@@ -11,7 +11,8 @@
       "Blue",
       "Gold"
     ],
-    "school_name": "East Texas A&M"
+    "school_name": "East Texas A&M",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "balanced",

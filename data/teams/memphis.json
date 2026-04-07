@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gray"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",
@@ -19,10 +20,10 @@
     "two_way_emphasis": "medium"
   },
   "recruiting_pipeline": {
-    "south": 0.50,
+    "south": 0.5,
     "midwest": 0.15,
-    "mid_atlantic": 0.10,
-    "texas_southwest": 0.10,
+    "mid_atlantic": 0.1,
+    "texas_southwest": 0.1,
     "west_coast": 0.05,
     "northeast": 0.05,
     "caribbean": 0.05

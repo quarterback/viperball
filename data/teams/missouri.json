@@ -10,7 +10,8 @@
     "colors": [
       "Black",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

@@ -11,7 +11,8 @@
       "Brown",
       "Red",
       "White"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",

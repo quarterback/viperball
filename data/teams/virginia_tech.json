@@ -10,7 +10,8 @@
     "colors": [
       "Maroon",
       "Orange"
-    ]
+    ],
+    "academic_tier": "above_average"
   },
   "identity": {
     "style": "balanced",

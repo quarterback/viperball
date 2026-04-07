@@ -11,7 +11,8 @@
       "Crimson",
       "Gold"
     ],
-    "school_name": "Ferris State"
+    "school_name": "Ferris State",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

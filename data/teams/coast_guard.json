@@ -11,7 +11,8 @@
       "Blue",
       "White",
       "Orange"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

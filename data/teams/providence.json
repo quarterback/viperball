@@ -10,7 +10,8 @@
     "colors": [
       "Black",
       "White"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",
@@ -95,7 +96,7 @@
       },
       {
         "number": 6,
-        "name": "Léa Leclerc",
+        "name": "L\u00e9a Leclerc",
         "position": "Back/Safety",
         "height": "5-7",
         "weight": 189,
@@ -255,7 +256,7 @@
       },
       {
         "number": 20,
-        "name": "Élise Girard",
+        "name": "\u00c9lise Girard",
         "position": "Zeroback/Back",
         "height": "5-9",
         "weight": 166,
@@ -447,7 +448,7 @@
       },
       {
         "number": 33,
-        "name": "Amélie Arsenault",
+        "name": "Am\u00e9lie Arsenault",
         "position": "Back/Corner",
         "height": "6-0",
         "weight": 186,
@@ -709,12 +710,12 @@
         "weight": 193,
         "year": "Sophomore",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "speed_flanker",
         "potential": 3,

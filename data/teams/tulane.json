@@ -10,7 +10,8 @@
       "Olive Green",
       "Sky Blue"
     ],
-    "school_name": "Tulane"
+    "school_name": "Tulane",
+    "academic_tier": "high_academic"
   },
   "identity": {
     "style": "balanced",

@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "White"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "balanced",
@@ -31,7 +32,7 @@
     "players": [
       {
         "number": 1,
-        "name": "Zoé Bédard",
+        "name": "Zo\u00e9 B\u00e9dard",
         "position": "Viper/Back",
         "height": "5-7",
         "weight": 177,
@@ -1087,18 +1088,18 @@
       },
       {
         "number": 91,
-        "name": "Nathalia González",
+        "name": "Nathalia Gonz\u00e1lez",
         "position": "Zeroback/Back",
         "height": "5-6",
         "weight": 171,
         "year": "Senior",
         "hometown": {
-          "city": "Córdoba",
+          "city": "C\u00f3rdoba",
           "state": "ARG",
           "country": "Argentina",
           "region": "latin_american"
         },
-        "high_school": "Colegio Córdoba",
+        "high_school": "Colegio C\u00f3rdoba",
         "nationality": "Latin American",
         "archetype": "dual_threat_zb",
         "potential": 3,
@@ -1119,7 +1120,7 @@
       },
       {
         "number": 92,
-        "name": "Clémence Richard",
+        "name": "Cl\u00e9mence Richard",
         "position": "Back/Safety",
         "height": "5-8",
         "weight": 165,

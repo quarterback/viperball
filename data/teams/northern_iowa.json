@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "Old Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "aggressive",

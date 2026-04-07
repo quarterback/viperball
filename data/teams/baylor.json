@@ -10,7 +10,8 @@
     "colors": [
       "Green",
       "Gold"
-    ]
+    ],
+    "academic_tier": "above_average"
   },
   "identity": {
     "style": "balanced",

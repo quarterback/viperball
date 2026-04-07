@@ -11,7 +11,8 @@
       "Green",
       "Gold"
     ],
-    "school": "North Dakota State"
+    "school": "North Dakota State",
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

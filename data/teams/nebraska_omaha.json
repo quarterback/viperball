@@ -10,7 +10,8 @@
     "colors": [
       "Crimson",
       "Black"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

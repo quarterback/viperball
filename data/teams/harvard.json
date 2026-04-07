@@ -11,7 +11,8 @@
       "Crimson",
       "Black",
       "White"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",

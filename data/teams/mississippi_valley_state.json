@@ -11,7 +11,8 @@
       "Green",
       "White"
     ],
-    "school": "Mississippi Valley State"
+    "school": "Mississippi Valley State",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "conservative",

@@ -10,7 +10,8 @@
     "colors": [
       "Green",
       "Blue"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

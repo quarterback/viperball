@@ -10,7 +10,8 @@
     "colors": [
       "Cardinal",
       "White"
-    ]
+    ],
+    "academic_tier": "elite_academic"
   },
   "identity": {
     "style": "balanced",

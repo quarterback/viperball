@@ -12,7 +12,8 @@
       "Black",
       "White"
     ],
-    "school_name": "Grand Valley State"
+    "school_name": "Grand Valley State",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

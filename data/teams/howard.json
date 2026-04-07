@@ -11,7 +11,8 @@
       "Blue",
       "White",
       "Red"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "conservative",

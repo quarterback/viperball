@@ -10,7 +10,8 @@
     "colors": [
       "Dandelion",
       "Blue"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

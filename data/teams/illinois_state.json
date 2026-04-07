@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "White"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",
@@ -837,12 +838,12 @@
         "weight": 160,
         "year": "Senior",
         "hometown": {
-          "city": "Bogotá",
+          "city": "Bogot\u00e1",
           "state": "COL",
           "country": "Colombia",
           "region": "latin_american"
         },
-        "high_school": "Colegio Bogotá",
+        "high_school": "Colegio Bogot\u00e1",
         "nationality": "Latin American",
         "archetype": "elusive_flanker",
         "potential": 2,

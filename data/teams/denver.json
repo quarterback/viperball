@@ -10,7 +10,8 @@
     "colors": [
       "Crimson",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",
@@ -863,7 +864,7 @@
       },
       {
         "number": 76,
-        "name": "Wendy Rodríguez",
+        "name": "Wendy Rodr\u00edguez",
         "position": "Halfback/Back",
         "height": "5-6",
         "weight": 176,
@@ -1151,7 +1152,7 @@
       },
       {
         "number": 97,
-        "name": "Lucía Bernard",
+        "name": "Luc\u00eda Bernard",
         "position": "Wedge/Line",
         "height": "5-11",
         "weight": 197,

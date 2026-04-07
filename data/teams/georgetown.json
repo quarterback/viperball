@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gray"
-    ]
+    ],
+    "academic_tier": "elite_academic"
   },
   "identity": {
     "style": "aggressive",
@@ -703,7 +704,7 @@
       },
       {
         "number": 65,
-        "name": "Gwenaëlle Roy",
+        "name": "Gwena\u00eblle Roy",
         "position": "Back/Corner",
         "height": "6-0",
         "weight": 160,
@@ -735,7 +736,7 @@
       },
       {
         "number": 66,
-        "name": "Pénélope Deschênes",
+        "name": "P\u00e9n\u00e9lope Desch\u00eanes",
         "position": "Wing/End",
         "height": "5-10",
         "weight": 173,

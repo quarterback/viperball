@@ -10,7 +10,8 @@
     "colors": [
       "Maize",
       "Blue"
-    ]
+    ],
+    "academic_tier": "high_academic"
   },
   "identity": {
     "style": "balanced",

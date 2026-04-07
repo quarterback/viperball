@@ -10,7 +10,8 @@
     "colors": [
       "Cardinal",
       "Purple"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "aggressive",

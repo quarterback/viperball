@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Silver"
-    ]
+    ],
+    "academic_tier": "elite_academic"
   },
   "identity": {
     "style": "aggressive",

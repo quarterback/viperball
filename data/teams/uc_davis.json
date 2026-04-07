@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",

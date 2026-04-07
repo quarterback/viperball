@@ -96,6 +96,174 @@ def _pick_region(rng: random.Random) -> str:
 
 
 # ──────────────────────────────────────────────
+# ACADEMIC / ADMISSIONS SYSTEM
+# ──────────────────────────────────────────────
+
+# Academic prestige tiers — determines minimum GPA/SAT for admission.
+# Higher academic prestige = stricter admissions floor.
+# admissions_flex: how much the athletic department can bend the rules.
+# High flex (0.8+) = basically anyone who's eligible can get in.
+# Low flex (0.2) = strict academic standards, limited exceptions.
+#
+# Tiers:
+#   elite_academic:    Stanford, service academies, Ivy-tier (GPA 3.2+, SAT 1200+)
+#   high_academic:     Duke, Northwestern, Vanderbilt (GPA 2.8+, SAT 1050+)
+#   above_average:     Most P5 schools (GPA 2.5+, SAT 950+)
+#   standard:          Average D1 (GPA 2.3+, SAT 880+)  — NCAA floor
+#   flexible:          Open admission / JUCO pathway (GPA 2.0+, SAT 800+)
+
+ACADEMIC_TIERS = {
+    "elite_academic":  {"gpa_floor": 3.2, "sat_floor": 1200, "admissions_flex": 0.15, "label": "Elite Academic"},
+    "high_academic":   {"gpa_floor": 2.8, "sat_floor": 1050, "admissions_flex": 0.30, "label": "High Academic"},
+    "above_average":   {"gpa_floor": 2.5, "sat_floor": 950,  "admissions_flex": 0.55, "label": "Above Average"},
+    "standard":        {"gpa_floor": 2.3, "sat_floor": 880,  "admissions_flex": 0.75, "label": "Standard"},
+    "flexible":        {"gpa_floor": 2.0, "sat_floor": 800,  "admissions_flex": 0.90, "label": "Flexible"},
+}
+
+# Schools with known academic prestige. Unlisted schools default to prestige-based tier.
+_ACADEMIC_TIER_OVERRIDES = {
+    # Elite academic (strict admissions)
+    "Stanford": "elite_academic",
+    "Air Force": "elite_academic",
+    "Army": "elite_academic",
+    "Navy": "elite_academic",
+    "Notre Dame": "high_academic",
+    "Duke": "high_academic",
+    "Northwestern": "high_academic",
+    "Vanderbilt": "high_academic",
+    "Rice": "high_academic",
+    "Wake Forest": "high_academic",
+    "Boston College": "high_academic",
+    "Virginia": "high_academic",
+    "Michigan": "high_academic",
+    "UCLA": "above_average",
+    "USC": "above_average",
+    "Georgia Tech": "above_average",
+    "Wisconsin": "above_average",
+    "Florida": "above_average",
+    "North Carolina": "above_average",
+    "Cal": "above_average",
+    "Ohio State": "above_average",
+    "Penn State": "above_average",
+    "Texas": "above_average",
+}
+
+
+def get_academic_tier(
+    team_name: str,
+    prestige: int = 50,
+    team_data: Optional[Dict] = None,
+) -> str:
+    """Determine a team's academic tier.
+
+    Checks team JSON data first (academic_tier field), then the override map,
+    then falls back to prestige-based assignment.
+    """
+    # 1. Check team data (set in team JSON files)
+    if team_data and isinstance(team_data, dict):
+        tier = team_data.get("team_info", {}).get("academic_tier")
+        if tier and tier in ACADEMIC_TIERS:
+            return tier
+
+    # 2. Check override map
+    if team_name in _ACADEMIC_TIER_OVERRIDES:
+        return _ACADEMIC_TIER_OVERRIDES[team_name]
+
+    # 3. Prestige-based fallback
+    if prestige >= 80:
+        return "above_average"
+    elif prestige >= 55:
+        return "standard"
+    elif prestige >= 30:
+        return "standard"
+    else:
+        return "flexible"
+
+
+def check_academic_eligibility(
+    recruit_gpa: float,
+    recruit_sat: int,
+    team_name: str,
+    team_prestige: int = 50,
+    rng: Optional[random.Random] = None,
+) -> bool:
+    """Check if a recruit meets a school's academic requirements.
+
+    Returns True if the recruit can be admitted. The admissions_flex factor
+    introduces stochastic wiggle — a kid just below the floor might still
+    get in at a flexible school, but never at an elite academic institution.
+    """
+    if rng is None:
+        rng = random.Random()
+
+    tier_name = get_academic_tier(team_name, team_prestige)
+    tier = ACADEMIC_TIERS[tier_name]
+
+    gpa_ok = recruit_gpa >= tier["gpa_floor"]
+    sat_ok = recruit_sat >= tier["sat_floor"]
+
+    if gpa_ok and sat_ok:
+        return True
+
+    # Below the floor — check if admissions_flex saves them
+    # Higher flex = more likely to bend rules for athletes
+    flex = tier["admissions_flex"]
+
+    # How far below are they?
+    gpa_gap = max(0, tier["gpa_floor"] - recruit_gpa)
+    sat_gap = max(0, tier["sat_floor"] - recruit_sat)
+
+    # Normalize gaps (0 = at floor, 1 = way below)
+    gpa_severity = min(1.0, gpa_gap / 0.5)   # 0.5 GPA below floor = max severity
+    sat_severity = min(1.0, sat_gap / 200)    # 200 SAT below floor = max severity
+
+    # Combined severity
+    severity = max(gpa_severity, sat_severity)
+
+    # Probability of admission = flex * (1 - severity)
+    # At elite_academic (flex=0.15): even small gaps = almost no chance
+    # At flexible (flex=0.90): moderate gaps still get through
+    admit_chance = flex * (1.0 - severity * 0.8)
+
+    return rng.random() < admit_chance
+
+
+# APR-style Academic Progress Rate for teams
+# Tracks how many players are academically eligible each year.
+# 100% = perfect (everyone eligible), <92.5% = NCAA penalty zone
+
+def compute_team_apr(
+    roster_gpas: List[float],
+    roster_academic_risks: Optional[List[str]] = None,
+) -> float:
+    """Compute a team's APR from roster GPAs.
+
+    Real NCAA APR is based on eligibility + retention over 4 years.
+    Simplified: % of roster with GPA >= 2.0 (eligible) with bonus
+    for high performers.
+
+    Returns 0-100 score. NCAA penalty zone is below 92.5.
+    """
+    if not roster_gpas:
+        return 100.0
+
+    eligible = sum(1 for g in roster_gpas if g >= 2.0)
+    total = len(roster_gpas)
+    base_rate = (eligible / total) * 100
+
+    # Bonus for academic excellence (team-wide GPA above 2.7)
+    avg_gpa = sum(roster_gpas) / total
+    if avg_gpa >= 3.5:
+        base_rate = min(100, base_rate + 3.0)
+    elif avg_gpa >= 3.0:
+        base_rate = min(100, base_rate + 1.5)
+    elif avg_gpa >= 2.7:
+        base_rate = min(100, base_rate + 0.5)
+
+    return round(base_rate, 1)
+
+
+# ──────────────────────────────────────────────
 # RECRUIT
 # ──────────────────────────────────────────────
 
@@ -133,6 +301,26 @@ class Recruit:
 
     true_potential: int     # 1-5
     true_development: str   # normal / quick / slow / late_bloomer
+
+    # ── Mental / Academic attributes ──────────
+    # Field intelligence: how smart the player is ON the field.
+    # Reads defenses, finds holes, makes adjustments in real time.
+    # Correlates loosely with awareness but is separate — a player can
+    # have high awareness (technique) but low field IQ (instincts).
+    field_intelligence: int = 50   # 25-95
+
+    # Coachability: how well the player responds to coaching.
+    # High coachability + right coach = faster development, higher ceiling.
+    # Low coachability = talent ceiling is harder to reach regardless of coach.
+    coachability: int = 50         # 25-95
+
+    # Academic profile — realistic bell curves with outliers
+    gpa: float = 3.0              # 1.5-4.0 (weighted GPA)
+    sat_score: int = 1050         # 600-1600
+
+    # Academic eligibility: computed from GPA + SAT
+    # ~0.5% of all recruits end up academically ineligible (NCAA Clearinghouse fail)
+    academic_risk: str = "clear"   # "clear" | "at_risk" | "ineligible"
 
     # Scouted attributes — None means "not yet scouted"
     scouted_attrs: Dict[str, int] = field(default_factory=dict)
@@ -294,6 +482,11 @@ class Recruit:
             "true_kick_accuracy": self.true_kick_accuracy,
             "true_lateral_skill": self.true_lateral_skill,
             "true_tackling": self.true_tackling,
+            "field_intelligence": self.field_intelligence,
+            "coachability": self.coachability,
+            "gpa": self.gpa,
+            "sat_score": self.sat_score,
+            "academic_risk": self.academic_risk,
             "scout_level": self.scout_level,
             "committed_to": self.committed_to,
             "signed": self.signed,
@@ -572,6 +765,53 @@ def generate_single_recruit(
         wt = rng.randint(160, 200)
     height = f"{ht_in // 12}-{ht_in % 12}"
 
+    # ── Mental attributes ──────────────────────
+    # Field intelligence: loosely correlated with awareness but separate.
+    # Bell curve centered around awareness ± noise. Some kids are field-smart
+    # but technique-poor (high FIQ, low awareness), others are textbook
+    # players who don't read the game (high awareness, low FIQ).
+    _fiq_base = awareness + rng.randint(-15, 15)
+    field_intelligence = max(25, min(95, int(rng.gauss(_fiq_base, 10))))
+
+    # Coachability: independent of everything — personality trait.
+    # High coachability = player responds to coaching, reaches potential faster.
+    # Bell curve centered at 60 with wide variance.
+    coachability = max(25, min(95, int(rng.gauss(60, 14))))
+
+    # ── Academic profile ──────────────────────
+    # GPA: bell curve centered at 3.0, σ=0.45
+    # Real data: ~50% between 2.5-3.5, ~15% below 2.5, ~15% above 3.5
+    # 10% outliers: high field IQ / low GPA (street smart, bad student)
+    # 10% outliers: high GPA / lower test scores (good student, bad tester)
+    _gpa_base = rng.gauss(3.0, 0.45)
+    # Slight correlation with field_intelligence (~20% influence)
+    _gpa_base += (field_intelligence - 60) * 0.005
+    gpa = round(max(1.5, min(4.0, _gpa_base)), 2)
+
+    # SAT: bell curve centered at 1050, σ=150
+    # Real data: median ~1050, ~5% below 850, ~5% above 1400, ~1% above 1500
+    _sat_base = rng.gauss(1050, 150)
+    # Moderate correlation with GPA (~40% influence) but with outliers
+    _sat_base += (gpa - 3.0) * 80
+    # 10% chance of GPA-SAT mismatch (good student/bad tester or vice versa)
+    if rng.random() < 0.10:
+        _sat_base += rng.choice([-200, -150, 150, 200])
+    sat_score = max(600, min(1600, int(_sat_base)))
+    # Round to nearest 10 (SATs come in 10-point increments)
+    sat_score = (sat_score // 10) * 10
+
+    # Academic risk: ~0.5% ineligible (NCAA Clearinghouse fail)
+    # ~5% at-risk (need to monitor, might lose eligibility)
+    if gpa < 2.0 or sat_score < 700:
+        academic_risk = "ineligible" if rng.random() < 0.3 else "at_risk"
+    elif gpa < 2.3 or sat_score < 820:
+        academic_risk = "at_risk" if rng.random() < 0.4 else "clear"
+    elif rng.random() < 0.005:
+        # Random clearinghouse issue (paperwork, transfer credits, etc.)
+        academic_risk = "at_risk"
+    else:
+        academic_risk = "clear"
+
     # Decision preferences (randomised personality)
     pres = rng.uniform(0.2, 0.6)
     geo = rng.uniform(0.1, 0.4)
@@ -581,6 +821,8 @@ def generate_single_recruit(
     # Lower-star recruits care more about playing time opportunity
     pt_base = 0.05 if stars >= 4 else (0.15 if stars >= 3 else 0.25)
     pt = rng.uniform(pt_base * 0.5, pt_base * 1.5)
+    # Coachability preference: high-coachability kids value coaching quality more
+    coach_pref = rng.uniform(0.05, 0.15) + (coachability - 50) * 0.003
 
     return Recruit(
         recruit_id=recruit_id,
@@ -606,9 +848,15 @@ def generate_single_recruit(
         true_tackling=tackling,
         true_potential=true_potential,
         true_development=true_dev,
+        field_intelligence=field_intelligence,
+        coachability=coachability,
+        gpa=gpa,
+        sat_score=sat_score,
+        academic_risk=academic_risk,
         prefers_prestige=pres,
         prefers_geography=geo,
         prefers_nil=nil_pref,
+        prefers_coaching=coach_pref,
         prefers_facilities=fac,
         prefers_playing_time=pt,
         prefers_program_success=prog_success,
@@ -1979,9 +2227,18 @@ def seed_recruiting_interest(
             if t not in interested_pool:
                 interested_pool.append(t)
 
-        # Trim to target count
+        # Trim to target count, filtering out schools that can't admit this recruit
         rng.shuffle(interested_pool)
-        interested_schools = interested_pool[:n_interested]
+        interested_schools = []
+        for school in interested_pool:
+            if len(interested_schools) >= n_interested:
+                break
+            # Elite/high academic schools won't waste time on academically at-risk kids
+            tier_name = get_academic_tier(school, team_prestige.get(school, 50))
+            if tier_name in ("elite_academic", "high_academic") and r.academic_risk != "clear":
+                if r.gpa < ACADEMIC_TIERS[tier_name]["gpa_floor"] - 0.3:
+                    continue  # too far below — school won't even look
+            interested_schools.append(school)
 
         # ── Set interest levels (hot / warm / cool) ──
         for school in interested_schools:
@@ -2000,10 +2257,21 @@ def seed_recruiting_interest(
                                   "cool": rng.randint(10, 39)}[heat]
 
         # ── Offers: subset of interested schools ──
-        # Higher interest = more likely to have already offered
+        # Schools can only offer if the recruit clears their academic floor.
+        # Elite academic schools won't offer a kid with a 2.1 GPA.
         offering_schools = []
-        for school in interested_schools[:n_offers]:
-            offering_schools.append(school)
+        for school in interested_schools[:n_offers + 5]:  # check extra in case some are blocked
+            if len(offering_schools) >= n_offers:
+                break
+            school_prestige = team_prestige.get(school, 50)
+            if check_academic_eligibility(r.gpa, r.sat_score, school, school_prestige, rng=rng):
+                offering_schools.append(school)
+            # else: school interested but can't offer due to academics
+
+        # Ineligible recruits can't get any offers
+        if r.academic_risk == "ineligible":
+            offering_schools = []
+
         r.offers = offering_schools
 
         # ── Top schools shortlist (top 3-5 from interested) ──

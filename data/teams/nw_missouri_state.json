@@ -11,7 +11,8 @@
       "Green",
       "White"
     ],
-    "school_name": "Northwest Missouri State"
+    "school_name": "Northwest Missouri State",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

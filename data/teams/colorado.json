@@ -11,7 +11,8 @@
       "Silver",
       "Gold",
       "Black"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",

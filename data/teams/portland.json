@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "White"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "aggressive",
@@ -95,7 +96,7 @@
       },
       {
         "number": 5,
-        "name": "Tāmāhine Edwards",
+        "name": "T\u0101m\u0101hine Edwards",
         "position": "Lineman",
         "height": "6-0",
         "weight": 211,
@@ -831,18 +832,18 @@
       },
       {
         "number": 62,
-        "name": "Teresa Gómez",
+        "name": "Teresa G\u00f3mez",
         "position": "Wingback/End",
         "height": "5-10",
         "weight": 177,
         "year": "Senior",
         "hometown": {
-          "city": "Medellín",
+          "city": "Medell\u00edn",
           "state": "COL",
           "country": "Colombia",
           "region": "latin_american"
         },
-        "high_school": "Colegio Medellín",
+        "high_school": "Colegio Medell\u00edn",
         "nationality": "Latin American",
         "archetype": "speed_flanker",
         "potential": 3,

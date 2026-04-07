@@ -10,7 +10,8 @@
     "colors": [
       "Midnight Blue",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

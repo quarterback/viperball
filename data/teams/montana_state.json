@@ -10,7 +10,8 @@
     "colors": [
       "Blue",
       "Gold"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",
@@ -261,12 +262,12 @@
         "weight": 186,
         "year": "Freshman",
         "hometown": {
-          "city": "Brasília",
+          "city": "Bras\u00edlia",
           "state": "BRA",
           "country": "Brazil",
           "region": "latin_american"
         },
-        "high_school": "Colegio Brasília",
+        "high_school": "Colegio Bras\u00edlia",
         "nationality": "Latin American",
         "archetype": "dual_threat_zb",
         "potential": 2,

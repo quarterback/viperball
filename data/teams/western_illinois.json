@@ -10,7 +10,8 @@
     "colors": [
       "Purple",
       "Gold"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "balanced",

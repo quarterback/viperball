@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "White"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "balanced",

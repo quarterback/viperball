@@ -10,7 +10,8 @@
     "colors": [
       "Garnet",
       "White"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "balanced",

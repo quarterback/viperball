@@ -10,7 +10,8 @@
     "colors": [
       "Red",
       "Blue"
-    ]
+    ],
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "conservative",

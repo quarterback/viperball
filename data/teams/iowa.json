@@ -10,7 +10,8 @@
     "colors": [
       "Black",
       "Gold"
-    ]
+    ],
+    "academic_tier": "above_average"
   },
   "identity": {
     "style": "aggressive",

@@ -10,7 +10,8 @@
     "colors": [
       "Maroon",
       "Gray"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "conservative",

@@ -10,7 +10,8 @@
     "colors": [
       "Crimson",
       "Steel Blue"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",
@@ -37,12 +38,12 @@
         "weight": 184,
         "year": "Freshman",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "hybrid_viper",
         "potential": 5,
@@ -741,12 +742,12 @@
         "weight": 161,
         "year": "Junior",
         "hometown": {
-          "city": "Málaga",
+          "city": "M\u00e1laga",
           "state": "ESP",
           "country": "Spain",
           "region": "uk_european"
         },
-        "high_school": "Málaga Academy",
+        "high_school": "M\u00e1laga Academy",
         "nationality": "European",
         "archetype": "return_keeper",
         "potential": 5,
@@ -927,7 +928,7 @@
       },
       {
         "number": 79,
-        "name": "Élodie Deschênes",
+        "name": "\u00c9lodie Desch\u00eanes",
         "position": "Zeroback/Back",
         "height": "5-11",
         "weight": 189,

@@ -10,7 +10,8 @@
     "colors": [
       "Vermillion",
       "White"
-    ]
+    ],
+    "academic_tier": "above_average"
   },
   "identity": {
     "style": "balanced",

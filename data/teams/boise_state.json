@@ -10,7 +10,8 @@
       "Blue",
       "Orange"
     ],
-    "school_name": "Boise State"
+    "school_name": "Boise State",
+    "academic_tier": "flexible"
   },
   "identity": {
     "style": "aggressive",

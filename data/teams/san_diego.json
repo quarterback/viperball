@@ -10,7 +10,8 @@
     "colors": [
       "Navy",
       "Columbia Blue"
-    ]
+    ],
+    "academic_tier": "standard"
   },
   "identity": {
     "style": "balanced",

@@ -10,7 +10,8 @@
     "colors": [
       "Orange",
       "Black"
-    ]
+    ],
+    "academic_tier": "above_average"
   },
   "identity": {
     "style": "conservative",
