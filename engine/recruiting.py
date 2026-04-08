@@ -2394,21 +2394,33 @@ def seed_recruiting_interest(
 
         r.offers = offering_schools
 
-        # ── Top schools shortlist (top 3-5 from interested) ──
-        if len(interested_schools) >= 3 and grade in ("12th", "11th"):
+        # ── Top schools shortlist (top 3-5 from offers, fallback to interest) ──
+        # Use offering schools as the primary source so predictions stay grounded
+        shortlist_source = offering_schools if offering_schools else interested_schools
+        if len(shortlist_source) >= 3 and grade in ("12th", "11th"):
             # Weight by prestige + interest
             scored = [(s, team_prestige.get(s, 50) + r.interest.get(s, 50) + rng.uniform(-15, 15))
-                      for s in interested_schools]
+                      for s in shortlist_source]
+            scored.sort(key=lambda x: -x[1])
+            r.top_schools = [s for s, _ in scored[:min(5, len(scored))]]
+            if len(scored) >= 3:
+                r.finalist_schools = [s for s, _ in scored[:3]]
+        elif offering_schools and grade in ("12th", "11th"):
+            # Fewer than 3 offers — still use them
+            scored = [(s, team_prestige.get(s, 50) + r.interest.get(s, 50) + rng.uniform(-15, 15))
+                      for s in offering_schools]
             scored.sort(key=lambda x: -x[1])
             r.top_schools = [s for s, _ in scored[:min(5, len(scored))]]
             if len(scored) >= 3:
                 r.finalist_schools = [s for s, _ in scored[:3]]
 
         # ── Crystal Ball / StrikePrediction ──
-        if r.top_schools and grade in ("12th", "11th"):
+        # Only predict schools that have actually offered — no phantom predictions
+        cb_schools = [s for s in r.top_schools if s in r.offers]
+        if cb_schools and grade in ("12th", "11th"):
             total_score = 0
             school_scores = {}
-            for school in r.top_schools:
+            for school in cb_schools:
                 score = (team_prestige.get(school, 50) * r.prefers_prestige
                         + r.interest.get(school, 50) * 0.5
                         + rng.uniform(5, 25))
