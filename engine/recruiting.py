@@ -655,26 +655,77 @@ _HOMETOWN_BY_REGION = {
     "northeast": [
         "Boston, MA", "Hartford, CT", "Portland, ME", "Burlington, VT",
         "Providence, RI", "Worcester, MA", "Bridgeport, CT", "Albany, NY",
+        "Springfield, MA", "New Haven, CT", "Stamford, CT", "Concord, NH",
+        "Manchester, NH", "Nashua, NH", "Bangor, ME", "Lewiston, ME",
+        "Warwick, RI", "Cranston, RI", "Montpelier, VT", "Brattleboro, VT",
+        "Cambridge, MA", "Lowell, MA", "Brockton, MA", "Pittsfield, MA",
+        "Danbury, CT", "Waterbury, CT", "Greenwich, CT",
     ],
     "mid_atlantic": [
         "Philadelphia, PA", "Baltimore, MD", "Washington, DC", "Newark, NJ",
         "Pittsburgh, PA", "Richmond, VA", "Virginia Beach, VA", "Trenton, NJ",
+        "Wilmington, DE", "Dover, DE", "Harrisburg, PA", "Allentown, PA",
+        "Scranton, PA", "State College, PA", "Annapolis, MD", "Rockville, MD",
+        "Silver Spring, MD", "Arlington, VA", "Alexandria, VA", "Norfolk, VA",
+        "Charlottesville, VA", "Roanoke, VA", "Charleston, WV",
+        "Huntington, WV", "Morgantown, WV", "Wheeling, WV",
+        "Jersey City, NJ", "Princeton, NJ", "Morristown, NJ",
+        "Cherry Hill, NJ", "Bethesda, MD", "Frederick, MD",
     ],
     "south": [
         "Atlanta, GA", "Charlotte, NC", "Nashville, TN", "Raleigh, NC",
         "Jacksonville, FL", "Tampa, FL", "New Orleans, LA", "Memphis, TN",
+        "Miami, FL", "Orlando, FL", "Birmingham, AL", "Chattanooga, TN",
+        "Knoxville, TN", "Charleston, SC", "Columbia, SC", "Greenville, SC",
+        "Savannah, GA", "Augusta, GA", "Macon, GA", "Greensboro, NC",
+        "Durham, NC", "Winston-Salem, NC", "Fayetteville, NC",
+        "Huntsville, AL", "Mobile, AL", "Montgomery, AL", "Tuscaloosa, AL",
+        "Jackson, MS", "Biloxi, MS", "Hattiesburg, MS", "Tupelo, MS",
+        "Fort Lauderdale, FL", "West Palm Beach, FL", "Pensacola, FL",
+        "Tallahassee, FL", "Gainesville, FL", "St. Petersburg, FL",
+        "Sarasota, FL", "Baton Rouge, LA", "Shreveport, LA", "Lafayette, LA",
+        "Little Rock, AR", "Fayetteville, AR", "Bentonville, AR",
     ],
     "midwest": [
         "Chicago, IL", "Indianapolis, IN", "Columbus, OH", "Detroit, MI",
         "Milwaukee, WI", "Minneapolis, MN", "Kansas City, MO", "Cincinnati, OH",
+        "Cleveland, OH", "St. Louis, MO", "Ann Arbor, MI", "Grand Rapids, MI",
+        "Madison, WI", "Green Bay, WI", "Des Moines, IA", "Cedar Rapids, IA",
+        "Omaha, NE", "Lincoln, NE", "Wichita, KS", "Overland Park, KS",
+        "Dayton, OH", "Toledo, OH", "Akron, OH", "Fort Wayne, IN",
+        "South Bend, IN", "Bloomington, IN", "Evansville, IN",
+        "Naperville, IL", "Springfield, IL", "Champaign, IL", "Peoria, IL",
+        "Duluth, MN", "St. Paul, MN", "Rochester, MN",
+        "Louisville, KY", "Lexington, KY", "Covington, KY", "Bowling Green, KY",
+        "Columbia, MO", "Springfield, MO", "Jefferson City, MO",
+        "Iowa City, IA", "Davenport, IA", "Sioux City, IA",
     ],
     "west_coast": [
         "Los Angeles, CA", "San Francisco, CA", "Seattle, WA", "Portland, OR",
         "San Diego, CA", "Sacramento, CA", "Oakland, CA", "Spokane, WA",
+        "San Jose, CA", "Fresno, CA", "Long Beach, CA", "Anaheim, CA",
+        "Riverside, CA", "Stockton, CA", "Bakersfield, CA", "Irvine, CA",
+        "Santa Barbara, CA", "Pasadena, CA", "Eugene, OR", "Salem, OR",
+        "Tacoma, WA", "Bellevue, WA", "Olympia, WA", "Vancouver, WA",
+        "Honolulu, HI", "Anchorage, AK", "Juneau, AK",
+        "Bend, OR", "Medford, OR", "Corvallis, OR",
+        "Redmond, WA", "Everett, WA", "Kent, WA",
     ],
     "texas_southwest": [
         "Houston, TX", "Dallas, TX", "San Antonio, TX", "Austin, TX",
         "Phoenix, AZ", "Tucson, AZ", "El Paso, TX", "Albuquerque, NM",
+        "Fort Worth, TX", "Arlington, TX", "Plano, TX", "Lubbock, TX",
+        "Amarillo, TX", "Corpus Christi, TX", "Midland, TX", "McAllen, TX",
+        "Frisco, TX", "McKinney, TX", "Round Rock, TX", "Sugar Land, TX",
+        "Scottsdale, AZ", "Mesa, AZ", "Chandler, AZ", "Gilbert, AZ",
+        "Tempe, AZ", "Glendale, AZ", "Las Cruces, NM", "Santa Fe, NM",
+        "Las Vegas, NV", "Reno, NV", "Henderson, NV",
+        "Oklahoma City, OK", "Tulsa, OK", "Norman, OK", "Edmond, OK",
+        "Boise, ID", "Meridian, ID", "Idaho Falls, ID",
+        "Salt Lake City, UT", "Provo, UT", "Ogden, UT",
+        "Denver, CO", "Colorado Springs, CO", "Boulder, CO", "Fort Collins, CO",
+        "Fargo, ND", "Bismarck, ND", "Sioux Falls, SD", "Rapid City, SD",
+        "Cheyenne, WY", "Casper, WY", "Billings, MT", "Missoula, MT",
     ],
     "australian": [
         "Sydney, AUS", "Melbourne, AUS", "Brisbane, AUS", "Perth, AUS",
@@ -725,7 +776,28 @@ def _generate_hometown(region: str, rng: random.Random) -> str:
 
 
 def _generate_high_school(hometown: str, rng: random.Random) -> str:
-    city = hometown.split(",")[0].strip()
+    """Pick a real school from hs_league_data based on the recruit's state."""
+    try:
+        from engine.hs_league_data import STATES
+    except ImportError:
+        STATES = {}
+
+    # Extract state/country code from hometown like "Boston, MA"
+    parts = hometown.split(",")
+    state_code = parts[-1].strip() if len(parts) > 1 else ""
+
+    # Look up schools for this state
+    if state_code in STATES:
+        state_data = STATES[state_code]
+        # Collect all schools across all conferences
+        all_schools = []
+        for conf_schools in state_data["conferences"].values():
+            all_schools.extend(conf_schools)
+        if all_schools:
+            return rng.choice(all_schools)
+
+    # Fallback for international or unrecognized states
+    city = parts[0].strip()
     suffix = rng.choice(_HS_SUFFIXES)
     return f"{city} {suffix}"
 
