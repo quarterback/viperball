@@ -523,7 +523,7 @@ class PlayerCard:
     coachability: int = 50           # 25-95: responsiveness to coaching
     gpa: float = 3.0                 # 1.5-4.0: academic GPA
     sat_score: int = 1050            # 600-1600: VAT score
-    academic_risk: str = "clear"     # "clear" | "at_risk" | "ineligible"
+    academic_risk: str = "clear"     # "clear" | "ineligible"
 
     # ── Transfer tracking ──
     transfer_count: int = 0          # how many times this player has transferred

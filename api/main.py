@@ -612,6 +612,7 @@ def _serialize_player(player) -> dict:
         "hometown_city": getattr(player, "hometown_city", ""),
         "hometown_state": getattr(player, "hometown_state", ""),
         "hometown_country": getattr(player, "hometown_country", "USA"),
+        "high_school": getattr(player, "high_school", ""),
         "nationality": getattr(player, "nationality", "American"),
         "potential": getattr(player, "potential", 3),
         "development": getattr(player, "development", "normal"),

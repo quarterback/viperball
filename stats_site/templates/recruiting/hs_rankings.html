@@ -121,7 +121,7 @@
       {% endif %}
     </td>
     <td class="num">{{ p.num_offers }}</td>
-    <td class="num {% if p.gpa >= 3.5 %}stat-good{% elif p.gpa < 2.5 %}stat-bad{% endif %}">{{ "%.2f"|format(p.gpa) if p.gpa else "—" }}{% if p.academic_risk == "at_risk" %} <span style="color:var(--yellow);font-size:9px;">!</span>{% elif p.academic_risk == "ineligible" %} <span style="color:var(--red);font-size:9px;">X</span>{% endif %}</td>
+    <td class="num {% if p.gpa >= 3.5 %}stat-good{% elif p.gpa < 2.5 %}stat-bad{% endif %}">{{ "%.2f"|format(p.gpa) if p.gpa else "—" }}{% if p.academic_risk == "ineligible" %} <span style="color:var(--red);font-size:9px;">X</span>{% endif %}</td>
     <td class="num {% if p.sat_score >= 1300 %}stat-good{% elif p.sat_score < 900 %}stat-bad{% endif %}">{{ p.sat_score if p.sat_score else "—" }}</td>
     <td class="num {% if p.field_intelligence >= 80 %}stat-good{% elif p.field_intelligence < 40 %}stat-bad{% endif %}">{{ p.field_intelligence if p.field_intelligence else "—" }}</td>
     <td class="num {% if p.coachability >= 80 %}stat-good{% elif p.coachability < 40 %}stat-bad{% endif %}">{{ p.coachability if p.coachability else "—" }}</td>

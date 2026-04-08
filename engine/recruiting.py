@@ -360,7 +360,7 @@ class Recruit:
 
     # Academic eligibility: computed from GPA + SAT
     # ~0.5% of all recruits end up academically ineligible (NCAA Clearinghouse fail)
-    academic_risk: str = "clear"   # "clear" | "at_risk" | "ineligible"
+    academic_risk: str = "clear"   # "clear" | "ineligible"
 
     # Scouted attributes — None means "not yet scouted"
     scouted_attrs: Dict[str, int] = field(default_factory=dict)
@@ -663,26 +663,77 @@ _HOMETOWN_BY_REGION = {
     "northeast": [
         "Boston, MA", "Hartford, CT", "Portland, ME", "Burlington, VT",
         "Providence, RI", "Worcester, MA", "Bridgeport, CT", "Albany, NY",
+        "Springfield, MA", "New Haven, CT", "Stamford, CT", "Concord, NH",
+        "Manchester, NH", "Nashua, NH", "Bangor, ME", "Lewiston, ME",
+        "Warwick, RI", "Cranston, RI", "Montpelier, VT", "Brattleboro, VT",
+        "Cambridge, MA", "Lowell, MA", "Brockton, MA", "Pittsfield, MA",
+        "Danbury, CT", "Waterbury, CT", "Greenwich, CT",
     ],
     "mid_atlantic": [
         "Philadelphia, PA", "Baltimore, MD", "Washington, DC", "Newark, NJ",
         "Pittsburgh, PA", "Richmond, VA", "Virginia Beach, VA", "Trenton, NJ",
+        "Wilmington, DE", "Dover, DE", "Harrisburg, PA", "Allentown, PA",
+        "Scranton, PA", "State College, PA", "Annapolis, MD", "Rockville, MD",
+        "Silver Spring, MD", "Arlington, VA", "Alexandria, VA", "Norfolk, VA",
+        "Charlottesville, VA", "Roanoke, VA", "Charleston, WV",
+        "Huntington, WV", "Morgantown, WV", "Wheeling, WV",
+        "Jersey City, NJ", "Princeton, NJ", "Morristown, NJ",
+        "Cherry Hill, NJ", "Bethesda, MD", "Frederick, MD",
     ],
     "south": [
         "Atlanta, GA", "Charlotte, NC", "Nashville, TN", "Raleigh, NC",
         "Jacksonville, FL", "Tampa, FL", "New Orleans, LA", "Memphis, TN",
+        "Miami, FL", "Orlando, FL", "Birmingham, AL", "Chattanooga, TN",
+        "Knoxville, TN", "Charleston, SC", "Columbia, SC", "Greenville, SC",
+        "Savannah, GA", "Augusta, GA", "Macon, GA", "Greensboro, NC",
+        "Durham, NC", "Winston-Salem, NC", "Fayetteville, NC",
+        "Huntsville, AL", "Mobile, AL", "Montgomery, AL", "Tuscaloosa, AL",
+        "Jackson, MS", "Biloxi, MS", "Hattiesburg, MS", "Tupelo, MS",
+        "Fort Lauderdale, FL", "West Palm Beach, FL", "Pensacola, FL",
+        "Tallahassee, FL", "Gainesville, FL", "St. Petersburg, FL",
+        "Sarasota, FL", "Baton Rouge, LA", "Shreveport, LA", "Lafayette, LA",
+        "Little Rock, AR", "Fayetteville, AR", "Bentonville, AR",
     ],
     "midwest": [
         "Chicago, IL", "Indianapolis, IN", "Columbus, OH", "Detroit, MI",
         "Milwaukee, WI", "Minneapolis, MN", "Kansas City, MO", "Cincinnati, OH",
+        "Cleveland, OH", "St. Louis, MO", "Ann Arbor, MI", "Grand Rapids, MI",
+        "Madison, WI", "Green Bay, WI", "Des Moines, IA", "Cedar Rapids, IA",
+        "Omaha, NE", "Lincoln, NE", "Wichita, KS", "Overland Park, KS",
+        "Dayton, OH", "Toledo, OH", "Akron, OH", "Fort Wayne, IN",
+        "South Bend, IN", "Bloomington, IN", "Evansville, IN",
+        "Naperville, IL", "Springfield, IL", "Champaign, IL", "Peoria, IL",
+        "Duluth, MN", "St. Paul, MN", "Rochester, MN",
+        "Louisville, KY", "Lexington, KY", "Covington, KY", "Bowling Green, KY",
+        "Columbia, MO", "Springfield, MO", "Jefferson City, MO",
+        "Iowa City, IA", "Davenport, IA", "Sioux City, IA",
     ],
     "west_coast": [
         "Los Angeles, CA", "San Francisco, CA", "Seattle, WA", "Portland, OR",
         "San Diego, CA", "Sacramento, CA", "Oakland, CA", "Spokane, WA",
+        "San Jose, CA", "Fresno, CA", "Long Beach, CA", "Anaheim, CA",
+        "Riverside, CA", "Stockton, CA", "Bakersfield, CA", "Irvine, CA",
+        "Santa Barbara, CA", "Pasadena, CA", "Eugene, OR", "Salem, OR",
+        "Tacoma, WA", "Bellevue, WA", "Olympia, WA", "Vancouver, WA",
+        "Honolulu, HI", "Anchorage, AK", "Juneau, AK",
+        "Bend, OR", "Medford, OR", "Corvallis, OR",
+        "Redmond, WA", "Everett, WA", "Kent, WA",
     ],
     "texas_southwest": [
         "Houston, TX", "Dallas, TX", "San Antonio, TX", "Austin, TX",
         "Phoenix, AZ", "Tucson, AZ", "El Paso, TX", "Albuquerque, NM",
+        "Fort Worth, TX", "Arlington, TX", "Plano, TX", "Lubbock, TX",
+        "Amarillo, TX", "Corpus Christi, TX", "Midland, TX", "McAllen, TX",
+        "Frisco, TX", "McKinney, TX", "Round Rock, TX", "Sugar Land, TX",
+        "Scottsdale, AZ", "Mesa, AZ", "Chandler, AZ", "Gilbert, AZ",
+        "Tempe, AZ", "Glendale, AZ", "Las Cruces, NM", "Santa Fe, NM",
+        "Las Vegas, NV", "Reno, NV", "Henderson, NV",
+        "Oklahoma City, OK", "Tulsa, OK", "Norman, OK", "Edmond, OK",
+        "Boise, ID", "Meridian, ID", "Idaho Falls, ID",
+        "Salt Lake City, UT", "Provo, UT", "Ogden, UT",
+        "Denver, CO", "Colorado Springs, CO", "Boulder, CO", "Fort Collins, CO",
+        "Fargo, ND", "Bismarck, ND", "Sioux Falls, SD", "Rapid City, SD",
+        "Cheyenne, WY", "Casper, WY", "Billings, MT", "Missoula, MT",
     ],
     "australian": [
         "Sydney, AUS", "Melbourne, AUS", "Brisbane, AUS", "Perth, AUS",
@@ -831,28 +882,34 @@ def _generate_hometown(region: str, rng: random.Random) -> str:
 
 
 def _generate_high_school(hometown: str, rng: random.Random) -> str:
-    """Generate a real high school name based on the recruit's hometown.
+    """Pick a real school from hs_league_data based on the recruit's state."""
+    try:
+        from engine.hs_league_data import STATES
+    except ImportError:
+        STATES = {}
 
-    Uses actual school names from MaxPreps data mapped by city.
-    Falls back to city + generic suffix for unmapped cities.
-    """
-    city = hometown.split(",")[0].strip()
+    # Extract state/country code from hometown like "Boston, MA"
+    parts = hometown.split(",")
+    state_code = parts[-1].strip() if len(parts) > 1 else ""
 
-    # Try exact city match first
-    schools = _REAL_HS_BY_CITY.get(city)
+    # Look up schools for this state (domestic recruits)
+    if state_code in STATES:
+        state_data = STATES[state_code]
+        all_schools = []
+        for conf_schools in state_data["conferences"].values():
+            all_schools.extend(conf_schools)
+        if all_schools:
+            return rng.choice(all_schools)
+
+    # International / unmapped: try city-based lookup
+    city = parts[0].strip()
+    schools = _REAL_HS_BY_CITY.get(city) or _REAL_HS_BY_CITY.get(hometown.strip())
     if schools:
         return rng.choice(schools)
 
-    # Try city with state disambiguator (e.g., "Portland, ME" vs "Portland, OR")
-    schools = _REAL_HS_BY_CITY.get(hometown.replace(", ", ", ").strip())
-    if schools:
-        return rng.choice(schools)
-
-    # Fallback: city + generic suffix (for cities not in the database)
-    suffix = rng.choice([
-        "High School", "Academy", "Prep", "Catholic High School",
-        "Christian Academy", "Country Day School", "Magnet School",
-    ])
+    # Final fallback
+    suffix = rng.choice(["High School", "Academy", "Prep", "Catholic High School",
+                          "Christian Academy", "Country Day School"])
     return f"{city} {suffix}"
 
 
@@ -970,15 +1027,16 @@ def generate_single_recruit(
     # Round to nearest 10 (SATs come in 10-point increments)
     sat_score = (sat_score // 10) * 10
 
-    # Academic risk: ~0.5% ineligible (NCAA Clearinghouse fail)
-    # ~5% at-risk (need to monitor, might lose eligibility)
+    # Academic risk: "ineligible" recruits can't qualify at top programs and
+    # are funneled to low-prestige open-enrollment schools as late signers.
+    # This creates a talent pipeline for small programs.  ~8% of recruits.
     if gpa < 2.0 or sat_score < 700:
-        academic_risk = "ineligible" if rng.random() < 0.3 else "at_risk"
+        academic_risk = "ineligible"
     elif gpa < 2.3 or sat_score < 820:
-        academic_risk = "at_risk" if rng.random() < 0.4 else "clear"
+        academic_risk = "ineligible" if rng.random() < 0.35 else "clear"
     elif rng.random() < 0.005:
         # Random clearinghouse issue (paperwork, transfer credits, etc.)
-        academic_risk = "at_risk"
+        academic_risk = "ineligible"
     else:
         academic_risk = "clear"
 
@@ -1477,10 +1535,13 @@ def build_recruit_shortlists(
         if not recruit.offers or recruit.signed:
             continue
 
-        # Assign decision speed
-        speeds = _DECISION_SPEED_BY_STARS.get(recruit.stars, _DECISION_SPEED_BY_STARS[3])
-        labels, weights = zip(*speeds)
-        recruit.decision_speed = rng.choices(labels, weights=weights, k=1)[0]
+        # Assign decision speed — ineligible recruits always sign late
+        if recruit.academic_risk == "ineligible":
+            recruit.decision_speed = "late_decider"
+        else:
+            speeds = _DECISION_SPEED_BY_STARS.get(recruit.stars, _DECISION_SPEED_BY_STARS[3])
+            labels, weights = zip(*speeds)
+            recruit.decision_speed = rng.choices(labels, weights=weights, k=1)[0]
 
         # Score all offering teams
         team_scores: List[Tuple[str, float]] = []
@@ -2407,11 +2468,10 @@ def seed_recruiting_interest(
         for school in interested_pool:
             if len(interested_schools) >= n_interested:
                 break
-            # Elite/high academic schools won't waste time on academically at-risk kids
+            # Elite/high academic schools won't recruit ineligible kids
             tier_name = get_academic_tier(school, team_prestige.get(school, 50))
-            if tier_name in ("elite_academic", "high_academic") and r.academic_risk != "clear":
-                if r.gpa < ACADEMIC_TIERS[tier_name]["gpa_floor"] - 0.3:
-                    continue  # too far below — school won't even look
+            if tier_name in ("elite_academic", "high_academic") and r.academic_risk == "ineligible":
+                continue  # can't qualify — school won't even look
             interested_schools.append(school)
 
         # ── Set interest levels (hot / warm / cool) ──
@@ -2442,27 +2502,57 @@ def seed_recruiting_interest(
                 offering_schools.append(school)
             # else: school interested but can't offer due to academics
 
-        # Ineligible recruits can't get any offers
+        # Ineligible recruits can only go to low-prestige open-enrollment
+        # programs.  This funnels talent to small schools that could never
+        # normally land top recruits — they sign late, whoever will take them.
         if r.academic_risk == "ineligible":
-            offering_schools = []
+            low_prestige_threshold = 45
+            open_enrollment = [
+                t for t in team_names
+                if team_prestige.get(t, 50) <= low_prestige_threshold
+            ]
+            if open_enrollment:
+                n_low = max(1, min(5, len(open_enrollment)))
+                offering_schools = rng.sample(open_enrollment, min(n_low, len(open_enrollment)))
+                # Set interest for these schools — they're pursuing hard
+                for school in offering_schools:
+                    r.school_interest[school] = "hot"
+                    r.interest[school] = rng.randint(70, 95)
+            else:
+                offering_schools = []
+            # Force late signing — these kids figure it out at the last minute
+            r.decision_speed = "late_decider"
+            r.decision_date = "Post-Bowl Period"
 
         r.offers = offering_schools
 
-        # ── Top schools shortlist (top 3-5 from interested) ──
-        if len(interested_schools) >= 3 and grade in ("12th", "11th"):
+        # ── Top schools shortlist (top 3-5 from offers, fallback to interest) ──
+        # Use offering schools as the primary source so predictions stay grounded
+        shortlist_source = offering_schools if offering_schools else interested_schools
+        if len(shortlist_source) >= 3 and grade in ("12th", "11th"):
             # Weight by prestige + interest
             scored = [(s, team_prestige.get(s, 50) + r.interest.get(s, 50) + rng.uniform(-15, 15))
-                      for s in interested_schools]
+                      for s in shortlist_source]
+            scored.sort(key=lambda x: -x[1])
+            r.top_schools = [s for s, _ in scored[:min(5, len(scored))]]
+            if len(scored) >= 3:
+                r.finalist_schools = [s for s, _ in scored[:3]]
+        elif offering_schools and grade in ("12th", "11th"):
+            # Fewer than 3 offers — still use them
+            scored = [(s, team_prestige.get(s, 50) + r.interest.get(s, 50) + rng.uniform(-15, 15))
+                      for s in offering_schools]
             scored.sort(key=lambda x: -x[1])
             r.top_schools = [s for s, _ in scored[:min(5, len(scored))]]
             if len(scored) >= 3:
                 r.finalist_schools = [s for s, _ in scored[:3]]
 
         # ── Crystal Ball / StrikePrediction ──
-        if r.top_schools and grade in ("12th", "11th"):
+        # Only predict schools that have actually offered — no phantom predictions
+        cb_schools = [s for s in r.top_schools if s in r.offers]
+        if cb_schools and grade in ("12th", "11th"):
             total_score = 0
             school_scores = {}
-            for school in r.top_schools:
+            for school in cb_schools:
                 score = (team_prestige.get(school, 50) * r.prefers_prestige
                         + r.interest.get(school, 50) * 0.5
                         + rng.uniform(5, 25))
@@ -2476,12 +2566,13 @@ def seed_recruiting_interest(
                     pct = max(1, min(95, pct + rng.uniform(-10, 10)))
                     r.crystal_ball[school] = round(pct, 1)
 
-        # ── Decision traits ──
-        r.decision_speed = rng.choice(["early_decider", "normal", "normal", "normal", "late_decider"])
-        if r.decision_speed == "early_decider" and grade == "12th":
-            r.decision_date = rng.choice(["Early Signing Day", "Pre-Season Commitment", "Summer Commitment"])
-        elif grade == "12th":
-            r.decision_date = rng.choice([None, None, "National Signing Day", "Late Signing Day"])
+        # ── Decision traits (ineligible recruits already forced to late_decider) ──
+        if r.academic_risk != "ineligible":
+            r.decision_speed = rng.choice(["early_decider", "normal", "normal", "normal", "late_decider"])
+            if r.decision_speed == "early_decider" and grade == "12th":
+                r.decision_date = rng.choice(["Early Signing Day", "Pre-Season Commitment", "Summer Commitment"])
+            elif grade == "12th":
+                r.decision_date = rng.choice([None, None, "National Signing Day", "Late Signing Day"])
 
         # ── Recruiting timeline ──
         timeline = []
