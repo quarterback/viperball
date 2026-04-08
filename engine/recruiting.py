@@ -360,7 +360,7 @@ class Recruit:
 
     # Academic eligibility: computed from GPA + SAT
     # ~0.5% of all recruits end up academically ineligible (NCAA Clearinghouse fail)
-    academic_risk: str = "clear"   # "clear" | "at_risk" | "ineligible"
+    academic_risk: str = "clear"   # "clear" | "ineligible"
 
     # Scouted attributes — None means "not yet scouted"
     scouted_attrs: Dict[str, int] = field(default_factory=dict)
@@ -916,15 +916,16 @@ def generate_single_recruit(
     # Round to nearest 10 (SATs come in 10-point increments)
     sat_score = (sat_score // 10) * 10
 
-    # Academic risk: ~0.5% ineligible (NCAA Clearinghouse fail)
-    # ~5% at-risk (need to monitor, might lose eligibility)
+    # Academic risk: "ineligible" recruits can't qualify at top programs and
+    # are funneled to low-prestige open-enrollment schools as late signers.
+    # This creates a talent pipeline for small programs.  ~8% of recruits.
     if gpa < 2.0 or sat_score < 700:
-        academic_risk = "ineligible" if rng.random() < 0.3 else "at_risk"
+        academic_risk = "ineligible"
     elif gpa < 2.3 or sat_score < 820:
-        academic_risk = "at_risk" if rng.random() < 0.4 else "clear"
+        academic_risk = "ineligible" if rng.random() < 0.35 else "clear"
     elif rng.random() < 0.005:
         # Random clearinghouse issue (paperwork, transfer credits, etc.)
-        academic_risk = "at_risk"
+        academic_risk = "ineligible"
     else:
         academic_risk = "clear"
 
@@ -1423,10 +1424,13 @@ def build_recruit_shortlists(
         if not recruit.offers or recruit.signed:
             continue
 
-        # Assign decision speed
-        speeds = _DECISION_SPEED_BY_STARS.get(recruit.stars, _DECISION_SPEED_BY_STARS[3])
-        labels, weights = zip(*speeds)
-        recruit.decision_speed = rng.choices(labels, weights=weights, k=1)[0]
+        # Assign decision speed — ineligible recruits always sign late
+        if recruit.academic_risk == "ineligible":
+            recruit.decision_speed = "late_decider"
+        else:
+            speeds = _DECISION_SPEED_BY_STARS.get(recruit.stars, _DECISION_SPEED_BY_STARS[3])
+            labels, weights = zip(*speeds)
+            recruit.decision_speed = rng.choices(labels, weights=weights, k=1)[0]
 
         # Score all offering teams
         team_scores: List[Tuple[str, float]] = []
@@ -2353,11 +2357,10 @@ def seed_recruiting_interest(
         for school in interested_pool:
             if len(interested_schools) >= n_interested:
                 break
-            # Elite/high academic schools won't waste time on academically at-risk kids
+            # Elite/high academic schools won't recruit ineligible kids
             tier_name = get_academic_tier(school, team_prestige.get(school, 50))
-            if tier_name in ("elite_academic", "high_academic") and r.academic_risk != "clear":
-                if r.gpa < ACADEMIC_TIERS[tier_name]["gpa_floor"] - 0.3:
-                    continue  # too far below — school won't even look
+            if tier_name in ("elite_academic", "high_academic") and r.academic_risk == "ineligible":
+                continue  # can't qualify — school won't even look
             interested_schools.append(school)
 
         # ── Set interest levels (hot / warm / cool) ──
@@ -2388,9 +2391,27 @@ def seed_recruiting_interest(
                 offering_schools.append(school)
             # else: school interested but can't offer due to academics
 
-        # Ineligible recruits can't get any offers
+        # Ineligible recruits can only go to low-prestige open-enrollment
+        # programs.  This funnels talent to small schools that could never
+        # normally land top recruits — they sign late, whoever will take them.
         if r.academic_risk == "ineligible":
-            offering_schools = []
+            low_prestige_threshold = 45
+            open_enrollment = [
+                t for t in team_names
+                if team_prestige.get(t, 50) <= low_prestige_threshold
+            ]
+            if open_enrollment:
+                n_low = max(1, min(5, len(open_enrollment)))
+                offering_schools = rng.sample(open_enrollment, min(n_low, len(open_enrollment)))
+                # Set interest for these schools — they're pursuing hard
+                for school in offering_schools:
+                    r.school_interest[school] = "hot"
+                    r.interest[school] = rng.randint(70, 95)
+            else:
+                offering_schools = []
+            # Force late signing — these kids figure it out at the last minute
+            r.decision_speed = "late_decider"
+            r.decision_date = "Post-Bowl Period"
 
         r.offers = offering_schools
 
@@ -2434,12 +2455,13 @@ def seed_recruiting_interest(
                     pct = max(1, min(95, pct + rng.uniform(-10, 10)))
                     r.crystal_ball[school] = round(pct, 1)
 
-        # ── Decision traits ──
-        r.decision_speed = rng.choice(["early_decider", "normal", "normal", "normal", "late_decider"])
-        if r.decision_speed == "early_decider" and grade == "12th":
-            r.decision_date = rng.choice(["Early Signing Day", "Pre-Season Commitment", "Summer Commitment"])
-        elif grade == "12th":
-            r.decision_date = rng.choice([None, None, "National Signing Day", "Late Signing Day"])
+        # ── Decision traits (ineligible recruits already forced to late_decider) ──
+        if r.academic_risk != "ineligible":
+            r.decision_speed = rng.choice(["early_decider", "normal", "normal", "normal", "late_decider"])
+            if r.decision_speed == "early_decider" and grade == "12th":
+                r.decision_date = rng.choice(["Early Signing Day", "Pre-Season Commitment", "Summer Commitment"])
+            elif grade == "12th":
+                r.decision_date = rng.choice([None, None, "National Signing Day", "Late Signing Day"])
 
         # ── Recruiting timeline ──
         timeline = []
