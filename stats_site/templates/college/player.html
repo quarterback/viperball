@@ -57,6 +57,7 @@
   <tr><td style="color:var(--fg-dim)">Year</td><td>{{ player.year }}{% if player.redshirt %} <span class="tag">REDSHIRT</span>{% endif %}</td></tr>
   <tr><td style="color:var(--fg-dim)">Height / Weight</td><td>{{ player.height if player.height else '—' }} / {{ player.weight if player.weight else '—' }} lbs</td></tr>
   <tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ player.hometown_city }}{% if player.hometown_state %}, {{ player.hometown_state }}{% endif %}{% if player.hometown_country and player.hometown_country != 'USA' %} ({{ player.hometown_country }}){% endif %}</td></tr>
+  {% if player.high_school %}<tr><td style="color:var(--fg-dim)">High School</td><td>{{ player.high_school }}</td></tr>{% endif %}
   <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if player.overall >= 85 %}stat-elite{% elif player.overall >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ player.overall }}</td></tr>
   <tr><td style="color:var(--fg-dim)">Potential</td><td>{% for i in range(player.potential) %}&#9733;{% endfor %}{% for i in range(5 - player.potential) %}&#9734;{% endfor %} ({{ player.development }})</td></tr>
   {% if prestige %}<tr><td style="color:var(--fg-dim)">Team Prestige</td><td>{{ prestige }}</td></tr>{% endif %}
