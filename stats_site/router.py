@@ -6197,7 +6197,9 @@ def _get_or_create_pipeline(sess, sid):
         else:
             sess["_hs_pipeline"] = pipeline
         return pipeline
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -6220,7 +6222,9 @@ def _get_recruiting_pipeline():
             if pipeline:
                 return pipeline, sess.get("dynasty"), sid
         return None, None, None
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         return None, None, None
 
 
@@ -6310,7 +6314,12 @@ def recruiting_hs_rankings(request: Request):
     state_filter = request.query_params.get("state", "")
     search_q = request.query_params.get("q", "").strip()
 
-    pipeline, dynasty, sid = _get_recruiting_pipeline()
+    try:
+        pipeline, dynasty, sid = _get_recruiting_pipeline()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        pipeline, dynasty, sid = None, None, None
 
     board = []
     visible_attrs = []
