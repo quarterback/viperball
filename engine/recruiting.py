@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from engine.player_card import PlayerCard, _get_position_weights
+from scripts.generate_names import load_name_pools, REGION_TO_ORIGIN
 
 
 # ──────────────────────────────────────────────
@@ -615,49 +616,14 @@ _DEV_BY_STARS: Dict[int, List[Tuple[str, float]]] = {
     1: [("slow", 0.25), ("normal", 0.30), ("late_bloomer", 0.30), ("quick", 0.10), ("bust", 0.05)],
 }
 
-# Simple first/last name pools for recruit generation (no external file dependency)
-_FIRST_NAMES = [
-    "Aaliyah", "Abby", "Ada", "Alex", "Aliyah", "Alyssa", "Amara", "Amelia",
-    "Andrea", "Angel", "Anna", "Aria", "Ariana", "Ashley", "Autumn", "Avery",
-    "Bailey", "Bella", "Blake", "Brielle", "Brianna", "Brooklyn", "Callie",
-    "Cameron", "Carmen", "Casey", "Charlie", "Chelsea", "Claire", "Cora",
-    "Dakota", "Dani", "Danica", "Delaney", "Destiny", "Diana", "Drew",
-    "Elena", "Eliana", "Ella", "Emily", "Emma", "Eva", "Evelyn", "Faith",
-    "Finley", "Gabriella", "Gianna", "Grace", "Hailey", "Hannah", "Harper",
-    "Haven", "Hayden", "Isabella", "Ivy", "Jade", "Jamie", "Jasmine", "Jenna",
-    "Jordan", "Julia", "Kai", "Kaia", "Kayla", "Kendall", "Kennedy", "Kira",
-    "Layla", "Leah", "Lila", "Lily", "Logan", "Luna", "Mackenzie", "Madison",
-    "Malia", "Maya", "Mia", "Morgan", "Nadia", "Natalie", "Nia", "Nicole",
-    "Nora", "Olivia", "Paige", "Parker", "Peyton", "Piper", "Quinn", "Raven",
-    "Reagan", "Reese", "Riley", "Sage", "Samantha", "Sara", "Savannah",
-    "Sienna", "Skylar", "Sloane", "Sofia", "Sydney", "Tatum", "Taylor",
-    "Tessa", "Trinity", "Valentina", "Victoria", "Vivian", "Willow", "Zara",
-    "Zoe", "Maeve", "Kai", "Emery", "Rowan", "Phoenix", "Harley", "Remi",
-]
+# Lazy-loaded name pools from data/name_pools/ JSON files
+_name_pools_cache: Optional[Dict] = None
 
-_LAST_NAMES = [
-    "Adams", "Allen", "Anderson", "Baker", "Barnes", "Bell", "Bennett",
-    "Brooks", "Brown", "Bryant", "Burke", "Burns", "Butler", "Campbell",
-    "Carter", "Chen", "Clark", "Cole", "Coleman", "Collins", "Cook", "Cooper",
-    "Cox", "Cruz", "Davis", "Diaz", "Dixon", "Edwards", "Evans", "Fisher",
-    "Flores", "Ford", "Foster", "Garcia", "Gibson", "Gonzalez", "Graham",
-    "Gray", "Green", "Griffin", "Hall", "Hamilton", "Harris", "Hayes",
-    "Henderson", "Henry", "Hernandez", "Hill", "Howard", "Hughes", "Hunter",
-    "Jackson", "James", "Jenkins", "Johnson", "Jones", "Jordan", "Kelly",
-    "Kennedy", "Kim", "King", "Lee", "Lewis", "Long", "Lopez", "Marshall",
-    "Martin", "Martinez", "Mason", "Matthews", "McDonald", "Miller",
-    "Mitchell", "Moore", "Morgan", "Morris", "Murphy", "Murray", "Nelson",
-    "Nguyen", "Owens", "Parker", "Patterson", "Perez", "Perry", "Peterson",
-    "Phillips", "Porter", "Powell", "Price", "Quinn", "Reed", "Reynolds",
-    "Richardson", "Rivera", "Roberts", "Robinson", "Rodriguez", "Rogers",
-    "Ross", "Russell", "Sanders", "Scott", "Shaw", "Simmons", "Smith",
-    "Spencer", "Stewart", "Sullivan", "Taylor", "Thomas", "Thompson",
-    "Torres", "Turner", "Walker", "Wallace", "Ward", "Washington", "Watson",
-    "Webb", "West", "White", "Williams", "Wilson", "Wood", "Wright", "Young",
-    "O'Brien", "O'Connor", "O'Neill", "McBride", "McCoy", "McLean",
-    "Nakamura", "Okafor", "Patel", "Singh", "Tanaka", "Tremblay", "Volkov",
-    "Wagner", "Weber", "Zhao",
-]
+def _get_name_pools() -> Dict:
+    global _name_pools_cache
+    if _name_pools_cache is None:
+        _name_pools_cache = load_name_pools(gender='female')
+    return _name_pools_cache
 
 _HOMETOWN_BY_REGION = {
     "northeast": [
@@ -871,8 +837,125 @@ _REAL_HS_BY_CITY = {
 
 
 def _generate_recruit_name(region: str, rng: random.Random) -> Tuple[str, str]:
-    first = rng.choice(_FIRST_NAMES)
-    last = rng.choice(_LAST_NAMES)
+    """Generate a recruit name using region-appropriate name pools."""
+    pools = _get_name_pools()
+    first_names = pools['first_names']
+    surnames = pools['surnames']
+
+    # Resolve origin from region
+    origin_entry = REGION_TO_ORIGIN.get(region)
+    if origin_entry:
+        origin = origin_entry[0]
+    else:
+        origin = 'american'
+
+    # --- First name selection ---
+    _first_pool_map = {
+        'australian': 'australian',
+        'canadian_english': 'canadian_english',
+        'canadian_french': 'canadian_french',
+        'new_zealand': 'new_zealand',
+        'pacific_islander': 'pacific_islander',
+        'uk_european': 'uk_european',
+        'latin_american': 'latin_american',
+        'african': 'african',
+        'caribbean': 'caribbean',
+        'nordic': 'nordic',
+        'irish_european': 'irish_european',
+        'east_asian': 'east_asian',
+        'southeast_asian': 'southeast_asian',
+        'french': 'french',
+        'german': 'german',
+        'spanish': 'spanish',
+        'italian': 'italian',
+        'dutch': 'dutch',
+        'russian': 'russian',
+        'turkish': 'turkish',
+        'arabic': 'arabic',
+        'indian': 'indian',
+        'portuguese': 'portuguese',
+        'polish': 'polish',
+        'czech': 'czech',
+        'central_asian': 'central_asian',
+        'ethiopian': 'ethiopian',
+        'east_african': 'east_african',
+        'malagasy': 'malagasy',
+        'lusophone_african': 'lusophone_african',
+        'vietnamese': 'vietnamese',
+        'cambodian': 'cambodian',
+    }
+    if origin == 'american':
+        _american_region_map = {
+            'northeast': 'american_northeast',
+            'mid_atlantic': 'american_northeast',
+            'south': 'american_south',
+            'midwest': 'american_midwest',
+            'west_coast': 'american_west',
+            'texas_southwest': 'american_texas_southwest',
+        }
+        first_pool_key = _american_region_map.get(region, 'american_midwest')
+    else:
+        first_pool_key = _first_pool_map.get(origin, 'american_midwest')
+
+    if first_pool_key in first_names:
+        first = rng.choice(first_names[first_pool_key])
+    else:
+        first = rng.choice(first_names['american_midwest'])
+
+    # --- Surname selection ---
+    if origin == 'american':
+        weights = {
+            'american_general': 0.50,
+            'irish': 0.10,
+            'italian': 0.08,
+            'german': 0.07,
+            'latino_hispanic': 0.10,
+            'black_american': 0.08,
+            'chinese': 0.02,
+            'korean': 0.02,
+            'vietnamese': 0.02,
+            'filipino': 0.01,
+        }
+        if region == 'northeast':
+            weights['irish'] = 0.15
+            weights['italian'] = 0.12
+        elif region == 'south':
+            weights['black_american'] = 0.15
+            weights['latino_hispanic'] = 0.12
+        elif region == 'texas_southwest':
+            weights['latino_hispanic'] = 0.25
+        elif region == 'west_coast':
+            weights['latino_hispanic'] = 0.15
+            weights['chinese'] = 0.05
+            weights['filipino'] = 0.03
+        total = sum(weights.values())
+        weights = {k: v / total for k, v in weights.items()}
+        rand = rng.random()
+        cumulative = 0.0
+        surname_pool_key = 'american_general'
+        for pool_name, weight in weights.items():
+            cumulative += weight
+            if rand <= cumulative:
+                surname_pool_key = pool_name
+                break
+    elif origin == 'canadian_english':
+        if rng.random() < 0.4:
+            surname_pool_key = rng.choice(['irish', 'australian'])
+        else:
+            surname_pool_key = 'american_general'
+    elif origin == 'canadian_french':
+        surname_pool_key = 'canadian_french'
+    elif origin == 'nordic':
+        surname_pool_key = 'nordic' if 'nordic' in surnames else 'scandinavian'
+    elif origin == 'irish_european':
+        surname_pool_key = 'irish'
+    else:
+        surname_pool_key = origin
+
+    if surname_pool_key not in surnames:
+        surname_pool_key = 'american_general'
+
+    last = rng.choice(surnames[surname_pool_key])
     return first, last
 
 

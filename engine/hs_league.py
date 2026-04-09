@@ -154,10 +154,11 @@ def _generate_hs_player(
     rng: random.Random,
 ) -> HSPlayer:
     """Generate a single HS player with year-appropriate stats."""
-    from engine.recruiting import _FIRST_NAMES, _LAST_NAMES, _STAR_DISTRIBUTION, _DEV_BY_STARS
+    from engine.recruiting import _STAR_DISTRIBUTION, _DEV_BY_STARS, _generate_recruit_name
+    from scripts.generate_names import STATE_TO_REGION
 
-    first = rng.choice(_FIRST_NAMES)
-    last = rng.choice(_LAST_NAMES)
+    region = STATE_TO_REGION.get(state, 'midwest')
+    first, last = _generate_recruit_name(region, rng)
     lo, hi = HS_STAT_RANGES[year]
 
     def _stat():
