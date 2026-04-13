@@ -4286,6 +4286,46 @@ class ViperballEngine:
             return 60.0
         return sum(p.overall for p in players) / len(players)
 
+    def _backup_talent_gap_ok(self, starter, backup, severity: str = "medium") -> bool:
+        """Return True if ``backup`` is close enough in OVR to ``starter`` to
+        justify a performance-based swap under the current score state.
+
+        Motivating case: don't pull an OVR 77 starter for an OVR 40 backup
+        in a close game just because the starter made a mistake — the bench
+        can't help you win.  A near-peer backup is worth the swap; a scrub
+        is not.
+
+        ``severity`` controls the gap tolerance — different hooks have
+        different bars for "unacceptable starter" and should weigh the
+        backup drop-off accordingly:
+
+        - ``"soft"``   — coaching preference swap (change-of-pace QB, sub
+                         an ineffective runner).  The starter *might* turn
+                         it around, so the backup needs to be close.
+                         Close game ≤5 OVR, loose game ≤12 OVR.
+        - ``"medium"`` — real problem (multiple fumbles, 3+ turnovers).
+                         Starter needs to come out, but a hopeless backup
+                         still doesn't help.  Close ≤8 OVR, loose ≤15 OVR.
+        - ``"hard"``   — no gap check (always returns True).  Reserved for
+                         benchings where the starter must come out
+                         regardless (injury, ejection).
+
+        "Close game" means ``abs(score_diff) <= 14``.  In blowouts or
+        garbage-time states the gap tolerance widens because the cost of a
+        worse player is lower (game is already decided) and the value of
+        developing the backup is higher.
+        """
+        if severity == "hard":
+            return True
+        starter_ovr = getattr(starter, "overall", 70)
+        backup_ovr = getattr(backup, "overall", 60)
+        ovr_gap = starter_ovr - backup_ovr
+        is_close = abs(self._get_score_diff()) <= 14
+        if severity == "soft":
+            return ovr_gap <= (5 if is_close else 12)
+        # "medium" — default for turnovers / fumbles / inefficacy
+        return ovr_gap <= (8 if is_close else 15)
+
     def _leading_team_talent_edge(self) -> float:
         """OVR points by which the *leading* team outclasses the trailing team.
 
@@ -12439,19 +12479,42 @@ class ViperballEngine:
                 should_bench = False
                 reason = ""
 
-                # 2a. Multiple fumbles — coaches lose trust
+                # Helper: best available backup at this position, or None.
+                # Several of the checks below need both "does a backup
+                # exist?" and "is the backup close enough in OVR?" — we
+                # compute it once here and reuse.
+                def _best_backup_for(player):
+                    pool = [b for b in team.players
+                            if b.position == player.position
+                            and b.name not in already_out
+                            and b.name != player.name]
+                    if not pool:
+                        return None
+                    return max(pool, key=lambda b: getattr(b, 'overall', 0))
+
+                # 2a. Multiple fumbles — coaches lose trust.  Medium
+                # severity: fumbles are a real problem but swapping in
+                # a 40-OVR backup for an 80-OVR fumbler in a close game
+                # still hurts more than it helps.
                 fumbles = getattr(p, 'game_fumbles', 0)
                 if fumbles >= 2:
-                    should_bench = True
-                    reason = "fumbles"
+                    backup = _best_backup_for(p)
+                    if backup and self._backup_talent_gap_ok(p, backup, "medium"):
+                        should_bench = True
+                        reason = "fumbles"
 
-                # 2b. Zeroback with multiple turnovers (fumbles + INTs thrown)
+                # 2b. Zeroback with multiple turnovers (fumbles + INTs thrown).
+                # Medium severity: ZB actively losing the game needs to come
+                # out, but the backup has to be at least remotely capable of
+                # running the offense.
                 if p.position == "Zeroback":
                     kp_ints = getattr(p, 'game_kick_pass_interceptions', 0)
                     total_turnovers = fumbles + kp_ints
-                    if total_turnovers >= 3:
-                        should_bench = True
-                        reason = "turnovers"
+                    if not should_bench and total_turnovers >= 3:
+                        backup = _best_backup_for(p)
+                        if backup and self._backup_talent_gap_ok(p, backup, "medium"):
+                            should_bench = True
+                            reason = "turnovers"
 
                     # 2b-i. "Change of pace" ZB swap — real coaches pull a
                     # QB who's getting picked off repeatedly, even if the
@@ -12459,58 +12522,42 @@ class ViperballEngine:
                     # with poor completion%, which indicates the defense
                     # has the starter's number.
                     #
-                    # Talent-gap sanity check: don't pull a OVR 77 starter
-                    # for a OVR 40 backup in a close game — the bench can't
-                    # help you win.  The change-of-pace only works when
-                    # there's a comparable backup to rotate in.  In a
-                    # blowout we tolerate a bigger drop-off because the
-                    # game isn't winnable anyway.  In a close game we
-                    # require a near-peer backup (within ~5 OVR).
+                    # Soft severity: this is a coaching preference more
+                    # than a necessity — the starter *might* turn it
+                    # around, so the backup needs to be close in OVR.
                     if not should_bench and kp_ints >= 2:
                         attempts = getattr(p, 'game_kick_pass_attempts', 0)
                         completions = getattr(p, 'game_kick_pass_completions', 0)
                         comp_pct = (completions / attempts) if attempts >= 6 else 1.0
                         if comp_pct < 0.40:
-                            zb_backups = [b for b in team.players
-                                          if b.position == "Zeroback"
-                                          and b.name not in already_out
-                                          and b.name != p.name]
-                            if zb_backups:
-                                best_backup = max(
-                                    zb_backups,
-                                    key=lambda b: getattr(b, 'overall', 0),
-                                )
-                                starter_ovr = getattr(p, 'overall', 70)
-                                backup_ovr = getattr(best_backup, 'overall', 60)
-                                ovr_gap = starter_ovr - backup_ovr
+                            backup = _best_backup_for(p)
+                            if backup and self._backup_talent_gap_ok(p, backup, "soft"):
+                                # Hook probability scales with quarter:
+                                # Q1 30%, Q2 50%, Q3+ 70%
+                                hook_prob = 0.30 + 0.20 * max(0, self.state.quarter - 1)
+                                hook_prob = min(0.70, hook_prob)
+                                if random.random() < hook_prob:
+                                    should_bench = True
+                                    reason = "change_of_pace"
 
-                                abs_diff = abs(self._get_score_diff())
-                                if abs_diff <= 14:
-                                    # Close game: near-peer only (≤5 OVR)
-                                    talent_ok = ovr_gap <= 5
-                                else:
-                                    # Loose/blowout game: tolerate ≤12 OVR
-                                    talent_ok = ovr_gap <= 12
-
-                                if talent_ok:
-                                    # Hook probability scales with quarter:
-                                    # Q1 30%, Q2 50%, Q3+ 70%
-                                    hook_prob = 0.30 + 0.20 * max(0, self.state.quarter - 1)
-                                    hook_prob = min(0.70, hook_prob)
-                                    if random.random() < hook_prob:
-                                        should_bench = True
-                                        reason = "change_of_pace"
-
-                # 2c. Ball carrier with lots of carries but terrible YPC
+                # 2c. Ball carrier with lots of carries but terrible YPC.
+                # Soft severity: coach is gambling on a change-of-pace
+                # for production, not addressing a ball-security crisis.
+                # The gamble only makes sense with a near-peer backup —
+                # swapping a grinding OVR 80 HB for an OVR 55 backup
+                # just because YPC is low is a worse bet than letting
+                # the starter keep working.
                 carries = getattr(p, 'game_rush_carries', 0)
                 rush_yards = getattr(p, 'game_rushing_yards', 0)
-                if carries >= 8 and carries > 0:
+                if not should_bench and carries >= 8:
                     ypc = rush_yards / carries
                     if ypc < 1.5:
-                        # ~40% chance coach pulls them — coaches give leeway
-                        if random.random() < 0.40:
-                            should_bench = True
-                            reason = "ineffective"
+                        backup = _best_backup_for(p)
+                        if backup and self._backup_talent_gap_ok(p, backup, "soft"):
+                            # ~40% chance coach pulls them — coaches give leeway
+                            if random.random() < 0.40:
+                                should_bench = True
+                                reason = "ineffective"
 
                 if should_bench and not self._is_last_kicker(team, p, already_out):
                     # Check that a backup exists
