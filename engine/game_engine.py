@@ -4249,6 +4249,66 @@ class ViperballEngine:
             return diff >= 25
         return False
 
+    def _is_garbage_time_trailing(self) -> bool:
+        """Trailing-team counterpart to ``_is_blowout``.
+
+        When the deficit is statistically insurmountable, the coaching
+        goal for the OFFENSE shifts from "win the game" to "score any
+        points still available" — shutout prevention, stat accumulation,
+        and dignity scoring.  In this state, the normal Q4 futility rule
+        (refuse kicks that can't tie or win) is inverted: no kick will
+        win, but any kick beats being shut out.
+
+        Mirrors ``_is_blowout`` thresholds so that when one team is in a
+        blowout (pulling starters), the other is in garbage-time-trailing
+        (taking any available points).  Analogous to late-game blowouts
+        in other sports where backups try to score against the opposing
+        starters who are coasting.
+
+        Triggers (offensive team is trailing by):
+          - 20+ in Q3 or Q4 (any time), OR
+          - 25+ in late Q2 (≤5:00 remaining)
+        """
+        score_diff = self._get_score_diff()
+        if score_diff >= 0:
+            return False
+        deficit = abs(score_diff)
+        if self.state.quarter >= 3:
+            return deficit >= 20
+        if self.state.quarter == 2 and self.state.time_remaining <= 300:
+            return deficit >= 25
+        return False
+
+    def _team_avg_overall(self, team) -> float:
+        """Mean ``player.overall`` across the given team's roster."""
+        players = [p for p in team.players if getattr(p, "overall", None) is not None]
+        if not players:
+            return 60.0
+        return sum(p.overall for p in players) / len(players)
+
+    def _leading_team_talent_edge(self) -> float:
+        """OVR points by which the *leading* team outclasses the trailing team.
+
+        - Positive: the leading team is also the more talented side (a
+          true talent mismatch — the kind of non-conference cupcake
+          matchup where the big program should rest starters).
+        - Negative: the leading team is actually the underdog on paper
+          (upset in progress — no reason to pull starters).
+        - Zero: evenly matched / tied game.
+
+        Used by ``_blowout_tier`` to escalate rotation when a big lead
+        is paired with a big talent gap — and explicitly NOT when the
+        weaker team is pulling an upset (those deserve full effort).
+        """
+        score_diff = self.state.home_score - self.state.away_score
+        if score_diff == 0:
+            return 0.0
+        talent_diff = (self._team_avg_overall(self.home_team)
+                       - self._team_avg_overall(self.away_team))
+        # If home leads, return home's talent edge.
+        # If away leads, return away's talent edge (flip sign).
+        return talent_diff if score_diff > 0 else -talent_diff
+
     def _blowout_tier(self, score_diff: float) -> int:
         """Return the blowout severity tier for the WINNING team.
 
@@ -4261,29 +4321,68 @@ class ViperballEngine:
                 Trigger: 25+ pts Q3+, or 30+ pts Q2.
         Tier 3 (Deep bench): Also rest defensive starters.
                 Trigger: 35+ pts Q3+.
+
+        V3.2 — Mismatch mercy rotation:
+            When the leading team outclasses the trailing team by a
+            significant talent margin (≥6 OVR pts) AND the lead is 30+
+            by late Q2 (halftime) or any point in Q3+, escalate one
+            tier.  This is the "don't burn starters in a non-conference
+            cupcake" rule — it protects big programs from injuries in
+            meaningless early-season mismatches.
+
+            Not applied when the leading team is the underdog on paper
+            (upset in progress — starters stay in to close it out).
         """
         if score_diff < 20:
             return 0
         quarter = self.state.quarter
         time_left = self.state.time_remaining
 
+        tier = 0
         if quarter >= 3:
             if score_diff >= 35:
-                return 3
-            if score_diff >= 25:
-                return 2
-            # Q4 under 5 minutes with 20+ lead — no reason for starters
-            # to still be in, pull them
-            if quarter == 4 and time_left <= 300 and score_diff >= 20:
-                return 2
-            if score_diff >= 20:
-                return 1
+                tier = 3
+            elif score_diff >= 25:
+                tier = 2
+            elif quarter == 4 and time_left <= 300 and score_diff >= 20:
+                # Q4 under 5 minutes with 20+ lead — no reason for starters
+                # to still be in, pull them
+                tier = 2
+            elif score_diff >= 20:
+                tier = 1
         elif quarter == 2 and time_left <= 300:
             if score_diff >= 30:
-                return 2
-            if score_diff >= 25:
-                return 1
-        return 0
+                tier = 2
+            elif score_diff >= 25:
+                tier = 1
+
+        # Mismatch mercy bump: escalate rotation when a big lead is
+        # paired with a real talent gap.  Caps at tier 3.
+        #
+        # Philosophy: in a clear non-conference cupcake mismatch, pull
+        # BOTH offensive and defensive starters together (tier 3).
+        # There's no upside to leaving starters — on either side of the
+        # ball — exposed to contact in a game that's already decided.
+        # If the lead dissipates (trailing team mounts a comeback), the
+        # score check naturally drops tier back down.
+        talent_edge = self._leading_team_talent_edge()
+        is_mismatch = talent_edge >= 6.0
+        if is_mismatch:
+            # Halftime rule: 30+ lead at/near halftime → pull offense AND
+            # defense starters at the start of Q3.  "Don't burn starters
+            # in a non-conference cupcake."
+            if quarter == 2 and time_left <= 300 and score_diff >= 30:
+                tier = max(tier, 3)
+            elif quarter == 3 and time_left >= 540 and score_diff >= 30:
+                # Opening minute of Q3 with a 30+ halftime lead — same rule
+                tier = max(tier, 3)
+            # General mismatch escalator: bump one tier whenever a blowout
+            # is already forming against an outmatched opponent.  At tier 2
+            # already (25+ in Q3+) this makes it tier 3 — both sides rest.
+            elif tier >= 1 and score_diff >= 20:
+                tier = min(3, tier + 1)
+
+        return tier
 
     def _spread_the_love_offense(self, eligible, weights, for_receiving=False, play_family=None):
         """Rating-driven touch distribution.
@@ -5689,9 +5788,16 @@ class ViperballEngine:
         # (5 pts) or place kick (3 pts) must at least tie the game.
         # Outside Q4 or with plenty of time, kicking for partial points
         # is fine because there are more possessions coming.
+        #
+        # ── V3.2: Garbage-time inversion ──
+        # When the deficit is already insurmountable (≥20 pts in Q3/Q4),
+        # futility is OFF.  No kick can win, but any kick beats a shutout.
+        # This is the trailing-team mirror of the blowout clock-chew rule.
+        garbage_trailing = self._is_garbage_time_trailing()
         dk_futile = False
         pk_futile = False
-        if quarter == 4 and time_left <= 180 and score_diff < 0:
+        if (quarter == 4 and time_left <= 180 and score_diff < 0
+                and not garbage_trailing):
             deficit = abs(score_diff)
             if deficit > 5:
                 dk_futile = True  # Even a snap kick can't tie — need TD
@@ -5715,6 +5821,19 @@ class ViperballEngine:
             is_bonus = getattr(self, '_is_bonus_drive', False)
             if desperation_clock and is_bonus and not dk_futile and dk_success >= 0.55:
                 return PlayType.DROP_KICK
+
+            # V3.2 — Garbage-time trailing: start cashing in on 4th down.
+            # Don't burn two more downs against a defense that's been
+            # shutting you down all game.  Take the snap kick if it's
+            # a reasonable look; chip-shot FGs only if the range is
+            # automatic.  Mirrors the "put subs in during a blowout"
+            # concept — garbage-time scoring is real in every sport.
+            if garbage_trailing:
+                if fg_distance <= dk_comfort and dk_success >= 0.50:
+                    return PlayType.DROP_KICK
+                if fg_distance <= 35 and pk_success >= 0.75:
+                    return PlayType.PLACE_KICK
+
             return None
 
         # ── Determine best available kick ──
@@ -5755,6 +5874,17 @@ class ViperballEngine:
                 if not dk_futile and dk_success >= 0.35:
                     return PlayType.DROP_KICK
                 if not pk_futile and pk_success >= 0.40:
+                    return PlayType.PLACE_KICK
+
+            # V3.2 — Garbage-time trailing: don't save for 6th.
+            # If the offense has struggled to convert all game, gambling
+            # the last kick opportunity on a 6th-down conversion against
+            # an elite defensive clamp is a bad bet.  Take the points
+            # available now.
+            if garbage_trailing:
+                if fg_distance <= dk_comfort and dk_success >= 0.40:
+                    return PlayType.DROP_KICK
+                if fg_distance <= 40 and pk_success >= 0.65:
                     return PlayType.PLACE_KICK
 
             # Default: advance and kick on 6th.
@@ -12322,6 +12452,54 @@ class ViperballEngine:
                     if total_turnovers >= 3:
                         should_bench = True
                         reason = "turnovers"
+
+                    # 2b-i. "Change of pace" ZB swap — real coaches pull a
+                    # QB who's getting picked off repeatedly, even if the
+                    # game is still winnable.  Trigger at 2+ INTs paired
+                    # with poor completion%, which indicates the defense
+                    # has the starter's number.
+                    #
+                    # Talent-gap sanity check: don't pull a OVR 77 starter
+                    # for a OVR 40 backup in a close game — the bench can't
+                    # help you win.  The change-of-pace only works when
+                    # there's a comparable backup to rotate in.  In a
+                    # blowout we tolerate a bigger drop-off because the
+                    # game isn't winnable anyway.  In a close game we
+                    # require a near-peer backup (within ~5 OVR).
+                    if not should_bench and kp_ints >= 2:
+                        attempts = getattr(p, 'game_kick_pass_attempts', 0)
+                        completions = getattr(p, 'game_kick_pass_completions', 0)
+                        comp_pct = (completions / attempts) if attempts >= 6 else 1.0
+                        if comp_pct < 0.40:
+                            zb_backups = [b for b in team.players
+                                          if b.position == "Zeroback"
+                                          and b.name not in already_out
+                                          and b.name != p.name]
+                            if zb_backups:
+                                best_backup = max(
+                                    zb_backups,
+                                    key=lambda b: getattr(b, 'overall', 0),
+                                )
+                                starter_ovr = getattr(p, 'overall', 70)
+                                backup_ovr = getattr(best_backup, 'overall', 60)
+                                ovr_gap = starter_ovr - backup_ovr
+
+                                abs_diff = abs(self._get_score_diff())
+                                if abs_diff <= 14:
+                                    # Close game: near-peer only (≤5 OVR)
+                                    talent_ok = ovr_gap <= 5
+                                else:
+                                    # Loose/blowout game: tolerate ≤12 OVR
+                                    talent_ok = ovr_gap <= 12
+
+                                if talent_ok:
+                                    # Hook probability scales with quarter:
+                                    # Q1 30%, Q2 50%, Q3+ 70%
+                                    hook_prob = 0.30 + 0.20 * max(0, self.state.quarter - 1)
+                                    hook_prob = min(0.70, hook_prob)
+                                    if random.random() < hook_prob:
+                                        should_bench = True
+                                        reason = "change_of_pace"
 
                 # 2c. Ball carrier with lots of carries but terrible YPC
                 carries = getattr(p, 'game_rush_carries', 0)
