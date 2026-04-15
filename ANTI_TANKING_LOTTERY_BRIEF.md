@@ -21,6 +21,11 @@ NBA tanking exists because the expected value of a top pick exceeds the value of
 | 5 | **RCL (Rolling Competitive Lottery)** — my full proposal | Multi-year coefficient + intra-tier head-to-head bonus + #1 pick cap (no repeat #1 in 5 years, no top-3 more than twice in 5) |
 | 6 | **Lottery tournament** | Bottom 8 teams play single-elim; winning gets you better picks |
 | 7 | **Pure inversion** | Best non-playoff team gets the best odds — rewards competitive failure, not failure |
+| 8 | **Gold Plan (PWHL)** | Draft order = wins accumulated *after* a team is mathematically eliminated from playoff contention. The team with the most post-elimination wins picks first. Already in live use by the PWHL — provides real-world behavioral data, not just theory. |
+
+### Why the Gold Plan matters
+
+The Gold Plan is the only system on this list that has been **actually deployed** in a top-tier pro league. It's also the most surgical fix — it doesn't replace the lottery framework, it just changes what determines order *within* the non-playoff group. That makes it incrementally adoptable in a way that RCL, inversion, or a tournament are not. The simulator should treat it as a near-baseline alongside Current NBA, since it's the realistic policy alternative an actual league might adopt.
 
 ## RCL spec (the one I'm actually pushing)
 
