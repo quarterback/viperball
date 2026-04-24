@@ -3132,9 +3132,9 @@ def offseason_complete(session_id: str):
     offseason = _require_offseason(session)
 
     # ── Persist roster state for next season ──
-    # Apply portal transfers and recruiting results to player_cards,
-    # then save them so dynasty_start_season() can rebuild teams from
-    # developed rosters instead of loading fresh from disk.
+    # Apply portal transfers, drop graduates, and add signed recruits to
+    # player_cards so dynasty_start_season() rebuilds next year's teams from
+    # the developed/promoted rosters instead of loading freshmen from disk.
     player_cards = offseason.get("player_cards", {})
 
     if player_cards:
@@ -3151,6 +3151,18 @@ def offseason_complete(session_id: str):
                     dest_cards = player_cards.get(entry.committed_to, [])
                     dest_cards.extend(transferred)
                     player_cards[entry.committed_to] = dest_cards
+
+        # Drop graduating seniors so they don't carry over as roster zombies.
+        for team_name, cards in list(player_cards.items()):
+            player_cards[team_name] = [c for c in cards if c.year != "Graduate"]
+
+        # Promote signed recruits to PlayerCards on their new team's roster.
+        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
+        for team_name, recruits in signed_recruits.items():
+            roster = player_cards.setdefault(team_name, [])
+            for recruit in recruits:
+                roster.append(recruit.to_player_card(team_name))
+        dynasty._pending_signed_recruits = None
 
         # Serialize rosters for persistence
         dynasty._next_season_rosters = {}
