@@ -3003,7 +3003,7 @@ def offseason_recruiting_offer(session_id: str, req: RecruitOfferRequest):
 
 @app.post("/sessions/{session_id}/offseason/recruiting/resolve")
 def offseason_recruiting_resolve(session_id: str):
-    from engine.recruiting import auto_recruit_team, simulate_recruit_decisions
+    from engine.recruiting import auto_recruit_team, simulate_phased_signing
     session = _get_session(session_id)
     dynasty = _require_dynasty(session)
     offseason = _require_offseason(session)
@@ -3014,7 +3014,8 @@ def offseason_recruiting_resolve(session_id: str):
         raise HTTPException(status_code=400, detail="No recruiting board found")
 
     human_team = dynasty.coach.team_name
-    rng = random.Random(dynasty.current_year + 13)
+    year = dynasty.current_year
+    rng = random.Random(year + 13)
     team_regions = dynasty._estimate_team_regions()
 
     boards = {human_team: recruit_board}
@@ -3022,6 +3023,11 @@ def offseason_recruiting_resolve(session_id: str):
 
     graduating = offseason.get("graduating", {})
     portal = offseason.get("portal")
+
+    player_cards = offseason.get("player_cards", {})
+    team_rosters: Dict[str, list] = {}
+    for tn, cards in player_cards.items():
+        team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
 
     for team_name in dynasty.team_histories:
         if team_name == human_team:
@@ -3040,7 +3046,7 @@ def offseason_recruiting_resolve(session_id: str):
                 1 for e in portal.entries
                 if e.origin_team == team_name and e.committed_to and e.committed_to != team_name
             )
-        open_spots = max(3, min(12, grads + portal_losses - portal_adds))
+        open_spots = max(6, min(12, grads + portal_losses - portal_adds + 4))
 
         board, nil = auto_recruit_team(
             team_name=team_name,
@@ -3050,6 +3056,7 @@ def offseason_recruiting_resolve(session_id: str):
             scholarships=open_spots,
             nil_budget=nil_budget,
             rng=rng,
+            current_roster=team_rosters.get(team_name),
         )
         boards[team_name] = board
         all_nil[team_name] = nil
@@ -3067,21 +3074,40 @@ def offseason_recruiting_resolve(session_id: str):
         if human_nil_prog:
             human_nil_prog.recruiting_pool += int(recruit_nil_boost * 0.3)
 
-    signed = simulate_recruit_decisions(
+    # Phased signing so the Signing Day Tracker has early/regular/post-bowl data.
+    phased = simulate_phased_signing(
         pool=recruit_pool,
         team_boards=boards,
         team_prestige=recruiting_prestige,
         team_regions=team_regions,
         nil_offers=all_nil,
         rng=rng,
+        team_rosters=team_rosters if team_rosters else None,
     )
+    signed = phased["signed_by_team"]
 
-    rankings = []
+    rankings_tuples = []
     for team, recruits in signed.items():
-        if recruits:
-            avg = sum(r.stars for r in recruits) / len(recruits)
-            rankings.append({"team": team, "avg_stars": round(avg, 2), "count": len(recruits)})
-    rankings.sort(key=lambda x: (-x["avg_stars"], -x["count"]))
+        scholarship = [r for r in recruits if not getattr(r, "is_walkon", False)]
+        if scholarship:
+            avg = sum(r.stars for r in scholarship) / len(scholarship)
+            rankings_tuples.append((team, round(avg, 2), len(scholarship)))
+    rankings_tuples.sort(key=lambda x: (-x[1], -x[2]))
+    rankings = [
+        {"team": t, "avg_stars": s, "count": c} for (t, s, c) in rankings_tuples
+    ]
+
+    # Persist so the stats-site Signing Day Tracker can read this year's data.
+    dynasty.recruiting_history[year] = {
+        "class_rankings": rankings_tuples,
+        "signed_count": {t: len(r) for t, r in signed.items()},
+        "pool_size": len(recruit_pool),
+        "signing_log": phased.get("signing_log", []),
+        "phase_summary": phased.get("phase_summary", {}),
+        "walkons": {},
+    }
+    dynasty._last_recruit_pool = recruit_pool
+    dynasty._pending_signed_recruits = signed
 
     offseason["phase"] = "ready"
 
@@ -3093,6 +3119,7 @@ def offseason_recruiting_resolve(session_id: str):
         "human_signed_count": len(human_signed),
         "total_signed": sum(len(v) for v in signed.values()),
         "offseason_phase": "ready",
+        "phase_summary": phased.get("phase_summary", {}),
     }
 
 
@@ -3105,9 +3132,9 @@ def offseason_complete(session_id: str):
     offseason = _require_offseason(session)
 
     # ── Persist roster state for next season ──
-    # Apply portal transfers and recruiting results to player_cards,
-    # then save them so dynasty_start_season() can rebuild teams from
-    # developed rosters instead of loading fresh from disk.
+    # Apply portal transfers, drop graduates, and add signed recruits to
+    # player_cards so dynasty_start_season() rebuilds next year's teams from
+    # the developed/promoted rosters instead of loading freshmen from disk.
     player_cards = offseason.get("player_cards", {})
 
     if player_cards:
@@ -3124,6 +3151,18 @@ def offseason_complete(session_id: str):
                     dest_cards = player_cards.get(entry.committed_to, [])
                     dest_cards.extend(transferred)
                     player_cards[entry.committed_to] = dest_cards
+
+        # Drop graduating seniors so they don't carry over as roster zombies.
+        for team_name, cards in list(player_cards.items()):
+            player_cards[team_name] = [c for c in cards if c.year != "Graduate"]
+
+        # Promote signed recruits to PlayerCards on their new team's roster.
+        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
+        for team_name, recruits in signed_recruits.items():
+            roster = player_cards.setdefault(team_name, [])
+            for recruit in recruits:
+                roster.append(recruit.to_player_card(team_name))
+        dynasty._pending_signed_recruits = None
 
         # Serialize rosters for persistence
         dynasty._next_season_rosters = {}

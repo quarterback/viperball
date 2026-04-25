@@ -1116,6 +1116,7 @@ class Dynasty:
         year = self.current_year  # already advanced by advance_season
         prev_year = year - 1
         result: dict = {}
+        human_team = self.coach.team_name
 
         # ── 1. Update team prestige ──
         # Prestige now updates per-game during the season (via Season.team_prestige).
@@ -1218,7 +1219,6 @@ class Dynasty:
                 )
 
         # CPU teams evaluate and potentially fire coaches
-        human_team = self.coach.team_name
         coaching_changes: Dict[str, list] = {}
         fired_roles: Dict[str, List[str]] = {}
 
@@ -1514,15 +1514,16 @@ class Dynasty:
         scholarships: Dict[str, int] = {}
         nil_budgets: Dict[str, float] = {}
         for team_name in self.team_histories:
-            # Rough scholarship count: roster target (36) minus current players
-            # minus portal additions plus graduating players
+            # Floor of 6 keeps net-positive portal seasons from collapsing
+            # to a ~3-player class; +4 covers redshirts & walk-on conversions
+            # that _roster_maintenance does not charge against scholarships.
             portal_adds = len(portal_result.get(team_name, []))
             grads = len(graduating.get(team_name, []))
             portal_losses = sum(
                 1 for e in portal.entries
                 if e.origin_team == team_name and e.committed_to and e.committed_to != team_name
             )
-            open_spots = max(3, min(12, grads + portal_losses - portal_adds))
+            open_spots = max(6, min(12, grads + portal_losses - portal_adds + 4))
             scholarships[team_name] = open_spots
 
             nil_prog = self._nil_programs.get(team_name)
