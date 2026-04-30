@@ -1303,6 +1303,37 @@ class Player:
     big_stage: bool = False   # earned via major award on stacked roster; suppresses voice saturation
     baggage: bool = False     # earned via repeated incidents/short tenure; floors drama
 
+    # ─── Team Chemistry — Phase 3: variable per-game values ───
+    # Stable baselines hold; current values move per game with situation.
+    # `drama_current` is what the chemistry math actually consumes after
+    # `compute_pregame_variables` runs. drama_baseline is the season-stable
+    # number shown on the player card.
+    drama_current: int = 0   # 0 = unset; pregame call populates from baseline
+    head_current: int = 50   # game-day mental state (multiplier on output)
+    fit_current: int = 50    # match between actual usage and ideal usage
+
+    # ─── Team Chemistry — Phase 2: drift accumulator + career flags ───
+    # Per-game drift signals appended during games; consolidated season-end.
+    # Each entry: {"attr": "voice|glue|pull|reach|drama_baseline", "delta": float, "weight": float}
+    chemistry_drift_log: List[Dict] = field(default_factory=list)
+    # Sticky path-event tags accumulated over a career (used for flag awards).
+    chemistry_career_events: List[str] = field(default_factory=list)
+    # Tenure tracking — used by franchise eligibility check.
+    seasons_with_team: int = 0
+    seasons_in_career: int = 0
+    teams_played_for: List[str] = field(default_factory=list)
+    # Major awards earned this career — list of dicts with at minimum
+    # {"type": str, "year": int, "team": str, "stacked_roster": bool}
+    chemistry_major_awards: List[Dict] = field(default_factory=list)
+    # Number of recent low-drama seasons under a players_coach (baggage recovery).
+    low_drama_seasons_for_baggage_recovery: int = 0
+    # Cumulative incident count (baggage trigger).
+    locker_room_incidents: int = 0
+    # ─── Phase 5: rolling drift indicators ───
+    # Per-attribute trailing 10-game drift sum (rolling window). Surfaced as
+    # rising / stable / declining on the player card.
+    chemistry_recent_drift: Dict[str, float] = field(default_factory=dict)
+
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
     game_rush_carries: int = 0
@@ -1438,17 +1469,21 @@ class Player:
 
 @dataclass
 class TeamChemistryState:
-    """Roster-level chemistry snapshot (Phase 1).
+    """Roster-level chemistry snapshot.
 
-    Computed pregame from the playing-time-weighted roster. Phase 4 adds
-    `spine` (resilience pool, depletes on adversity draws) and Phase 5 adds
-    `pipeline` (succession health on rising young voices).
+    Phase 1: tone/fabric/drag/tilt/franchise_count from composition.
+    Phase 4: spine — resilience pool initialized at game start, depletes on
+             adversity draws. High spine boosts adversity responses; low spine
+             is the opposite, and high tilt actively crumbles in adversity.
+    Phase 5: pipeline — succession health (rising young voices).
     """
     tone: float = 0.0            # 0-100; team-level voice yield (saturation curve)
     fabric: float = 0.0          # 0-100; cohesion (glue × pull, franchise-amplified)
     drag: float = 0.0            # 0-100; drama load (HC archetype mediated)
     tilt: float = 0.0            # 0-100; tilt risk (high pull × high drama, less fabric)
     franchise_count: int = 0     # # of franchise-flag players on roster
+    spine: float = 0.0           # 0-100; resilience pool (Phase 4)
+    pipeline: float = 0.0        # 0-100; succession health (Phase 5)
 
 
 @dataclass
@@ -3852,8 +3887,10 @@ class ViperballEngine:
         # ── Team Chemistry composition pass (Phase 1) ──
         # Replaces the players_coach-only chemistry_bonus_per_game lever with
         # a roster-wide composition read. Chemistry is a small modifier in
-        # normal play (Phase 4 lifts spine into a major adversity lever).
-        from engine.chemistry import compute_chemistry, apply_chemistry_to_rhythm
+        # normal play; Phase 4 spine becomes a major lever in adversity.
+        from engine.chemistry import (
+            compute_chemistry, apply_chemistry_to_rhythm, initialize_spine,
+        )
         for side_label, team, staff in [
             ("home", self.home_team, self._home_coaching_staff),
             ("away", self.away_team, self._away_coaching_staff),
@@ -3862,6 +3899,7 @@ class ViperballEngine:
                 continue
             hc = staff.get("head_coach") if staff else None
             chem_state = compute_chemistry(team, hc)
+            initialize_spine(team, hc)  # Phase 4: stamp spine for the game
             if side_label == "home":
                 self.home_game_rhythm = apply_chemistry_to_rhythm(
                     self.home_game_rhythm, chem_state)
@@ -4874,6 +4912,14 @@ class ViperballEngine:
                     my_half = self._home_halftime_score if side == "home" else self._away_halftime_score
                     opp_half = self._away_halftime_score if side == "home" else self._home_halftime_score
                     if my_half < opp_half:
+                        # ── Phase 4: Spine modulates the adversity boost ──
+                        # High spine extends the boost; high tilt crumbles it.
+                        from engine.chemistry import adversity_boost_with_spine
+                        team = self.home_team if side == "home" else self.away_team
+                        if team and team.chemistry.spine > 0:
+                            boost, team.chemistry = adversity_boost_with_spine(
+                                boost, team.chemistry,
+                            )
                         if side == "home":
                             self.home_game_rhythm = min(1.35, self.home_game_rhythm + boost)
                         else:
