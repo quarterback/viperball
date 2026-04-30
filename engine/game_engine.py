@@ -1277,6 +1277,32 @@ class Player:
     game_def_role: str = "ROTATION"   # "STARTER" | "ROTATION" (defense)
     game_st_role: str = "ROTATION"    # "STARTER" | "ROTATION" (special teams)
 
+    # ─── Team Chemistry — Phase 1: stable attributes (25-95) ───
+    # Slow movers; drift over a season. These are the attributes that
+    # _drive_ team chemistry math (composition phase). Variable layer
+    # (drama_current/head_current/fit_current) lands in Phase 3.
+    voice: int = 50           # willingness/ability to set the team standard publicly
+    glue: int = 50            # ability to absorb friction, keep teammates connected
+    pull: int = 50            # how much a player's words/behavior carry weight
+    reach: int = 60           # receptiveness to coaching; mediates HC influence
+    drama_baseline: int = 35  # stable component of drama (defaults low)
+    fit: int = 50             # match between current usage and ideal usage
+
+    # Innate ranges — visible in v1, eventual scouting fog later
+    voice_range: Tuple[int, int] = (25, 95)
+    glue_range: Tuple[int, int] = (25, 95)
+    pull_range: Tuple[int, int] = (25, 95)
+    reach_range: Tuple[int, int] = (25, 95)
+    drama_baseline_range: Tuple[int, int] = (25, 95)
+    fit_range: Tuple[int, int] = (25, 95)
+
+    # Permanent flags — earned, sticky, hard or impossible to lose.
+    # Awarded by season-end checks (Phase 2). Default False on every
+    # generated player; only veteran imports may seed them.
+    franchise: bool = False   # earned via tenure + major awards; halves drama, amplifies pull
+    big_stage: bool = False   # earned via major award on stacked roster; suppresses voice saturation
+    baggage: bool = False     # earned via repeated incidents/short tenure; floors drama
+
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
     game_rush_carries: int = 0
@@ -1411,6 +1437,21 @@ class Player:
 
 
 @dataclass
+class TeamChemistryState:
+    """Roster-level chemistry snapshot (Phase 1).
+
+    Computed pregame from the playing-time-weighted roster. Phase 4 adds
+    `spine` (resilience pool, depletes on adversity draws) and Phase 5 adds
+    `pipeline` (succession health on rising young voices).
+    """
+    tone: float = 0.0            # 0-100; team-level voice yield (saturation curve)
+    fabric: float = 0.0          # 0-100; cohesion (glue × pull, franchise-amplified)
+    drag: float = 0.0            # 0-100; drama load (HC archetype mediated)
+    tilt: float = 0.0            # 0-100; tilt risk (high pull × high drama, less fabric)
+    franchise_count: int = 0     # # of franchise-flag players on roster
+
+
+@dataclass
 class Team:
     name: str
     abbreviation: str
@@ -1430,6 +1471,8 @@ class Team:
     prestige: int = 50               # 0-99, drives halo derivation
     halo_offense: float = 68.0       # Derived from prestige via derive_halo()
     halo_defense: float = 67.0       # Derived from prestige via derive_halo()
+    # --- Team Chemistry (Phase 1) ---
+    chemistry: TeamChemistryState = field(default_factory=TeamChemistryState)
 
 
 @dataclass
@@ -3806,16 +3849,25 @@ class ViperballEngine:
                     else:
                         self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) / comp_amp
 
-        for side_label, mods in [("home", self.home_coaching_mods), ("away", self.away_coaching_mods)]:
-            if mods.get("hc_classification") == "players_coach":
-                cls_fx = mods.get("classification_effects", {})
-                chem = cls_fx.get("chemistry_bonus_per_game", 0.0)
-                if chem > 0:
-                    cumulative = chem * self.game_week
-                    if side_label == "home":
-                        self.home_game_rhythm = min(1.35, self.home_game_rhythm + cumulative)
-                    else:
-                        self.away_game_rhythm = min(1.35, self.away_game_rhythm + cumulative)
+        # ── Team Chemistry composition pass (Phase 1) ──
+        # Replaces the players_coach-only chemistry_bonus_per_game lever with
+        # a roster-wide composition read. Chemistry is a small modifier in
+        # normal play (Phase 4 lifts spine into a major adversity lever).
+        from engine.chemistry import compute_chemistry, apply_chemistry_to_rhythm
+        for side_label, team, staff in [
+            ("home", self.home_team, self._home_coaching_staff),
+            ("away", self.away_team, self._away_coaching_staff),
+        ]:
+            if not team:
+                continue
+            hc = staff.get("head_coach") if staff else None
+            chem_state = compute_chemistry(team, hc)
+            if side_label == "home":
+                self.home_game_rhythm = apply_chemistry_to_rhythm(
+                    self.home_game_rhythm, chem_state)
+            else:
+                self.away_game_rhythm = apply_chemistry_to_rhythm(
+                    self.away_game_rhythm, chem_state)
 
         self._home_momentum_plays = 0
         self._away_momentum_plays = 0
@@ -14070,6 +14122,28 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                 development=p_data.get("development", "normal"),
             )
         )
+        # Hydrate chemistry attrs: prefer persisted values, otherwise generate.
+        _p = players[-1]
+        chem_data = p_data.get("chemistry")
+        if chem_data:
+            _p.voice = chem_data.get("voice", _p.voice)
+            _p.glue = chem_data.get("glue", _p.glue)
+            _p.pull = chem_data.get("pull", _p.pull)
+            _p.reach = chem_data.get("reach", _p.reach)
+            _p.drama_baseline = chem_data.get("drama_baseline", _p.drama_baseline)
+            _p.fit = chem_data.get("fit", _p.fit)
+            _p.voice_range = tuple(chem_data.get("voice_range", _p.voice_range))
+            _p.glue_range = tuple(chem_data.get("glue_range", _p.glue_range))
+            _p.pull_range = tuple(chem_data.get("pull_range", _p.pull_range))
+            _p.reach_range = tuple(chem_data.get("reach_range", _p.reach_range))
+            _p.drama_baseline_range = tuple(chem_data.get("drama_baseline_range", _p.drama_baseline_range))
+            _p.fit_range = tuple(chem_data.get("fit_range", _p.fit_range))
+            _p.franchise = bool(chem_data.get("franchise", False))
+            _p.big_stage = bool(chem_data.get("big_stage", False))
+            _p.baggage = bool(chem_data.get("baggage", False))
+        else:
+            from engine.chemistry import generate_chemistry_attributes as _gen_chem
+            _gen_chem(_p)
 
     players.sort(key=lambda p: (POSITION_ORDER.get(p.position, 99), p.number))
 
@@ -14247,6 +14321,9 @@ def generate_team_on_the_fly(
             potential=attrs.get("potential", 3),
             development=attrs.get("development", "normal"),
         ))
+        # Roll chemistry attributes for the freshly created player.
+        from engine.chemistry import generate_chemistry_attributes as _gen_chem
+        _gen_chem(players[-1])
 
     # ── Hidden gem boosts ──
     # Every program has a few players whose hidden abilities outstrip their
