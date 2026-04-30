@@ -3890,6 +3890,7 @@ class ViperballEngine:
         # normal play; Phase 4 spine becomes a major lever in adversity.
         from engine.chemistry import (
             compute_chemistry, apply_chemistry_to_rhythm, initialize_spine,
+            compute_pregame_variables,
         )
         for side_label, team, staff in [
             ("home", self.home_team, self._home_coaching_staff),
@@ -3898,6 +3899,26 @@ class ViperballEngine:
             if not team:
                 continue
             hc = staff.get("head_coach") if staff else None
+            # Phase 3: populate variable per-game values for every player
+            # before chemistry composition reads them. Most situational
+            # context (contract year, streaks, off-field noise) lives in
+            # the dynasty layer; the engine populates with neutral defaults
+            # so the simulation runs correctly when that context isn't set
+            # via player attrs first.
+            for p in team.players:
+                compute_pregame_variables(
+                    p,
+                    contract_year=getattr(p, "contract_year", False),
+                    team_losing_streak=getattr(team, "losing_streak", 0),
+                    team_winning_streak=getattr(team, "winning_streak", 0),
+                    recent_demotion=getattr(p, "recent_demotion", False),
+                    recent_personal_achievement=getattr(p, "recent_personal_achievement", False),
+                    off_field_noise=getattr(p, "off_field_noise", 0),
+                    recent_strong_performance=getattr(p, "recent_strong_performance", False),
+                    scheme_change_recency=getattr(team, "scheme_change_recency", 99),
+                    snap_share_actual=0.5,
+                    snap_share_ideal=0.5,
+                )
             chem_state = compute_chemistry(team, hc)
             initialize_spine(team, hc)  # Phase 4: stamp spine for the game
             if side_label == "home":
@@ -4778,7 +4799,52 @@ class ViperballEngine:
                 and self.state.home_score == self.state.away_score):
             self._simulate_overtime()
 
+        # ── Phase 2: Postgame chemistry drift signals ──
+        # Each player's snap_share + team result feed log_game_drift_signals.
+        # Signals append to player.chemistry_drift_log; consolidated season-end.
+        self._emit_postgame_drift_signals()
+
         return self.generate_game_summary()
+
+    def _emit_postgame_drift_signals(self) -> None:
+        """Append per-player drift signals based on this game's outcome."""
+        from engine.chemistry import log_game_drift_signals
+
+        home_won = self.state.home_score > self.state.away_score
+        away_won = self.state.away_score > self.state.home_score
+        # Comeback flag: trailed at half by 14+ and ended up winning.
+        home_comeback = (
+            home_won
+            and (self._away_halftime_score - self._home_halftime_score) >= 14
+        )
+        away_comeback = (
+            away_won
+            and (self._home_halftime_score - self._away_halftime_score) >= 14
+        )
+
+        for team, won, was_comeback in [
+            (self.home_team, home_won, home_comeback),
+            (self.away_team, away_won, away_comeback),
+        ]:
+            if not team or not team.players:
+                continue
+            # Total team offensive snaps (denominator for snap_share).
+            total_snaps = sum(getattr(p, "game_offensive_snaps", 0) for p in team.players)
+            if total_snaps <= 0:
+                continue
+            for p in team.players:
+                snaps = getattr(p, "game_offensive_snaps", 0)
+                snap_share = snaps / total_snaps
+                log_game_drift_signals(
+                    p,
+                    snap_share=snap_share,
+                    team_won=won,
+                    was_comeback=was_comeback,
+                    is_demoted_starter=getattr(p, "recent_demotion", False),
+                    mentee_breakout=getattr(p, "mentee_breakout_this_game", False),
+                    injury_comeback=getattr(p, "injury_comeback_this_game", False),
+                    coaching_change_survived=getattr(p, "coaching_change_survived_flag", False),
+                )
 
     def _simulate_overtime(self):
         """Play overtime quarters until someone wins.
@@ -5496,6 +5562,17 @@ class ViperballEngine:
                     new_mods = self.home_coaching_mods if new_pos == "home" else self.away_coaching_mods
                     if new_mods.get("hc_classification") == "motivator":
                         mom_plays = int(new_mods.get("classification_effects", {}).get("momentum_recovery_plays", 0))
+                        # ── Phase 4: Spine modulates turnover recovery ──
+                        # Recovering from a turnover is an adversity moment.
+                        # High spine extends the recovery; high tilt
+                        # actively shortens it (the team unravels).
+                        recovering_team = self.home_team if new_pos == "home" else self.away_team
+                        if recovering_team and recovering_team.chemistry.spine > 0:
+                            from engine.chemistry import adversity_boost_with_spine
+                            scaled, recovering_team.chemistry = adversity_boost_with_spine(
+                                float(mom_plays), recovering_team.chemistry,
+                            )
+                            mom_plays = max(0, int(round(scaled)))
                         if new_pos == "home":
                             self._home_momentum_plays = mom_plays
                         else:
