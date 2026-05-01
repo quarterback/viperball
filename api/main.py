@@ -1403,6 +1403,86 @@ def get_team_roster(session_id: str, team_name: str):
     }
 
 
+@app.get("/sessions/{session_id}/teams/{team_name}/chemistry")
+def get_team_chemistry(session_id: str, team_name: str):
+    """Team chemistry snapshot — composition + per-player attribute block.
+
+    Recomputes on every read (cheap) so it always reflects the latest drift
+    consolidation and current per-game variable values.
+    """
+    from engine.chemistry import compute_chemistry, drift_indicator
+
+    session = _get_session(session_id)
+    season = _require_season(session)
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+
+    # Resolve HC for this team (may be None in non-dynasty modes).
+    staffs = session.get("coaching_staffs") or {}
+    dynasty = session.get("dynasty")
+    if not staffs and dynasty and getattr(dynasty, "_coaching_staffs", None):
+        staffs = dynasty._coaching_staffs
+    staff = staffs.get(team_name) if staffs else None
+    hc = staff.get("head_coach") if staff else None
+
+    state = compute_chemistry(team, hc)
+
+    def _player_chem(p):
+        return {
+            "name": p.name,
+            "position": p.position,
+            "year": p.year,
+            "overall": p.overall,
+            "voice": p.voice,
+            "voice_range": list(p.voice_range),
+            "voice_indicator": drift_indicator(p, "voice"),
+            "glue": p.glue,
+            "glue_range": list(p.glue_range),
+            "glue_indicator": drift_indicator(p, "glue"),
+            "pull": p.pull,
+            "pull_range": list(p.pull_range),
+            "pull_indicator": drift_indicator(p, "pull"),
+            "reach": p.reach,
+            "reach_range": list(p.reach_range),
+            "reach_indicator": drift_indicator(p, "reach"),
+            "drama_baseline": p.drama_baseline,
+            "drama_baseline_range": list(p.drama_baseline_range),
+            "drama_indicator": drift_indicator(p, "drama_baseline"),
+            "drama_current": p.drama_current,
+            "fit": p.fit,
+            "fit_current": p.fit_current,
+            "head_current": p.head_current,
+            "franchise": p.franchise,
+            "big_stage": p.big_stage,
+            "baggage": p.baggage,
+            "seasons_with_team": p.seasons_with_team,
+            "seasons_in_career": p.seasons_in_career,
+        }
+
+    return {
+        "team_name": team_name,
+        "team_state": {
+            "tone": round(state.tone, 1),
+            "fabric": round(state.fabric, 1),
+            "drag": round(state.drag, 1),
+            "tilt": round(state.tilt, 1),
+            "spine": round(state.spine, 1),
+            "pipeline": round(state.pipeline, 1),
+            "franchise_count": state.franchise_count,
+        },
+        "hc": {
+            "name": hc.full_name if hc else None,
+            "classification": hc.classification if hc else None,
+            "chemistry_archetype": hc.chemistry_archetype if hc else None,
+            "message": hc.message if hc else None,
+            "standard": hc.standard if hc else None,
+            "growth": hc.growth if hc else None,
+        } if hc else None,
+        "players": [_player_chem(p) for p in team.players],
+    }
+
+
 class UpdatePlayerRequest(BaseModel):
     player_name: str
     number: Optional[int] = None

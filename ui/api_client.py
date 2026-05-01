@@ -264,6 +264,10 @@ def get_roster(session_id: str, team_name: str) -> dict:
     return _get(f"/sessions/{session_id}/season/roster/{team_name}")
 
 
+def get_team_chemistry(session_id: str, team_name: str) -> dict:
+    return _get(f"/sessions/{session_id}/teams/{team_name}/chemistry")
+
+
 def get_player_stats(session_id: str, conference: Optional[str] = None,
                      team: Optional[str] = None, position: Optional[str] = None,
                      min_touches: int = 0) -> dict:
