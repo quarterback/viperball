@@ -90,6 +90,111 @@
   </tbody>
 </table>
 
+{# Team Chemistry — stable attrs + drift indicators + permanent flags #}
+{% set chem = player.get('chemistry', {}) %}
+{% if chem %}
+{% set ind_arrows = {'rising': '&uarr;', 'stable': '&rarr;', 'declining': '&darr;'} %}
+{% set ind_colors = {'rising': 'var(--green)', 'stable': 'var(--fg-dim)', 'declining': 'var(--red)'} %}
+
+<h2>Team Chemistry</h2>
+
+{# Permanent flag badges #}
+{% if chem.get('franchise') or chem.get('big_stage') or chem.get('baggage') %}
+<div style="margin:6px 0 10px;display:flex;gap:6px;flex-wrap:wrap;">
+  {% if chem.get('franchise') %}
+  <span style="background:var(--yellow);color:#000;padding:3px 10px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Franchise</span>
+  {% endif %}
+  {% if chem.get('big_stage') %}
+  <span style="background:var(--accent);color:#000;padding:3px 10px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Big Stage</span>
+  {% endif %}
+  {% if chem.get('baggage') %}
+  <span style="background:var(--red);color:#fff;padding:3px 10px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Baggage</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>Attribute</th>
+      <th class="num">Rating</th>
+      <th>Trend</th>
+      <th class="num">Range</th>
+      <th>Bar</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% set chem_attrs = [
+    ('Voice', chem.get('voice', 50), chem.get('voice_indicator', 'stable'), chem.get('voice_range', [25, 95])),
+    ('Glue', chem.get('glue', 50), chem.get('glue_indicator', 'stable'), chem.get('glue_range', [25, 95])),
+    ('Pull', chem.get('pull', 50), chem.get('pull_indicator', 'stable'), chem.get('pull_range', [25, 95])),
+    ('Reach', chem.get('reach', 60), chem.get('reach_indicator', 'stable'), chem.get('reach_range', [25, 95])),
+  ] %}
+  {% for name, val, ind, rng in chem_attrs %}
+  <tr>
+    <td>{{ name }}</td>
+    <td class="num {% if val >= 75 %}stat-elite{% elif val >= 60 %}stat-good{% elif val < 45 %}stat-bad{% endif %}">{{ val }}</td>
+    <td><span style="color:{{ ind_colors.get(ind) }};font-size:14px;">{{ ind_arrows.get(ind)|safe }}</span> <span style="color:var(--fg-dim);font-size:11px;">{{ ind }}</span></td>
+    <td class="num" style="color:var(--fg-dim);font-size:11px;">{{ rng[0] }}&ndash;{{ rng[1] }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle;position:relative;">
+        {# Innate range as the lighter shaded sub-region #}
+        <div style="background:var(--bg-alt);height:100%;position:absolute;left:{{ rng[0] }}%;width:{{ rng[1] - rng[0] }}%;"></div>
+        {# Actual current value bar on top #}
+        <div style="background:{% if val >= 75 %}var(--yellow){% elif val >= 60 %}var(--green){% elif val < 45 %}var(--red){% else %}var(--fg-dim){% endif %};height:100%;width:{{ val }}%;position:relative;"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+
+  {# Drama: shown as baseline + today separately #}
+  {% set drama_base = chem.get('drama_baseline', 35) %}
+  {% set drama_today = chem.get('drama_current', 0) %}
+  {% set drama_rng = chem.get('drama_baseline_range', [25, 95]) %}
+  {% set drama_ind = chem.get('drama_indicator', 'stable') %}
+  <tr>
+    <td>Drama (baseline)</td>
+    <td class="num {% if drama_base >= 60 %}stat-bad{% elif drama_base <= 35 %}stat-good{% endif %}">{{ drama_base }}</td>
+    <td><span style="color:{{ ind_colors.get(drama_ind) }};font-size:14px;">{{ ind_arrows.get(drama_ind)|safe }}</span> <span style="color:var(--fg-dim);font-size:11px;">{{ drama_ind }}</span></td>
+    <td class="num" style="color:var(--fg-dim);font-size:11px;">{{ drama_rng[0] }}&ndash;{{ drama_rng[1] }}</td>
+    <td>
+      <div style="background:var(--border);height:8px;width:100px;display:inline-block;vertical-align:middle">
+        <div style="background:{% if drama_base >= 60 %}var(--red){% elif drama_base <= 35 %}var(--green){% else %}var(--fg-dim){% endif %};height:100%;width:{{ drama_base }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% if drama_today and drama_today > 0 %}
+  <tr>
+    <td style="color:var(--fg-dim);font-style:italic;">Drama (today)</td>
+    <td class="num">{{ drama_today }}</td>
+    <td colspan="3" style="color:var(--fg-dim);font-size:11px;">
+      Per-game drama with situational modifiers (contract year, streaks, demotions). Caps/floors apply for Franchise/Baggage.
+    </td>
+  </tr>
+  {% endif %}
+  </tbody>
+</table>
+
+<details style="margin-top:8px;">
+  <summary style="cursor:pointer;color:var(--fg-dim);font-size:11px;">What do these mean?</summary>
+  <div style="font-size:11px;color:var(--fg-dim);margin-top:6px;line-height:1.5;">
+    <strong>Voice</strong> &mdash; willingness/ability to set the team standard publicly.<br>
+    <strong>Glue</strong> &mdash; ability to absorb friction, keep teammates connected.<br>
+    <strong>Pull</strong> &mdash; how much this player's words and behavior carry weight.<br>
+    <strong>Reach</strong> &mdash; receptiveness to coaching; mediates HC influence.<br>
+    <strong>Drama</strong> &mdash; locker-room friction. Baseline drifts season-over-season; today's value moves with situation.<br>
+    <br>
+    <strong>Range</strong> is the player's innate ceiling and floor &mdash; current values can't drift outside it.<br>
+    <strong>Trend</strong> reflects rolling 10-game drift on this attribute.<br>
+    <br>
+    <strong>Franchise</strong> &mdash; earned via 5+ tenured seasons, a major award, and elite production. Halves drama contribution; amplifies pull.<br>
+    <strong>Big Stage</strong> &mdash; major-award winner on a stacked-roster deep playoff run. Softens voice saturation.<br>
+    <strong>Baggage</strong> &mdash; earned via repeated team changes, incidents, or releases. Floors drama at 50.
+  </div>
+</details>
+
+{% endif %}
+
 {# Career Awards #}
 {% set awards = player.get('career_awards', []) %}
 {% if awards %}
