@@ -592,11 +592,61 @@ class CoachCard:
     # they're a "hot name" that gets ranking boosts in portal matching.
     hc_meter: int = 0
 
+    # ─── Team Chemistry sub-scores (25-95) ───
+    # message  : clarity of standards and feedback (drives drag suppression)
+    # standard : own credibility / standard-setting (overlaps with leadership;
+    #            kept separate so chemistry math doesn't collide with the
+    #            existing leadership-driven systems). Backfills from leadership
+    #            in __post_init__ if left at default.
+    # growth   : developmental impact on young players (Phase 2 drift signal)
+    message: int = 50
+    standard: int = 50
+    growth: int = 50
+
     # ── computed properties ───────────────────
+
+    def __post_init__(self) -> None:
+        # Backfill chemistry sub-scores from existing attrs when left at default.
+        # `standard` mirrors `leadership` since they measure overlapping things;
+        # `growth` mirrors `development`. Allows new chemistry math to behave
+        # sensibly on coaches generated before these fields existed.
+        if self.standard == 50 and self.leadership != 50:
+            self.standard = self.leadership
+        if self.growth == 50 and self.development != 50:
+            self.growth = self.development
+        # `message` has no obvious legacy mirror — leave at 50 unless explicitly set.
 
     @property
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def coach_rating(self) -> float:
+        """Chemistry-relevant overall (message + standard + growth) / 3."""
+        return (self.message + self.standard + self.growth) / 3.0
+
+    @property
+    def chemistry_archetype(self) -> str:
+        """Map existing classification to the chemistry archetype the
+        composition math reads. Existing classifications stay authoritative;
+        this is a derived view, not a stored field.
+        """
+        cls_ = self.classification
+        if cls_ == "players_coach":
+            return "players_coach"
+        if cls_ == "disciplinarian":
+            return "disciplinarian"
+        if cls_ == "motivator":
+            return "mentor"
+        if cls_ == "scheme_master":
+            return "tactician"
+        if cls_ == "gameday_manager":
+            return "tactician"
+        if cls_ == "program_changer":
+            # Program-changers are usually charismatic culture-builders;
+            # treat as players_coach for chemistry purposes.
+            return "players_coach"
+        return "tactician"
 
     @property
     def display_name(self) -> str:
@@ -718,6 +768,9 @@ class CoachCard:
             "championship_appearances": self.championship_appearances,
             "coaching_tree": list(self.coaching_tree),
             "hc_meter": self.hc_meter,
+            "message": self.message,
+            "standard": self.standard,
+            "growth": self.growth,
         }
 
     @classmethod
@@ -768,6 +821,9 @@ class CoachCard:
             championship_appearances=d.get("championship_appearances", 0),
             coaching_tree=d.get("coaching_tree", []),
             hc_meter=d.get("hc_meter", 0),
+            message=d.get("message", 50),
+            standard=d.get("standard", 50),
+            growth=d.get("growth", 50),
         )
 
 

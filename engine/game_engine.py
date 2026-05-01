@@ -1277,6 +1277,63 @@ class Player:
     game_def_role: str = "ROTATION"   # "STARTER" | "ROTATION" (defense)
     game_st_role: str = "ROTATION"    # "STARTER" | "ROTATION" (special teams)
 
+    # ─── Team Chemistry — Phase 1: stable attributes (25-95) ───
+    # Slow movers; drift over a season. These are the attributes that
+    # _drive_ team chemistry math (composition phase). Variable layer
+    # (drama_current/head_current/fit_current) lands in Phase 3.
+    voice: int = 50           # willingness/ability to set the team standard publicly
+    glue: int = 50            # ability to absorb friction, keep teammates connected
+    pull: int = 50            # how much a player's words/behavior carry weight
+    reach: int = 60           # receptiveness to coaching; mediates HC influence
+    drama_baseline: int = 35  # stable component of drama (defaults low)
+    fit: int = 50             # match between current usage and ideal usage
+
+    # Innate ranges — visible in v1, eventual scouting fog later
+    voice_range: Tuple[int, int] = (25, 95)
+    glue_range: Tuple[int, int] = (25, 95)
+    pull_range: Tuple[int, int] = (25, 95)
+    reach_range: Tuple[int, int] = (25, 95)
+    drama_baseline_range: Tuple[int, int] = (25, 95)
+    fit_range: Tuple[int, int] = (25, 95)
+
+    # Permanent flags — earned, sticky, hard or impossible to lose.
+    # Awarded by season-end checks (Phase 2). Default False on every
+    # generated player; only veteran imports may seed them.
+    franchise: bool = False   # earned via tenure + major awards; halves drama, amplifies pull
+    big_stage: bool = False   # earned via major award on stacked roster; suppresses voice saturation
+    baggage: bool = False     # earned via repeated incidents/short tenure; floors drama
+
+    # ─── Team Chemistry — Phase 3: variable per-game values ───
+    # Stable baselines hold; current values move per game with situation.
+    # `drama_current` is what the chemistry math actually consumes after
+    # `compute_pregame_variables` runs. drama_baseline is the season-stable
+    # number shown on the player card.
+    drama_current: int = 0   # 0 = unset; pregame call populates from baseline
+    head_current: int = 50   # game-day mental state (multiplier on output)
+    fit_current: int = 50    # match between actual usage and ideal usage
+
+    # ─── Team Chemistry — Phase 2: drift accumulator + career flags ───
+    # Per-game drift signals appended during games; consolidated season-end.
+    # Each entry: {"attr": "voice|glue|pull|reach|drama_baseline", "delta": float, "weight": float}
+    chemistry_drift_log: List[Dict] = field(default_factory=list)
+    # Sticky path-event tags accumulated over a career (used for flag awards).
+    chemistry_career_events: List[str] = field(default_factory=list)
+    # Tenure tracking — used by franchise eligibility check.
+    seasons_with_team: int = 0
+    seasons_in_career: int = 0
+    teams_played_for: List[str] = field(default_factory=list)
+    # Major awards earned this career — list of dicts with at minimum
+    # {"type": str, "year": int, "team": str, "stacked_roster": bool}
+    chemistry_major_awards: List[Dict] = field(default_factory=list)
+    # Number of recent low-drama seasons under a players_coach (baggage recovery).
+    low_drama_seasons_for_baggage_recovery: int = 0
+    # Cumulative incident count (baggage trigger).
+    locker_room_incidents: int = 0
+    # ─── Phase 5: rolling drift indicators ───
+    # Per-attribute trailing 10-game drift sum (rolling window). Surfaced as
+    # rising / stable / declining on the player card.
+    chemistry_recent_drift: Dict[str, float] = field(default_factory=dict)
+
     # --- Per-game stat counters (reset each game) ---
     game_touches: int = 0
     game_rush_carries: int = 0
@@ -1411,6 +1468,25 @@ class Player:
 
 
 @dataclass
+class TeamChemistryState:
+    """Roster-level chemistry snapshot.
+
+    Phase 1: tone/fabric/drag/tilt/franchise_count from composition.
+    Phase 4: spine — resilience pool initialized at game start, depletes on
+             adversity draws. High spine boosts adversity responses; low spine
+             is the opposite, and high tilt actively crumbles in adversity.
+    Phase 5: pipeline — succession health (rising young voices).
+    """
+    tone: float = 0.0            # 0-100; team-level voice yield (saturation curve)
+    fabric: float = 0.0          # 0-100; cohesion (glue × pull, franchise-amplified)
+    drag: float = 0.0            # 0-100; drama load (HC archetype mediated)
+    tilt: float = 0.0            # 0-100; tilt risk (high pull × high drama, less fabric)
+    franchise_count: int = 0     # # of franchise-flag players on roster
+    spine: float = 0.0           # 0-100; resilience pool (Phase 4)
+    pipeline: float = 0.0        # 0-100; succession health (Phase 5)
+
+
+@dataclass
 class Team:
     name: str
     abbreviation: str
@@ -1430,6 +1506,8 @@ class Team:
     prestige: int = 50               # 0-99, drives halo derivation
     halo_offense: float = 68.0       # Derived from prestige via derive_halo()
     halo_defense: float = 67.0       # Derived from prestige via derive_halo()
+    # --- Team Chemistry (Phase 1) ---
+    chemistry: TeamChemistryState = field(default_factory=TeamChemistryState)
 
 
 @dataclass
@@ -3806,16 +3884,49 @@ class ViperballEngine:
                     else:
                         self.away_game_rhythm = 1.0 + (self.away_game_rhythm - 1.0) / comp_amp
 
-        for side_label, mods in [("home", self.home_coaching_mods), ("away", self.away_coaching_mods)]:
-            if mods.get("hc_classification") == "players_coach":
-                cls_fx = mods.get("classification_effects", {})
-                chem = cls_fx.get("chemistry_bonus_per_game", 0.0)
-                if chem > 0:
-                    cumulative = chem * self.game_week
-                    if side_label == "home":
-                        self.home_game_rhythm = min(1.35, self.home_game_rhythm + cumulative)
-                    else:
-                        self.away_game_rhythm = min(1.35, self.away_game_rhythm + cumulative)
+        # ── Team Chemistry composition pass (Phase 1) ──
+        # Replaces the players_coach-only chemistry_bonus_per_game lever with
+        # a roster-wide composition read. Chemistry is a small modifier in
+        # normal play; Phase 4 spine becomes a major lever in adversity.
+        from engine.chemistry import (
+            compute_chemistry, apply_chemistry_to_rhythm, initialize_spine,
+            compute_pregame_variables,
+        )
+        for side_label, team, staff in [
+            ("home", self.home_team, self._home_coaching_staff),
+            ("away", self.away_team, self._away_coaching_staff),
+        ]:
+            if not team:
+                continue
+            hc = staff.get("head_coach") if staff else None
+            # Phase 3: populate variable per-game values for every player
+            # before chemistry composition reads them. Most situational
+            # context (contract year, streaks, off-field noise) lives in
+            # the dynasty layer; the engine populates with neutral defaults
+            # so the simulation runs correctly when that context isn't set
+            # via player attrs first.
+            for p in team.players:
+                compute_pregame_variables(
+                    p,
+                    contract_year=getattr(p, "contract_year", False),
+                    team_losing_streak=getattr(team, "losing_streak", 0),
+                    team_winning_streak=getattr(team, "winning_streak", 0),
+                    recent_demotion=getattr(p, "recent_demotion", False),
+                    recent_personal_achievement=getattr(p, "recent_personal_achievement", False),
+                    off_field_noise=getattr(p, "off_field_noise", 0),
+                    recent_strong_performance=getattr(p, "recent_strong_performance", False),
+                    scheme_change_recency=getattr(team, "scheme_change_recency", 99),
+                    snap_share_actual=0.5,
+                    snap_share_ideal=0.5,
+                )
+            chem_state = compute_chemistry(team, hc)
+            initialize_spine(team, hc)  # Phase 4: stamp spine for the game
+            if side_label == "home":
+                self.home_game_rhythm = apply_chemistry_to_rhythm(
+                    self.home_game_rhythm, chem_state)
+            else:
+                self.away_game_rhythm = apply_chemistry_to_rhythm(
+                    self.away_game_rhythm, chem_state)
 
         self._home_momentum_plays = 0
         self._away_momentum_plays = 0
@@ -4688,7 +4799,52 @@ class ViperballEngine:
                 and self.state.home_score == self.state.away_score):
             self._simulate_overtime()
 
+        # ── Phase 2: Postgame chemistry drift signals ──
+        # Each player's snap_share + team result feed log_game_drift_signals.
+        # Signals append to player.chemistry_drift_log; consolidated season-end.
+        self._emit_postgame_drift_signals()
+
         return self.generate_game_summary()
+
+    def _emit_postgame_drift_signals(self) -> None:
+        """Append per-player drift signals based on this game's outcome."""
+        from engine.chemistry import log_game_drift_signals
+
+        home_won = self.state.home_score > self.state.away_score
+        away_won = self.state.away_score > self.state.home_score
+        # Comeback flag: trailed at half by 14+ and ended up winning.
+        home_comeback = (
+            home_won
+            and (self._away_halftime_score - self._home_halftime_score) >= 14
+        )
+        away_comeback = (
+            away_won
+            and (self._home_halftime_score - self._away_halftime_score) >= 14
+        )
+
+        for team, won, was_comeback in [
+            (self.home_team, home_won, home_comeback),
+            (self.away_team, away_won, away_comeback),
+        ]:
+            if not team or not team.players:
+                continue
+            # Total team offensive snaps (denominator for snap_share).
+            total_snaps = sum(getattr(p, "game_offensive_snaps", 0) for p in team.players)
+            if total_snaps <= 0:
+                continue
+            for p in team.players:
+                snaps = getattr(p, "game_offensive_snaps", 0)
+                snap_share = snaps / total_snaps
+                log_game_drift_signals(
+                    p,
+                    snap_share=snap_share,
+                    team_won=won,
+                    was_comeback=was_comeback,
+                    is_demoted_starter=getattr(p, "recent_demotion", False),
+                    mentee_breakout=getattr(p, "mentee_breakout_this_game", False),
+                    injury_comeback=getattr(p, "injury_comeback_this_game", False),
+                    coaching_change_survived=getattr(p, "coaching_change_survived_flag", False),
+                )
 
     def _simulate_overtime(self):
         """Play overtime quarters until someone wins.
@@ -4822,6 +4978,14 @@ class ViperballEngine:
                     my_half = self._home_halftime_score if side == "home" else self._away_halftime_score
                     opp_half = self._away_halftime_score if side == "home" else self._home_halftime_score
                     if my_half < opp_half:
+                        # ── Phase 4: Spine modulates the adversity boost ──
+                        # High spine extends the boost; high tilt crumbles it.
+                        from engine.chemistry import adversity_boost_with_spine
+                        team = self.home_team if side == "home" else self.away_team
+                        if team and team.chemistry.spine > 0:
+                            boost, team.chemistry = adversity_boost_with_spine(
+                                boost, team.chemistry,
+                            )
                         if side == "home":
                             self.home_game_rhythm = min(1.35, self.home_game_rhythm + boost)
                         else:
@@ -5398,6 +5562,17 @@ class ViperballEngine:
                     new_mods = self.home_coaching_mods if new_pos == "home" else self.away_coaching_mods
                     if new_mods.get("hc_classification") == "motivator":
                         mom_plays = int(new_mods.get("classification_effects", {}).get("momentum_recovery_plays", 0))
+                        # ── Phase 4: Spine modulates turnover recovery ──
+                        # Recovering from a turnover is an adversity moment.
+                        # High spine extends the recovery; high tilt
+                        # actively shortens it (the team unravels).
+                        recovering_team = self.home_team if new_pos == "home" else self.away_team
+                        if recovering_team and recovering_team.chemistry.spine > 0:
+                            from engine.chemistry import adversity_boost_with_spine
+                            scaled, recovering_team.chemistry = adversity_boost_with_spine(
+                                float(mom_plays), recovering_team.chemistry,
+                            )
+                            mom_plays = max(0, int(round(scaled)))
                         if new_pos == "home":
                             self._home_momentum_plays = mom_plays
                         else:
@@ -14070,6 +14245,28 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                 development=p_data.get("development", "normal"),
             )
         )
+        # Hydrate chemistry attrs: prefer persisted values, otherwise generate.
+        _p = players[-1]
+        chem_data = p_data.get("chemistry")
+        if chem_data:
+            _p.voice = chem_data.get("voice", _p.voice)
+            _p.glue = chem_data.get("glue", _p.glue)
+            _p.pull = chem_data.get("pull", _p.pull)
+            _p.reach = chem_data.get("reach", _p.reach)
+            _p.drama_baseline = chem_data.get("drama_baseline", _p.drama_baseline)
+            _p.fit = chem_data.get("fit", _p.fit)
+            _p.voice_range = tuple(chem_data.get("voice_range", _p.voice_range))
+            _p.glue_range = tuple(chem_data.get("glue_range", _p.glue_range))
+            _p.pull_range = tuple(chem_data.get("pull_range", _p.pull_range))
+            _p.reach_range = tuple(chem_data.get("reach_range", _p.reach_range))
+            _p.drama_baseline_range = tuple(chem_data.get("drama_baseline_range", _p.drama_baseline_range))
+            _p.fit_range = tuple(chem_data.get("fit_range", _p.fit_range))
+            _p.franchise = bool(chem_data.get("franchise", False))
+            _p.big_stage = bool(chem_data.get("big_stage", False))
+            _p.baggage = bool(chem_data.get("baggage", False))
+        else:
+            from engine.chemistry import generate_chemistry_attributes as _gen_chem
+            _gen_chem(_p)
 
     players.sort(key=lambda p: (POSITION_ORDER.get(p.position, 99), p.number))
 
@@ -14247,6 +14444,9 @@ def generate_team_on_the_fly(
             potential=attrs.get("potential", 3),
             development=attrs.get("development", "normal"),
         ))
+        # Roll chemistry attributes for the freshly created player.
+        from engine.chemistry import generate_chemistry_attributes as _gen_chem
+        _gen_chem(players[-1])
 
     # ── Hidden gem boosts ──
     # Every program has a few players whose hidden abilities outstrip their

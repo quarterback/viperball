@@ -1021,8 +1021,77 @@ class Dynasty:
         # Update record book
         self._update_record_book(year, season)
 
+        # ── Phase 2: Season-end team chemistry pass ──
+        # Consolidates per-game drift signals into stable-attribute deltas,
+        # runs innate range pressure, and evaluates permanent flags. Done
+        # AFTER record-book updates (so award lists are populated) but BEFORE
+        # year advance + roster maintenance (so the player's seasons_with_team
+        # and seasons_in_career counters reflect the season just played).
+        self._apply_season_chemistry(season, year, rng=rng)
+
         # Advance year
         self.current_year += 1
+
+    def _apply_season_chemistry(
+        self,
+        season: "Season",
+        year: int,
+        rng: Optional[random.Random] = None,
+    ) -> None:
+        """Run per-player chemistry season-end pass for every team.
+
+        Drift signals were appended during games. This consolidates them,
+        applies range pressure, and evaluates permanent flag awards.
+        """
+        from engine.chemistry import season_end_chemistry_pass
+
+        rng = rng or random.Random(year + 13)
+
+        # Track per-player ceiling/floor pinning across seasons. Living on
+        # self lets pressure rolls accumulate over a career.
+        if not hasattr(self, "_chem_ceiling_streaks"):
+            self._chem_ceiling_streaks: Dict[str, Dict[str, int]] = {}
+            self._chem_floor_streaks: Dict[str, Dict[str, int]] = {}
+
+        for team_name, team in season.teams.items():
+            staff = self._coaching_staffs.get(team_name, {}) if self._coaching_staffs else {}
+            hc = staff.get("head_coach")
+            for player in team.players:
+                pid = player.player_id or f"{team_name}:{player.name}"
+
+                # Bookkeeping — increment tenure counters before the pass.
+                player.seasons_with_team += 1
+                player.seasons_in_career += 1
+                if team_name not in player.teams_played_for:
+                    player.teams_played_for.append(team_name)
+
+                # Pinning streak counters per attribute.
+                ceiling_streaks = self._chem_ceiling_streaks.setdefault(pid, {})
+                floor_streaks = self._chem_floor_streaks.setdefault(pid, {})
+                for attr in ("voice", "glue", "pull", "reach", "drama_baseline", "fit"):
+                    floor, ceiling = getattr(player, f"{attr}_range", (25, 95))
+                    val = getattr(player, attr)
+                    if val >= ceiling:
+                        ceiling_streaks[attr] = ceiling_streaks.get(attr, 0) + 1
+                    else:
+                        ceiling_streaks[attr] = 0
+                    if val <= floor:
+                        floor_streaks[attr] = floor_streaks.get(attr, 0) + 1
+                    else:
+                        floor_streaks[attr] = 0
+
+                # Heuristic for "low-drama season": baseline + drift didn't
+                # push the player into the dramatic regime this season.
+                is_low_drama_season = player.drama_baseline < 55
+
+                season_end_chemistry_pass(
+                    player,
+                    hc,
+                    consecutive_at_ceiling=ceiling_streaks,
+                    consecutive_below_floor=floor_streaks,
+                    is_low_drama_season=is_low_drama_season,
+                    rng=rng,
+                )
 
     def _publish_graduates_to_bridge(self, season: Season, year: int) -> int:
         """Auto-publish graduating seniors to the CVL→WVL bridge DB.
