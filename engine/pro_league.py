@@ -204,6 +204,13 @@ def archive_season(season: 'ProLeagueSeason') -> dict:
             seen.add(t["team_key"])
             break
 
+    # Run the season-end chemistry pass for every team. Pro leagues are
+    # spectator-only (no HC), so the pass runs HC-less — drift consolidates,
+    # range pressure rolls, flag awards evaluate. Permanent flag awards still
+    # fire when career thresholds are hit (e.g., a multi-season pro vet on
+    # the same team can earn `franchise` once tenure + production align).
+    _run_season_end_chemistry(season)
+
     snapshot = {
         "league_id": league_id,
         "league_name": season.config.league_name,
@@ -214,6 +221,59 @@ def archive_season(season: 'ProLeagueSeason') -> dict:
     }
     _completed_league_snapshots[league_id] = snapshot
     return snapshot
+
+
+def _run_season_end_chemistry(season: 'ProLeagueSeason') -> None:
+    """Per-team season-end chemistry pass for pro leagues.
+
+    Mirrors Dynasty._apply_season_chemistry but with no head coach and a
+    league-scoped pinning-streak store so career-arc range pressure
+    accumulates across seasons of the same pro league.
+    """
+    from engine.chemistry import season_end_chemistry_pass
+    import random as _random
+
+    rng = _random.Random(hash(season.config.league_id) & 0xFFFFFFFF)
+
+    # Pinning-streak counters live on the season's config-keyed store so
+    # they survive across calls (one per pro-league lifetime).
+    if not hasattr(season, "_chem_ceiling_streaks"):
+        season._chem_ceiling_streaks = {}
+        season._chem_floor_streaks = {}
+
+    for team_key, team in season.teams.items():
+        for player in team.players:
+            pid = player.player_id or f"{team_key}:{player.name}"
+
+            player.seasons_with_team += 1
+            player.seasons_in_career += 1
+            if team.name not in player.teams_played_for:
+                player.teams_played_for.append(team.name)
+
+            ceiling_streaks = season._chem_ceiling_streaks.setdefault(pid, {})
+            floor_streaks = season._chem_floor_streaks.setdefault(pid, {})
+            for attr in ("voice", "glue", "pull", "reach", "drama_baseline", "fit"):
+                floor, ceiling = getattr(player, f"{attr}_range", (25, 95))
+                val = getattr(player, attr)
+                if val >= ceiling:
+                    ceiling_streaks[attr] = ceiling_streaks.get(attr, 0) + 1
+                else:
+                    ceiling_streaks[attr] = 0
+                if val <= floor:
+                    floor_streaks[attr] = floor_streaks.get(attr, 0) + 1
+                else:
+                    floor_streaks[attr] = 0
+
+            is_low_drama_season = player.drama_baseline < 55
+
+            season_end_chemistry_pass(
+                player,
+                None,  # no HC in pro leagues
+                consecutive_at_ceiling=ceiling_streaks,
+                consecutive_below_floor=floor_streaks,
+                is_low_drama_season=is_low_drama_season,
+                rng=rng,
+            )
 
 
 def get_completed_leagues() -> Dict[str, dict]:
