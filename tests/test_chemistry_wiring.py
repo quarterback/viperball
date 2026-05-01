@@ -117,6 +117,69 @@ def test_apply_season_chemistry_tracks_baggage_via_team_changes():
     assert p.baggage is True
 
 
+def test_pro_league_season_end_chemistry():
+    """`_run_season_end_chemistry` runs the same pass with no HC."""
+    from engine.chemistry import log_drift_signal
+    from engine.pro_league import _run_season_end_chemistry
+
+    p = mk_player()
+    p.voice = 50
+    p.voice_range = (40, 80)
+    for _ in range(15):
+        log_drift_signal(p, "voice", +1.0)
+
+    team = mk_team("ProTeam", [p])
+
+    # Mock the parts of ProLeagueSeason _run_season_end_chemistry actually uses.
+    class _MockConfig:
+        league_id = "test_league"
+
+    class _MockSeason:
+        def __init__(self):
+            self.config = _MockConfig()
+            self.teams = {"ProTeam": team}
+
+    season = _MockSeason()
+    _run_season_end_chemistry(season)
+
+    # Drift consolidated (with no HC, base_mult=1.0, expected delta ~+15
+    # but clipped to ceiling 80).
+    assert p.voice > 50
+    assert p.voice <= 80
+    assert len(p.chemistry_drift_log) == 0
+    assert p.seasons_with_team == 1
+    assert p.seasons_in_career == 1
+    assert "ProTeam" in p.teams_played_for
+    # Streak counters initialized on the season.
+    assert hasattr(season, "_chem_ceiling_streaks")
+
+
+def test_pro_league_no_hc_does_not_crash_on_season_end():
+    """Season-end pass must run cleanly with HC=None."""
+    from engine.chemistry import log_drift_signal
+    from engine.pro_league import _run_season_end_chemistry
+
+    p = mk_player(overall=85)
+    p.seasons_with_team = 4  # near franchise tenure
+    p.chemistry_major_awards.append({"type": "mvp", "year": 2025, "team": "ProTeam"})
+
+    team = mk_team("ProTeam", [p])
+
+    class _MockConfig:
+        league_id = "test_league_2"
+
+    class _MockSeason:
+        def __init__(self):
+            self.config = _MockConfig()
+            self.teams = {"ProTeam": team}
+
+    season = _MockSeason()
+    _run_season_end_chemistry(season)
+
+    # Tenure ticks → 5 → franchise eligibility met → flag awarded.
+    assert p.franchise is True
+
+
 def test_streak_counters_persist_across_calls():
     """Ceiling/floor pinning streaks need to survive between season passes."""
     p = mk_player()

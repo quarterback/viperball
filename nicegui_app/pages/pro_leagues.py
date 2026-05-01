@@ -2087,6 +2087,100 @@ def _render_playoffs(season: ProLeagueSeason):
                     ui.label("TBD").classes("text-xs text-slate-400 italic")
 
 
+def _render_team_chemistry_panel(team) -> None:
+    """Pro-leagues team chemistry view.
+
+    Pro leagues are spectator-only — no head coach is assigned, so chemistry
+    runs HC-less (drag still computes via baseline drama; archetype-mediated
+    suppression simply doesn't apply). Otherwise the layout matches the
+    My Team chemistry tab.
+    """
+    from engine.chemistry import compute_chemistry, drift_indicator
+
+    state = compute_chemistry(team, None)
+
+    def _interp(val: float, mode: str = "high_good") -> str:
+        if mode == "high_good":
+            if val >= 75: return "strong"
+            if val >= 55: return "solid"
+            if val >= 35: return "modest"
+            return "weak"
+        if val <= 20: return "low"
+        if val <= 40: return "moderate"
+        if val <= 60: return "elevated"
+        return "structural"
+
+    ui.label(f"Team Chemistry — {team.name}").classes("text-lg font-bold text-slate-800 mb-1")
+    ui.label("Pro leagues are spectator-only; chemistry runs without an HC archetype.").classes(
+        "text-xs italic mb-2"
+    ).style("color: #64748b;")
+
+    with ui.row().classes("w-full gap-2 flex-wrap mb-2"):
+        for label, val, mode in [
+            ("Tone", state.tone, "high_good"),
+            ("Fabric", state.fabric, "high_good"),
+            ("Drag", state.drag, "low_good"),
+            ("Tilt", state.tilt, "low_good"),
+            ("Spine", state.spine, "high_good"),
+            ("Pipeline", state.pipeline, "high_good"),
+        ]:
+            with ui.card().classes("p-3 min-w-[100px] flex-1"):
+                ui.label(label).classes("text-[11px] font-semibold uppercase").style("color: #94a3b8;")
+                ui.label(f"{val:.0f}").classes("text-xl font-bold").style("color: #e2e8f0;")
+                ui.label(_interp(val, mode)).classes("text-xs").style("color: #64748b;")
+        with ui.card().classes("p-3 min-w-[100px] flex-1"):
+            ui.label("Franchise").classes("text-[11px] font-semibold uppercase").style("color: #94a3b8;")
+            ui.label(str(state.franchise_count)).classes("text-xl font-bold").style("color: #e2e8f0;")
+            ui.label("icons on roster").classes("text-xs").style("color: #64748b;")
+
+    with ui.expansion("What do these mean?").classes("w-full mt-1 mb-2"):
+        ui.markdown(
+            "- **Tone**: voice yield. Saturates past 2-3 strong voices "
+            "unless glue is high or `big_stage` veterans are on the roster.\n"
+            "- **Fabric**: cohesion. Glue × pull, with a 1.3× pull bump for franchise icons.\n"
+            "- **Drag**: drama load. Halved for franchise players, "
+            "floored for `baggage` players.\n"
+            "- **Tilt**: crumble risk. Above 60, adversity moments go *worse* than baseline.\n"
+            "- **Spine**: per-game resilience pool that extends adversity boosts.\n"
+            "- **Pipeline**: succession health — rising young voices with high innate ceilings."
+        ).classes("text-xs").style("color: #94a3b8;")
+
+    arrows = {"rising": "↑", "stable": "→", "declining": "↓"}
+
+    def _flag_str(p):
+        flags = []
+        if p.franchise: flags.append("FRANCHISE")
+        if p.big_stage: flags.append("BIG STAGE")
+        if p.baggage:   flags.append("BAGGAGE")
+        return " ".join(flags) or "—"
+
+    columns = [
+        {"name": "name", "label": "Name", "field": "name", "align": "left", "sortable": True},
+        {"name": "pos", "label": "Pos", "field": "position", "align": "center"},
+        {"name": "ovr", "label": "OVR", "field": "overall", "align": "center", "sortable": True},
+        {"name": "voice", "label": "Voice", "field": "voice", "align": "center", "sortable": True},
+        {"name": "glue", "label": "Glue", "field": "glue", "align": "center", "sortable": True},
+        {"name": "pull", "label": "Pull", "field": "pull", "align": "center", "sortable": True},
+        {"name": "drama", "label": "Drama", "field": "drama", "align": "center", "sortable": True},
+        {"name": "today", "label": "Drama (today)", "field": "drama_today", "align": "center"},
+        {"name": "flags", "label": "Flags", "field": "flags", "align": "left"},
+    ]
+    rows = []
+    for p in sorted(team.players, key=lambda x: -x.overall):
+        rows.append({
+            "name": p.name,
+            "position": p.position,
+            "overall": p.overall,
+            "voice": f"{p.voice} {arrows.get(drift_indicator(p, 'voice'), '→')}",
+            "glue": f"{p.glue} {arrows.get(drift_indicator(p, 'glue'), '→')}",
+            "pull": f"{p.pull} {arrows.get(drift_indicator(p, 'pull'), '→')}",
+            "drama": f"{p.drama_baseline} {arrows.get(drift_indicator(p, 'drama_baseline'), '→')}",
+            "drama_today": p.drama_current if p.drama_current > 0 else "—",
+            "flags": _flag_str(p),
+        })
+    ui.table(columns=columns, rows=rows, row_key="name").classes("w-full").props("dense flat bordered")
+
+
 def _render_teams(season: ProLeagueSeason):
     is_cl = season.config.league_id == "cl"
     league_abbr = season.config.league_id.upper().replace("_LEAGUE", "")
@@ -2126,6 +2220,7 @@ def _render_teams(season: ProLeagueSeason):
                 tab_roster = ui.tab("Roster")
                 tab_tstats = ui.tab("Season Stats")
                 tab_tsched = ui.tab("Schedule")
+                tab_tchem = ui.tab("Chemistry")
 
             current_team_key = selected["key"]
 
@@ -2198,6 +2293,13 @@ def _render_teams(season: ProLeagueSeason):
                             )
                     else:
                         ui.label("No schedule data.").classes("text-sm text-slate-400")
+
+                with ui.tab_panel(tab_tchem):
+                    team_obj = season.teams.get(current_team_key)
+                    if team_obj is None:
+                        ui.label("Team not loaded.").classes("text-sm text-red-500")
+                    else:
+                        _render_team_chemistry_panel(team_obj)
 
     def _on_team_select(e):
         selected["key"] = e.value

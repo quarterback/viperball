@@ -1080,6 +1080,117 @@ async def _render_schedule(session_id: str, mode: str, team_name: str):
 # History tab (dynasty only)
 # ---------------------------------------------------------------------------
 
+async def _render_chemistry(session_id: str, team_name: str):
+    """Team Chemistry tab — composition snapshot + per-player attribute block.
+
+    Reads /sessions/{id}/teams/{name}/chemistry which recomputes the state
+    on every call, so this view always reflects the latest drift
+    consolidation and per-game variable values.
+    """
+    try:
+        chem = await run.io_bound(api_client.get_team_chemistry, session_id, team_name)
+    except api_client.APIError:
+        notify_warning(f"Could not load chemistry for {team_name}.")
+        return
+
+    state = chem.get("team_state", {})
+    hc = chem.get("hc")
+    players = chem.get("players", [])
+
+    # ── Header / HC ─────────────────────────────────────────────────
+    section_header(f"Team Chemistry — {team_name}")
+    if hc:
+        ui.label(
+            f"HC: {hc.get('name', '?')} · "
+            f"{hc.get('classification', '?')} → {hc.get('chemistry_archetype', '?')} archetype"
+        ).classes("text-sm").style("color: #94a3b8;")
+        ui.label(
+            f"Coaching sub-scores: message {hc.get('message', '?')} · "
+            f"standard {hc.get('standard', '?')} · growth {hc.get('growth', '?')}"
+        ).classes("text-xs mb-2").style("color: #64748b;")
+    else:
+        ui.label("No head coach assigned for this team in this session.").classes(
+            "text-xs italic mb-2"
+        ).style("color: #64748b;")
+
+    # ── Team-level metrics row ──────────────────────────────────────
+    def _interp(label: str, val: float, mode: str = "high_good") -> str:
+        """Return a short qualitative tag for the metric value."""
+        if mode == "high_good":
+            if val >= 75: return "strong"
+            if val >= 55: return "solid"
+            if val >= 35: return "modest"
+            return "weak"
+        else:  # low_good
+            if val <= 20: return "low"
+            if val <= 40: return "moderate"
+            if val <= 60: return "elevated"
+            return "structural"
+
+    with ui.row().classes("w-full gap-2 flex-wrap"):
+        metric_card("Tone", state.get("tone", 0), _interp("tone", state.get("tone", 0)))
+        metric_card("Fabric", state.get("fabric", 0), _interp("fabric", state.get("fabric", 0)))
+        metric_card("Drag", state.get("drag", 0), _interp("drag", state.get("drag", 0), "low_good"))
+        metric_card("Tilt", state.get("tilt", 0), _interp("tilt", state.get("tilt", 0), "low_good"))
+        metric_card("Spine", state.get("spine", 0), _interp("spine", state.get("spine", 0)))
+        metric_card("Pipeline", state.get("pipeline", 0), _interp("pipeline", state.get("pipeline", 0)))
+        metric_card("Franchise", state.get("franchise_count", 0), "icons on roster")
+
+    # ── Composition glossary (collapsed) ────────────────────────────
+    with ui.expansion("What do these mean?").classes("w-full mt-2 mb-3"):
+        ui.markdown(
+            "- **Tone**: voice yield from the roster. Saturates past 2-3 strong voices "
+            "unless the room has high glue or `big_stage` veterans.\n"
+            "- **Fabric**: cohesion. Glue × pull, with a 1.3× pull bump for franchise icons.\n"
+            "- **Drag**: drama load. Modulated by HC archetype × player talent fit, "
+            "halved for franchise players, floored for `baggage` players, "
+            "suppressed by HC `message`.\n"
+            "- **Tilt**: crumble risk. High-pull × high-drama presence. Above 60, "
+            "adversity moments go *worse* than baseline.\n"
+            "- **Spine**: per-game resilience pool. Extends adversity boosts (trailing-"
+            "halftime lifts, turnover recoveries) and depletes 5/draw.\n"
+            "- **Pipeline**: succession health. Rising young voices with high innate ceilings."
+        ).classes("text-xs").style("color: #94a3b8;")
+
+    ui.separator().classes("my-2")
+
+    # ── Per-player chemistry table ──────────────────────────────────
+    section_header("Player Chemistry")
+    arrows = {"rising": "↑", "stable": "→", "declining": "↓"}
+
+    def _flag_str(p):
+        flags = []
+        if p.get("franchise"): flags.append("FRANCHISE")
+        if p.get("big_stage"): flags.append("BIG STAGE")
+        if p.get("baggage"): flags.append("BAGGAGE")
+        return " ".join(flags)
+
+    def _attr_cell(value, indicator):
+        return f"{value} {arrows.get(indicator, '→')}"
+
+    rows = []
+    for p in players:
+        rows.append({
+            "Name": f"{p.get('name', '')} ({p.get('position', '')})",
+            "Year": p.get("year", ""),
+            "OVR": p.get("overall", 0),
+            "Voice": _attr_cell(p.get("voice", 0), p.get("voice_indicator", "stable")),
+            "Glue": _attr_cell(p.get("glue", 0), p.get("glue_indicator", "stable")),
+            "Pull": _attr_cell(p.get("pull", 0), p.get("pull_indicator", "stable")),
+            "Reach": _attr_cell(p.get("reach", 0), p.get("reach_indicator", "stable")),
+            "Drama (base)": _attr_cell(p.get("drama_baseline", 0), p.get("drama_indicator", "stable")),
+            "Drama (today)": p.get("drama_current", 0) or "—",
+            "Flags": _flag_str(p) or "—",
+        })
+
+    # Sort by OVR desc so the chemistry-heavy starters surface first.
+    rows.sort(key=lambda r: -r["OVR"])
+
+    columns = ["Name", "Year", "OVR", "Voice", "Glue", "Pull", "Reach",
+               "Drama (base)", "Drama (today)", "Flags"]
+    stat_table(rows, columns=columns, rows_per_page=25, searchable=True)
+
+
 async def _render_history(session_id: str):
     try:
         dyn_status = await run.io_bound(api_client.get_dynasty_status, session_id)
@@ -1397,7 +1508,7 @@ async def render_my_team_section(state, shared):
     selected_team_ref = {"value": human_teams[0]}
 
     # Build tab names
-    tab_names = ["Dashboard", "Roster", "Schedule"]
+    tab_names = ["Dashboard", "Roster", "Chemistry", "Schedule"]
     if mode == "dynasty":
         tab_names.append("History")
 
@@ -1410,6 +1521,7 @@ async def render_my_team_section(state, shared):
             with ui.tabs().classes("w-full").props("mobile-arrows outside-arrows") as tabs:
                 dashboard_tab = ui.tab("Dashboard")
                 roster_tab = ui.tab("Roster")
+                chemistry_tab = ui.tab("Chemistry")
                 schedule_tab = ui.tab("Schedule")
                 history_tab = None
                 if mode == "dynasty":
@@ -1423,6 +1535,8 @@ async def render_my_team_section(state, shared):
                     _panels["Dashboard"] = ui.column().classes("w-full")
                 with ui.tab_panel(roster_tab):
                     _panels["Roster"] = ui.column().classes("w-full")
+                with ui.tab_panel(chemistry_tab):
+                    _panels["Chemistry"] = ui.column().classes("w-full")
                 with ui.tab_panel(schedule_tab):
                     _panels["Schedule"] = ui.column().classes("w-full")
                 if mode == "dynasty" and history_tab is not None:
@@ -1449,6 +1563,8 @@ async def render_my_team_section(state, shared):
                 with panel:
                     if name == "Roster":
                         await _render_roster(session_id, team_name)
+                    elif name == "Chemistry":
+                        await _render_chemistry(session_id, team_name)
                     elif name == "Schedule":
                         await _render_schedule(session_id, mode, team_name)
                     elif name == "History":
