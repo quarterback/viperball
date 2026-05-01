@@ -1087,10 +1087,29 @@ async def _render_chemistry(session_id: str, team_name: str):
     on every call, so this view always reflects the latest drift
     consolidation and per-game variable values.
     """
+    import traceback as _tb
+
     try:
         chem = await run.io_bound(api_client.get_team_chemistry, session_id, team_name)
-    except api_client.APIError:
-        notify_warning(f"Could not load chemistry for {team_name}.")
+    except api_client.APIError as e:
+        ui.label(f"Could not load chemistry for {team_name}.").classes(
+            "text-base font-semibold"
+        ).style("color: #f87171;")
+        ui.label(str(e)).classes("text-xs").style("color: #94a3b8;")
+        return
+    except Exception as e:
+        ui.label(f"Chemistry render failed: {type(e).__name__}").classes(
+            "text-base font-semibold"
+        ).style("color: #f87171;")
+        ui.label(str(e)).classes("text-xs").style("color: #94a3b8;")
+        with ui.expansion("traceback").classes("w-full"):
+            ui.code(_tb.format_exc()).classes("text-xs")
+        return
+
+    if not chem:
+        ui.label("Chemistry endpoint returned no data.").classes(
+            "text-base font-semibold"
+        ).style("color: #f87171;")
         return
 
     state = chem.get("team_state", {})

@@ -537,6 +537,79 @@
 
 {# ── Roster ── #}
 <div>
+{# ── Team Chemistry — composition snapshot ── #}
+{% if team_chemistry %}
+{% set tc = team_chemistry %}
+<h2>Team Chemistry</h2>
+
+{% if tc.hc_archetype %}
+<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;">
+  HC mapping: <strong style="color:var(--fg-bright);">{{ tc.hc_classification }}</strong> &rarr;
+  <span style="color:var(--accent);font-weight:bold;">{{ tc.hc_archetype }}</span> archetype
+  &middot; sub-scores: msg {{ tc.hc_message }} &middot; std {{ tc.hc_standard }} &middot; grw {{ tc.hc_growth }}
+</div>
+{% else %}
+<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;font-style:italic;">No HC archetype mapped &mdash; chemistry runs without archetype-mediated drag suppression.</div>
+{% endif %}
+
+<table>
+  <thead>
+    <tr><th>Metric</th><th class="num">Value</th><th>Read</th><th>Bar</th></tr>
+  </thead>
+  <tbody>
+  {% set comp_rows = [
+    ('Tone',    tc.tone,     'voice yield: roster cohesion of strong voices', 'high_good'),
+    ('Fabric',  tc.fabric,   'cohesion: glue × pull, franchise-amplified', 'high_good'),
+    ('Drag',    tc.drag,     'drama load: HC-mediated, message-suppressed', 'low_good'),
+    ('Tilt',    tc.tilt,     'crumble risk: above 60, adversity goes WORSE', 'low_good'),
+    ('Spine',   tc.spine,    'per-game resilience pool for adversity moments', 'high_good'),
+    ('Pipeline', tc.pipeline, 'succession health: rising young voices', 'high_good'),
+  ] %}
+  {% for label, val, desc, mode in comp_rows %}
+  {% if mode == 'high_good' %}
+    {% if val >= 75 %}{% set tag = 'strong' %}{% set color = 'var(--green)' %}
+    {% elif val >= 55 %}{% set tag = 'solid' %}{% set color = 'var(--fg-bright)' %}
+    {% elif val >= 35 %}{% set tag = 'modest' %}{% set color = 'var(--fg-dim)' %}
+    {% else %}{% set tag = 'weak' %}{% set color = 'var(--red)' %}{% endif %}
+  {% else %}
+    {% if val <= 20 %}{% set tag = 'low' %}{% set color = 'var(--green)' %}
+    {% elif val <= 40 %}{% set tag = 'moderate' %}{% set color = 'var(--fg-bright)' %}
+    {% elif val <= 60 %}{% set tag = 'elevated' %}{% set color = 'var(--yellow)' %}
+    {% else %}{% set tag = 'structural' %}{% set color = 'var(--red)' %}{% endif %}
+  {% endif %}
+  <tr>
+    <td><strong>{{ label }}</strong></td>
+    <td class="num">{{ val }}</td>
+    <td><span style="color:{{ color }};font-weight:bold;">{{ tag }}</span> <span style="color:var(--fg-dim);font-size:11px;">&middot; {{ desc }}</span></td>
+    <td>
+      <div style="background:var(--border);height:8px;width:120px;display:inline-block;vertical-align:middle">
+        <div style="background:{{ color }};height:100%;width:{{ val }}%"></div>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><strong>Franchise icons</strong></td>
+    <td class="num" style="color:{% if tc.franchise_count > 0 %}var(--yellow){% else %}var(--fg-dim){% endif %};">{{ tc.franchise_count }}</td>
+    <td colspan="2" style="color:var(--fg-dim);font-size:11px;">long-tenured stars who stabilize the room</td>
+  </tr>
+  </tbody>
+</table>
+
+<details style="margin:6px 0 14px;">
+  <summary style="cursor:pointer;color:var(--fg-dim);font-size:11px;">How to read this</summary>
+  <div style="font-size:11px;color:var(--fg-dim);margin-top:6px;line-height:1.5;">
+    <strong>Tone</strong> measures voice saturation. 1-2 strong voices is the peak; 3+ saturates unless the room has high glue or <em>big_stage</em> veterans who've proven they can play in stacked rooms.<br>
+    <strong>Fabric</strong> is the cohesion of the room &mdash; high glue + high pull. Franchise icons get a 1.3x pull multiplier here.<br>
+    <strong>Drag</strong> is drama load. Modulated by the HC's archetype: a players_coach broadly suppresses; a disciplinarian only handles drama when talent justifies it.<br>
+    <strong>Tilt</strong> is the crumble risk. Above 60, adversity moments produce a worse-than-baseline response.<br>
+    <strong>Spine</strong> is a per-game resilience pool. High spine extends adversity boosts; high tilt actively crumbles them.<br>
+    <strong>Pipeline</strong> tracks young (4 seasons or fewer) players with rising voice/pull and high innate ceilings.
+  </div>
+</details>
+
+{% endif %}
+
 <h2>Roster ({{ players|length }})</h2>
 
 {# ── Sort Controls ── #}

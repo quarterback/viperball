@@ -1615,6 +1615,34 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
                 "opp_ppg": round(sr.get("points_against", 0) / total_games, 1),
             })
 
+    # ── Team Chemistry composition snapshot ──
+    # Resolve HC from dynasty staffs if available so archetype mapping shows.
+    team_chemistry = None
+    try:
+        from engine.chemistry import compute_chemistry
+        dynasty_obj = sess.get("dynasty") if sess else None
+        staffs = sess.get("coaching_staffs") if sess else None
+        if not staffs and dynasty_obj and getattr(dynasty_obj, "_coaching_staffs", None):
+            staffs = dynasty_obj._coaching_staffs
+        hc = (staffs or {}).get(team_name, {}).get("head_coach") if staffs else None
+        chem_state = compute_chemistry(team, hc)
+        team_chemistry = {
+            "tone": round(chem_state.tone, 1),
+            "fabric": round(chem_state.fabric, 1),
+            "drag": round(chem_state.drag, 1),
+            "tilt": round(chem_state.tilt, 1),
+            "spine": round(chem_state.spine, 1),
+            "pipeline": round(chem_state.pipeline, 1),
+            "franchise_count": chem_state.franchise_count,
+            "hc_classification": hc.classification if hc else None,
+            "hc_archetype": hc.chemistry_archetype if hc else None,
+            "hc_message": hc.message if hc else None,
+            "hc_standard": hc.standard if hc else None,
+            "hc_growth": hc.growth if hc else None,
+        }
+    except Exception:
+        team_chemistry = None
+
     return templates.TemplateResponse("college/team.html", _ctx(
         request, section="college", session_id=session_id,
         team=team, team_name=team_name, players=players,
@@ -1630,6 +1658,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         banners=banners,
         season_history=season_history,
         academics=academics,
+        team_chemistry=team_chemistry,
     ))
 
 

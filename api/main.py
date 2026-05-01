@@ -618,6 +618,42 @@ def _serialize_player(player) -> dict:
         "development": getattr(player, "development", "normal"),
         "career_awards": getattr(player, "career_awards", []),
         "career_seasons": getattr(player, "career_seasons", []),
+        # ── Team Chemistry ───────────────────────────────────────────
+        # Stable attrs + ranges + drift indicators + permanent flags.
+        # Drift indicators come from the chemistry module; safe to call
+        # with no recent_drift data (returns "stable").
+        "chemistry": _serialize_player_chemistry(player),
+    }
+
+
+def _serialize_player_chemistry(player) -> dict:
+    from engine.chemistry import drift_indicator
+    return {
+        "voice": getattr(player, "voice", 50),
+        "voice_range": list(getattr(player, "voice_range", (25, 95))),
+        "voice_indicator": drift_indicator(player, "voice"),
+        "glue": getattr(player, "glue", 50),
+        "glue_range": list(getattr(player, "glue_range", (25, 95))),
+        "glue_indicator": drift_indicator(player, "glue"),
+        "pull": getattr(player, "pull", 50),
+        "pull_range": list(getattr(player, "pull_range", (25, 95))),
+        "pull_indicator": drift_indicator(player, "pull"),
+        "reach": getattr(player, "reach", 60),
+        "reach_range": list(getattr(player, "reach_range", (25, 95))),
+        "reach_indicator": drift_indicator(player, "reach"),
+        "drama_baseline": getattr(player, "drama_baseline", 35),
+        "drama_baseline_range": list(getattr(player, "drama_baseline_range", (25, 95))),
+        "drama_indicator": drift_indicator(player, "drama_baseline"),
+        "drama_current": getattr(player, "drama_current", 0),
+        "fit": getattr(player, "fit", 50),
+        "fit_current": getattr(player, "fit_current", 50),
+        "fit_range": list(getattr(player, "fit_range", (25, 95))),
+        "head_current": getattr(player, "head_current", 50),
+        "franchise": getattr(player, "franchise", False),
+        "big_stage": getattr(player, "big_stage", False),
+        "baggage": getattr(player, "baggage", False),
+        "seasons_with_team": getattr(player, "seasons_with_team", 0),
+        "seasons_in_career": getattr(player, "seasons_in_career", 0),
     }
 
 
