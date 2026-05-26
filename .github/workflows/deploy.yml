@@ -3,6 +3,10 @@ name: Deploy to Fly.io
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.doc/**'
+      - 'docs/**'
   workflow_dispatch:  # manual trigger from GitHub Actions UI
 
 jobs:
