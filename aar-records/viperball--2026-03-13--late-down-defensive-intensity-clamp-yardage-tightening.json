@@ -1,0 +1,99 @@
+{
+  "record_id": "viperball--2026-03-13--late-down-defensive-intensity-clamp-yardage-tightening",
+  "source_path": "docs/AAR_late_down_defensive_clamp.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-13",
+  "title": "AAR: Late-Down Defensive Intensity Clamp & Yardage Tightening (V2.9)",
+  "scope": "Feature: Defensive intensity ramp on downs 4-6, yardage generation rebalance",
+  "rationale": [
+    {
+      "item": "Sixth downs were too rare. In a 200-game simulation, only 1.4% of drives ever reached 6th down, and 5th down appeared in just 4.3%. The entire late-down decision tree ... was effectively dead code. Teams converted first downs so easily that the 6-down system played like a 3-down sport.",
+      "references": []
+    },
+    {
+      "item": "Root Cause: Yards Per Play Too Generous. With runs averaging 13.3 yards and kick passes 15.5, teams were converting first downs in ~1.5 plays. The down counter rarely climbed past 3rd.",
+      "references": []
+    },
+    {
+      "item": "Why exponential? Small talent deltas should feel random... But when OVR 90 plays OVR 50, the defense should reliably squelch drives. Linear scaling treats a 3-point gap and a 40-point gap the same way (proportionally).",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Layer 1 — tightened yardage generation: run plays (_contest_run_yards) base_yards_multiplier 4.2 → 2.3, explosive rate 26% → 4.5%, explosive multiplier 1.8x → 1.33x, bust rate 4% → 7%; kick pass (simulate_kick_pass) base distances reduced ~25% and YAC reduced across sub-families, bomb caught-in-stride rate 35% → 22%.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Layer 2 — new _late_down_defensive_clamp(yards) method, applied at five resolution points (run plays, trick plays, lateral chains, kick pass completions, kick-lateral completions); base clamp chance 20%/35%/50% on downs 4/5/6, scaled exponentially by H2H talent gap (matchup_scale = clamp(0.15, 2.2, e^(gap_norm * 5.0))).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Removed dead _fourth_down_decision() (78 lines) from the 4-down era — never called; select_kick_decision() had fully replaced it.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "Reduced yards at the source — no artificial barriers, just tighter natural mechanics.",
+    "This is the key design decision: the clamp isn't a flat dice roll — it respects the matchup."
+  ],
+  "validation_claims": [
+    {
+      "claim": "200-game simulation (Washington U vs Southern Illinois): drives reaching 6th down 1.4% → 4.9% (+3.5pp, 3.5x); 5th down 4.3% → 8.3%; 4th down 18.1% → 22.7%.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 200-game Washington U vs Southern Illinois batch and tabulate drives reaching each down.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Yards per play after: Run 13.3 → 7.4; Kick Pass 15.5 → 13.3; Lateral Chain 8.9 → 9.8; Trick Play 4.1 → 4.2.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run batch sim and compute average yards per play type.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Avg combined score ~110 → 97.2.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run batch sim and compute average combined score.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "AAR: Late-Down Defensive Intensity Clamp & Yardage Tightening (V2.9)",
+    "Problem Statement",
+    "Root Cause: Yards Per Play Too Generous",
+    "Solution: Two-Layer Approach",
+    "Layer 1: Tighten Yardage Generation",
+    "Layer 2: Late-Down Defensive Intensity Clamp",
+    "Matchup-Driven Scaling",
+    "Results",
+    "Down Distribution",
+    "Drives Reaching Each Down",
+    "Yards Per Play",
+    "Scoring",
+    "What This Unlocks",
+    "Files Changed",
+    "Commits"
+  ],
+  "unmapped_content": "Before yardage table: Run 13.3 avg, 18% explosive (20+ yds); Kick Pass 15.5, 28%; Lateral Chain 8.9, 9%. Kick pass base distance changes: Quick Kick 5-8 → 3-6; Territory 10-16 → 7-12; Bomb 22-30 → 18-25. YAC: Quick Kick floor 3-8 → 1-5; Territory floor 2-5 → 1-3; Bomb caught-in-stride YAC 10-20 base → 6-14 base.\n\nBase clamp table: 4th 20% chance, reduction range -10% to +25% of original; 5th 35%, -15% to +20%; 6th 50% (coin flip), -20% to +15%. Matchup scaling: defensive rating = tackling(0.40) + awareness(0.35) + speed(0.25), fatigue-weighted; offensive rating = speed(0.30) + agility(0.25) + power(0.20) + awareness(0.25), fatigue-weighted; gap_norm = (avg_def - avg_off) / 100.0. Scaling examples: gap 0 → scale 1.00; gap +5 → 1.28 (4th 26%, 5th 45%, 6th 64%); gap +15 → 2.12 (4th 42%, 5th 60%, 6th 70% capped); gap -5 → 0.78 (16%/27%/39%); gap -15 → 0.47 (9%/16%/24%).\n\nDown distribution of plays before/after: 1st 44.5% → 38.2%; 2nd 30.5% → 28.8%; 3rd 15.0% → 17.5%; 4th 7.8% → 10.8%; 5th 1.8% → 3.4%; 6th 0.4% → 1.2%.\n\nWhat This Unlocks: select_kick_decision() down-5 logic (the \"setup shot\") fires 8.3% of drives; down-6 logic (\"last chance — kick > punt > go for it\") fires 4.9% of drives; GO_FOR_IT_MATRIX thresholds on 5th and 6th down are now meaningful decision points; Finnish baseball retention on snap kick misses creates real 5th→6th down sequences; lead management countermeasures (V2.7) that bias toward kick mode on late downs have material impact.\n\nFiles Changed table (engine/game_engine.py): lines 56-61 base_yards_multiplier 4.2 → 2.3; 7186-7203 run explosive rate changes; 8460-8474 kick pass base distances; 8806-8826 kick pass YAC; 4701-4750 new _late_down_defensive_clamp(); 7782,8056,8433,8849,9044 clamp wired into 5 resolution points; 4701 (old) removed dead _fourth_down_decision() (78 lines).\n\nCommits: b070dbd Remove dead _fourth_down_decision() from 4-down era; fce32fc Tighten yardage generation to increase late-down frequency; af8ddc0 Lower run explosive rate to 4.5%; 45b7436 Add late-down defensive intensity clamp.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": null
+}

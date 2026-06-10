@@ -1,0 +1,65 @@
+{
+  "record_id": "viperball--2026-04-07--academic-mental-attributes-system",
+  "source_path": "AAR_2026-04-07_academic_system.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": null,
+  "title": "AAR: Academic & Mental Attributes System",
+  "scope": "Added a comprehensive academic and mental attributes system to Viperball's recruiting engine. This makes recruiting feel like a real marketplace where academic eligibility gates who can go where, and mental traits (field intelligence, coachability) determine how well recruits develop once they arrive.",
+  "rationale": [
+    { "item": "No other college sports sim does this well. Most games treat academics as a binary pass/fail or ignore it entirely.", "references": [] },
+    { "item": "Stanford's 3.85 median GPA / 1480 median VAT makes it impossible to offer a 2.1 GPA recruit; this distinction was missing", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Separate Field Intelligence from Awareness because they develop differently and are scouted differently", "decided_by": "agent", "quote": "A quarterback who can read a Cover 2 shell (field IQ) is different from one who has perfect footwork (awareness/technique). You want both, but they develop differently and are scouted differently." },
+    { "decision": "Coachability is independent of skill — a personality trait, not a skill", "decided_by": "agent", "quote": "It's a personality trait, not a skill. Some elite athletes are uncoachable — they've always been the best and never learned to take instruction." },
+    { "decision": "Bell curves with outliers instead of flat distributions", "decided_by": "agent", "quote": "Reality. Most recruits cluster around the middle. The outliers (1500+ VAT, sub-2.0 GPA) are rare and notable." },
+    { "decision": "Compute tier from medians instead of static labels for moddability", "decided_by": "agent", "quote": "Moddability. You can change a school's median_gpa in the JSON and the tier updates automatically." }
+  ],
+  "actions": [
+    { "description": "Recruit dataclass: 4 new attributes (Field Intelligence, Coachability, GPA, VAT Score), academic risk computed field, eligibility gating", "artifacts": ["engine/recruiting.py"], "kind": "modified" },
+    { "description": "School academic profiles: 205 team JSON files updated with median_gpa, median_vat, academic_tier", "artifacts": ["data/teams/*.json"], "kind": "data" },
+    { "description": "Academic Profile section on college team page", "artifacts": ["stats_site/templates/college/team.html"], "kind": "modified" },
+    { "description": "Recruit profile: GPA, VAT, Field IQ, Coachability, academic risk flags display", "artifacts": ["stats_site/templates/recruiting/recruit_profile.html"], "kind": "modified" },
+    { "description": "Academic data loading in router", "artifacts": ["stats_site/router.py"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [],
+  "non_actions": [
+    { "item": "NIL system override of academics", "reason": "You can offer $500K to a kid but if they can't get into Stanford, they can't get into Stanford.", "category": "out_of_scope", "status": "unknown" }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "Dynasty mode can eventually drift school academics based on program success, coaching changes, or conference realignment since tier is computed from median values",
+    "APR metric (compute_team_apr()) tracks team-wide academic health — below 92.5% = NCAA penalty zone"
+  ],
+  "section_headers_original": [
+    "AAR: Academic & Mental Attributes System",
+    "Viperball Recruiting Intelligence — April 2026",
+    "Summary",
+    "What Was Built",
+    "1. Recruit Mental Attributes",
+    "2. School Academic Profiles",
+    "3. Academic Gating in Recruiting",
+    "4. VAT & GPA on Team Pages",
+    "5. Recruit Profile Enrichment",
+    "Design Decisions",
+    "Why separate Field Intelligence from Awareness?",
+    "Why is Coachability independent?",
+    "Why bell curves with outliers instead of flat distributions?",
+    "Why compute tier from medians instead of static labels?",
+    "Interaction with Other Systems",
+    "Files Changed"
+  ],
+  "unmapped_content": "Date in subtitle 'April 2026' — no specific day given. Filename says 2026-04-07, not confirmed in document body. Using null for date with parser note. Academic tier table showing 5 tiers (Elite/High/Above Average/Standard/Flexible) with example schools, GPA ranges, VAT ranges, and admissions flex. Interaction section: Program Changer coaches effectively bypass academic barriers; NIL doesn't override academics; Transfer portal uses same eligibility check; APR metric tracks team academic health.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date: document body says 'April 2026' with no specific day; filename says 2026-04-07 but the rule requires a date that 'literally appears in the document'. Subtitle says 'April 2026' only, so using null. No validation claims and no explicit non_actions/residual_risk sections. Design Decisions section partially mapped to delegation_events."
+}

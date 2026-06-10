@@ -1,0 +1,81 @@
+{
+  "record_id": "viperball--2026-03-22--sports-analytics-framework",
+  "source_path": "AAR_ANALYTICS.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-22",
+  "title": "After-Action Report: Sports Analytics Framework",
+  "scope": "Full-stack analytics overhaul — metrics layer, season/dynasty/pro accumulation, UI, stats site, writer/LLM tooling",
+  "rationale": [
+    { "item": "The existing metrics (OPI, Territory Rating, Chaos Factor, etc.) were opaque composites that didn't map to concepts readers or LLMs could reason about.", "references": [] },
+    { "item": "Deeper issue: the analytics were measuring the wrong signals. Flat conversion rates, meaningless \"Micro-Scoring Differential\" (DK×5 − PK×3), and no way to distinguish where on the field performance happened.", "references": [] },
+    { "item": "The sport also lacked any cross-sport context. A PPD of 4.2 means nothing to someone who doesn't already know the scale.", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "New metrics: conversion by field zone (4D/5D/6D split by 4 field zones) and delta profile (operating environment)", "artifacts": ["engine/viperball_metrics.py", "calculate_conversion_by_field_zone()", "calculate_delta_profile()"], "kind": "new" },
+    { "description": "Math fixes: PPD calc, EP docstring 5-down→6-down, Micro-Scoring Diff → Kicking Aggression Index, yards_gained→yards key", "artifacts": ["engine/viperball_metrics.py", "engine/epa.py", "engine/box_score.py"], "kind": "modified" },
+    { "description": "Season accumulation: 24 conversion-zone accumulators + delta accumulators + properties on TeamRecord", "artifacts": ["engine/season.py"], "kind": "modified" },
+    { "description": "Dynasty finalize_season stores new metrics per-season", "artifacts": ["engine/dynasty.py"], "kind": "modified" },
+    { "description": "Pro league ProTeamRecord.add_metrics() and standings serialization", "artifacts": ["engine/pro_league.py"], "kind": "modified" },
+    { "description": "CLI UI dashboard, standings columns, season awards", "artifacts": ["engine/season_ui.py"], "kind": "modified" },
+    { "description": "Streamlit web UI standings columns", "artifacts": ["ui/page_modules/section_league.py"], "kind": "modified" },
+    { "description": "Stats site template additions (college standings/team, pro season)", "artifacts": ["stats_site/templates/college/standings.html", "stats_site/templates/college/team.html", "stats_site/templates/pro/season.html"], "kind": "modified" },
+    { "description": "API serializer new fields", "artifacts": ["api/main.py", "_serialize_team_record()"], "kind": "modified" },
+    { "description": "Analytics reference doc (new)", "artifacts": ["ANALYTICS.md"], "kind": "docs" },
+    { "description": "Self-describing game analysis tool (new)", "artifacts": ["analyze_game.py"], "kind": "new" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "Smoke-tested TeamRecord instantiation and property access", "evidence_cited": "render/smoke", "checkable_against_repo": "unclear", "check_method": "Instantiate TeamRecord and access new properties", "verified": "not_checked" },
+    { "claim": "Smoke-tested ProTeamRecord instantiation and property access", "evidence_cited": "render/smoke", "checkable_against_repo": "unclear", "check_method": "Instantiate ProTeamRecord and access new properties", "verified": "not_checked" },
+    { "claim": "Ran analyze_game.py --sim nyu gonzaga and --sim marquette creighton end-to-end", "evidence_cited": "manual verification", "checkable_against_repo": "yes", "check_method": "Run analyze_game.py --sim nyu gonzaga", "verified": "not_checked" },
+    { "claim": "Verified API serializer compiles and includes new fields", "evidence_cited": "manual verification", "checkable_against_repo": "yes", "check_method": "Import api/main.py and inspect _serialize_team_record output keys", "verified": "not_checked" },
+    { "claim": "Template changes are structural HTML additions — will render correctly when the serialized data includes the new keys (which it does)", "evidence_cited": "none", "checkable_against_repo": "unclear", "check_method": "Render templates with sample serialized data", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Season-to-season trend analysis", "reason": "the data is now stored per-season in dynasty, but there's no tool to compare a team's 5D% trajectory across years. The data is there; the visualization isn't.", "category": "deferred", "status": "unknown" },
+    { "item": "Fast sim integration", "reason": "fast_sim.py produces statistical approximations without full play-by-play. The conversion-by-zone metrics require play-level data, so fast-simmed games will show 0% across all zones.", "category": "out_of_scope", "status": "unknown" },
+    { "item": "Five Nations international not separately tested", "reason": "uses the same Season engine, so the metrics flow through automatically. Not separately tested.", "category": "deferred", "status": "unknown" },
+    { "item": "Nicegui app not updated", "reason": "nicegui_app/pages/my_team.py references avg_opi and legacy metrics. Not updated in this pass (uses legacy aliases which still work).", "category": "deferred", "status": "unknown" }
+  ],
+  "residual_risks": [
+    "Fast-simmed games will show 0% across all conversion-by-zone fields; dynasty-mode CPU games won't populate these fields",
+    "Nicegui app still references legacy metric aliases"
+  ],
+  "open_hooks": [
+    "Per-season metrics stored in dynasty history enable future trend-analysis tooling",
+    "analyze_game.py output embeds sport context so any reader (human or LLM) can interpret numbers without prior Viperball knowledge"
+  ],
+  "section_headers_original": [
+    "After-Action Report: Sports Analytics Framework",
+    "Problem Statement",
+    "Key Finding",
+    "What Changed",
+    "New Metrics (engine/viperball_metrics.py)",
+    "Math Fixes",
+    "Season Accumulation (engine/season.py)",
+    "Dynasty (engine/dynasty.py)",
+    "Pro League (engine/pro_league.py)",
+    "CLI UI (engine/season_ui.py)",
+    "Web UI — Streamlit (ui/page_modules/section_league.py)",
+    "Stats Site (stats_site/templates/)",
+    "API (api/main.py)",
+    "Writer/LLM Tooling",
+    "Data Flow",
+    "What's Not Done",
+    "Testing",
+    "Files Modified"
+  ],
+  "unmapped_content": "Key Finding: The league separates on small, consistent edges in late-down conversion conditioned by field position. Winning teams don't have dramatically better raw stats. They convert 5th down at slightly higher rates, in slightly worse field positions, over many repetitions. The gap is 2-5% — small enough to be invisible in aggregate stats, large enough to compound over a season. This is the analytical signal that was missing. Everything else (turnovers, explosive plays, kicking) is noise until you condition on field position. | Data Flow diagram (Game Engine → calculate_viperball_metrics → TeamRecord.add_game_result → Season properties → _serialize_team_record → stats site / Streamlit / CLI / Dynasty history; Pro league follows same pattern via ProTeamRecord.add_metrics()). | Files Modified line-change table with magnitudes (e.g. viperball_metrics.py +95, season.py +100, ANALYTICS.md +350 new, analyze_game.py +530 new).",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "No explicit decision/delegation section. 'What's Not Done' mapped to non_actions; residual risks inferred from the same section's standing limitations."
+}

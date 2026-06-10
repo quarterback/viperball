@@ -1,0 +1,51 @@
+{
+  "record_id": "viperball--2026-03-25--missing-teams-rivalry-fix",
+  "source_path": "docs/aar_missing_teams_and_rivalry_fix.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-25",
+  "title": "After-Action Report: Missing Teams in Ratings & Rivalry Fix",
+  "scope": "Composite ratings showed 197/200 teams; inaccurate rivalry assignments. Three teams completely invisible in all rankings and stats.",
+  "rationale": [
+    { "item": "The ratings page header declared '200 teams' but the composite rankings table only listed 197 teams. Three teams were missing entirely: Mississippi Valley State (Heritage League), North Dakota State (Northern Shield), Pepperdine (Mountain West).", "references": [] },
+    { "item": "Auto-assigned rivalries were geographically generated without any knowledge of real-world college rivalries, producing nonsensical pairings like Purdue-Rutgers instead of Penn State-Rutgers.", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Added team files for North Carolina Central (Heritage League) and Lafayette (Midwest States); moved Sacramento State to Moonshine League; added 'school' field to Mississippi Valley State and NDSU JSON files; deleted Pepperdine and Saint Louis", "artifacts": ["data/teams/north_carolina_central.json", "data/teams/lafayette.json", "data/teams/pepperdine.json", "data/teams/saint_louis.json", "data/teams/sacramento_state.json", "data/teams/mississippi_valley_state.json", "data/teams/ndsu.json"], "kind": "data" },
+    { "description": "Rebuilt data/conferences.json and data/cvl_conference_directory.txt from updated team files", "artifacts": ["data/conferences.json", "data/cvl_conference_directory.txt"], "kind": "data" },
+    { "description": "Replaced single-entry rivalries.json with 43 protected rivalries (33 conference + 10 non-conference)", "artifacts": ["data/rivalries.json"], "kind": "data" },
+    { "description": "Updated TARGET dict in realign_conferences.py", "artifacts": ["scripts/realign_conferences.py"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [
+    "Prevention checklist documented: always include 'school' field; add schedule generation assertion for unscheduled teams; validate team counts in composite rankings; use protected rivalries for known matchups; run post-realignment verification steps"
+  ],
+  "section_headers_original": [
+    "After-Action Report: Missing Teams in Ratings & Rivalry Fix",
+    "Problem",
+    "Root Cause Analysis",
+    "Missing Teams",
+    "Rivalry Assignment",
+    "Changes Made",
+    "Team Roster Changes",
+    "Conference Size After Changes",
+    "Rivalry System Overhaul",
+    "Files Modified",
+    "Prevention Checklist"
+  ],
+  "unmapped_content": "Root cause: realign_conferences.py used ti.pop('school', None) then ti['school_name'] = school_name, leaving teams with school_name but no school key. Composite ranking system (engine/ranking_composite.py) builds team list exclusively from completed games (all_teams built from game home_team/away_team) — teams with zero games never entered rankings. Conference changes table: Galactic League 11→10, Heritage League 12→13, Moonshine League 9→10, Mountain West 12→11. 43 rivalry examples: Ohio State-Michigan, Alabama-Auburn, Army-Navy, Oregon-Oregon State, Kansas-Missouri Border War, Pittsburgh-West Virginia Backyard Brawl, Florida-Florida State.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date from document header: 2026-03-25. No validation claims, no non_actions or residual_risks explicitly stated beyond the prevention checklist."
+}

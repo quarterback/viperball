@@ -1,0 +1,104 @@
+{
+  "record_id": "viperball--2026-02-28--coaching-integration-fiv-international-pro-league-fast-sim",
+  "source_path": "docs/AAR_coaching_integration_fiv_pro.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-28",
+  "title": "AAR: Coaching Integration — FIV International + Pro League Fast Sim",
+  "scope": "Feature: Wire coaching effects into international and pro league game modes",
+  "rationale": [
+    {
+      "item": "After the V2.7 lead management countermeasure system was implemented, coaching effects (gameday modifiers, DC gameplan, lead management profiles) only activated in college games. The simulation has three tiers of competition, and two of them were completely unaffected.",
+      "references": ["docs/AAR_lead_management_countermeasures.md"]
+    },
+    {
+      "item": "The FIV gap was especially frustrating: Phase 4 of international team building calls `generate_coaching_staff()` to create full 4-person staffs ... Then `_play_match()` creates a ViperballEngine and simply... doesn't pass them in. The coaches exist. They're just sitting in a drawer.",
+      "references": []
+    },
+    {
+      "item": "The pro league gap was structural: `fast_sim_game()` is a statistical model (~1-5ms per game vs ~1-3s for the full engine) designed for spectator-mode simulation. It has no coaching parameters at all. Every air_raid team and every ground_pound team ran through the same scoring formula with the same variance.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Fixed data loss bug in _coach_to_dict() in fiv.py: replaced 6-field manual serialization with card.to_dict() (full ~30-field serialization).",
+      "artifacts": ["engine/fiv.py", "coaching.py:641"],
+      "kind": "modified"
+    },
+    {
+      "description": "_play_match() now reconstructs CoachCard objects via CoachCard.from_dict() and passes home_coaching/away_coaching kwargs to ViperballEngine, matching the season.py college pattern, with try/except graceful fallback.",
+      "artifacts": ["engine/fiv.py", "engine/coaching.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Added COACHING_FLAVOR table to fast_sim mapping offense style to (points_mult, variance_mult) pairs, e.g. air_raid (1.08, 1.30), smashmouth (0.91, 0.70).",
+      "artifacts": ["engine/fast_sim.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Added DEFENSE_COACHING_FLAVOR table shifting scoring envelope by defense style (sign inverted: pts_mult -= def_shift).",
+      "artifacts": ["engine/fast_sim.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Prestige amplification: prestige_factor = (prestige - 50) / 200.0; pts_mult += prestige_factor * abs(pts_mult - 1.0) * 1.5; high-prestige teams get tighter variance (0.85x), low-prestige wilder (1.20x). Final multiplier clamped to 0.80 - 1.20, applied immediately after _expected_points(), before weather/rivalry modifiers.",
+      "artifacts": ["engine/fast_sim.py"],
+      "kind": "new"
+    }
+  ],
+  "risk_posture": [
+    "The `try/except` ensures that if coaching reconstruction fails for any reason, the game still runs — just without coaching effects, same as before.",
+    "Switching pro games to the full ViperballEngine would cost ~1000x in performance (5-17 minutes to simulate one week across all leagues vs ~4 seconds today). That's not viable.",
+    "Computation overhead: <1ms. No CoachCard objects, no personality slider lookups, no profile derivation. Just table lookups and arithmetic."
+  ],
+  "validation_claims": [],
+  "non_actions": [
+    {
+      "item": "Named coaches / full CoachCard coaching for pro leagues",
+      "reason": "Pro leagues are explicitly \"spectator-only: no management, no coaching hires, no roster moves.\" Adding named coaches would create expectations around coaching hires, firings, contract management, and portal — none of which exist for pro leagues.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Running pro league games through the full ViperballEngine",
+      "reason": "would cost ~1000x in performance (5-17 minutes to simulate one week across all leagues vs ~4 seconds today). That's not viable.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "Future extensibility: If pro leagues ever add management features (coaching hires, etc.), the fast_sim function already accepts the patterns — the coaching flavor can be replaced or augmented with full CoachCard integration without changing the call site."
+  ],
+  "section_headers_original": [
+    "AAR: Coaching Integration — FIV International + Pro League Fast Sim",
+    "Problem Statement",
+    "Fix 1: FIV International — Wire Existing Staffs Through",
+    "The Data Loss Bug",
+    "The Fix",
+    "Passing Staffs to the Engine",
+    "What FIV Gets Now",
+    "Fix 2: Pro League Fast Sim — Coaching Flavor Without Named Coaches",
+    "COACHING_FLAVOR Table",
+    "DEFENSE_COACHING_FLAVOR Table",
+    "Prestige Amplification",
+    "Final Range",
+    "Application Point",
+    "Design Decisions",
+    "Three-Tier Coaching Summary",
+    "What This Enables"
+  ],
+  "unmapped_content": "Tier table (before): College (season.py / dynasty.py) — Full ViperballEngine, full coaching staffs passed as kwargs; FIV International (fiv.py) — Full ViperballEngine, coaching staffs generated but never used; Pro Leagues (pro_league.py) — fast_sim statistical model, no coaching at all.\n\nWhat FIV Gets Now: Gameday modifiers from compute_gameday_modifiers() — composure tracking, leadership effects, rotation quality; DC gameplan from roll_dc_gameplan() — per-game defensive effectiveness; Lead management profiles — the full V2.7 countermeasure system (Avalanche, Thermostat, Vault, Counterpunch, Slow Drip); Halo system — star player magnetism; Composure tracking — tilt mechanics under pressure. International matches now have coaching identity. A Brazilian national team with a Motivator HC (high aggression, high chaos) will play Avalanche football... A German national team with a Disciplinarian HC (high composure, high rotations) will play Vault.\n\nCOACHING_FLAVOR table values: air_raid (1.08, 1.30); lateral_chaos (1.06, 1.35); tempo (1.07, 1.20); power_spread (1.04, 1.10); ground_pound (0.93, 0.75); smashmouth (0.91, 0.70); triple_option (0.95, 0.80); balanced (1.00, 0.90); west_coast (1.03, 0.95). The gap between the most explosive and most conservative styles is 17 percentage points of base scoring (0.91 to 1.08). DEFENSE_COACHING_FLAVOR: swarm 0.00; bend_no_break 0.03; blitz_heavy -0.05; zone 0.02; man_press -0.03. A team with air_raid + blitz_heavy gets a 1.13x base multiplier — the most explosive combination in the league.\n\nDesign Decisions: Why full coaching for FIV but lightweight for pro? FIV already runs the full ViperballEngine — the coaching system plugs in with zero performance cost; the full coaching pipeline requires play-by-play decisions that fast_sim doesn't make. Why 0.80-1.20 instead of a narrower range? With 200+ teams, narrow ranges make everyone feel the same. A 1.02-1.05 spread would be invisible in the noise of the existing 0.50-1.50 variance multiplier. The 0.80-1.20 range means season standings will reflect coaching philosophy, not just roster strength. Why include defense_style in the scoring multiplier? Coaching philosophy is holistic... The defense_style shift is small (max 0.05), but it distinguishes teams with coherent aggressive identities from teams with mixed philosophies.\n\nThree-Tier Coaching Summary (after): College — Full ViperballEngine, full CoachCard staffs, full V2.7 countermeasures, ~1-3s/game; FIV International — Full ViperballEngine, full CoachCard staffs (now wired through), full V2.7 countermeasures, ~1-3s/game; Pro Leagues — fast_sim statistical, coaching flavor from team identity (no named coaches), lead management not applicable, ~1-5ms/game. College and FIV now have identical coaching depth.\n\nWhat This Enables: FIV World Cup narratives — international matches now have coaching matchups (a Counterpunch coach vs a Vault coach in the World Cup semifinal creates a legible tactical storyline); Pro league style identity — an air_raid pro team will have higher-scoring, wilder games across a season, a smashmouth team will grind out 14-12 outcomes; Full-stack coaching — no team anywhere in the 200+ team ecosystem plays uncoached football.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Header lists a Companion document: docs/AAR_lead_management_countermeasures.md (V2.7 countermeasure system). No verification/validation section present."
+}

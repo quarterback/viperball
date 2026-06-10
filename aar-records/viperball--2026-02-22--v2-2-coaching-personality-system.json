@@ -1,0 +1,135 @@
+{
+  "record_id": "viperball--2026-02-22--v2-2-coaching-personality-system",
+  "source_path": "AAR_2026-02-22_coaching_v2.2.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-22",
+  "title": "After-Action Report: V2.2 Coaching Personality System",
+  "scope": "Full implementation of the V2.2 coaching personality layer",
+  "rationale": [
+    {
+      "item": "Implement the V2.2 Coaching Personality System — adding sub-archetypes, personality sliders, and hidden traits on top of the existing V2.1 classification system. Also fix two discovered bugs where game engine code was orphaned (defined but never consumed).",
+      "references": ["COACHING_SPEC.md"]
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Code-derived spec written documenting the entire coaching system from actual code, not memory; full audit of which coaching effects were actually live vs dead; post-V2-merge re-audit confirming all 15 V2.1 effects wired and discovering two bugs (orphaned game_rhythm, unreferenced EXPLOSIVE_CHANCE dict)",
+      "artifacts": ["COACHING_SPEC.md"],
+      "kind": "docs"
+    },
+    {
+      "description": "CoachCard data model extension: added 3 new fields (sub_archetype, personality_sliders, hidden_traits), V2.2 constants (15 sub-archetypes, 9 personality slider names, 20 hidden trait effect dicts, display labels), helper functions personality_factor(), get_sub_archetype_effects(), compute_hidden_trait_effects(), coaching_modifier_chain(), updated to_dict()/from_dict(), updated generate_coach_card() and convert_player_to_coach(), expanded compute_gameday_modifiers()",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug fix — wired game_rhythm: applied rhythm multiplier in _contest_run_yards() before the dice roll and in _contest_kick_pass_prob() on offensive skill, making 6 previously-dead coaching effects live",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug fix — wired EXPLOSIVE_CHANCE: changed _breakaway_check() to read per-family explosive base chance from EXPLOSIVE_CHANCE dict instead of hardcoded 0.15; updated call sites to pass family parameter",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "V2.2 personality multipliers — 8 game engine hooks: select_play_family, select_kick_decision, _contest_run_yards, _run_fumble_check, get_defensive_read, _apply_halftime_coaching_adjustments, _defensive_fatigue_factor, hero ball star targeting",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Dynasty integration: Mentor sub-archetype +10% development boost multiplier; Recruiter +15% recruiting appeal, +2 prestige bonus; Stabilizer +20% retention bonus, +2% portal suppression",
+      "artifacts": ["engine/dynasty.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Regenerated coaching staffs: re-ran scripts/generate_coaching_staffs.py for all 187 teams; verified V2.2 fields populated in team JSONs",
+      "artifacts": ["scripts/generate_coaching_staffs.py", "data/teams/*.json"],
+      "kind": "data"
+    },
+    {
+      "description": "Merge conflict resolution: merged origin/main containing PR #48 (4th down movement mechanic, bimodal yardage polarization, power play scaffolding); resolved conflicts in select_kick_decision (kept V2.2 personality modifiers alongside refactored kick-mode logic) and _contest_run_yards (rhythm multiplies center before the mode split)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "Multiplicative chain, not additive: X_final = X_base * F_personality * F_sub * F_trait, clamped [0.5, 1.5]. This prevents any single layer from dominating.",
+    "F(50) = 1.0 neutrality: Personality sliders gaussian around 50, so the average coach has neutral personality effects. Only outlier coaches push the needle.",
+    "Hidden traits capped at 2: Prevents trait soup. 5% chance per trait, 20 traits → ~63% of coaches have 0 traits, ~32% have 1, ~5% have 2.",
+    "Slight upward drift in yards/score from rhythm bug fix making coaching effects live — expected and acceptable",
+    "This is the intended behavior being unmasked, not a regression."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Batch sim (200 games): TDs 3.3, yards 499, score 50",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run the batch sim script for 200 games and compare TDs/yards/score averages",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Verified V2.2 fields populated in team JSONs (sub_archetype, personality_sliders, hidden_traits)",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "yes",
+      "check_method": "Inspect data/teams/*.json for sub_archetype, personality_sliders, hidden_traits fields",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Q3/Q4 analyst boost (q3_boost_multiplier) and q4_explosive_play_bias from firestarter are stored but not yet consumed",
+      "reason": "need quarter-aware hooks",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "5 no-op sub-archetype effects stored for future systems: tilt_resistance, tilt_sensitivity, timeout_efficiency, collapse_resistance, surge_probability_bonus",
+      "reason": "Harmlessly persisted.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Tune if the +66 yards drift is too much (could scale rhythm effect by 0.5-0.8 in the consumption points)"
+  ],
+  "open_hooks": [
+    "Build timeout, tilt, collapse, and surge systems to activate the 5 no-op sub-archetype effects",
+    "Consider exposing personality sliders in the UI (coach profile cards)",
+    "Q3/Q4 analyst boost and q4_explosive_play_bias stored awaiting quarter-aware hooks"
+  ],
+  "section_headers_original": [
+    "After-Action Report: V2.2 Coaching Personality System",
+    "Objective",
+    "Starting State",
+    "Work Performed",
+    "Phase 1: Audit & Spec (earlier session)",
+    "Phase 2: V2.2 Implementation (this session)",
+    "Step 1: CoachCard Data Model Extension (`engine/coaching.py`)",
+    "Step 2: Bug Fix — Wire `game_rhythm` (`engine/game_engine.py`)",
+    "Step 3: Bug Fix — Wire `EXPLOSIVE_CHANCE` (`engine/game_engine.py`)",
+    "Step 4: V2.2 Personality Multipliers — 8 Game Engine Hooks (`engine/game_engine.py`)",
+    "Step 5: Dynasty Integration (`engine/dynasty.py`)",
+    "Step 6: Regenerate Coaching Staffs",
+    "Step 7: Verification",
+    "Phase 3: Merge Conflict Resolution",
+    "Files Modified",
+    "Architecture Decisions",
+    "Bugs Found & Fixed",
+    "Calibration Impact",
+    "What's Next"
+  ],
+  "unmapped_content": "Starting State:\n- V2 engine rewrite had already been merged, wiring all 15 V2.1 classification effects\n- Season coaching plumbing was done (Season passes coaching staffs to ViperballEngine)\n- CoachCard had 6 attributes + 1 classification badge\n- Coaching staffs generated for 187 teams\n- Batch sim calibration: TDs ~3.45, yards ~433, score ~44\n\nFiles Modified table:\n| engine/coaching.py | +260 | V2.2 constants, fields, helpers, generation, serialization |\n| engine/game_engine.py | +127 | 2 bug fixes + 8 personality hooks + merge resolution |\n| engine/dynasty.py | +29 | Mentor, recruiter, stabilizer sub-archetype integration |\n| scripts/generate_coaching_staffs.py | +5 | V2.2 fields in dry-run display |\n| data/teams/*.json (187 files) | ~26k | Regenerated coaching staffs with V2.2 fields |\n\nBugs Found & Fixed:\n1. Orphaned game_rhythm — 6 coaching effects modified this state variable across 15 code sites, but it was never read during play resolution. Leadership, composure amplification, halftime adjustment, trailing boost, chemistry, and momentum recovery were all silently dead. Fixed by consuming rhythm in both _contest_run_yards() and _contest_kick_pass_prob().\n2. Dead EXPLOSIVE_CHANCE — Per-family explosive play probabilities (5-18%) defined as a constant dict but never referenced. The breakaway system used a hardcoded 0.15 base. Fixed by reading from the dict with play family key.\n\nCalibration Impact table:\n| TDs/team | 3.45 | 3.3 | -0.15 | Within noise |\n| Yards/team | 433 | 499 | +66 | Rhythm bug fix makes coaching effects live |\n| Score/team | 44 | 50 | +6 | Same cause |\n| Plays/game | ~170 | 170 | 0 | Stable |\nThe drift is from the rhythm bug fix — coaching effects that push rhythm above 1.0 (chemistry, momentum, halftime boosts) now actually affect play outcomes.\n\nHeader metadata: Branch: claude/improve-fantasy-app-menus-cRFqp",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Document addresses an owner in second person ('your PR #48', 'your bimodal yardage polarization system') during merge conflict resolution, but records no explicit delegation decisions."
+}

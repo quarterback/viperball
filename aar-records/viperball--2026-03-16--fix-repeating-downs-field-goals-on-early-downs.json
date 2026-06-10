@@ -1,0 +1,120 @@
+{
+  "record_id": "viperball--2026-03-16--fix-repeating-downs-field-goals-on-early-downs",
+  "source_path": "docs/aar_2026-03-16_repeating_downs_early_kicks.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-16",
+  "title": "After Action Review — Fix Repeating Downs & Field Goals on Early Downs",
+  "scope": "Fix play-by-play showing duplicate down & distance on consecutive plays, and prevent the coaching AI from kicking field goals on downs 1-3. 1 file changed, +48 / -3 lines",
+  "rationale": [
+    {
+      "item": "Incident: National Championship box score (Arizona State 72.0 vs Nebraska Omaha 74.5) showed multiple instances of \"repeating downs\" — consecutive plays displaying identical down, distance, and field position — plus a field goal kicked on what was effectively 3rd down.",
+      "references": []
+    },
+    {
+      "item": "Kicking a field goal with 4 downs remaining is irrational — you can always kick later if the drive stalls.",
+      "references": []
+    },
+    {
+      "item": "Four independent bugs combined to produce the observed symptoms: offensive during-play penalties silently consumed a down; defensive post-play penalties never granted automatic first downs; Play objects stored inconsistent pre-play vs post-play state; and select_play_family() maintained non-zero kick weights on all downs, bypassing the select_kick_decision() down 4-6 gate.",
+      "references": []
+    },
+    {
+      "item": "The bugs compounded: a single offensive holding call early in a drive could cascade into a lost down, a premature field goal, and a confusing box score — all from one penalty.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Bug 1 fix (_apply_during_play_penalty, line ~5116): offensive during-play penalties now restore state.down and state.yards_to_go to pre-play values saved at the start of simulate_play(), so the down replays instead of being silently consumed.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug 2 fix (_apply_post_play_penalty, line ~5155): defensive post-play penalties now award an automatic first down when penalty.yards >= yards_to_go (down = 1, yards_to_go = 20), matching the checks already present in _apply_pre_snap_penalty and during-play defensive handling.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug 3 fix: simulate_play() now saves _pre_play_fp/_pre_play_down/_pre_play_ytg before _simulate_play_core() and stamps them on every returned Play, so every play consistently shows the starting situation; this also implicitly fixes EPA's ep_before calculation.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug 4 fix (select_play_family, line ~5598): zeroed out field_goal, snap_kick, and punt weights on downs 1-3, with an exception for desperation clock situations (Q2/Q4 under 45 seconds).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Commit d8070a6 \"Fix repeating downs in play-by-play and field goals on early downs\".",
+      "artifacts": ["d8070a6"],
+      "kind": "other"
+    }
+  ],
+  "risk_posture": [
+    "Snap kicks on downs 2-3 are still possible through _check_snap_kick_shot_play(), which is a controlled decision (kicker skill + coaching style check), not a random weight selection. The desperation exception allows last-second kicks when there literally isn't time for another play.",
+    "Drive summary stats: Drive yards are accumulated from play.yards_gained (unchanged), not from field position deltas, so the fix doesn't affect drive totals."
+  ],
+  "validation_claims": [],
+  "non_actions": [
+    {
+      "item": "Pre-snap penalty handling",
+      "reason": "Already correctly replayed the down (offensive) and checked for auto-first-down (defensive)",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "During-play defensive penalty handling",
+      "reason": "Already checked for auto-first-down at line 5127-5129",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "_check_snap_kick_shot_play()",
+      "reason": "Opportunistic snap kicks on downs 2-3 still work; only the uncontrolled weight-based selection was gated",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "EPA calculation",
+      "reason": "Now implicitly fixed: p.field_position and p.down are pre-play values, so calculate_ep(p.field_position, p.down) correctly computes ep_before",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Drive summary stats",
+      "reason": "Drive yards are accumulated from play.yards_gained (unchanged), not from field position deltas, so the fix doesn't affect drive totals",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Fix Repeating Downs & Field Goals on Early Downs",
+    "Mission",
+    "Incident",
+    "Commits",
+    "Scope",
+    "Root Cause Analysis",
+    "Bug 1 — During-Play Offensive Penalties Don't Replay the Down",
+    "Bug 2 — Post-Play Defensive Penalties Don't Grant Automatic First Down",
+    "Bug 3 — Play Objects Store Inconsistent State (Pre-Play vs Post-Play)",
+    "Bug 4 — Field Goals and Snap Kicks Selectable on Downs 1-3",
+    "Interaction Between Bugs",
+    "Design Note: Pre-Play State Stamping",
+    "What Was Not Changed"
+  ],
+  "unmapped_content": "Branch: claude/fix-championship-game-logic-zoWVE.\n\nIncident play-by-play examples:\n17:24  UNO  55  2&17  speed option  3\n17:07  UNO  55  2&17  KICK PASS    45  — TOUCHDOWN!\n50  3&5  sweep option   3\n50  3&5  SPEED OPTION  50  — TOUCHDOWN!\n42  2&13  PENALTY  7   — draw 7 + Unsportsmanlike on D 15 yds\n42  2&13  KICK PASS 58 — TOUCHDOWN!\n44:55  ASU  86  2&17  FIELD GOAL  15  — 39yd FG GOOD!\n\nBug 1 mechanism detail: a 3-yard gain on 1st & 20 followed by holding left state at 2nd & 17 at FP 28 instead of replaying 1st & 20; over a full game this could cost a team 2-4 downs.\n\nBug 3 mechanism detail: GAIN/FIRST_DOWN plays store post-play values; TOUCHDOWN/scoring plays store pre-play values, so a GAIN followed by a TD both display the same down/FP/ytg. Secondary impact: EPA used post-play state for ep_before on GAIN plays.\n\nBug 4 code path: simulate_play() → _simulate_play_core() → select_play_family() (can return FIELD_GOAL on down 2) → PLAY_FAMILY_TO_TYPE[FIELD_GOAL] = PLACE_KICK → _dispatch_play(PLACE_KICK) → simulate_place_kick(). The select_kick_decision() gate is never consulted.\n\nInteraction Between Bugs: 1) Bug 1 (penalty steals a down) → offense is on 2nd down when it should be 1st; 2) Bug 4 (FG on early downs) → weighted selection picks field_goal on that 2nd down; 3) Bug 3 (inconsistent state) → play-by-play shows \"2&17\" twice in a row; 4) Bug 2 (no auto-first-down) → defensive personal foul doesn't reset the down, perpetuating the off-by-one.\n\nDesign Note: The _pre_play_* attributes serve dual purpose: display consistency and penalty rollback. This avoids needing to reverse-engineer the pre-play state from the post-play state (which would require knowing exactly which code path modified state and how).",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Same branch and same incident game as docs/aar_2026-03-16_championship_kick_decision_logic.md — companion AAR. No validation/testing section."
+}

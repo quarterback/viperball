@@ -1,0 +1,221 @@
+{
+  "record_id": "viperball--2026-02-23--v2-5-hc-ambition-coaching-trees-assistant-hc-meter-coach-development",
+  "source_path": "AAR_2026-02-23_coaching_systems_v2.5.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-23",
+  "title": "After-Action Report: V2.5 — HC Ambition System, Coaching Trees, Assistant HC Meter, and Coach Development",
+  "scope": "Twelve commits spanning fly.io deployment fixes, game engine balancing (touch distribution, hero ball nerfs), the coaching portal NRMP matching system, in-game dev aura, and — in the final commit — the HC ambition/departure overhaul, coaching tree tracker, assistant HC readiness meter, coach attribute development, and role fluidity between HC and coordinator positions.",
+  "rationale": [
+    {
+      "item": "The coaching system through V2.4 treated head coaches like permanent fixtures. An HC stayed at a school until fired or until their contract expired (50% coin flip to leave). There was no model for why a successful coach would leave a low-prestige program, no mechanism for assistant coaches to earn their way into HC candidacy beyond a simple wants_hc boolean, and no career lineage connecting a coordinator's development to the head coaches they served under.",
+      "references": []
+    },
+    {
+      "item": "HC departure was random, not meritocratic — A 50% coin flip decided whether an expired-contract HC left. Real coaching markets are driven by ambition: successful coaches seek bigger stages.",
+      "references": []
+    },
+    {
+      "item": "No parlay mechanism — Coaches who were happy at their program had no way to extend.",
+      "references": []
+    },
+    {
+      "item": "Assistants couldn't earn HC candidacy — The wants_hc flag was set at generation time and never changed. There was no development pathway.",
+      "references": []
+    },
+    {
+      "item": "No coaching tree — Every coach existed in isolation. ... no way to display a Saban-style coaching tree on the coach card.",
+      "references": []
+    },
+    {
+      "item": "Coaches didn't develop — Players gained attributes every offseason through apply_offseason_development, but coaches were static.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "CoachCard data model expansion: new fields conference_titles, playoff_appearances, playoff_wins, championship_appearances, coaching_tree (List[dict]), hc_meter (0-100); all serialised in to_dict()/from_dict() and survive dynasty save/load roundtrips",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "HC Ambition System (compute_hc_ambition): ambition = int(win_percentage * 80) + conference_titles*5 + playoff_appearances*3 + playoff_wins*4 + championship_appearances*5 + championships*8, clamped [10, 99]",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Contract extension parlay (try_hc_contract_extension): no extension if ambition > team_prestige + 10 or recent record below .500; otherwise extend 3-5 new years, salary re-calculated with a 10% loyalty bump",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "new"
+    },
+    {
+      "description": "HC departure rewrite (coaching_portal.py :: populate_coaching_portal): head coaches never leave by coin flip — try_hc_contract_extension decides stay vs portal; coordinator departure remains probabilistic 50/50",
+      "artifacts": ["coaching_portal.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "HC readiness meter (advance_hc_meter): offseason point accumulation from tenure, star player in area, team winning record, playoffs, conference titles, HC success, and own quality; thresholds at 75 (wants_hc flips, enters HC candidate pool 30% chance if overall ≥ 65) and 90 ('hot name' — always enters pool if overall ≥ 60, +8 ranking boost)",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Coach attribute development (apply_coach_development): per-offseason attribute changes scaled by season record (win% ≥ .650: 0 to +2 per attribute; ≥ .500: 0 to +1; < .500: -1 to +1); age decline -1 per attribute at 60+, -2 at 65+",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Role fluidity (get_acceptable_roles): fired HCs can take coordinator roles matching their affinity; coordinators with meter ≥ 75 appear in HC vacancy pools; portal free-agent generation also uses get_acceptable_roles",
+      "artifacts": ["engine/coaching.py", "coaching_portal.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Coaching tree tracker (dynasty.py :: advance_season): every offseason, for each assistant, extend or append coaching_tree entries {coach_name, coach_id, team_name, year_start, year_end}; tree persists across team changes",
+      "artifacts": ["engine/dynasty.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Portal scoring updates: _team_score_coach adds postseason pedigree (conf titles ×2, playoff wins ×1.5, championship appearances ×3, championships ×5) and hot name bonus (meter ≥ 90: +8, ≥ 75: +4); _coach_score_team adds ambition matching bonus = clamp((team_prestige - ambition) × 0.3, -15, +10)",
+      "artifacts": ["coaching_portal.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Dynasty integration: run_offseason runs three new phases between contract-ticking and portal population — HC meter advancement, coach attribute development, and postseason stat tracking plus coaching tree updates in advance_season",
+      "artifacts": ["engine/dynasty.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "The +10 buffer is critical. A prestige-55 school can retain an HC with ambition up to 65, which covers most \"solid but not elite\" coaches. But a coach who wins a championship at that school jumps to ambition ~80+ and leaves — exactly as intended.",
+    "The ambition model makes departures legible — the player can look at an HC's ambition score and their team's prestige and predict whether the coach will stay.",
+    "A coordinator on a losing team with mediocre talent and an average HC gains ~6-10 points/year — they might never hit 75, which is realistic. Not every coordinator is HC material.",
+    "This creates natural retirement pressure without forcing it."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Import verification (coaching, coaching_portal, dynasty) — Pass",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Import the three modules in a Python session",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Serialization roundtrip (to_dict → from_dict) — Pass — hc_meter, coaching_tree, postseason fields survive",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Roundtrip a CoachCard through to_dict/from_dict and compare new fields",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "HC ambition for various profiles — 54 (modest), 65 (good), 92+ (dominant), 99 (dynasty)",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Call compute_hc_ambition with the listed profiles",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Extension parlay: modest HC at matching prestige — Extended (3 years); dominant HC at low prestige — Rejected — enters portal",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Call try_hc_contract_extension with the two scenarios",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "HC meter progression: 5 years on playoff team — 0 → 25 → 49 → 78 → 100 (wants_hc flips at year 3)",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Simulate 5 offseasons of advance_hc_meter under playoff-team conditions",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Coach development: winning team — +2-6 total attr points per year",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Run apply_coach_development for a winning team and sum attribute deltas",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Role fluidity: fired HC acceptable roles — [head_coach, oc] for offensive_mind affinity",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Call get_acceptable_roles on an offensive_mind HC card",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "test_dynasty.py full integration — Pass — 5-season dynasty runs cleanly",
+      "evidence_cited": "tests",
+      "checkable_against_repo": "yes",
+      "check_method": "Run test_dynasty.py",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Human team coaching tree display (UI panel on the coach card page)",
+      "reason": "The coaching tree data is tracked but there's no UI panel yet to display it on the coach card page.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "HC meter visibility in season mode UI",
+      "reason": "The meter is computed but not surfaced in the season mode UI.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Interactive extension negotiation for the human team",
+      "reason": "Currently automatic.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Fired HC stigma / cooling-off mechanic",
+      "reason": "A fired HC currently enters the portal with no penalty.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Individual playoff-win tracking for assistants",
+      "reason": "Currently only HCs get postseason stat bonuses.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "Dynasty mode could show a 'rising star' indicator for assistants approaching 75",
+    "Extension negotiation could become interactive: 'Coach Smith wants an extension. Offer 3 years / $X?' with a risk of losing them if you lowball",
+    "Could add a 'cooling off' mechanic where recently-fired HCs accept lower salaries",
+    "Coordinators on championship teams could get a smaller HC meter boost per playoff win"
+  ],
+  "section_headers_original": [
+    "After-Action Report: V2.5 — HC Ambition System, Coaching Trees, Assistant HC Meter, and Coach Development",
+    "Objective",
+    "Starting State (V2.4 Baseline)",
+    "Work Performed",
+    "1. CoachCard Data Model Expansion (`engine/coaching.py`)",
+    "2. HC Ambition System (`compute_hc_ambition`)",
+    "3. Contract Extension Parlay (`try_hc_contract_extension`)",
+    "4. HC Departure Rewrite (`coaching_portal.py :: populate_coaching_portal`)",
+    "5. HC Readiness Meter (`advance_hc_meter`)",
+    "6. Coach Attribute Development (`apply_coach_development`)",
+    "7. Role Fluidity (`get_acceptable_roles`)",
+    "8. Coaching Tree Tracker (`dynasty.py :: advance_season`)",
+    "9. Portal Scoring Updates",
+    "10. Dynasty Integration",
+    "Testing",
+    "Before/After Summary",
+    "Known Limitations & Future Work"
+  ],
+  "unmapped_content": "Header metadata: Branch: claude/fix-season-mode-flyio-PH0pe\n\nStarting State (V2.4 Baseline) table: HC departure trigger — contract expired → 50% coin flip; Contract extension — none; HC ambition model — none; wants_hc flag set at generation, never updated; HC readiness meter — none; Coaching tree — none; Coach attribute development — none; Role fluidity — permanent; Postseason stat tracking — championships only on CoachCard; Portal scoring (HC candidates) — overall rating + classification fit.\n\nWhy these fields: The ambition formula needs postseason data beyond just championships. ... playoff_wins specifically rewards depth — an HC who went to three straight semifinals accumulates 6+ playoff wins, making them extremely attractive to elite programs.\n\nAmbition profile table: First-year HC, no record ~10; 7-5 HC, 1 conf title ~54; 9-3 HC, 2 playoff trips, 1 conf title ~68; 11-1 HC, 3 playoffs, 5 PO wins, 1 championship ~92; Dynasty HC, multiple rings 99. Design rationale: win percentage provides the base (0-80 range).\n\nWhy not just re-sign at 50%? The old model was degenerate, with two failure modes: (a) a great coach randomly leaves a great program for no reason, and (b) a great coach randomly stays at a terrible program forever.\n\nHC meter point sources table: Tenure +2/year as coordinator; Star player in area +5 to +10; Team winning record +2 to +8; Made playoffs +3 to +5; Won conference +2 to +4; HC success +2 to +6; Own quality +1 to +3 (overall ≥ 75). Progression: playoff-team coordinator gains ~20-30 points/year, hits 75 in ~3 years and 90 in ~4. Why a meter instead of a formula? A formula would be stateless; the meter is cumulative — history matters; development doesn't reset on team change.\n\nCoach development net effect: a winning coordinator improves ~3-6 total attribute points per year; over a 5-year stint could gain +15-30 points, jumping from 65 overall to 72-75. Creates an arc: hire a young coordinator, watch them develop into a legitimate HC candidate, then promote them or lose them to the portal.\n\nRole fluidity table: HC (defensive_mind) → head_coach, dc; HC (offensive_mind) → head_coach, oc; HC (special_teams_guru) → head_coach, stc; HC (balanced) → head_coach, oc or dc; Coordinator (meter ≥ 75) → current_role, head_coach; Coordinator (meter < 75) → current_role only.\n\nCoaching tree example JSON: [{\"coach_name\": \"A. Smith\", \"coach_id\": \"coach_...\", \"team_name\": \"Xavier\", \"year_start\": 2026, \"year_end\": 2029}, {\"coach_name\": \"B. Jones\", ... \"year_start\": 2030, \"year_end\": 2032}].\n\nBefore/After Summary table: HC departure 50% coin flip → ambition vs. prestige comparison; Contract extension none → automatic for content coaches (ambition ≤ prestige + 10); HC candidate pool wants_hc boolean → HC meter earned through performance; Coaching tree none → full lineage; Coach development static → 0-2 attr gains/year, age decline 60+; Role fluidity permanent → HCs ↔ coordinators based on affinity + meter; Postseason tracking championships only → conf_titles, playoff_appearances, playoff_wins, championship_appearances; Portal scoring overall + classification → + pedigree bonus, hot name bonus, ambition matching.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Scope mentions twelve commits including fly.io deployment fixes, engine balancing, NRMP matching and dev aura, but the Work Performed section only details the final commit's coaching systems; the earlier eleven commits are not documented here. Note: this is a second 'V2.5' AAR (dated 2026-02-23) distinct from AAR_2026-02-22_film_study_v2.5.md."
+}

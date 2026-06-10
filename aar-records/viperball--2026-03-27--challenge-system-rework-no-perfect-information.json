@@ -1,0 +1,129 @@
+{
+  "record_id": "viperball--2026-03-27--challenge-system-rework-no-perfect-information",
+  "source_path": "docs/aar_2026-03-27_challenge_system_rework.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-27",
+  "title": "AAR: Challenge System Rework — No Perfect Information",
+  "scope": "The original challenge system gave coaches perfect information. Two separate code paths existed: _coach_challenge() called only on actual blown calls, and _coach_wastes_challenge() randomly burning challenges on correct calls.",
+  "rationale": [
+    {
+      "item": "This is backwards. A real coach sees a play, has an instinct about whether the ruling was correct, and decides whether to bet a challenge on that instinct. They don't have access to the truth until replay tells them.",
+      "references": []
+    },
+    {
+      "item": "Additionally, the original system only challenged penalties. In real football (NFL), penalties CANNOT be challenged. Coaches challenge plays: spot of the ball, catch/no-catch, fumble rulings, and scoring plays.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Replaced the two methods (_coach_challenge + _coach_wastes_challenge) with a single method _coach_considers_challenge(play), which runs after every play in the drive loop; the coach evaluates the play and decides whether to challenge without knowing if the ref got it right.",
+      "artifacts": ["_coach_considers_challenge", "_coach_challenge", "_coach_wastes_challenge"],
+      "kind": "modified"
+    },
+    {
+      "description": "Defined what can be challenged (Viperball rules): spot of the ball (offense, 12%), late-down spot (offense, 6%), turnover on downs (offense, 10%), fumble/INT ruling (offense, 8%), catch/no-catch (offense, 4%), scoring play (defense, 6%). NOT challengeable: penalties, plays inside the 3-minute warning (auto-reviewed).",
+      "artifacts": [],
+      "kind": "modified"
+    },
+    {
+      "description": "Implemented coach decision factors: ref crew reputation, coach judgment quality (clock_management as proxy — bad coaches challenge more but succeed less), game situation (close games within 9 points and second-half plays increase challenge likelihood by 30-40%), and budget awareness against remaining challenges.",
+      "artifacts": ["clock_management"],
+      "kind": "modified"
+    },
+    {
+      "description": "Replay determines the truth: for play challenges, a success rate roll scales with coach quality — clock_mgmt 0.0 → 25% success, 0.5 → 42%, 1.0 → 60%.",
+      "artifacts": [],
+      "kind": "modified"
+    },
+    {
+      "description": "Auto-review inside 3-minute warning: plays are auto-reviewed by officials; coaches cannot throw challenge flags during this period.",
+      "artifacts": [],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "The system never tells the coach 'this is a bad challenge.'"
+  ],
+  "validation_claims": [
+    {
+      "claim": "Results (100-game sample): Challenges per game 1.58; Games with challenges 80%; Success rate 43.7%; Challenges overturned 69; Challenges failed 89.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 100-game batch simulation and compare challenge metrics; no script is named in the document.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Challenge breakdown by reason: Catch 54, Turnover 49, Spot 38, Scoring 17.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run the 100-game sample and tally challenge reasons.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "NFL comparison: success rate 43.7% vs NFL ~40-45%; challenges/game 1.58 vs ~1-2; games with challenges 80% vs ~70-85%; best coach success ~60% vs 71% (Daboll); worst ~25% vs 21% (McDaniel).",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "no",
+      "check_method": "NFL figures are external reference data; sim figures require batch re-simulation.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Failed challenge = lost timeout: NFL penalizes failed challenges with a timeout loss.",
+      "reason": "Not implemented yet.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Third challenge earned: NFL gives a third challenge if the first two succeed.",
+      "reason": "Could add this.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Challenge success tracking on coach cards: the referee card tracks challenges, but the coach card doesn't yet track their career challenge success rate.",
+      "reason": "Not done yet (no reason given beyond listing).",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Announcer-style narrative ('Coach Smith throws the red flag... and after review, the ruling on the field is OVERTURNED!').",
+      "reason": "Not generated in play descriptions yet.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "For penalty challenges (phantom flags): if blown_call=True → overturned. But penalties can't be challenged, so this only matters in the post-game review log."
+  ],
+  "section_headers_original": [
+    "AAR: Challenge System Rework — No Perfect Information",
+    "Problem",
+    "What Changed",
+    "Architecture: One Decision Point, No Perfect Information",
+    "What Can Be Challenged (Viperball Rules)",
+    "Coach Decision Factors",
+    "Replay Determines the Truth",
+    "Auto-Review Inside 3-Minute Warning",
+    "Results (100-game sample)",
+    "Challenge Breakdown by Reason",
+    "NFL Comparison",
+    "Key Design Principle",
+    "What's Not Done Yet"
+  ],
+  "unmapped_content": "Problem detail: '1. _coach_challenge() — called ONLY on actual blown calls. The coach \"knew\" the call was wrong because the code only invoked this method when the engine had already determined the ref made an error. 90% challenge rate, 100% success rate. 2. _coach_wastes_challenge() — called after every play, randomly burning challenges on correct calls.' Key Design Principle: 'The coach is always sure they're right — they just sometimes aren't. The system never tells the coach \"this is a bad challenge.\" The coach evaluates the play through their own lens (ref reputation, game situation, instinct), throws the flag with confidence, and finds out the truth when replay announces the ruling. Sometimes their read is correct and they look brilliant. Sometimes it's wrong and they look like McDaniel.' Challenge trigger table details: Spot — gain within 2 yards of first-down marker; Late-down spot — 4th-6th down, within 4 yards of marker; Turnover on downs — TOD ruling (high stakes); Fumble/INT — any turnover; Catch/no-catch — incomplete kick pass; Scoring play — TD with ≤5 yards gained. Metadata: Branch: claude/referee-bias-system-B6KAy.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "No file paths named for the changes (only method names); the affected module is not stated. Scope field uses the opening 'Problem' statement."
+}

@@ -1,0 +1,151 @@
+{
+  "record_id": "viperball--2026-03-27--graduated-blowout-backup-rotation",
+  "source_path": "docs/ard_2026-03-27_blowout_backup_rotation.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "medium",
+  "date": "2026-03-27",
+  "title": "Architecture Decision Record: Graduated Blowout Backup Rotation",
+  "scope": "Replace the single-threshold blowout trigger with a graduated three-tier system that begins earlier, escalates with the lead, and pairs substitution decisions with conservative play-calling.",
+  "rationale": [
+    {
+      "item": "Starters played full games in 20-24 point leads. A team up 22 in the 3rd quarter would run its full starting lineup through the end of the game. This inflated individual stat lines, padded scoring totals, and looked unrealistic.",
+      "references": ["Coaching substitution system (2026-03-20)"]
+    },
+    {
+      "item": "Backups accumulated near-zero stats. Without meaningful game reps, backup players had no opportunity to build stat profiles. In dynasty mode, this matters: a backup Halfback who never touches the ball has no case for portal interest or development.",
+      "references": []
+    },
+    {
+      "item": "Blowout final scores were too high. With starters running aggressive play-calls (kick passes, laterals, trick plays) deep into decided games, final scores ballooned. The engine had no mechanism to shift to conservative, clock-chewing football when the game was over in all but name.",
+      "references": []
+    },
+    {
+      "item": "Why graduated tiers instead of a lower flat threshold? A flat threshold would be too aggressive in many situations. An 18-point lead early in Q3 can evaporate — pulling all starters at that point risks giving the game away. Graduated tiers let coaches respond proportionally.",
+      "references": []
+    },
+    {
+      "item": "Why couple play-calling changes with substitutions? Substitutions alone don't solve the scoring problem. Even with backups in the game, if the play-caller is still dialing up kick passes and trick plays, the offense generates unnecessary scoring opportunities and turnover risk.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Implemented _blowout_tier(score_diff) returning tiers 0-3 (Normal / Soft Rotation / Pull Starters / Deep Bench) based on lead size, quarter, and time remaining, including late-Q2 triggers and a Q4 under-5-minute rule at tier 2.",
+      "artifacts": ["engine/game_engine.py", "_blowout_tier()"],
+      "kind": "modified"
+    },
+    {
+      "description": "Soft rotation logic (tier 1): filter to skill-position starters (Viper, Zeroback, Halfback, Wingback, Slotback), sort by game_touches descending, 60% chance each of being rested for one drive (cap 2 per evaluation); additive to performance and fatigue checks.",
+      "artifacts": ["engine/game_engine.py", "evaluate_coaching_substitutions()"],
+      "kind": "modified"
+    },
+    {
+      "description": "Conservative play-calling (blowout clock-chew) in select_play_family(): run families 2.0x, sweep_option 1.4x, speed_option 1.2x, kick_pass 0.20x, lateral_spread 0.10x, trick_play 0.05x, viper_jet 0.30x, snap_kick/field_goal 1.3x. Q4 clock-run mode now applies universally when leading in Q4.",
+      "artifacts": ["engine/game_engine.py", "select_play_family()"],
+      "kind": "modified"
+    },
+    {
+      "description": "Tempo play-clock milking: leading team in a blowout runs base_time floored at 36 seconds and capped at 42, stacking with existing 3-minute-warning clock burn logic.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Expanded _is_blowout(): from '20+ pts, Q3/Q4 only' to '20+ pts Q3/Q4, or 25+ pts Q2 with ≤5:00 left', so backup-friendly touch distribution (_spread_the_love_offense/_spread_the_love_defense) also kicks in earlier.",
+      "artifacts": ["engine/game_engine.py", "_is_blowout()", "_spread_the_love_offense", "_spread_the_love_defense"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "Tier 1 rotation is probabilistic. ... This is intentional (coaching variance) but could look inconsistent in small samples.",
+    "Clock-chew stacks aggressively. ... This is correct behavior for a blowout, but worth monitoring for games where the lead narrows and the play-caller should open back up.",
+    "The thresholds are 5 points higher than Q3+ equivalents to account for the half remaining."
+  ],
+  "validation_claims": [
+    {
+      "claim": "20-game mismatch test (Alabama vs Alabama State, seeds 100-119): avg home score 102.5, avg away 55.5, avg margin 47.1; avg tier-1 subs 1.7/game; avg tier-2/3 subs 6.9/game; tier 1 reached 9/20 (45%), tier 2 20/20 (100%), tier 3 14/20 (70%); Q2 blowout trigger 13/20 (65%).",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "yes",
+      "check_method": "Re-run 20 simulations Alabama vs Alabama State with seeds 100-119 and tally tier triggers and scores.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "20-game even matchup test (Alabama vs Auburn, seeds 200-219): blowout subs triggered in 17/20 (85%); the 3 games with zero blowout triggers (seeds 202, 214, 217) were wire-to-wire close contests with final margins under 7 points.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "yes",
+      "check_method": "Re-run 20 simulations Alabama vs Auburn with seeds 200-219 and tally trigger rates by final margin.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Lower flat threshold (20 instead of 25) — alternative not adopted.",
+      "reason": "Would catch more games but is too aggressive for Q3 20-point leads in a 9-point-TD sport. A 20-point lead is ~2.5 touchdowns — well within comeback range.",
+      "category": "declined_by_owner",
+      "status": "unknown"
+    },
+    {
+      "item": "Time-of-possession based trigger — alternative not adopted.",
+      "reason": "Rejected because TOP correlates weakly with game outcome in Viperball's high-scoring format — a team can dominate TOP with field goals while the opponent scores touchdowns on short drives.",
+      "category": "declined_by_owner",
+      "status": "unknown"
+    },
+    {
+      "item": "Explicit 'garbage time' mode (formal game state flag changing all simulation parameters at once) — alternative not adopted.",
+      "reason": "Rejected in favor of composing existing systems (substitutions + play-calling + tempo) because it's more maintainable and each component can be tuned independently.",
+      "category": "declined_by_owner",
+      "status": "unknown"
+    },
+    {
+      "item": "Coach personality gating (only conservative coaches pull starters early).",
+      "reason": "Rejected for the initial implementation because the behavior should be universal — even aggressive coaches pull starters in 35-point blowouts. Future work could modulate the tier thresholds based on coaching personality.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Viperball scores are inherently high. Even with suppressed play-calling, a team's backups running dives in a 35-point blowout will still score occasionally. The system dampens scoring but doesn't eliminate it. Final scores in mismatches will still look large by football standards.",
+    "Tier 1 rotation is probabilistic. The 60% trigger chance and 2-per-drive cap mean tier 1 behavior varies game-to-game.",
+    "Clock-chew stacks aggressively. In theory, a run play's weight could be boosted 4-5x through cascading multipliers while kick pass weight is suppressed to near-zero — worth monitoring for games where the lead narrows."
+  ],
+  "open_hooks": [
+    "Future work could modulate the tier thresholds based on coaching personality (e.g., aggressive coaches require 5 more points to trigger each tier)."
+  ],
+  "section_headers_original": [
+    "Architecture Decision Record: Graduated Blowout Backup Rotation",
+    "Context",
+    "Decision",
+    "Why graduated tiers instead of a lower flat threshold?",
+    "Why couple play-calling changes with substitutions?",
+    "Design",
+    "Tier System",
+    "Soft Rotation Logic (Tier 1)",
+    "Conservative Play-Calling (Blowout Clock-Chew)",
+    "Tempo: Play Clock Milking",
+    "`_is_blowout()` Expansion",
+    "Validation",
+    "20-Game Mismatch Test (Alabama vs Alabama State, seeds 100-119)",
+    "20-Game Even Matchup Test (Alabama vs Auburn, seeds 200-219)",
+    "Consequences",
+    "Positive",
+    "Negative / Risks",
+    "Alternatives Considered",
+    "Lower flat threshold (20 instead of 25)",
+    "Time-of-possession based trigger",
+    "Explicit \"garbage time\" mode",
+    "Coach personality gating",
+    "Files Changed",
+    "Related Documents"
+  ],
+  "unmapped_content": "Tier table: Tier 0 Normal (<20 pts, or Q1/early Q2) — none; Tier 1 Soft Rotation (20+ pts Q3+, or 25+ pts late Q2) — rotate 1-2 highest-usage starters out per drive (60% chance each), blowout clock-chew active; Tier 2 Pull Starters (25+ pts Q3+, or 30+ late Q2, or 20+ pts under 5:00 Q4) — all skill-position starters benched for game; Tier 3 Deep Bench (35+ pts Q3+) — skill + defensive starters benched. Q4 rule rationale: 'There is no competitive reason for starters to be on the field with a 20-point lead and less than 5 minutes in the game.' Positive consequences: backups accumulate meaningful stats feeding portal calculations, award consideration, development tracking; final scores come down in mismatches; comeback potential increases ('backups are measurably worse... This creates organic drama without scripting it'); starters stay healthy (less injury exposure compounding over a dynasty season). Even-matchup observation: 'In the 2 close games where blowout subs still fired (seeds 200, 204), one team built a large mid-game lead that later evaporated — the backup rotation itself may have contributed to the comeback, which is a realistic and desirable emergent behavior.' Files Changed: engine/game_engine.py +136/-17. Related Documents: Coaching Substitution System AAR (aar_2026-03-20_coaching_substitutions.md), Fatigue System Overhaul PRD (prd_fatigue_system_overhaul_2026_03_20.md), Lead Management Countermeasures AAR (AAR_lead_management_countermeasures.md). Metadata: Status: Implemented; Branch: claude/backup-rotation-blowout-Bk2IG.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Titled Architecture Decision Record (status Implemented), not an AAR, but follows the full AAR shape (context/why, decision/design, validation with seeds, consequences/risks, alternatives rejected) — genre_confidence medium per assignment. 'Alternatives Considered' mapped into non_actions as rejected options."
+}

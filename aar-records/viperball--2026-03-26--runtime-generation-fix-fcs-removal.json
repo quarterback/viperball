@@ -1,0 +1,127 @@
+{
+  "record_id": "viperball--2026-03-26--runtime-generation-fix-fcs-removal",
+  "source_path": "docs/aar_2026-03-26_runtime_generation_fix.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-26",
+  "title": "After Action Review — Runtime Generation Fix & FCS Removal",
+  "scope": "Fix the remaining sources of overpowered player generation that persisted after the initial talent balance changes, and remove the obsolete FCS fictional team system.",
+  "rationale": [
+    {
+      "item": "After dropping all archetype stat centers by ~30 points, widening spreads to 18, capping generation at 96, and adding a stat budget system, fresh saves were still producing 90+ OVR players with stats at 96-100. The initial changes to scripts/generate_rosters.py were correct but insufficient — the actual runtime code path used by fresh saves was in a completely different file.",
+      "references": ["scripts/generate_rosters.py"]
+    },
+    {
+      "item": "team_center_offset with std dev of 25 was the primary culprit: per-team jitter added a random offset to the archetype center for every team on every fresh save. ~16% of teams got an offset of +25 or more; ~2.5% got +50 or more. A blue blood (center 64) + offset 40 = effective center 104 → every stat clamped at 96.",
+      "references": ["engine/game_engine.py line 12735"]
+    },
+    {
+      "item": "Hidden gem boost capped at 100 instead of 96: the hidden gem system in generate_team_on_the_fly() had its own cap of 100, independent of the 96 ceiling in _stat_roll(), letting stats reach 99 and 100.",
+      "references": ["engine/game_engine.py line 12826"]
+    },
+    {
+      "item": "Development gains were too aggressive: a 5-star 'quick' developer gained +2 to +5 per stat per offseason — up to +55 total points across 11 stats. A player who started at 60 OVR could reach 96+ in two seasons, making the -30 center drop meaningless over time.",
+      "references": ["engine/development.py"]
+    },
+    {
+      "item": "FCS team system was obsolete: with 205 schools in the CVL, fictional teams to fill schedule gaps are no longer needed.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Removed team_center_offset entirely; changed `team_center_offset = int(round(random.gauss(0, 25)))` to `team_center_offset = 0`. Also removed the conference floor clamping code that only existed to counteract extreme negative jitter.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Fixed hidden gem boost cap: `min(100, current + boost)` → `min(96, current + boost)`, now consistent with the 96 generation ceiling everywhere else.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Halved development gains: quick +2..+5 → +1..+3; normal +1..+3 → +0..+2; slow +0..+2 → +0..+1; late_bloomer (late) +3..+7 → +1..+4; late_bloomer (early) unchanged. Max total gain per offseason: quick 55→33, normal 33→22, late_bloomer (late) 77→44.",
+      "artifacts": ["engine/development.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Disabled FCS team generation: the FCS filler loop in generate_schedule() no longer generates fictional teams. If any team ends up short on games, it logs a warning and the team simply plays fewer games. The FCS constants, name generator, and team generator functions are still in the file but are now dead code.",
+      "artifacts": ["engine/season.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "These changes only affect new saves and new seasons within a dynasty. Players already generated with inflated stats will retain them until they graduate.",
+    "If it becomes an issue, the FCS system can be re-enabled with better stat ranges.",
+    "If player progression feels glacial, the gain ranges can be bumped by 1 point per tier without reintroducing the old inflation problem."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Screenshots from a fresh save (2 games in, no development applied) showed Lillian Aguero (Oklahoma) 89 OVR with seven stats at 96; Idaho Slotback 85 OVR with 99 awareness and 98 stamina; Denise Shaw (Indiana) 78 OVR with 96 awareness — documenting the pre-fix incident state.",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "no",
+      "check_method": "Screenshots are not in the repo; would require generating fresh saves on the pre-fix commit.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "With the offset removed: a blue blood's effective center is now exactly 64; with spread 18, individual stats range ~46-82 (1σ); the stat budget caps total points at center×11+44 = 748 (~68 avg per stat); hidden gems boost targeted stats to at most 96; development adds +1-3 per stat per year. The math now works end-to-end.",
+      "evidence_cited": "none",
+      "checkable_against_repo": "yes",
+      "check_method": "Read engine/game_engine.py, engine/development.py, scripts/generate_rosters.py and confirm the constants; run fresh-save generation and inspect stat distributions.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "FCS constants, name generator, and team generator functions were not deleted — left in engine/season.py as dead code.",
+      "reason": "The sim paths that check is_fcs_game and load FCS teams will never trigger since no FCS games are created; the system can be re-enabled with better stat ranges if needed.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Existing saves were not migrated — players already generated with inflated stats will retain them until they graduate.",
+      "reason": "These changes only affect new saves and new seasons within a dynasty.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "FCS removal: If a league has fewer than 205 teams (custom configurations), some teams may end up with fewer games. The warning log will flag this.",
+    "Development too slow: If player progression feels glacial, the gain ranges can be bumped by 1 point per tier. Monitor whether 4-year development arcs produce satisfying player growth.",
+    "Existing saves: Players already generated with inflated stats will retain them until they graduate."
+  ],
+  "open_hooks": [
+    "The FCS system can be re-enabled with better stat ranges if custom configurations with fewer than 205 teams need it.",
+    "Development gain ranges can be bumped by 1 point per tier without reintroducing the old inflation problem."
+  ],
+  "section_headers_original": [
+    "After Action Review — Runtime Generation Fix & FCS Removal",
+    "Mission",
+    "Incident / Starting State",
+    "Root Cause Analysis",
+    "1. The runtime generation path was in `engine/game_engine.py`, not `generate_rosters.py`",
+    "2. `team_center_offset` with std dev of 25 was the primary culprit",
+    "3. Hidden gem boost capped at 100 instead of 96",
+    "4. Development gains were too aggressive",
+    "5. FCS team system was obsolete",
+    "Changes Made",
+    "1. Removed `team_center_offset` entirely (`engine/game_engine.py`)",
+    "2. Fixed hidden gem boost cap (`engine/game_engine.py`)",
+    "3. Halved development gains (`engine/development.py`)",
+    "4. Disabled FCS team generation (`engine/season.py`)",
+    "How This Fixes the Problem",
+    "Risk Assessment"
+  ],
+  "unmapped_content": "Root cause detail: Every fresh save calls load_team_from_json(fresh=True) which calls generate_team_on_the_fly() in engine/game_engine.py (line 12649). This function imports generate_player_attributes() from generate_rosters.py — so the center/spread changes did flow through — but it added its own modifications on top that completely undermined them. The generate_rosters.py script is only used for pre-building roster JSON files offline. 'This single line explains every screenshot: Lillian Aguero's Oklahoma likely got a +30-40 offset, pushing the effective center to 94-104. The stat budget system (which uses the archetype center, not the offset center) couldn't catch it because the budget was calculated from center 64 while the actual rolls used center 104.' Design reasoning for offset removal: 'The archetype center IS the team's identity, and the wide stat_spread of 18 already creates massive individual player variance within each roster.' Development arc note: 'A 5-star quick developer starting at 55 OVR now reaches ~70 by junior year and ~80 by senior year, instead of rocketing to 96+ by sophomore year.' Metadata: Branch: claude/balance-talent-generation-mS413.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Document is structured as Mission / Incident / Root Cause / Changes / Risk Assessment rather than standard AAR headings. No batch-simulation validation cited post-fix; the 'How This Fixes the Problem' section is analytical, not empirical."
+}

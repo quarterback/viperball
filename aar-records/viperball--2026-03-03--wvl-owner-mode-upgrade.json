@@ -1,0 +1,72 @@
+{
+  "record_id": "viperball--2026-03-03--wvl-owner-mode-upgrade",
+  "source_path": "docs/project_report_wvl_owner_mode_upgrade_2026_03_03.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "medium",
+  "date": "2026-03-03",
+  "title": "WVL Owner Mode Upgrade — Project Report",
+  "scope": "Full upgrade of the Women's Viperball League (WVL) from thin spectator experience to robust Owner Mode dynasty.",
+  "rationale": [
+    { "item": "The entire season simulated at once with a single button press — no week-by-week engagement.", "references": [] },
+    { "item": "No roster viewer existed — the owner couldn't see their own players.", "references": [] },
+    { "item": "Roster management was absent — no ability to cut or sign players during or between seasons.", "references": [] },
+    { "item": "The offseason was a single silent function call with a brief summary popup.", "references": [] },
+    { "item": "The UI was a single scrolling page instead of an organized tab layout.", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Container-based refresh pattern over @ui.refreshable decorator for complex nested tab panels", "decided_by": "agent", "quote": "This container-based refresh pattern was chosen over NiceGUI's @ui.refreshable decorator because it handles complex nested tab panels more reliably — a lesson learned from the NVL Pro Leagues implementation." },
+    { "decision": "Compute-then-present pattern for multi-step offseason wizard — run_offseason() executes once, results stored, wizard presents results interactively", "decided_by": "agent", "quote": "Rather than decomposing the run_offseason() engine method into separate step-by-step calls (which would have been a risky refactor of complex interdependent logic), the wizard uses a compute-then-present pattern." }
+  ],
+  "actions": [
+    { "description": "Restructured WVL page into 5 tabs: Dashboard, My Team, Schedule, League, Finances", "artifacts": ["nicegui_app/pages/wvl_mode.py"], "kind": "modified" },
+    { "description": "Five new WVLDynasty methods: get_owner_roster(), cut_player(), sign_free_agent(), get_owner_team_summary(), get_available_free_agents()", "artifacts": ["engine/wvl_dynasty.py"], "kind": "modified" },
+    { "description": "8-step offseason wizard with compute-then-present pattern using app.storage.user", "artifacts": ["nicegui_app/pages/wvl_mode.py"], "kind": "modified" },
+    { "description": "CVL graduate pipeline: auto-detect cached graduates, pass as import_data to run_offseason(), preview table, custom JSON import", "artifacts": ["nicegui_app/pages/wvl_mode.py"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "Syntax validation: both wvl_mode.py and wvl_dynasty.py pass py_compile checks. Method verification: all 5 new WVLDynasty methods confirmed present via import assertion. Server startup: application starts cleanly with no errors.", "evidence_cited": "render/smoke", "checkable_against_repo": "yes", "check_method": "Run py_compile on wvl_mode.py and wvl_dynasty.py; import assertion for 5 new methods; start server", "verified": "not_checked" },
+    { "claim": "Architect code review: 3 critical issues identified and resolved (bounds checking, defensive defaults, import refresh).", "evidence_cited": "manual verification", "checkable_against_repo": "unclear", "check_method": "Review code for _wvl_offseason_step bounds clamping, offseason_data isinstance check, import refresh trigger", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Custom imports are in-memory only — don't persist through page reload", "reason": "A future enhancement could serialize custom imports into dynasty state.", "category": "deferred", "status": "unknown" },
+    { "item": "No mid-season trading system between clubs", "reason": "Not implemented", "category": "deferred", "status": "unknown" },
+    { "item": "No scouting system — all FA ratings shown openly", "reason": "A future scouting mechanic could reveal ratings progressively based on scouting investment.", "category": "deferred", "status": "unknown" },
+    { "item": "No depth chart reordering by drag-and-drop", "reason": "Not implemented", "category": "deferred", "status": "unknown" },
+    { "item": "President hiring/firing UI — president card visible but no interactive hire/fire flow", "reason": "Presidents are auto-assigned at dynasty creation.", "category": "deferred", "status": "unknown" },
+    { "item": "Season history browser — no dedicated season archive with historical standings, champions, player awards across multiple years", "reason": "Not implemented", "category": "deferred", "status": "unknown" }
+  ],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "WVL Owner Mode Upgrade — Project Report",
+    "1. Problem Statement",
+    "2. Architecture Decisions",
+    "2.1 Tab-Based UI (Container Refresh Pattern)",
+    "2.2 Engine-Side Roster Management",
+    "2.3 Multi-Step Offseason Wizard",
+    "2.4 CVL Graduate Pipeline",
+    "3. Features Delivered",
+    "3.1 Dashboard Tab",
+    "3.2 My Team Tab",
+    "3.3 Schedule Tab",
+    "3.4 League Tab",
+    "3.5 Finances Tab",
+    "3.6 Multi-Step Offseason Wizard (8 Steps)",
+    "4. Code Quality & Robustness",
+    "5. File Inventory",
+    "6. Known Limitations & Future Work",
+    "7. Testing"
+  ],
+  "unmapped_content": "Date: March 3, 2026. Commits: 558d488, 99817ec. Files Modified: nicegui_app/pages/wvl_mode.py (1,603 lines), engine/wvl_dynasty.py (641 lines), replit.md. 8-step offseason wizard steps: 1 Season Recap, 2 Promotion & Relegation, 3 Retirements, 4 Player Import, 5 Free Agency, 6 Development, 7 Investment, 8 Financial Summary. WVLDynasty methods table: get_owner_roster() falls back to _current_season if _team_rosters empty; cut_player() enforces min 30; sign_free_agent() enforces max 40; _fa_pool non-persisted field. Code Quality issues resolved: step index bounds checking (_wvl_offseason_step clamped); offseason data validation isinstance(dict); defensive defaults data.get('key') or {}; custom import refresh triggered. Zone coloring: green=promotion, amber=playoff, red=relegation, indigo=owner's team.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Document titled 'Project Report' not AAR — genre_confidence medium. Date confirmed: March 3, 2026. 'Known Limitations & Future Work' maps to non_actions."
+}

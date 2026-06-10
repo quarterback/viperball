@@ -1,0 +1,69 @@
+{
+  "record_id": "viperball--2026-03-20--coaching-substitution-system",
+  "source_path": "docs/aar_2026-03-20_coaching_substitutions.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-20",
+  "title": "After Action Review — Coaching Substitution System (Backup Player Rotation)",
+  "scope": "Implement a coaching substitution system so backup players actually see the field during games. Prior to this change, substitutions only occurred when a player was injured mid-game.",
+  "rationale": [
+    { "item": "Backup zerobacks across the league averaged 0 game touches per season. Depth players existed only as insurance against injuries that rarely happened.", "references": [] },
+    { "item": "A starter could fumble 5 times and keep playing. A halfback with 25 carries and depleted energy would never get a breather. In a 50-point blowout, starters played every snap of Q4.", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Between-drive substitutions, not mid-drive", "decided_by": "agent", "quote": "Real coaches don't yank a halfback off the field between plays. Substitutions happen at natural stoppages — between drives, at halftime." },
+    { "decision": "Probabilistic triggers, not deterministic", "decided_by": "agent", "quote": "A starter with 12 carries in Q3 has a 15% rest chance, not a guaranteed benching. Different coaching philosophies: some coaches ride their workhorse, others rotate aggressively." },
+    { "decision": "Use workload (carries/touches) not energy system as fatigue proxy", "decided_by": "agent", "quote": "The per-player energy system keeps starters near 100 energy for most of the game. Workload (carries, touches) is a much better proxy for 'this player should rest' than the energy value itself." },
+    { "decision": "_unavailable_in_game() wraps both injured and benched sets as single point of filtering", "decided_by": "agent", "quote": "Single point of filtering. Every method that selects players calls one function and gets back everyone who shouldn't be on the field, regardless of reason." }
+  ],
+  "actions": [
+    { "description": "Three substitution triggers (performance/workload/blowout), benched state with expiration rules, evaluate_coaching_substitutions() called between drives", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "New _home_benched/_away_benched dicts; _unavailable_in_game() wrapping both injured and benched sets; 12+ player selection methods updated", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Substitution log output in game summary under coaching_substitutions key", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "_clear_halftime_benches() and bench expiration processing at drive start", "artifacts": ["engine/game_engine.py"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "20-game batch test (seed=99): fatigue/workload rests 20 (1.0/game), performance benchings 2 (0.1/game), blowout rests 50 (2.5/game), total 72 (3.6/game).", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 20-game batch sim with seed=99 and count substitution types", "verified": "not_checked" },
+    { "claim": "Emergent: comeback catalyst — Saint Mary's led by 25+ in Q3 and pulled starters; Yale closed to 44.5-43.5. Multi-cycle rotation: Nneka Obi rested 3 separate times in one game.", "evidence_cited": "manual verification", "checkable_against_repo": "unclear", "check_method": "Review game logs for blowout rest / comeback sequences", "verified": "not_checked" }
+  ],
+  "non_actions": [],
+  "residual_risks": [
+    "Blowout threshold (25 points) may be too conservative — a 20-point lead may be better threshold in a 9-point TD sport",
+    "Performance bench at halftime reset may cause yo-yo benching for same player fumbling twice",
+    "Backup quality gap may allow blowout losing teams to score freely against backups — may need explicit modifier",
+    "Defensive substitution frequency may need tuning (tackles≥10 in Q3, 25% chance × 50% confirmation)"
+  ],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Coaching Substitution System (Backup Player Rotation)",
+    "Mission",
+    "Incident / Starting State",
+    "Commits",
+    "Scope",
+    "Architecture",
+    "Benching vs. Injury — Parallel But Reversible",
+    "Three Substitution Triggers",
+    "Integration Points",
+    "Substitution Log",
+    "Validation",
+    "20-Game Batch Test (seed=99)",
+    "Frequency Analysis",
+    "Emergent Behaviors Observed",
+    "Design Decisions",
+    "What Went Well",
+    "What to Watch",
+    "Lessons Learned"
+  ],
+  "unmapped_content": "Branch: claude/add-backup-substitutions-tOe46. Commit: 5774c0a. 1 file changed, +255/-21 lines. Three trigger table: performance (2+ fumbles OR 3+ turnovers OR <1.5 YPC on 8+ carries at 40%), workload (12+ carries in Q3 15-40% scaling OR 18+ touches in Q4 30%), blowout (leading 25+ in Q3/Q4). Substitution log schema: {team, quarter, time_remaining, benched_player, benched_position, reason, duration, substitute}. Lessons: energy system too generous for substitution triggers; multiple triggers needed (injury-only subs meant backups never played in 95%+ games); benching is a coaching decision, not a player state.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": false,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date confirmed from document header: 2026-03-20. 'What to Watch' section mapped to residual_risks."
+}

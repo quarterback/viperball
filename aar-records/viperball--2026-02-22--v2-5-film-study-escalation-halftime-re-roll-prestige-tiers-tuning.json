@@ -1,0 +1,200 @@
+{
+  "record_id": "viperball--2026-02-22--v2-5-film-study-escalation-halftime-re-roll-prestige-tiers-tuning",
+  "source_path": "AAR_2026-02-22_film_study_v2.5.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-22",
+  "title": "After-Action Report: V2.5 — Film Study Escalation, Halftime Re-Roll, Defensive Prestige Tiers, and Tuning",
+  "scope": "Five commits introducing an offensive escalation system that counterbalances V2.4's defensive adaptation, a halftime DC re-roll mechanic, two new defensive prestige tiers, debug tooling for the suppression stack, season UI overhaul, and base yards tuning from 5.5 → 3.8 → 4.2.",
+  "rationale": [
+    {
+      "item": "V2.4 successfully crushed scoring from arena-league levels (~160 combined) down to ~103 combined. But it overshot. ... games felt lopsided toward defense with no offensive comeback mechanic. An offense that fell behind in the adaptation race had no path back.",
+      "references": ["V2.4 (prior AAR workstream)"]
+    },
+    {
+      "item": "No offensive escalation — Defenses adapted mid-game (Solved Puzzle), but offenses had no equivalent \"film study\" system. Stale offenses stayed stale.",
+      "references": []
+    },
+    {
+      "item": "DC gameplan was static across halves — Rolled once at game init, never updated.",
+      "references": []
+    },
+    {
+      "item": "Only one defensive prestige tier — No-Fly Zone rewarded interception excellence but ignored run defense dominance and turnover volume.",
+      "references": []
+    },
+    {
+      "item": "No visibility into the suppression stack — Debug tools showed scores and yards but not WHY drives stalled.",
+      "references": []
+    },
+    {
+      "item": "Season UI was rudimentary — Conference setup used a slider instead of real conference assignments; schedule length was editable (should be fixed at 13).",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Debug tools (commit 6c19025): extended debug_tools.py (+287 lines) with DC Gameplan Inspector, Adaptation State Viewer, and Modifier Stack Breakdown panels",
+      "artifacts": ["nicegui_app/pages/debug_tools.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Halftime DC gameplan re-roll (commit 1dba5ec): _reroll_dc_gameplan_at_halftime() — at start of Q3 each DC re-rolls gameplan biased by first-half offensive tendencies (bias up to -0.06 when a play type exceeded 40% of first-half plays, min 8 plays, bias = min(0.06, (pct - 0.40) * 0.15)); game temperature recalculated; adaptation log records the re-roll",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Defensive prestige tiers (commit 1dba5ec): Brick Wall (hold opponents under 200 rushing yards 3 consecutive games → -8% yardage center on opposing run-family plays) and Turnover Machine (4+ turnovers forced in 3 consecutive games → +3% fumble probability, +2% INT chance on kick passes); both permanent once earned; tracking via Season._record_game_result() → TeamRecord.add_game_result() → _check_brick_wall()/_check_turnover_machine(); flags passed to engine via kwargs",
+      "artifacts": ["engine/season.py", "engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Season UI overhaul (commit 1dba5ec): conference setup replaced slider with real assignment UI loading stock conferences from team files with reassignment dropdowns; schedule length fixed at 13 regular season games; _create_season() converted to async to prevent UI blocking",
+      "artifacts": ["nicegui_app/pages/season_simulator.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Clock management refinements (commit 1dba5ec): Q2 leading clock burn reduced to 1.1x; Q4 trailing hurry-up increased to 50% compression (was 33%)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Base yards multiplier reduction 5.5 → 3.8, lateral efficiency halved, micro-jitter (±0.3 yards) added to all yard calculations (commit 10c644e)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Film Study Escalation system (commit a0d2736): per-drive offensive escalation with quarter-gated trigger (10/25/40/55%), ball carrier ability bonus (up to +15%), play diversity bonus (up to +10%), drive number ramp (+1%/drive after drive 3, cap +8%), hard cap 1.35; applied multiplicatively to center in _contest_run_yards() and to skill in _compute_kick_pass_result()",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Base yards multiplier bump 3.8 → 4.2 (commit 80816db) — a compromise between the too-generous 5.5x and the too-tight 3.8x",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "The re-roll is stochastic, not deterministic. The DC doesn't simply \"go cold on runs because you ran a lot\" — they re-roll with a thumb on the scale. This preserves game-to-game variance while rewarding halftime adjustments narratively.",
+    "Minimum 8 first-half plays required for bias to activate (avoids small-sample noise).",
+    "The 1.35 cap is generous — in practice, very few drives hit all three components at maximum.",
+    "Escalation resets every drive (no accumulation) ... This prevents snowball scoring where a hot offense gets hotter indefinitely.",
+    "Prestige tiers are all permanent once earned ... a deliberate repeat of the V2.4 decision.",
+    "Tune in one direction, then correct. Going from 5.5 → 3.8 was aggressive and immediately showed the floor was too tight. Going from 3.8 → 4.2 was a measured correction informed by batch data."
+  ],
+  "validation_claims": [
+    {
+      "claim": "30-game batch results at 3.8x: Score/team 52.4; TDs/team 3.3; Yards/team 420; Plays/game 97; 4th down conversion 26.4%; First downs/game 11.2",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch sim at commit 10c644e and compare metrics",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "30-game batch results at 4.2x: Score/team 57.2; TDs/team 3.9; Yards/team 445; Plays/game 97; 4th down conversion 27.6%; First downs/game 12.2; Avg yards-to-go on 4th 11.0; Lateral efficiency 84.0%",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch sim at commit 80816db and compare metrics",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Per-play escalation rolls",
+      "reason": "Rejected because per-play escalation would create wild yard variance within a single drive and make drive outcomes feel random.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Prestige UI integration (badges, pregame indicators, postgame callouts) for Brick Wall and Turnover Machine",
+      "reason": "Like No-Fly Zone before them, these prestige tiers are mechanically active but invisible to the user.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "OC counter-adaptation (proactive play-calling weight shift when a family is solved)",
+      "reason": "instead of relying on random selection to eventually pick a different family",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Hitting the 140-220 plays/game target",
+      "reason": "This is a structural constraint, not a tuning knob — the base yards multiplier cannot fix it.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "4th down conversion is still low (27.6% vs ~85% target) — the sport is playing more like 4-down football where punting is routine. Root cause: average yards-to-go on 4th down is 11.0.",
+    "Plays/game (~97) is well below target (140-220) — the ToP model locks play count regardless of yards multiplier.",
+    "Scoring (~57/team) is below target (65-85) — a direct consequence of the low 4th down conversion and limited play count.",
+    "Brick Wall and Turnover Machine have no UI integration.",
+    "Lateral efficiency rebounded to 84% — the lateral cap reduction was intended to halve lateral efficiency but shows essentially unchanged from baseline. The cap may not be binding, or the lateral success calculation may have other dominant factors that override the cap."
+  ],
+  "open_hooks": [
+    "4th down conversion tuning — raise multiplier to 4.8, strengthen late-down urgency anchor (already exists at _contest_run_yards lines 4997-5003), or add a 'must-have' conversion boost on 5th/6th down",
+    "Play count investigation — whether 140-220 target is achievable within the ToP model or play clock parameters need adjustment (a 30s base would yield ~120 plays/game)",
+    "Lateral efficiency audit — investigate why the lateral cap isn't binding",
+    "Prestige UI integration for all three prestige tiers",
+    "Escalation narrative in the play-by-play feed",
+    "Escalation decay on turnovers — reset escalation to 1.0 for the next drive after a fumble or INT",
+    "Prestige matchup narratives — pregame 'clash of styles' narrative"
+  ],
+  "section_headers_original": [
+    "After-Action Report: V2.5 — Film Study Escalation, Halftime Re-Roll, Defensive Prestige Tiers, and Tuning",
+    "Objective",
+    "Starting State (V2.4 Baseline)",
+    "Work Performed",
+    "1. Debug Tools — DC Gameplan & Adaptation Display",
+    "2. Season UI Fixes, Clock Management, Halftime DC Re-Roll, Defensive Prestige Tiers",
+    "2a. Halftime DC Gameplan Re-Roll",
+    "2b. Defensive Prestige Tiers — Brick Wall & Turnover Machine",
+    "2c. Season UI Overhaul",
+    "2d. Clock Management Refinements",
+    "3. Base Yards Multiplier Reduction (5.5 → 3.8) + Lateral Cap + Micro-Jitter",
+    "4. Film Study Escalation — Offensive Comeback Mechanic",
+    "Component 1: Quarter-Gated Dice Roll",
+    "Component 2: Ball Carrier Ability",
+    "Component 3: Play Diversity (Offensive Puzzle)",
+    "Component 4: Drive Number Ramp",
+    "Combined Escalation",
+    "5. Base Yards Multiplier Bump (3.8 → 4.2)",
+    "Files Modified",
+    "Key Metrics Across Tuning Iterations",
+    "Architecture Decisions",
+    "1. Escalation is per-drive, not per-play",
+    "2. Escalation resets every drive (no accumulation)",
+    "3. Halftime DC re-roll is biased, not deterministic",
+    "4. The 40% threshold prevents small-sample bias",
+    "5. Prestige tiers are all permanent once earned",
+    "6. Play count is time-constrained, not drive-constrained",
+    "What Worked",
+    "Film Study Escalation creates a natural game arc",
+    "Halftime DC re-roll rewards adaptive OCs",
+    "Debug tooling paid for itself immediately",
+    "What Didn't Work / Risks",
+    "4th down conversion is still low (27.6% vs ~85% target)",
+    "Plays/game (~97) is well below target (140-220)",
+    "Scoring (~57/team) is below target (65-85)",
+    "Brick Wall and Turnover Machine have no UI integration",
+    "Lateral efficiency rebounded to 84%",
+    "Configuration Reference",
+    "What's Next",
+    "Immediate",
+    "Short-term",
+    "Medium-term",
+    "Lessons Learned"
+  ],
+  "unmapped_content": "Header metadata: Branch: claude/balance-defensive-adaptation-PzgsT\n\nStarting State (V2.4 Baseline): Avg score/team ~51.5; Avg yards/team ~432; Avg TDs/team ~4.25; Plays/game ~93; DC gameplan rolled once at init, static all game; Offensive escalation none; Defensive prestige tiers 1 (No-Fly Zone only); Debug suppression visibility none.\n\nWhy debug tooling first: Every subsequent change in this segment needed validation against the suppression stack. Building the debug tooling first meant every later change could be diagnosed immediately.\n\nFilm Study Escalation formulas: carrier_talent = (best.speed + best.agility) / 2.0; carrier_bonus = max(0.0, (carrier_talent - 60) / 30.0) * 0.15. Diversity: 1-2 categories +0%, 3 → +5%, 4 → +10%. escalation = 1.0 + carrier_bonus + diversity_bonus + drive_ramp; escalation = min(1.35, escalation). Maximum theoretical escalation 1.33x. Interaction with Solved Puzzle: opposing forces — DC solves a family (−15%) but offense escalates (+up to 33%); a diverse offense avoids being solved AND earns diversity bonus.\n\nFiles Modified: engine/game_engine.py +276/-10; engine/season.py +85/-6; nicegui_app/pages/debug_tools.py +287/-2; nicegui_app/pages/season_simulator.py +87/-18. Total +701/-34 across 4 files.\n\nKey Metrics Across Tuning Iterations table: Score/team ~83 (V2.3 5.5x) → ~51.5 (V2.4) → 52.4 (V2.5 3.8x) → 57.2 (V2.5 4.2x + Escalation); TDs/team ~6.3 → ~4.25 → 3.3 → 3.9; Yards/team ~744 → ~432 → 420 → 445; Plays/game ~148 → ~93 → 97 → 97; First downs/game — — 11.2 12.2; 4th down conv — — 26.4% 27.6%.\n\nArchitecture decision 6 (key discovery): plays/game barely changed between 3.8x and 4.2x — the Time-of-Possession model is the true constraint: 2400 seconds ÷ ~25s/play ≈ 96 plays. The yards multiplier primarily controls drive efficiency and scoring rate, not game length.\n\nWhat Worked: Film Study Escalation creates a natural game arc mirroring real football flow (slow starts, halftime adjustments, wide-open fourth quarter). Halftime DC re-roll mechanically rewards balanced first-half play-calling. Debug tooling paid for itself immediately — every tuning iteration validated through the panels.\n\nConfiguration Reference: V2_ENGINE_CONFIG base_yards_multiplier default 4.2. Film Study Escalation has no config toggle — always active when V2_ENGINE_CONFIG exists; internal parameters: quarter triggers 10/25/40/55%, carrier bonus 0.0–0.15, diversity +0.05 per category above 2, drive ramp +0.01/drive after drive 3 capped +0.08, hard cap 1.35. Halftime DC re-roll always active; bias parameters: tendency threshold 40%, min plays 8, max bias -0.06, bias rate 0.15 per % above threshold. Prestige tiers table: No-Fly Zone (2+ INTs / 3 games, -5% kick pass accuracy), Brick Wall (<200 rush yards / 3 games, -8% run yardage center), Turnover Machine (4+ turnovers / 3 games, +3% fumble prob, +2% INT chance).\n\nLessons Learned: Offense and defense need symmetric mid-game learning — asymmetric progression creates structural bias; symmetric progression creates strategic depth. The time model is the master constraint, not the yards model. Tune in one direction, then correct — the two-step process (overshoot then correct) was faster than finding the right value in a single step. Debug tooling before tuning, always — without visibility into the modifier stack, you're tuning blind.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Five commit hashes named (6c19025, 1dba5ec, 10c644e, a0d2736, 80816db), consistent with the 'five commits' scope. Same branch as the V2.4 AAR (claude/balance-defensive-adaptation-PzgsT)."
+}

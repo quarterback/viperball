@@ -1,0 +1,50 @@
+{
+  "record_id": "viperball--2026-02-23--nicegui-3x-compatibility-saas-ui-layout",
+  "source_path": "docs/AAR_nicegui3x_compatibility.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-23",
+  "title": "After Action Report: NiceGUI 3.x Compatibility & SaaS UI Layout",
+  "scope": null,
+  "rationale": [
+    { "item": "The Viperball Sandbox app was rendering a blank white page with no visible errors. Browser showed repeated 'implicit handshake failed' messages and websocket connection would open then immediately close in a loop.", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "nicegui_app/state.py: app.storage.tab → app.storage.user (cookie-based storage works without async client connection)", "artifacts": ["nicegui_app/state.py"], "kind": "modified" },
+    { "description": "nicegui_app/app.py: async def index(client) → def index(), removed await client.connected()", "artifacts": ["nicegui_app/app.py"], "kind": "modified" },
+    { "description": "nicegui_app/pages/play.py: added render_play_section_sync() sync entry point for initial page build", "artifacts": ["nicegui_app/pages/play.py"], "kind": "modified" }
+  ],
+  "risk_posture": [
+    "app.storage.user persists across all tabs (not per-tab like before). For a single-user sandbox tool, this is acceptable.",
+    "The initial page render is fully synchronous. Active session data loads asynchronously after render via a short timer, so there's a brief 'Loading...' flash for returning sessions."
+  ],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [
+    "app.storage.user persists across all tabs — competing sessions in different tabs may interfere"
+  ],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Report: NiceGUI 3.x Compatibility & SaaS UI Layout",
+    "Problem Statement",
+    "Root Cause Analysis",
+    "Debugging Process",
+    "Solution",
+    "Trade-offs",
+    "UI Outcome",
+    "Lessons Learned",
+    "NiceGUI Storage Reference"
+  ],
+  "unmapped_content": "Root Cause Analysis: (1) app.storage.tab requires await client.connected() before it can be accessed; (2) await client.connected() in NiceGUI 3.x caused a deadlock when combined with await run.io_bound() API calls during page build because NiceGUI and FastAPI share the same uvicorn event loop; (3) catch-22: storage API needed async wait, async wait broke websocket lifecycle. Debugging Process: 8-step isolation process from checking server logs to explicit error message 'app.storage.tab can only be used with a client connection'. UI Outcome: SaaS-style horizontal navigation bar; no hidden menus/sidebar; session status and End button in header; mobile-friendly. NiceGUI Storage Reference table: client/tab/user/browser/general — scope, requires connected(), persists on reload, persists across tabs. Lessons: 1) blank NiceGUI page → check browser console for 'implicit handshake failed'; 2) avoid await during page build in shared event loop; 3) verify installed vs pinned package version; 4) app.storage.user is safest default.",
+  "quality_vector": {
+    "has_scope": false,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date: February 23, 2026 — confirmed in document header. Very short document — mostly root cause analysis and solution. No validation claims, no non_actions, no explicit scope statement."
+}

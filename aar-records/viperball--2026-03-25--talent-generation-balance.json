@@ -1,0 +1,78 @@
+{
+  "record_id": "viperball--2026-03-25--talent-generation-balance",
+  "source_path": "docs/aar_2026-03-25_talent_generation_balance.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-25",
+  "title": "After Action Review — Talent Generation Balance",
+  "scope": "Rebalance the talent generation system to eliminate the glut of 90+ OVR players that was causing unrealistic 100+ point games and compressing the competitive landscape.",
+  "rationale": [
+    { "item": "Blue blood rosters were wall-to-wall 93-99 OVR with stat_center=95 and stat_spread=3 — razor-tight 92-98 band; players had no profile", "references": [] },
+    { "item": "Transfer portal seniors generated up to 93 OVR base with +2-6 position boosts, routinely producing 95+ players from thin air", "references": [] },
+    { "item": "Stat spreads universally too narrow (3-6) — every player on a team felt like a clone; no real depth chart drama", "references": [] },
+    { "item": "No ceiling or budget constraints — gaussian pile-up at 99 ceiling; no mechanism preventing a player from being elite at everything", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Archetype stat centers dropped ~30 points (blue_blood: 95→64, national_power: 89→52, etc.); spreads unified to 18; per-stat ceiling lowered to 96; stat budget system added", "artifacts": ["scripts/generate_rosters.py"], "kind": "modified" },
+    { "description": "Recruiting stat ranges shifted down 30 (5-star: 83-98→49-63, etc.); position boost caps lowered to 99; OVR floor 40→10", "artifacts": ["engine/recruiting.py"], "kind": "modified" },
+    { "description": "Transfer portal ranges shifted down 30; 5-star potential 10%→6%; position boost caps lowered to 96", "artifacts": ["engine/transfer_portal.py"], "kind": "modified" },
+    { "description": "OVR floor lowered from 40 to 10", "artifacts": ["engine/player_card.py"], "kind": "modified" },
+    { "description": "Conference floors adjusted proportionally (~30 points lower)", "artifacts": ["scripts/generate_rosters.py"], "kind": "modified" },
+    { "description": "Hidden gem boosts recalibrated proportionally", "artifacts": ["scripts/generate_rosters.py"], "kind": "modified" }
+  ],
+  "risk_posture": [
+    "Possible over-correction on scoring — if games become too low-scoring, centers can be nudged up 3-5 points without touching the spread/ceiling/budget infrastructure. The 30-point drop is aggressive.",
+    "Multiplier dependency: this change assumes the in-game multiplier system is robust enough to differentiate teams with similar raw stats.",
+    "UI/display consideration: Player cards will now show stats in the 30s-70s range — may initially feel 'wrong' to players accustomed to seeing high numbers."
+  ],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [
+    "Existing dynasty saves unaffected — inflated talent retained until natural attrition cycles players out",
+    "Conference floor interaction may need tuning if SEC doormats (floor 25) are too competitive with Big East powers",
+    "In-game multiplier system must be robust enough to differentiate teams starting with similar raw stats"
+  ],
+  "open_hooks": [
+    "Tuning levers documented: stat_center (generate_rosters.py), stat_spread (38), generation ceiling (85), stat budget headroom, development gains (development.py), development ceiling (99), hidden gem boost, portal ranges, recruit ranges"
+  ],
+  "section_headers_original": [
+    "After Action Review — Talent Generation Balance",
+    "Mission",
+    "Incident / Starting State",
+    "Root Cause Analysis",
+    "1. Stat centers were calibrated for ceiling, not for raw talent",
+    "2. Gaussian spreads were too narrow to create roster texture",
+    "3. Three independent talent pipelines all skewed high",
+    "4. No ceiling or budget constraints",
+    "5. Hidden gems compounded the problem at the top",
+    "Changes Made",
+    "1. Stat centers dropped ~30 points across all tiers (scripts/generate_rosters.py)",
+    "2. Spreads unified to 18 across all tiers",
+    "3. Per-stat generation ceiling lowered to 96",
+    "4. Stat budget system added",
+    "5. Recruiting stat ranges shifted down 30 (engine/recruiting.py)",
+    "6. Transfer portal ranges shifted down 30 (engine/transfer_portal.py)",
+    "7. OVR floor lowered from 40 to 10",
+    "8. Conference floors adjusted proportionally",
+    "9. Hidden gem boosts recalibrated",
+    "How This Helps",
+    "The scoring problem",
+    "The 'all 99s' problem",
+    "The talent pipeline loop",
+    "In-game multipliers become meaningful",
+    "Development creates stories",
+    "Risk Assessment"
+  ],
+  "unmapped_content": "Branch: claude/balance-talent-generation-mS413. Archetype table before/after: doormat 28→15, underdog 50→20, punching_above 65→35, regional_power 78→44, national_power 89→52, blue_blood 95→64. Spread unified to 18 (was 3-6). Base OVR ranges after: doormat ~10-27, blue_blood ~52-76. Stat budget: center×11+44. Portal ranges: soph/jr 65-90→28-52, senior 70-93→32-56. Conference floors: SEC 60→25, Big Ten 55→20, ACC 69→32. Note: this document covers the same topic as docs/feature_report_talent_generation_rebalance_2026_03_27.md which was dated 2026-03-27 and includes an additional hidden runtime bug (team_center_offset) not mentioned here. These may be AAR + follow-up report of the same workstream.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date confirmed: 2026-03-25. No validation claims or non_actions. Related document: docs/feature_report_talent_generation_rebalance_2026_03_27.md covers the same workstream with more detail (additional team_center_offset bug, additional files including game_engine.py and development.py) — dated 2026-03-27."
+}

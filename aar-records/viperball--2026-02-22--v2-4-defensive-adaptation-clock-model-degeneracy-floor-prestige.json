@@ -1,0 +1,172 @@
+{
+  "record_id": "viperball--2026-02-22--v2-4-defensive-adaptation-clock-model-degeneracy-floor-prestige",
+  "source_path": "AAR_2026-02-22_defensive_adaptation_v2.4.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-22",
+  "title": "After-Action Report: V2.4 — Defensive Adaptation, Clock Model, Degeneracy Floor, and Prestige",
+  "scope": "Six systemic changes that transition viperball from \"simulation of plays\" to \"simulation of a sport\" — reducing total yardage ~35% and scoring ~35% through clock economics, mid-game defensive learning, and anti-stacking safeguards.",
+  "rationale": [
+    {
+      "item": "V2.3 made the sport chaotic and exciting: breakaways, turnovers, bonus possessions, and 70+ yard plays became routine. But it left scoring unchecked — 166.5 avg combined points, 1705 total yards in a single game (Davidson 121.5 vs Creighton 107.5), 19 TDs. Batch sims showed 780/708 avg yards per side and 6.29 TDs/team. These are arena league numbers, not a sport with meaningful defensive agency.",
+      "references": []
+    },
+    {
+      "item": "Every offensive style burned the same clock — tempo teams and grind teams both consumed ~18s/play, so game length was purely a function of play count, not style matchup.",
+      "references": []
+    },
+    {
+      "item": "No mid-game defensive adaptation — the DC gameplan was rolled once at game init and never changed. An offense running the same play family 12 times faced no escalating resistance.",
+      "references": []
+    },
+    {
+      "item": "Modifier stacking could produce degenerate 0-yard drives — a cold DC (0.82) in sleet (-0.08 speed) with a disciplinarian bonus (0.95 variance) could mathematically suppress center below 1 yard.",
+      "references": []
+    },
+    {
+      "item": "Defensive prestige had no memory — a team that forced 2+ INTs three weeks in a row got nothing for it. No \"fear factor\" carried between games.",
+      "references": []
+    },
+    {
+      "item": "No visibility into WHY a team was losing — the game summary showed yards and scores but never explained the suppression picture (DC + weather + coaching + adaptation).",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Time-of-Possession model (top_model_enabled): play clock varies by offensive style's tempo attribute via base_time = 38 - tempo * 20 with ±3s variance; clock burn multiplier restricted to Q4 when leading (Q2 leading mild 1.1x, Q4 leading 1.2 * clock_burn_multiplier, trailing 50% compression); drops average plays per game from ~148 to ~93",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Play-family adaptation 'Solved Puzzle' mechanic (play_family_adaptation_enabled): DC instincts_factor drives mid-game pattern recognition with per-drive/per-half frequency tracking, instincts-dependent trigger thresholds, solve_chance = 0.20 + instincts * 0.40 + frequency_bonus - OC_deception * 0.15 capped at 80%, +15% yardage suppression on solve, and a 3-play decay mechanic (0.85 → 0.90 → 0.95 → removed)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Degeneracy floor min_yardage_multiplier (0.65): after all modifiers, if effective_mult < 0.65 then center = pre_modifier_center * 0.65; combined stacking cannot suppress more than 35% of raw offensive yardage",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Configurable starting yard line: V2_ENGINE_CONFIG[\"starting_yard_line\"], defaults to 20, can be set to 15 for tighter scoring; all hardcoded 20 references for field position (bonus possession, safety restart, interception restart) now read from this config",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "config"
+    },
+    {
+      "description": "Defensive prestige 'No-Fly Zone' system: TeamRecord.defensive_ints_history tracks INTs forced; 2+ INTs in 3 consecutive games sets no_fly_zone = True permanently for the season; opposing kick pass accuracy gets 5% 'Rattled' penalty via base_prob *= 0.95 in _compute_kick_pass_result(); Season._simulate_game() passes home/away NFZ flags into ViperballEngine.__init__(); Season._record_game_result() extracts defensive INTs; TeamRecord._check_no_fly_zone() evaluates rolling window",
+      "artifacts": ["engine/season.py", "engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Modifier stack logging (_build_modifier_stack_summary()): game summary now includes modifier_stack (per-side defensive suppression breakdown with human-readable stack_label rated STIFLING/STRONG/SOLID/NEUTRAL) and adaptation_log (chronological narrative of mid-game adaptation events)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    }
+  ],
+  "risk_posture": [
+    "Why 0.65: This was chosen so that elite defenses (cold DC + bad weather + solved families) still feel crushing — 35% suppression is enormous — but drives aren't mathematically dead. The offense always has a theoretical path to a first down.",
+    "This is an emergency lever — the default 20 is correct for V2.4, but if scoring is still too high after extended testing, flipping to 15 tightens the screws without touching any play-level mechanics.",
+    "At 0.65, the floor only activates in extreme stacking scenarios (maybe 5% of plays). In normal games, the combined modifier never drops below 0.70-0.75, so the floor never fires. It's pure insurance — it prevents the worst 1% of outcomes without affecting the other 99%.",
+    "Capped at 80% — even elite DCs can fail",
+    "Once earned, No-Fly Zone is permanent for the season. Dominance doesn't expire."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Key Metrics (10-game batch validation): Avg combined yards 1,320 → 864 (-35%, Target hit); Avg combined score 159 → 103 (-35%, Target hit); Avg TDs per game 12.6 → 8.5 (-33%, Target hit); Avg plays per game ~148 → ~93 (-37%, Expected from ToP model); Yards per play ~8.9 → ~9.3 (+4%, Plays are more efficient but fewer)",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 10+ game batch sim with V2.4 config enabled and compare combined yards/score/TD/play averages",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "No-Fly Zone UI/narrative integration",
+      "reason": "Like the bonus possession in V2.3, No-Fly Zone is mechanically active but invisible to the user. There's no pregame notification, no in-game indicator, and no postgame callout. The modifier_stack summary includes it, but it needs front-end support.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Dynamic DC gameplan mid-game (re-rolling base suppression values at halftime)",
+      "reason": "Currently the DC gameplan is still rolled once at init. The adaptation system adds on top of it, but the base suppression values never change.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "OC counter-adaptation",
+      "reason": "currently the offense just continues selecting from normal weights, which means it keeps feeding the solved family until random selection happens to pick something else",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Precise per-modifier multiplicative tracking for the stack label (weather is approximated)",
+      "reason": "The weather speed modifier is additive to center (not multiplicative), but the stack label converts it to an approximate multiplicative equivalent for display purposes. This is directionally correct but not precise.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "103 combined points may still be high — viperball at 103 sits closer to arena than professional. 103 may be appropriate, but warrants continued monitoring.",
+    "The adaptation system may be too aggressive for low-variety offenses — against an elite DC (instincts 0.9+), a Ground & Pound offense could be 'solved' before halftime; it may make certain style matchups unplayable.",
+    "Modifier stack label is approximated for weather — directionally correct but not precise.",
+    "No-Fly Zone has no UI/narrative integration yet — mechanically active but invisible to the user.",
+    "Stamina interaction with ToP — grind teams now hold the ball 35+ seconds per play; the stamina system may need recalibration to account for the ToP differential."
+  ],
+  "open_hooks": [
+    "starting_yard_line lever: setting it to 15 would add ~30 additional failure points per game, likely dropping combined scoring to ~85-90",
+    "Starting yard line = 15 A/B test — run a 500-game batch at both 15 and 20 to decide on the permanent default",
+    "Extended batch validation — 200+ game batch sim to validate V2.4 metrics at scale",
+    "Defensive identity branding — additional prestige tiers: 'Brick Wall', 'Turnover Machine'",
+    "Commentary/broadcast layer — the modifier stack and adaptation log are structured data that could drive a generated commentary system",
+    "UI integration for No-Fly Zone and adaptation narrative in play-by-play"
+  ],
+  "section_headers_original": [
+    "After-Action Report: V2.4 — Defensive Adaptation, Clock Model, Degeneracy Floor, and Prestige",
+    "Objective",
+    "Starting State (V2.3 Baseline)",
+    "Work Performed",
+    "1. Time-of-Possession Model (`top_model_enabled`)",
+    "2. Play-Family Adaptation — \"Solved Puzzle\" Mechanic (`play_family_adaptation_enabled`)",
+    "3. Degeneracy Floor — `min_yardage_multiplier` (0.65)",
+    "4. Configurable Starting Yard Line (`starting_yard_line`)",
+    "5. Defensive Prestige — \"No-Fly Zone\" (`season.py`)",
+    "6. Modifier Stack Logging (`_build_modifier_stack_summary()`)",
+    "Files Modified",
+    "Key Metrics (10-game batch validation)",
+    "Architecture Decisions",
+    "1. Adaptation is per-DC-category, not per-play-family",
+    "2. Solved families persist through halftime but frequency resets",
+    "3. ToP model uses absolute seconds, not tempo multipliers",
+    "4. Degeneracy floor is applied AFTER all modifiers, not as a per-modifier cap",
+    "5. No-Fly Zone is permanent once earned",
+    "6. Clock burn restricted to Q4",
+    "What Worked",
+    "The ToP model is the single most impactful change",
+    "Adaptation creates mid-game narrative tension",
+    "The degeneracy floor is invisible when it's not needed",
+    "What Didn't Work / Risks",
+    "103 combined points may still be high",
+    "The adaptation system may be too aggressive for low-variety offenses",
+    "No-Fly Zone has no UI/narrative integration yet",
+    "Modifier stack label is approximated for weather",
+    "Configuration Reference",
+    "What's Next",
+    "Immediate",
+    "Short-term",
+    "Medium-term",
+    "Lessons Learned"
+  ],
+  "unmapped_content": "Header metadata: Branch: claude/balance-defensive-adaptation-PzgsT\n\nStarting State (V2.3 Baseline) table: Avg combined score 166.5; Avg combined yards ~1,488; Avg TDs per game 12.6; Play clock fixed 18s/play ± small tempo mult; Avg plays per game ~148; DC gameplan rolled once at init, static all game; Modifier stacking floor none (theoretically 0.0x); Defensive prestige none; Modifier visibility none in summary.\n\nToP seconds-per-play table: Ground & Pound / Ball Control tempo 0.0-0.2 → 34-38s; Triple Threat / Balanced 0.3-0.5 → 25-30s; Boot Raid / Ghost 0.6-0.7 → 22-26s; Chain Gang / Lateral Spread 0.8-1.0 → 18-22s.\n\nAdaptation trigger thresholds table: instincts 0.0 → 4 plays/drive, 10 plays/half; 0.5 → 3/8; 1.0 → 2/6.\n\nDegeneracy floor stacking example: DC 0.82 × weather 0.95 × disciplinarian 0.95 × composure 0.85 × adaptation 0.85 = 0.50; a 5.5-yard raw center becomes 2.75 yards.\n\nFiles Modified table: engine/game_engine.py +404/-26 (all six systems); engine/season.py +62/-4 (No-Fly Zone tracking, INT extraction, NFZ flag passed to engine).\n\nArchitecture Decisions discussion: (1) Adaptation maps play families to four DC categories (run/lateral/kick_pass/trick) rather than 10+ individual families — 'solving runs' suppresses all seven run-type families; matches the abstraction level of real defensive film study. (2) Half-level frequency counters reset at halftime but solved families carry forward, modeling halftime adjustments. (3) Old system 18 * (1.30 - tempo * 0.55) compressed range to 13-23s; new direct formula spreads to 18-38s, a 2:1 ratio. (4) Floor applied to the combined product rather than per-modifier caps, allowing individual modifiers to be extreme as long as total doesn't breach threshold. (5) No-Fly Zone alternatives considered: decay after 2 games (more realistic but adds complexity and reduces 'identity' payoff); sliding boost +1%/+2%/+3% (more granular but harder to narrate); permanent model chosen for clarity: 'They earned it, they keep it.' (6) Old clock burn applied in Q2 and Q4 3-minute warnings; restricting to Q4 means clock management only matters when the game is closing.\n\nWhat Worked: ToP model is the single most impactful change — reduced play count alone would cut scoring by ~37%; this is the structural fix. Adaptation creates mid-game narrative tension and emergent story arcs. Degeneracy floor invisible when not needed.\n\nConfiguration Reference: V2_ENGINE_CONFIG keys — starting_yard_line (default 20), min_yardage_multiplier (0.65), play_family_adaptation_enabled (True), top_model_enabled (True). No-Fly Zone is always active when running through the Season system (no toggle).\n\nLessons Learned: Clock economics are the master lever — every other balance change in V2.3 and V2.4 combined moved scoring less than the ToP model alone. Mid-game adaptation needs both a hammer and a release valve — the 3-play decay window creates a chess match, not a death sentence. Anti-degenerate floors are cheap insurance — 8 lines of code; every simulation engine should have these. Prestige systems need cross-game memory — naming things matters.\n\nExample narrative quotes: 'DEFENSIVE INSIGHT: DC has solved the running game! (+15% suppression applied)' / 'TENDENCY BROKEN: Offense has reset the DC's read on run.' Example modifier_stack JSON with stack_label 'Cold DC + Rain + Adapted = STIFLING RUN DEFENSE (0.74 Multiplier applied)'.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": null
+}

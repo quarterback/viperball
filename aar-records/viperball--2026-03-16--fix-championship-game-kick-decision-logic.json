@@ -1,0 +1,132 @@
+{
+  "record_id": "viperball--2026-03-16--fix-championship-game-kick-decision-logic",
+  "source_path": "docs/aar_2026-03-16_championship_kick_decision_logic.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-16",
+  "title": "After Action Review — Fix Championship Game Kick Decision Logic",
+  "scope": "Fix irrational late-game coaching AI decisions where the offense would kick field goals or snap kicks when trailing by more than the kick could score, and add smart snap kick mode activation for trailing teams in Q4. 1 file changed, +78 / -11 lines",
+  "rationale": [
+    {
+      "item": "Incident: National Championship game, Arizona State (72.0) vs Nebraska Omaha (74.5). ASU trailed by ~5.5 points with seconds remaining and the coaching AI elected a place kick (+3) at the 63-yard line with 0:01 on the clock — the one option that was guaranteed to still lose. A snap kick (+5) would have tied; a touchdown (+9) would have won.",
+      "references": []
+    },
+    {
+      "item": "Neither select_kick_decision() nor the stall/final-play auto-kick logic ever checked whether a kick's point value could overcome the deficit. The clock pressure flag (Q4, <=3:00) actually encouraged kicking — it didn't distinguish between \"useful points\" and \"futile points\".",
+      "references": []
+    },
+    {
+      "item": "The stall/final-play code (V2.5) had a rigid preference hierarchy — fp >= 55 → place kick — that ignored the score entirely.",
+      "references": []
+    },
+    {
+      "item": "Why 3 minutes (180s) as the threshold? This matches the existing clock_pressure threshold. With <=3 minutes in Q4, the trailing team likely has 1-2 possessions left at most. Kicking for insufficient points wastes one of those precious possessions.",
+      "references": []
+    },
+    {
+      "item": "Why not also apply this in Q2 before the half? Before the half, any points have value because the game continues. Kicking a FG when trailing by 6 before halftime is reasonable — you're chipping away. In Q4 with the clock dying, it's not.",
+      "references": []
+    },
+    {
+      "item": "Edge case of trailing by exactly 5: a successful snap kick (+5) ties the game. Tying is strictly better than losing, so the kick is rational. The futility check uses deficit <= 5 (not < 5) to allow tie-producing kicks.",
+      "references": []
+    },
+    {
+      "item": "kick_mode rationale: snap kicks that miss only cost a down, not possession. When trailing by ≤5 late in Q4, the optimal strategy is to get into snap kick range and fire repeatedly — the Viperball equivalent of a no-huddle field goal offense.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Added helper method _kick_can_tie_or_win(kick_type, score_diff) (line ~4798): returns True when leading/tied; for DROP_KICK requires deficit <= 5, for PLACE_KICK deficit <= 3.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Added futility flags (dk_futile, pk_futile) in select_kick_decision() (line ~4600), active when quarter == 4, time_left <= 180, and score_diff < 0; all kick return paths in downs 4, 5, and 6 gated by these flags. On down 6, if trailing with no viable kick and <=3:00 in Q4, the AI goes for it instead of punting.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Deficit-aware final play selection in the V2.5 stall/clock-management logic (line ~4340): deficit 0 keeps original hierarchy; 1-3 allows FG or DK; 3.5-5 skips FG, attempts DK if in range; >5 punts (no kick can help).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Activated previously dead kick_mode: when select_kick_decision() returns DROP_KICK on 4th down AND quarter == 4, time_remaining <= 180, trailing by <= 5, set self.state.kick_mode = True (line ~5359), giving up to 3 consecutive snap kick attempts on downs 4-6.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Commit 816ccf4 \"Fix late-game coaching AI making irrational kick decisions when trailing\".",
+      "artifacts": ["816ccf4"],
+      "kind": "other"
+    }
+  ],
+  "risk_posture": [
+    "Scope: This only applies in Q4 with <=3 minutes. Earlier in the game, kicking for partial points is rational because more possessions are coming.",
+    "It only activates under very specific late-game conditions (Q4, <=3min, trailing by <=5, on 4th down with a viable snap kick). It resets on first down, change of possession, or new drive — so it can't persist into normal play. The worst case is 3 missed snap kicks followed by turnover on downs, which is no worse than the old behavior of kicking a futile FG and losing anyway."
+  ],
+  "validation_claims": [],
+  "non_actions": [
+    {
+      "item": "Lead management countermeasures",
+      "reason": "The Slow Drip tendency still encourages kick-mode when leading. Deficit awareness only overrides when trailing.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Red zone logic",
+      "reason": "The fp >= 90 always-chase-TD rule was already correct and remains untouched.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Q2/halftime kicks",
+      "reason": "Kicking for partial points before the half is still allowed regardless of deficit.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Defensive clamp rates",
+      "reason": "Late-down defensive intensity is unchanged.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "fast_sim.py",
+      "reason": "The CPU fast-sim path doesn't model individual kick decisions, so no changes needed there.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "In the championship scenario, ASU trailing by 5.5 at fp=63 falls through to punt. Not ideal (a Hail Mary attempt would be better), but at least the AI isn't burning the last play on a kick that mathematically cannot win."
+  ],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Fix Championship Game Kick Decision Logic",
+    "Mission",
+    "Incident",
+    "Commits",
+    "Scope",
+    "Issues Found & Fixed",
+    "Critical — No Deficit Awareness in Kick Decisions",
+    "Critical — Stall/Final-Play Auto-Kick Ignores Score",
+    "High — kick_mode Never Activated (Dead Code)",
+    "Design Rationale",
+    "What Was Not Changed"
+  ],
+  "unmapped_content": "Branch: claude/fix-championship-game-logic-zoWVE.\n\nFutility flag table: deficit ≤ 3 → either kick viable; 3.5–5 → pk_futile True, only snap kick considered; > 5 → both futile, go for touchdown.\n\nkick_mode dead code detail: GameState.kick_mode was declared (line 1179), checked in simulate_play() (line ~5343), and reset in multiple places (drive start, first down, change of possession) — but never set to True anywhere. The entire \"rapid-fire snap kick on 4th-6th\" system was dead code.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "No validation/testing section. Note: a later AAR (docs/aar_2026-03-18_early_down_snap_kicks.md) removes the kick_mode activation added here."
+}

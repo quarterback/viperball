@@ -1,0 +1,65 @@
+{
+  "record_id": "viperball--2026-03-21--tournament-scoring-awards-postseason",
+  "source_path": "docs/aar_2026-03-21_tournament_scoring_awards_postseason.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-21",
+  "title": "After Action Review — Tournament Scoring, Awards System, and Postseason Tracking",
+  "scope": "Overhaul the CVL tournament scoring system so quality wins are properly scaled by opponent strength, fix media awards not appearing on player cards, revamp All-CVL team selection to use skill positions only, track coach postseason stats, add postseason history to team pages, and generate bowl/playoff MVPs.",
+  "rationale": [
+    { "item": "Quality win scoring was too narrow — 7-tier system didn't differentiate enough; wins against teams ranked 51-100 counted for nothing; 20-point cap compressed elite resumes", "references": [] },
+    { "item": "Rankings were retroactive — end-of-season ranking used instead of game-time ranking, punishing teams for opponents' late-season collapses", "references": [] },
+    { "item": "Media awards (AP, UPI, The Lateral, TSN) never appeared on player cards", "references": [] },
+    { "item": "All-CVL teams included lineman slots despite linemen having no meaningful offensive stats", "references": [] },
+    { "item": "Best Kicker award went to players with 0 kick attempts because OVR-based fallback scored keepers with 99 kicking rating", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Skill positions only for All-CVL — followed user's basketball analogy, added kicker slot", "decided_by": "joint", "quote": "Followed the user's basketball analogy — like basketball dropping the center position as the game evolved, viperball doesn't need to force lineman selections when there are no meaningful stats." },
+    { "decision": "Remove the quality win cap — let truly elite schedules stand out", "decided_by": "agent", "quote": "A team with two top-5 wins looked the same as a team with four. Removing the cap lets truly elite schedules stand out in the power index." },
+    { "decision": "Game-time rankings for quality wins instead of end-of-season", "decided_by": "agent", "quote": "Rankings at time of play matches how real-world selection committees evaluate resumes. Beating a team that was #3 when you played them is a top-5 win regardless of where they finish." },
+    { "decision": "Combined postseason stats (bowls + playoff) rather than separate", "decided_by": "agent", "quote": "Variable playoff field sizes mean the line between bowl and playoff isn't as meaningful." }
+  ],
+  "actions": [
+    { "description": "New 5-tier quality win scoring; uncapped quality wins component; _get_rankings_at_week() for game-time rankings; _pick_game_mvp() for bowl/playoff MVPs; MVP assignment in _play_round() and simulate_bowls()", "artifacts": ["engine/season.py"], "kind": "modified" },
+    { "description": "Removed lineman slots from _AA_SLOTS; added kicker slot + kicker scoring pipeline; 50% games-played floor in _best_in_position(); fixed Best Kicker to require actual kick attempts", "artifacts": ["engine/awards.py"], "kind": "modified" },
+    { "description": "Added conference_titles, playoff_wins, bowl_wins, bowl_appearances to dynasty Coach; AI coaching staff gets W/L/seasons/championships/bowl wins updated each season", "artifacts": ["engine/dynasty.py"], "kind": "modified" },
+    { "description": "Awards endpoint now calls compute_media_awards() and _apply_awards_to_players(); coach serialization exposes new postseason fields", "artifacts": ["api/main.py"], "kind": "modified" },
+    { "description": "Poll ranking history on team browser; Postseason Media Awards section on awards page", "artifacts": ["nicegui_app/pages/league.py"], "kind": "modified" },
+    { "description": "Coach career display: Conf. Titles, Postseason Apps, Postseason Wins", "artifacts": ["nicegui_app/pages/my_team.py"], "kind": "modified" },
+    { "description": "Postseason game data and coach stats passed to templates", "artifacts": ["stats_site/router.py"], "kind": "modified" },
+    { "description": "New 'Bowls & Playoff Appearances' section with result/opponent/score/MVP", "artifacts": ["stats_site/templates/college/team.html"], "kind": "modified" },
+    { "description": "Postseason Apps and Wins on coach page", "artifacts": ["stats_site/templates/college/coach.html"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Tournament Scoring, Awards System, and Postseason Tracking",
+    "Mission",
+    "Incident / Starting State",
+    "Commits",
+    "Scope",
+    "Files Modified",
+    "Key Decisions",
+    "Quality Win Tiers",
+    "Removing the Quality Win Cap",
+    "Game-Time Rankings",
+    "Skill Positions Only for All-CVL",
+    "Combined Postseason Stats",
+    "MVP Selection",
+    "Impact"
+  ],
+  "unmapped_content": "Branch: claude/tournament-win-scoring-NMcw8. 5 commits: 2c3ef4a (5-tier quality wins), 07e2a78 (remove cap), b0f10b2 (game-time rankings + poll history), 7f1073b (media awards + All-CVL slots), 92d6ac2 (coach postseason stats + team postseason section + bowl/playoff MVPs). Quality win tiers: 10 pts (top 5), 8 pts (top 10), 5 pts (top 25), 3 pts (top 50), 1 pt (top 100). MVP composite score: yards + TDs + kick pass yards + tackles + sacks + WPA, position-agnostic. Impact summary: harder schedules get more credit; no retroactive ranking inflation; media awards appear on player cards; no 2-GP wingbacks making First All-CVL; no keepers with 0 kicks winning Best Kicker.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date confirmed: 2026-03-21. No validation claims or non_actions. Delegation_events includes one 'joint' (user's basketball analogy) per the design decision text."
+}

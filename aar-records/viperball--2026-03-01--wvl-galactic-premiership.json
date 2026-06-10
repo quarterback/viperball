@@ -1,0 +1,90 @@
+{
+  "record_id": "viperball--2026-03-01--wvl-galactic-premiership",
+  "source_path": "docs/feature_report_wvl_galactic_premiership_2026_03_01.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "medium",
+  "date": "2026-03-01",
+  "title": "Feature Report — Women's Viperball League (WVL): Galactic Premiership",
+  "scope": "A complete 64-team, 4-tier women's professional league with EPL-style promotion/relegation, operating as a standalone game mode where the human plays as a club owner (not a coach).",
+  "rationale": [
+    { "item": "College women's players in the CVL (187 teams across 13 conferences) graduate into a dead end. Their only post-college path is FIV international play — there's no women's professional league.", "references": [] },
+    { "item": "College dynasty mode builds attachment to players across 4 years, and then those players have nowhere to go.", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Owner Mode design philosophy: ownership sim, not coaching sim — high-level decisions, layers of delegation", "decided_by": "agent", "quote": "This is not a coaching sim. The WVL is an ownership sim — you make high-level decisions and watch the consequences play out through layers of delegation." },
+    { "decision": "Decoupled from college dynasty — completely independent modes with optional JSON bridge", "decided_by": "agent", "quote": "The two modes are completely independent. No shared state, no code coupling. The bridge is a JSON file on disk." }
+  ],
+  "actions": [
+    { "description": "New engine/wvl_config.py: 64 clubs, 4 tier configs, 13 rivalry groups", "artifacts": ["engine/wvl_config.py"], "kind": "new" },
+    { "description": "New engine/promotion_relegation.py: pro/rel engine with custom rules per boundary, playoff simulation", "artifacts": ["engine/promotion_relegation.py"], "kind": "new" },
+    { "description": "New engine/wvl_free_agency.py: FA pool (import or synthetic), AI signing, owner targeted FA", "artifacts": ["engine/wvl_free_agency.py"], "kind": "new" },
+    { "description": "New engine/wvl_owner.py: 7 owner archetypes, 6 president archetypes, investment system, financials", "artifacts": ["engine/wvl_owner.py"], "kind": "new" },
+    { "description": "New engine/wvl_dynasty.py: multi-season dynasty with offseason pipeline, save/load", "artifacts": ["engine/wvl_dynasty.py"], "kind": "new" },
+    { "description": "New engine/wvl_season.py: multi-tier season orchestrator", "artifacts": ["engine/wvl_season.py"], "kind": "new" },
+    { "description": "New scripts/generate_wvl_teams.py: 64-team generation with country-appropriate names", "artifacts": ["scripts/generate_wvl_teams.py"], "kind": "new" },
+    { "description": "New nicegui_app/pages/wvl_mode.py: Owner Mode UI", "artifacts": ["nicegui_app/pages/wvl_mode.py"], "kind": "new" },
+    { "description": "New test_wvl.py: 34 integration tests", "artifacts": ["test_wvl.py"], "kind": "new" },
+    { "description": "engine/player_card.py: 5 optional pro fields (age, pro_team, contract_years, contract_salary, pro_status)", "artifacts": ["engine/player_card.py"], "kind": "modified" },
+    { "description": "engine/development.py: apply_pro_development() and should_retire()", "artifacts": ["engine/development.py"], "kind": "modified" },
+    { "description": "engine/dynasty.py: export_graduating_class() method", "artifacts": ["engine/dynasty.py"], "kind": "modified" },
+    { "description": "nicegui_app/app.py: added WVL to NAV_SECTIONS + routing", "artifacts": ["nicegui_app/app.py"], "kind": "modified" },
+    { "description": "Generated data: 64 club JSON files in data/wvl_teams/ + data/wvl_tier_assignments.json", "artifacts": ["data/wvl_teams/"], "kind": "data" }
+  ],
+  "risk_posture": [
+    "All new player card fields are Optional with None defaults — no impact on existing college code"
+  ],
+  "validation_claims": [
+    { "claim": "34/34 tests passing across TestWVLConfig, TestOwnerMode, TestFreeAgency, TestProDevelopment, TestPromotionRelegation, TestWVLDynasty, TestPlayerCardProFields, TestTeamData.", "evidence_cited": "tests", "checkable_against_repo": "yes", "check_method": "Run pytest test_wvl.py and verify 34/34", "verified": "not_checked" },
+    { "claim": "No regressions in existing test suite (pre-existing failure in test_recruiting.py::test_roster_prestige_estimation is unrelated — verified failing on clean branch before changes).", "evidence_cited": "tests", "checkable_against_repo": "yes", "check_method": "Run full test suite and compare failure set to pre-change baseline", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Full season simulation through the UI — week-by-week stepping with standings display is stubbed", "reason": "multi-tier sim orchestrator works in engine but UI only has basic sim button", "category": "deferred", "status": "unknown" },
+    { "item": "Offseason UI flow — investment allocation, president hire/fire, targeted FA selection are engine-complete but need dedicated UI screens", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "Pro/rel drama screen", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "History/timeline view", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "League map (14-country geographic view)", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "College export UI button — export_graduating_class() wired but dynasty UI doesn't expose it yet", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "AI president coaching changes — coaching_style_bias exists but doesn't propagate to team's style dict between seasons", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" },
+    { "item": "Inter-tier cup competition", "reason": "Not implemented in this pass", "category": "deferred", "status": "unknown" }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "export_graduating_class() method wired and ready for UI exposure",
+    "Optional CVL graduate import via JSON bridge"
+  ],
+  "section_headers_original": [
+    "Feature Report — Women's Viperball League (WVL): Galactic Premiership",
+    "Problem Statement",
+    "What Was Built",
+    "League Structure",
+    "Promotion/Relegation Rules",
+    "Built-In Rivalries (13 groups)",
+    "Narrative Arcs (baked into team metadata)",
+    "Owner Mode — Design Philosophy",
+    "Four Owner Levers",
+    "1. Owner Archetype (chosen once at setup)",
+    "2. President Hire/Fire (between seasons)",
+    "3. One Targeted Free Agent per offseason",
+    "4. Investment Allocation (annual, temporary boosts)",
+    "Architecture",
+    "Decoupled from College Dynasty",
+    "Player Lifecycle Differences",
+    "Files Delivered",
+    "New Files (9)",
+    "Modified Files (4)",
+    "Generated Data (64 team files + 1 assignment file)",
+    "Test Results",
+    "What's Not Yet Done (future work)"
+  ],
+  "unmapped_content": "Branch: claude/add-womens-pro-league-PIkzg. Commit: c412a86. Date: March 1, 2026. Narrative arcs: Wrexham (vanity project), Portland Timbers (lone American outpost), Vimpelin Veto (Tier 4 Cinderella), Nottingham Forest/Leeds/Everton (fallen giants), Bodø/Glimt. Owner archetype table: Sugar Daddy ($80M, 2 seasons patience, +15% FA rep), Patient Builder ($50M, 5 seasons), Youth Evangelist ($45M, 4 seasons), Trophy Hunter ($70M, 2 seasons), Hometown Hero ($40M, 4 seasons), Corporate Group ($65M, 3 seasons), Underdog Dreamer ($25M, 6 seasons). Investment allocation: Training Facilities (physical stats), Coaching Staff (mental stats), Stadium (FA attractiveness), Youth Academy (dev <25), Sports Science (stamina/power), Marketing/Brand (attractiveness/prestige). Player lifecycle differences table. 13 rivalry groups including El Clásico, English Triangle, Derby della Madonnina, North London Derby, Old Firm, etc.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Document titled 'Feature Report' not AAR — genre_confidence medium. Date confirmed: March 1, 2026."
+}

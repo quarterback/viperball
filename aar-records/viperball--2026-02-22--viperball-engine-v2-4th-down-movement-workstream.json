@@ -1,0 +1,98 @@
+{
+  "record_id": "viperball--2026-02-22--viperball-engine-v2-4th-down-movement-workstream",
+  "source_path": "AAR_4TH_DOWN_MOVEMENT.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-22",
+  "title": "After Action Report: Viperball Engine V2 + 4th Down Movement Workstream",
+  "scope": "Rebuild the viperball simulation engine to V2 architecture (10-phase spec), then design and implement a 4th down \"movement\" mechanic inspired by Finnish baseball (pesäpallo) to solve the sport's fundamental drive structure problem: drives had no narrative arc, 4th down conversion was 26.7%, and most possessions stalled into aimless kicks.",
+  "rationale": [
+    { "item": "drives had no narrative arc, 4th down conversion was 26.7%, and most possessions stalled into aimless kicks", "references": ["pesäpallo (Finnish baseball)"] }
+  ],
+  "delegation_events": [
+    { "decision": "Pesäpallo rule scoped to snap kicks only — place kicks can still be blocked/recovered; only snap kicks get retention", "decided_by": "agent", "quote": "Pesäpallo rule scoped to snap kicks only — Place kicks (3 pts) can still be blocked, deflected, and recovered by the defense. Only snap kicks (5 pts) get the retention treatment." },
+    { "decision": "4th down decision is probabilistic, not deterministic", "decided_by": "agent", "quote": "4th down decision is probabilistic, not deterministic — The coaching AI calculates a probability of entering kick mode based on 6 factors" },
+    { "decision": "Power play deprioritized / deferred", "decided_by": "agent", "quote": "Power play deprioritized — The man-advantage system is a separate design thread. The scaffolding is in place but wiring it in was correctly deferred to avoid scope creep during the 4th down implementation." },
+    { "decision": "All 10 V2 phases shipped together", "decided_by": "agent", "quote": "All 10 V2 phases shipped together — Risky but enabled by feature flags." },
+    { "decision": "Shot interrupts restricted to downs 2-3", "decided_by": "agent", "quote": "Shot interrupts restricted to downs 2-3 — Previously, snap kick interrupts fired on downs 2-5, randomly derailing drives." },
+    { "decision": "Resolve merge conflict by accepting incoming (our branch) changes", "decided_by": "agent", "quote": "Resolution: accept the incoming (our branch) changes, as the implementation is more complete and matches the original design intent." }
+  ],
+  "actions": [
+    { "description": "V2 10-phase engine rebuild", "artifacts": ["e480068", "V2_ENGINE_CONFIG"], "kind": "new" },
+    { "description": "Late-down play_shift fix + archetype clamp", "artifacts": ["9854308"], "kind": "modified" },
+    { "description": "Late-down conversion urgency tuning", "artifacts": ["facc660"], "kind": "modified" },
+    { "description": "Play family decomposition (SNAP_KICK/FG/PUNT)", "artifacts": ["ae56846", "TERRITORY_KICK"], "kind": "modified" },
+    { "description": "Power play scaffolding (not wired)", "artifacts": ["ae56846", "_start_power_play()", "get_power_play_bonus()", "_tick_power_play()"], "kind": "new" },
+    { "description": "10-minute quarters + 3-minute warning", "artifacts": ["ae56846"], "kind": "modified" },
+    { "description": "9-style offense weight rebalancing", "artifacts": ["ae56846"], "kind": "modified" },
+    { "description": "4th down movement mechanic + Pesäpallo possession retention", "artifacts": ["865e87e", "kick_mode", "_fourth_down_decision()", "MISSED_SNAP_KICK_RETAINED", "kick_mode_aggression"], "kind": "new" }
+  ],
+  "risk_posture": [
+    "The V2 architecture was aggressive but landed",
+    "Implementing all 10 V2 phases in a single commit (e480068) was bold.",
+    "All 10 V2 phases shipped together — Risky but enabled by feature flags."
+  ],
+  "validation_claims": [
+    { "claim": "A/B testing showed tighter margins (10.4 vs 13.7 avg) and fewer blowouts (4 vs 8 out of 30 games)", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Re-run A/B batch sim comparing V1 vs V2 over 30 games", "verified": "not_checked" },
+    { "claim": "Turnovers on downs dropped from a persistent problem to 0.4% of drives", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run batch sim and inspect turnover_on_downs drive outcome rate", "verified": "not_checked" },
+    { "claim": "Post-implementation batch sim shows 1.9 TDs/team", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 10-game batch sim and read TDs/team", "verified": "not_checked" },
+    { "claim": "45.1 points/team average vs. 65-85 target", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run batch sim and read avg score/team", "verified": "not_checked" },
+    { "claim": "Plays/game 145, Snap kicks made/team 3.1, FGs made/team 3.0, Kick pass completion 55.5%, 4th down conversion 30.0%", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 10-game batch sim and read the key metrics table", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Power play bonus not wired into play simulation", "reason": "This was deprioritized in favor of the 4th down mechanic — correct call — but it's dangling.", "category": "deferred", "status": "unknown" },
+    { "item": "TD conversion / total scoring still below target", "reason": "The pesäpallo rule and 4th down mechanic improved drive structure but didn't solve the underlying touchdown conversion problem.", "category": "deferred", "status": "unknown" },
+    { "item": "PR not created programmatically", "reason": "gh CLI not available in environment", "category": "blocked", "status": "unknown" }
+  ],
+  "residual_risks": [
+    "TDs per team still below target (1.9 vs 6-8)",
+    "Total scoring below target (45.1 vs 65-85)",
+    "Power play system not wired — scaffolding exists but the bonus multiplier isn't applied",
+    "Merge conflict with parallel implementation on origin/main (5fa1efb)",
+    "4th down conversion 30% is too low for advancement attempts",
+    "Yards per team 421 vs 600-750 target; run play yardage generation is the bottleneck"
+  ],
+  "open_hooks": [
+    "Power play scaffolding (_start_power_play(), get_power_play_bonus(), _tick_power_play()) in place for full implementation later",
+    "Feature flag system (V2_ENGINE_CONFIG) allows each system to be toggled independently",
+    "Narrative generation (YAR metrics, headline generator) in engine but likely not surfaced in UI"
+  ],
+  "section_headers_original": [
+    "After Action Report: Viperball Engine V2 + 4th Down Movement Workstream",
+    "1. Mission Statement",
+    "2. What Was Planned",
+    "V2 Engine Architecture (10 phases)",
+    "4th Down Movement Mechanic + Pesäpallo Rule",
+    "Supporting Work",
+    "3. What Was Delivered",
+    "4. What Worked",
+    "The pesäpallo rule is elegant and solves multiple problems at once",
+    "Structuring the drive into three phases created narrative",
+    "Per-style kick_mode_aggression creates genuine strategic diversity",
+    "The V2 architecture was aggressive but landed",
+    "5. What Didn't Work / Problems Encountered",
+    "TDs per team still below target",
+    "Total scoring below target",
+    "Power play system not wired",
+    "Merge conflict with parallel implementation",
+    "gh CLI not available in environment",
+    "6. Key Metrics (10-game batch sim, post-implementation)",
+    "7. Decisions Made",
+    "8. What's Next",
+    "Immediate (next session)",
+    "Short-term",
+    "Medium-term",
+    "9. Lessons Learned"
+  ],
+  "unmapped_content": "Lessons Learned: \"The best rule changes solve multiple problems simultaneously.\" The pesäpallo rule wasn't just \"keep the ball on a miss\" — it eliminated turnover-on-downs as a drive killer, gave snap kicks a natural home in the drive structure, made the kicker a position of genuine strategic value, and created a two-shot mechanic on 5th/6th that produces natural drama. One rule, five outcomes. \"Drive structure matters more than play-level tuning.\" We spent significant effort on late-down urgency multipliers (facc660) and they helped marginally. The 4th down restructure was a qualitative change to the flow of the game — it changed what drives *mean*, not just how individual plays resolve. The structural change was worth more than all the scalar tuning combined. \"Parallel workstreams on the same file create conflicts.\" The duplicate Finnish baseball implementation on main (5fa1efb) happened because the design conversation wasn't captured in a shared artifact before implementation began. If the design doc had been committed first, the parallel session would have seen it and built on it rather than reimplementing. | Branch: claude/validate-mechanics-spec-7tkGQ. Duration: ~12 hours (2026-02-21 14:35 UTC → 2026-02-22 02:18 UTC). 6 commits, 2 files changed, ~740 insertions / ~430 deletions net. Drive outcomes: successful_kick 44.6%, touchdown 13.4%, punt 13.4%, missed_snap_kick_retained 0.7%, turnover_on_downs 0.4%.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Well-structured canonical AAR. 'Decisions Made' section mapped to delegation_events (all agent-decided). 'What's Next' items treated as open work; explicit non-actions captured separately."
+}
