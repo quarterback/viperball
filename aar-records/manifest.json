@@ -1,0 +1,366 @@
+[
+  {
+    "record_id": "viperball--2026-02-21--viperball-engine-project-report-engine-rebalance-sprint",
+    "source_path": "PROJECT_REPORT.md",
+    "date": "2026-02-21",
+    "title": "Viperball Engine \u2014 Project Report: Engine Rebalance Sprint",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-02-22--v2-2-coaching-personality-system",
+    "source_path": "AAR_2026-02-22_coaching_v2.2.md",
+    "date": "2026-02-22",
+    "title": "After-Action Report: V2.2 Coaching Personality System",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-22--v2-3-sport-balance-turnovers-breakaways-defensive-bonus-possession",
+    "source_path": "AAR_2026-02-22_sport_balance_v2.3.md",
+    "date": "2026-02-22",
+    "title": "After-Action Report: V2.3 Sport Balance \u2014 Turnovers, Breakaways, Defensive Bonus Possession",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-22--v2-4-defensive-adaptation-clock-model-degeneracy-floor-prestige",
+    "source_path": "AAR_2026-02-22_defensive_adaptation_v2.4.md",
+    "date": "2026-02-22",
+    "title": "After-Action Report: V2.4 \u2014 Defensive Adaptation, Clock Model, Degeneracy Floor, and Prestige",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-22--v2-5-film-study-escalation-halftime-re-roll-prestige-tiers-tuning",
+    "source_path": "AAR_2026-02-22_film_study_v2.5.md",
+    "date": "2026-02-22",
+    "title": "After-Action Report: V2.5 \u2014 Film Study Escalation, Halftime Re-Roll, Defensive Prestige Tiers, and Tuning",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-22--viperball-engine-v2-4th-down-movement-workstream",
+    "source_path": "AAR_4TH_DOWN_MOVEMENT.md",
+    "date": "2026-02-22",
+    "title": "After Action Report: Viperball Engine V2 + 4th Down Movement Workstream",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-22--viperball-rules-evolution-primer-v1-vs-current-engine",
+    "source_path": "RULES_EVOLUTION_AAR.md",
+    "date": "2026-02-22",
+    "title": "Viperball Rules Evolution: Primer v1 vs Current Engine",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-02-23--feature-report-four-areas",
+    "source_path": "docs/feature_report_2026_02_23.md",
+    "date": "2026-02-23",
+    "title": "Feature Report \u2014 February 23, 2026",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-02-23--kick-pass-stat-tracking-fixes",
+    "source_path": "docs/AAR_kick_pass_stat_tracking.md",
+    "date": "2026-02-23",
+    "title": "After Action Report: Kick Pass Stat Tracking Fixes",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-23--missed-drop-kick-live-ball-returns",
+    "source_path": "docs/AAR_missed_dk_live_ball_returns.md",
+    "date": "2026-02-23",
+    "title": "After Action Report: Missed Drop Kick Live Ball Returns",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-23--nicegui-3x-compatibility-saas-ui-layout",
+    "source_path": "docs/AAR_nicegui3x_compatibility.md",
+    "date": "2026-02-23",
+    "title": "After Action Report: NiceGUI 3.x Compatibility & SaaS UI Layout",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-23--v2-5-hc-ambition-coaching-trees-assistant-hc-meter-coach-development",
+    "source_path": "AAR_2026-02-23_coaching_systems_v2.5.md",
+    "date": "2026-02-23",
+    "title": "After-Action Report: V2.5 \u2014 HC Ambition System, Coaching Trees, Assistant HC Meter, and Coach Development",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-24--february-24-2026",
+    "source_path": "docs/aar_2026-02-24.md",
+    "date": "2026-02-24",
+    "title": "After-Action Review \u2014 February 24, 2026",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-25--analytics-rework-wpa-war-zbr-vpr",
+    "source_path": "docs/feature_report_analytics_rework_2026_02_25.md",
+    "date": "2026-02-25",
+    "title": "Feature Report \u2014 Analytics Rework (February 25, 2026)",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-02-25--rating-driven-touch-distribution-system",
+    "source_path": "docs/aar_touch_distribution_overhaul.md",
+    "date": "2026-02-25",
+    "title": "AFTER ACTION REPORT: Rating-Driven Touch Distribution System",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-26--sitrep-pro-leagues-nvl-button-fix-international-leagues",
+    "source_path": "docs/sitrep_pro_leagues_2026_02_26.md",
+    "date": "2026-02-26",
+    "title": "SITREP \u2014 Pro Leagues: NVL Button Fix + International Leagues",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-02-27--february-27-2026",
+    "source_path": "docs/aar_2026-02-27_history_awards_overhaul.md",
+    "date": "2026-02-27",
+    "title": "After-Action Review \u2014 February 27, 2026",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-28--coaching-integration-fiv-international-pro-league-fast-sim",
+    "source_path": "docs/AAR_coaching_integration_fiv_pro.md",
+    "date": "2026-02-28",
+    "title": "AAR: Coaching Integration \u2014 FIV International + Pro League Fast Sim",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-02-28--lead-management-countermeasures-v2-7",
+    "source_path": "docs/AAR_lead_management_countermeasures.md",
+    "date": "2026-02-28",
+    "title": "AAR: Lead Management Countermeasures (V2.7)",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-01--wvl-galactic-premiership",
+    "source_path": "docs/feature_report_wvl_galactic_premiership_2026_03_01.md",
+    "date": "2026-03-01",
+    "title": "Feature Report \u2014 Women's Viperball League (WVL): Galactic Premiership",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-03-03--march-3-2026",
+    "source_path": "docs/aar_2026-03-03_wvl_ties_boxscores_stats.md",
+    "date": "2026-03-03",
+    "title": "After-Action Review \u2014 March 3, 2026",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-03--wvl-owner-mode-upgrade",
+    "source_path": "docs/project_report_wvl_owner_mode_upgrade_2026_03_03.md",
+    "date": "2026-03-03",
+    "title": "WVL Owner Mode Upgrade \u2014 Project Report",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-03-07--landing-page-modes-performance-fix",
+    "source_path": "docs/aar_2026-03-07_landing_page_modes_performance.md",
+    "date": "2026-03-07",
+    "title": "After Action Review \u2014 Landing Page Modes & Performance Fix",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-07--march-7-2026",
+    "source_path": "docs/aar_2026-03-07_mobile_compat_state_persistence.md",
+    "date": "2026-03-07",
+    "title": "After-Action Review \u2014 March 7, 2026",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-12--fix-interception-down-conversion-rates",
+    "source_path": "docs/aar_2026-03-12_interception_down_rates.md",
+    "date": "2026-03-12",
+    "title": "After Action Review \u2014 Fix Interception & Down Conversion Rates",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-13--late-down-defensive-intensity-clamp-yardage-tightening",
+    "source_path": "docs/AAR_late_down_defensive_clamp.md",
+    "date": "2026-03-13",
+    "title": "AAR: Late-Down Defensive Intensity Clamp & Yardage Tightening (V2.9)",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-15--bonus-possession-awarded-to-wrong-team",
+    "source_path": "docs/AAR_bonus_possession_inversion.md",
+    "date": "2026-03-15",
+    "title": "After Action Report: Bonus Possession Awarded to Wrong Team",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-16--fix-championship-game-kick-decision-logic",
+    "source_path": "docs/aar_2026-03-16_championship_kick_decision_logic.md",
+    "date": "2026-03-16",
+    "title": "After Action Review \u2014 Fix Championship Game Kick Decision Logic",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-16--fix-repeating-downs-field-goals-on-early-downs",
+    "source_path": "docs/aar_2026-03-16_repeating_downs_early_kicks.md",
+    "date": "2026-03-16",
+    "title": "After Action Review \u2014 Fix Repeating Downs & Field Goals on Early Downs",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-18--ai-kicking-snap-kicks-on-early-downs",
+    "source_path": "docs/aar_2026-03-18_early_down_snap_kicks.md",
+    "date": "2026-03-18",
+    "title": "After Action Review \u2014 AI Kicking Snap Kicks on Early Downs While Trailing",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-20--coaching-substitution-system",
+    "source_path": "docs/aar_2026-03-20_coaching_substitutions.md",
+    "date": "2026-03-20",
+    "title": "After Action Review \u2014 Coaching Substitution System (Backup Player Rotation)",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-21--pro-league-stats-parity",
+    "source_path": "docs/aar_2026-03-21_pro_league_stats_parity.md",
+    "date": "2026-03-21",
+    "title": "After Action Review \u2014 Pro League Stats Parity",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-21--tournament-scoring-awards-postseason",
+    "source_path": "docs/aar_2026-03-21_tournament_scoring_awards_postseason.md",
+    "date": "2026-03-21",
+    "title": "After Action Review \u2014 Tournament Scoring, Awards System, and Postseason Tracking",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-22--clock-management-overhaul-v2-8",
+    "source_path": "docs/AAR_clock_management_overhaul.md",
+    "date": "2026-03-22",
+    "title": "AAR: Clock Management Overhaul (V2.8)",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-22--keeper-stats-game-balance-ui-fixes",
+    "source_path": "AAR_2026-03-22_keeper_stats_and_game_balance.md",
+    "date": "2026-03-22",
+    "title": "After-Action Report: Keeper Stats, Game Balance & UI Fixes",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-22--sports-analytics-framework",
+    "source_path": "AAR_ANALYTICS.md",
+    "date": "2026-03-22",
+    "title": "After-Action Report: Sports Analytics Framework",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-25--game-clock-timeout-overtime-referee-injury-overhaul",
+    "source_path": "docs/aar_2026-03-25_timeout_overhaul.md",
+    "date": "2026-03-25",
+    "title": "AAR: Game Clock, Timeout, Overtime, Referee, Injury & Efficiency Overhaul",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-25--missing-teams-rivalry-fix",
+    "source_path": "docs/aar_missing_teams_and_rivalry_fix.md",
+    "date": "2026-03-25",
+    "title": "After-Action Report: Missing Teams in Ratings & Rivalry Fix",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-25--talent-generation-balance",
+    "source_path": "docs/aar_2026-03-25_talent_generation_balance.md",
+    "date": "2026-03-25",
+    "title": "After Action Review \u2014 Talent Generation Balance",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-26--runtime-generation-fix-fcs-removal",
+    "source_path": "docs/aar_2026-03-26_runtime_generation_fix.md",
+    "date": "2026-03-26",
+    "title": "After Action Review \u2014 Runtime Generation Fix & FCS Removal",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-27--challenge-system-rework-no-perfect-information",
+    "source_path": "docs/aar_2026-03-27_challenge_system_rework.md",
+    "date": "2026-03-27",
+    "title": "AAR: Challenge System Rework \u2014 No Perfect Information",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-27--graduated-blowout-backup-rotation",
+    "source_path": "docs/ard_2026-03-27_blowout_backup_rotation.md",
+    "date": "2026-03-27",
+    "title": "Architecture Decision Record: Graduated Blowout Backup Rotation",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-03-27--penalty-catalog-expansion-kickpass-penalty-phase",
+    "source_path": "docs/aar_2026-03-27_penalty_catalog_expansion.md",
+    "date": "2026-03-27",
+    "title": "AAR: Penalty Catalog Expansion & Kickpass Penalty Phase",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-03-27--talent-generation-rebalance-post-feature-report",
+    "source_path": "docs/feature_report_talent_generation_rebalance_2026_03_27.md",
+    "date": "2026-03-27",
+    "title": "Post-Feature Report: Talent Generation Rebalance",
+    "genre_confidence": "medium"
+  },
+  {
+    "record_id": "viperball--2026-04-13--garbage-time-scoring-mismatch-mercy-rotation",
+    "source_path": "docs/AAR_garbage_time_and_mismatch_mercy.md",
+    "date": "2026-04-13",
+    "title": "AAR: Garbage-Time Scoring & Mismatch-Mercy Rotation",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-04-07--academic-mental-attributes-system",
+    "source_path": "AAR_2026-04-07_academic_system.md",
+    "date": null,
+    "title": "AAR: Academic & Mental Attributes System",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-04-24--dynasty-recruiting-signing-pipeline-fix",
+    "source_path": "AAR_2026-04-24_dynasty_recruiting_signing_fix.md",
+    "date": null,
+    "title": "AAR: Dynasty Recruiting & Signing Pipeline Fix",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--2026-05-01--team-chemistry-system",
+    "source_path": "AAR_2026-05-01_team_chemistry.md",
+    "date": null,
+    "title": "AAR: Team Chemistry System",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--undated--case-study-box-score-restructure",
+    "source_path": "docs/AAR_box_score_restructure.md",
+    "date": null,
+    "title": "Case Study AAR: The Box Score Restructure",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--undated--case-study-diving-wing-archetype",
+    "source_path": "docs/AAR_diving_wing_case_study.md",
+    "date": null,
+    "title": "Case Study AAR: The Diving Wing Archetype",
+    "genre_confidence": "high"
+  },
+  {
+    "record_id": "viperball--undated--fiv-world-cup-continental-championships",
+    "source_path": "docs/case_study_fiv_world_cup.md",
+    "date": null,
+    "title": "Feature Case Study: FIV World Cup & Continental Championships",
+    "genre_confidence": "low"
+  },
+  {
+    "record_id": "viperball--undated--wvl-commissioner-mode-bug-fixes",
+    "source_path": "AAR_commissioner_mode.md",
+    "date": null,
+    "title": "After Action Report: WVL Commissioner Mode + Bug Fixes",
+    "genre_confidence": "high"
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "record_id": "viperball--2026-03-27--talent-generation-rebalance-post-feature-report",
+  "source_path": "docs/feature_report_talent_generation_rebalance_2026_03_27.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "medium",
+  "date": "2026-03-27",
+  "title": "Post-Feature Report: Talent Generation Rebalance",
+  "scope": "Complete overhaul of the talent generation system to fix a scoring crisis. Teams were routinely putting up 100+ points because the engine generated too many 90+ OVR players with maxed-out stats.",
+  "rationale": [
+    { "item": "Hidden per-team offset in the runtime code path (team_center_offset = random.gauss(0, 25)) could add +50 points to any team's base stats", "references": [] },
+    { "item": "Inflated stat centers, narrow gaussian spreads, no hard ceiling on generation produced wall-to-wall 90+ OVR rosters", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Archetype centers dropped (blue_blood 95→64, national_power 89→52, etc.); spread 3-6→38; generation ceiling 99→85; stat budget center×11+44; hidden gem caps 100→85; archetype thresholds lowered; conference floors -30", "artifacts": ["scripts/generate_rosters.py"], "kind": "modified" },
+    { "description": "Removed team_center_offset (random.gauss(0,25) hidden bug) and fixed hidden gem cap", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Recruiting star ranges shifted down 30 (5-star: 83-98→49-63); position boost caps to 85; OVR floor 40→10", "artifacts": ["engine/recruiting.py"], "kind": "modified" },
+    { "description": "Portal stat ranges shifted down 30; 5-star potential 10%→6%; position boost caps to 85", "artifacts": ["engine/transfer_portal.py"], "kind": "modified" },
+    { "description": "Development gain tables halved (quick: +2to+5→+1to+3, normal: +1to+3→+0to+2, etc.); OVR floor 40→10", "artifacts": ["engine/development.py", "engine/player_card.py"], "kind": "modified" },
+    { "description": "FCS filler generation disabled with 205 real teams", "artifacts": ["engine/season.py"], "kind": "modified" }
+  ],
+  "risk_posture": [
+    "Archetype thresholds were lowered to match the 85 ceiling. If the ceiling changes significantly, these thresholds need to be rescaled or most players will default to generic archetypes.",
+    "Existing dynasty saves are unaffected. Players already generated retain inflated stats until they graduate.",
+    "UI display: player cards now show stats in the 30s-70s range — correct but may feel 'wrong' initially.",
+    "FCS generation is disabled but not deleted — dead code in engine/season.py."
+  ],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [
+    "Existing dynasty saves retain inflated talent until natural attrition",
+    "FCS generation disabled but not deleted — dead code"
+  ],
+  "open_hooks": [
+    "Tuning levers documented in table: stat_center, stat_spread, generation ceiling, stat budget headroom, development gains, development ceiling, hidden gem boost, portal ranges, recruit ranges"
+  ],
+  "section_headers_original": [
+    "Post-Feature Report: Talent Generation Rebalance",
+    "Overview",
+    "What Changed",
+    "Files Modified",
+    "The Numbers",
+    "Archetype stat centers (the big lever)",
+    "Gaussian spread",
+    "Generation ceiling",
+    "Stat budget",
+    "Recruiting stat ranges",
+    "Transfer portal stat ranges",
+    "Development gains (per stat per offseason)",
+    "Archetype assignment thresholds",
+    "OVR floor",
+    "Other",
+    "Why This Fixes Scoring",
+    "What This Means for Each Mode",
+    "Single Season",
+    "Dynasty Mode",
+    "Transfer Portal",
+    "Tuning Levers",
+    "Known Considerations"
+  ],
+  "unmapped_content": "Branch: claude/balance-talent-generation-mS413. PR: #240. Date: 2026-03-27. Additional files vs docs/aar_2026-03-25_talent_generation_balance.md: engine/game_engine.py (removes team_center_offset), engine/development.py (development gains halved), engine/player_card.py (OVR floor), engine/season.py (FCS filler disabled). The key additional bug not in the 2026-03-25 version: team_center_offset = random.gauss(0, 25) was a hidden per-team offset that could add +50 to a team's effective stat center. This is the 'single biggest bug' per the document. Development gains halved (not mentioned in 2026-03-25 document). This document covers the same workstream as docs/aar_2026-03-25_talent_generation_balance.md but from 2 days later with additional bugs/files discovered.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Document titled 'Post-Feature Report' not AAR — genre_confidence medium. Date confirmed: 2026-03-27. This is a related but distinct document from docs/aar_2026-03-25_talent_generation_balance.md (2 days earlier), covering the same workstream but adding: team_center_offset bug, development.py halved gains, FCS filler disabled, engine/season.py and player_card.py changes. Both parsed as separate records."
+}

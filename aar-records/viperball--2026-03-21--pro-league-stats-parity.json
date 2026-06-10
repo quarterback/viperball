@@ -1,0 +1,62 @@
+{
+  "record_id": "viperball--2026-03-21--pro-league-stats-parity",
+  "source_path": "docs/aar_2026-03-21_pro_league_stats_parity.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-21",
+  "title": "After Action Review — Pro League Stats Parity",
+  "scope": "Bring pro league (NVL, EL, AL, PL, LA) and WVL stats pages to parity with the college (CVL) stats system. Fix empty keeper stat leaders, upgrade flat team stats tables to full tabbed category views, and fix the 'Back to League Hub' navigation bug.",
+  "rationale": [
+    { "item": "Keeper stat leaders showed no data — every pro league Keeper section had column headers but zero rows", "references": [] },
+    { "item": "Team stats were a single flat table with 20 columns; no defensive stats at all — no opponent yards, no scoring defense, no turnover margins", "references": [] },
+    { "item": "'Back to League Hub' button didn't work after completing a season", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Generate keeper stats synthetically rather than switch to full engine — preserve fast sim performance", "decided_by": "agent", "quote": "The fast sim exists for performance (~1ms vs ~1-3s per game). Adding 3 gaussian distributions per keeper per game is negligible overhead vs switching pro leagues to the full engine." },
+    { "decision": "Match college template structure exactly — pro leagues should be at least as detailed as college", "decided_by": "agent", "quote": "Pro leagues are the flagship product — their stats should be at least as detailed as college." },
+    { "decision": "Clear legacy storage key rather than remove the fallback — less disruptive to existing sessions", "decided_by": "agent", "quote": "The pro_league_session_id legacy path still serves users who might have old sessions stored. Clearing the key on hub navigation is less disruptive than removing the fallback entirely." }
+  ],
+  "actions": [
+    { "description": "fast_sim.py: added keeper-specific stat generation in defender loop (keeper_bells ~1.5/game, keeper_tackles ~3/game, kick_deflections ~1/game gaussian)", "artifacts": ["engine/fast_sim.py"], "kind": "modified" },
+    { "description": "pro_leagues.py: added app.storage.user['pro_league_session_id'] = None to _back_to_hub() and _go_hub()", "artifacts": ["nicegui_app/pages/pro_leagues.py"], "kind": "modified" },
+    { "description": "stats_site/router.py pro_team_stats(): rewrote to collect opponent stats, scoring data, special teams, penalties; added _LOWER_IS_BETTER set; expanded valid_sorts", "artifacts": ["stats_site/router.py", "pro_team_stats()"], "kind": "modified" },
+    { "description": "stats_site/router.py wvl_team_stats(): same changes as pro", "artifacts": ["stats_site/router.py", "wvl_team_stats()"], "kind": "modified" },
+    { "description": "stats_site/templates/pro/team_stats.html: replaced 110-line flat table with ~600-line tabbed template (offense/defense/analytics tabs)", "artifacts": ["stats_site/templates/pro/team_stats.html"], "kind": "modified" },
+    { "description": "stats_site/templates/wvl/team_stats.html: same tabbed redesign as pro", "artifacts": ["stats_site/templates/wvl/team_stats.html"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Pro League Stats Parity",
+    "Mission",
+    "Incident / Starting State",
+    "Root Cause Analysis",
+    "Keeper stats: fast_sim never generates them",
+    "Team stats: router only collected own-side stats",
+    "League Hub navigation: legacy storage re-activated the league",
+    "Commits",
+    "Changes",
+    "engine/fast_sim.py",
+    "nicegui_app/pages/pro_leagues.py",
+    "stats_site/router.py — pro_team_stats()",
+    "stats_site/router.py — wvl_team_stats()",
+    "stats_site/templates/pro/team_stats.html",
+    "stats_site/templates/wvl/team_stats.html",
+    "Key Decisions",
+    "Lessons Learned"
+  ],
+  "unmapped_content": "Branch: claude/fix-pro-league-stats-eBU7h. Commit: f9ade63. Template tabs: Offense (Scoring Offense, Total Offense, Rushing Offense, Kick-Pass Offense, Special Teams OFF); Defense (Scoring Defense, Total Defense, Rushing Defense, Kick-Pass Defense, Special Teams DEF, Turnovers, Penalties); Analytics (Efficiency with 4D/5D/6D conversion rates, Delta System, Bonus Possessions). Lessons: fast sim stat gaps invisible until stats page checked; 'same logic as X' comments are a code smell; legacy storage migration paths can create loops.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date confirmed: 2026-03-21. No validation claims (no batch test results). No non_actions or residual risks. Lessons Learned section not mapped to a schema field."
+}

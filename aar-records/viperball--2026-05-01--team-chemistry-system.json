@@ -1,0 +1,81 @@
+{
+  "record_id": "viperball--2026-05-01--team-chemistry-system",
+  "source_path": "AAR_2026-05-01_team_chemistry.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": null,
+  "title": "AAR: Team Chemistry System",
+  "scope": "Built a roster-composition chemistry system across five phases. Players carry stable chemistry attributes (voice/glue/pull/reach) and a permanent flag layer (franchise/big_stage/baggage). Coaches gain three sub-scores and a derived chemistry archetype. Produces four team-level outputs (tone/fabric/drag/tilt) plus a per-game spine pool. Wired into the live game loop and season-end dynasty pass.",
+  "rationale": [
+    { "item": "Before this work, 'chemistry' lived as a single line: if HC is players_coach, add chemistry_bonus_per_game to home_game_rhythm. A team of strangers and a team of long-tenured veterans got the same chemistry curve as long as they had the same HC archetype.", "references": [] }
+  ],
+  "delegation_events": [
+    { "decision": "Don't apply drift per game — append signals to buffer, consolidate at season end to keep season arcs recognizable rather than noisy", "decided_by": "agent", "quote": "Don't apply drift per game. Append signals to a buffer; consolidate at season end. This keeps season arcs recognizable rather than noisy." },
+    { "decision": "Map existing coach classifications to chemistry archetypes via property — no new field, no migration", "decided_by": "agent", "quote": "Existing coach classifications (players_coach, disciplinarian, motivator, scheme_master, gameday_manager, program_changer) map to chemistry archetypes via a property — no new field, no migration." }
+  ],
+  "actions": [
+    { "description": "New chemistry module: all composition, drift, flag, spine, pipeline, UI math", "artifacts": ["engine/chemistry.py"], "kind": "new" },
+    { "description": "Player + Team + TeamChemistryState dataclass; pregame + postgame + adversity hooks in game engine", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "CoachCard sub-scores (message/standard/growth) + chemistry_archetype property", "artifacts": ["engine/coaching.py"], "kind": "modified" },
+    { "description": "_apply_season_chemistry + advance_season hook", "artifacts": ["engine/dynasty.py"], "kind": "modified" },
+    { "description": "70 chemistry tests across 6 test files (phases 1-5 + wiring)", "artifacts": ["tests/test_chemistry_phase1.py", "tests/test_chemistry_phase2.py", "tests/test_chemistry_phase3.py", "tests/test_chemistry_phase4.py", "tests/test_chemistry_phase5.py", "tests/test_chemistry_wiring.py"], "kind": "new" }
+  ],
+  "risk_posture": [
+    "The plan called for 'stop at any phase boundary if the feel is wrong' and 'play 5-10 sim seasons' between phases. That validation hasn't happened yet — the work shipped continuously through all five phases on the strength of the unit tests."
+  ],
+  "validation_claims": [
+    { "claim": "70 chemistry tests, all green", "evidence_cited": "tests", "checkable_against_repo": "yes", "check_method": "Run pytest tests/test_chemistry_phase*.py tests/test_chemistry_wiring.py", "verified": "not_checked" },
+    { "claim": "Full 60-minute game runs with 34/34 home players getting drama_current set pregame and drift signals emitted postgame, score 45-66, no exceptions", "evidence_cited": "render/smoke", "checkable_against_repo": "unclear", "check_method": "Run a full game simulation and verify all players have drama_current set and drift signals logged", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Persistence of chemistry attrs across save/load cycles", "reason": "The save path doesn't yet write chemistry back. Drift work is preserved in memory but not across save/load cycles. Adding it is a 20-line patch.", "category": "deferred", "status": "unknown" },
+    { "item": "Mentee breakout detection", "reason": "log_game_drift_signals reads mentee_breakout_this_game off the player. Nothing currently sets it.", "category": "deferred", "status": "unknown" },
+    { "item": "Path event detection for coaching_change_survived, mentored_breakout, injury_comeback", "reason": "Each is a single function call to log_path_event but code in the right places to identify them is missing.", "category": "deferred", "status": "unknown" },
+    { "item": "Major-award tagging (chemistry_major_awards list)", "reason": "chemistry_major_awards is a list on each player; nothing populates it yet. Without it, no one ever earns franchise or big_stage organically.", "category": "deferred", "status": "unknown" },
+    { "item": "Locker-room incidents counter", "reason": "locker_room_incidents is a counter that nothing increments. The baggage flag has two other paths that do fire from existing dynamics.", "category": "deferred", "status": "unknown" },
+    { "item": "Multi-season dynasty validation: play 5-10 sim seasons to verify career arc distributions", "reason": "The plan called for this validation between phases. The work shipped continuously on the strength of unit tests.", "category": "deferred", "status": "unknown" }
+  ],
+  "residual_risks": [
+    "No multi-season sim validation yet; composition curves calibrated against plan exit criteria but not pressure-tested against league-wide season runs",
+    "Target distributions not yet measured: ~1-3% franchise, ~5% big_stage, ~3-5% baggage per career"
+  ],
+  "open_hooks": [
+    "Spine pool creates chemistry lever in adversity moments without affecting normal play",
+    "Drift buffer + season-end consolidation pattern enables future longitudinal analysis of player chemistry arcs",
+    "chemistry_major_awards list on player is ready to be populated by awards system"
+  ],
+  "section_headers_original": [
+    "AAR: Team Chemistry System",
+    "Viperball — May 2026",
+    "Summary",
+    "What This Replaces",
+    "What Was Built",
+    "Three attribute layers",
+    "Composition curves",
+    "Coach archetype × drama interaction",
+    "Drift accumulator (per-game) → consolidation (season-end)",
+    "Permanent flag awards",
+    "Spine + adversity",
+    "Pipeline + UI",
+    "Wiring Into the Live Engine",
+    "What Was Hard",
+    "Tuning the drag formula",
+    "Voice saturation curve direction",
+    "Float rounding in fit_current",
+    "Team object identity inside the engine",
+    "Test Coverage",
+    "What's Not Done",
+    "Files Touched"
+  ],
+  "unmapped_content": "Date: subtitle says 'May 2026' with no specific day; filename says 2026-05-01 not confirmed in document body. Using null. Three commits on claude/plan-team-chemistry-Q3lRn: 7e6e5e8 Phase 1, 8974e76 Phases 2-5, 8390179 live-engine wiring. What Was Hard section: detailed engineering post-mortem on drag formula tuning (glue_total vs mean_glue divisor, calibration targets 1 high-drama→~20 drag, 4 high-drama→~75); voice saturation curve direction bug (glue_shift only applies past effective_voices>2); float rounding in fit_current (abs(0.2 - 0.7) = 0.49999... IEEE 754); team object identity inside engine (e.home_team.chemistry vs user-supplied object). Test coverage table: 15+22+12+10+7+4 = 70 tests with focus areas per file. Plan exit criteria mapped to specific test names. Spine formula verbatim: spine = fabric + (composure − 50) × 0.4 + 10 if any player has voice≥75 AND glue≥75 + 10 × franchise_count.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date: subtitle 'May 2026' only, no specific day. Filename says 2026-05-01 but per instructions only use date from document body. Using null. 'What Was Hard' section is a distinctive unmapped section type (engineering post-mortem / implementation challenges) that appears in other AARs as well — potential new schema field."
+}

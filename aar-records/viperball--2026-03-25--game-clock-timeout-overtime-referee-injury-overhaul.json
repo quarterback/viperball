@@ -1,0 +1,89 @@
+{
+  "record_id": "viperball--2026-03-25--game-clock-timeout-overtime-referee-injury-overhaul",
+  "source_path": "docs/aar_2026-03-25_timeout_overhaul.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-25",
+  "title": "AAR: Game Clock, Timeout, Overtime, Referee, Injury & Efficiency Overhaul",
+  "scope": "Major overhaul touching six systems: game clock model, timeout logic, postseason overtime, referee bias, injury catalog, and KenPom-style efficiency metrics. The common thread: making the simulation behave like a real broadcast game, not a spreadsheet.",
+  "rationale": [
+    { "item": "A TD at 1:01 left the opposing team starting at 0:17 (44 seconds vanished) — game clock and play clock conflated", "references": [] },
+    { "item": "Victory formation triggering with 4+ minutes remaining", "references": [] },
+    { "item": "Timeouts hoarded until final 2-5 minutes; games had only 1-2 charged timeouts with both teams ending with 3-4 unused per half", "references": [] },
+    { "item": "Playoff games could end in a tie (UTSA 45 — Grambling 45)", "references": [] },
+    { "item": "Trailing teams could punt on 6th down", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Game clock / play clock split: game clock burns only action time (3-9s) after scores/penalties/incompletes; clock state persists across drives", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Victory formation restricted to time_remaining<=50 seconds in Q4", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "New timeout categories (8 types) with coaching intelligence, 3-min warning free timeout treatment, trait modifiers", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Postseason overtime: successive 8-minute OT quarters until someone wins (is_playoff=True, week>=900)", "artifacts": ["engine/game_engine.py", "engine/season.py"], "kind": "modified" },
+    { "description": "Punt logic fix: trailing team never punts on 6th down; blocks punts with <=30 seconds in Q4", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Referee bias system: 300 named refs, 3-person crews, blown call types, coach challenge system (3/game)", "artifacts": ["engine/game_engine.py"], "kind": "new" },
+    { "description": "Injury catalog expanded 83→190 entries with OOTP-style metadata (freq/reinjury/nagging/surgery/inf_run/inf_kick/inf_lateral)", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Injury Report UI with filters, metric cards, histogram, nagging/re-injury watch", "artifacts": [], "kind": "new" },
+    { "description": "KenPom-style efficiency metrics: 25 new TeamRecord accumulators; glossary at docs/kenpom_glossary.md", "artifacts": ["engine/season.py", "docs/kenpom_glossary.md"], "kind": "new" },
+    { "description": "Box score improvements: team names, individual stat leaders, time of possession, organized sections, declined penalties", "artifacts": [], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "Clock verification: TD at 6:21 → next play at 6:14 (7s elapsed — action time only); play after at 6:08 (6s elapsed — clock still stopped); play after at 5:38 (30s elapsed — normal play clock resumes)", "evidence_cited": "manual verification", "checkable_against_repo": "unclear", "check_method": "Run a game and verify post-score clock state in play-by-play", "verified": "not_checked" },
+    { "claim": "20-game timeout sample: avg TOs per game 6.3 (was ~2); TOs remaining avg/team/half ~2 (was 3-4); category breakdown: scheme reset 34%, momentum 26%, offensive clock 24%, strategic 12%, kneel stop 4%", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 20-game batch sim and count timeout categories", "verified": "not_checked" },
+    { "claim": "200-game playoff sample: 4.5% of playoff games go to OT; 0% ties in playoff mode; regular season 3.5% ties (unchanged)", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 200-game playoff simulation and count OT occurrences and ties", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Opponent-adjusted efficiency (AdjO/AdjD weighted by schedule strength)", "reason": "Not done yet", "category": "deferred", "status": "unknown" },
+    { "item": "Nagging injury flare-ups (elevated re-injury risk for 2-3 weeks after return)", "reason": "Not done yet", "category": "deferred", "status": "unknown" },
+    { "item": "Per-attribute DTD penalties using inf_run/kick/lateral", "reason": "Not done yet", "category": "deferred", "status": "unknown" },
+    { "item": "Conference-assigned referee crews (refs can't officiate own conference)", "reason": "Not done yet", "category": "deferred", "status": "unknown" },
+    { "item": "KenPom UI display on stats page", "reason": "Data is in the API, needs frontend", "category": "deferred", "status": "unknown" },
+    { "item": "Icing the kicker / fresh legs categories need more testing with varied rosters", "reason": "Not done yet", "category": "deferred", "status": "unknown" }
+  ],
+  "residual_risks": [],
+  "open_hooks": [
+    "KenPom glossary at docs/kenpom_glossary.md documents all 10 metrics with basketball analytics equivalents"
+  ],
+  "section_headers_original": [
+    "AAR: Game Clock, Timeout, Overtime, Referee, Injury & Efficiency Overhaul",
+    "Overview",
+    "1. Game Clock vs Play Clock",
+    "Problem",
+    "Fix",
+    "Verified",
+    "2. Victory Formation",
+    "Problem",
+    "Fix",
+    "3. Timeout System",
+    "Problem",
+    "New Categories",
+    "Coaching Intelligence",
+    "Bug Fixes",
+    "Results (20-game sample)",
+    "4. Postseason Overtime",
+    "Problem",
+    "Fix",
+    "Results (200-game sample)",
+    "5. Punt Logic Fix",
+    "Problem",
+    "Fix",
+    "6. Referee Bias System",
+    "Design",
+    "7. Injury Catalog Expansion",
+    "Injury Report UI",
+    "8. KenPom-Style Efficiency Metrics",
+    "9. Box Score Improvements",
+    "What's Not Done Yet"
+  ],
+  "unmapped_content": "Branch: claude/referee-bias-system-B6KAy. KenPom metric table with 10 metrics: Raw O (pts/10 drives = AdjO), Raw D (opp pts/10 drives = AdjD), EK% (value-weighted kick success = eFG%), TO%, TOD%, LR% (lateral recovery = OR%), FDR (penalty first downs = FTR), RLE (rush yards/carry = 2P%), KP% (kick pass completion = 3P%), Adj T (plays/game = AdjT). Injury profile shifted toward soccer/basketball (soft tissue, concussions elevated for no-hard-helmet sport). Overtime: fresh 4 TOs per OT team; 3-min warning applies; energy +20 recovery; alternating first possession; max 5 OT periods; OT plays as Q5/Q6 etc. Timeout coaching intelligence: 3-min warning = free timeout; good clock managers save 1 TO; Q4 crunch time suppresses non-clock categories; timeout_hoarder trait resists 30-60%; timeout_sprinter burns 25-50% faster. Bug fixes in timeout section: _drive_yards was always 0 via getattr fallback; _drive_consecutive_negative tracked; _consecutive_opponent_scores tracked.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date confirmed: 2026-03-25. Very large scope — 6 distinct systems in one AAR. 'What's Not Done Yet' maps to non_actions."
+}

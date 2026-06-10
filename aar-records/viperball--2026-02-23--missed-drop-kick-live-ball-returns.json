@@ -1,0 +1,58 @@
+{
+  "record_id": "viperball--2026-02-23--missed-drop-kick-live-ball-returns",
+  "source_path": "docs/AAR_missed_dk_live_ball_returns.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-23",
+  "title": "After Action Report: Missed Drop Kick Live Ball Returns",
+  "scope": "Engine mechanic — missed drop kick live ball return system. Implement a live ball return mechanic for missed DKs at long range.",
+  "rationale": [
+    { "item": "Previously, ALL missed DKs on downs 1-5 were dead balls with zero consequence (Finnish baseball rule: retain possession, advance down). This made long-range DK attempts completely risk-free.", "references": [] },
+    { "item": "Teams could bomb 65-yard DKs with impunity knowing at worst they'd retain possession.", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Live ball rate table (distance-dependent, 0% at ≤45yd to 55% at 65+yd), return mechanics using _pick_returner() and _calculate_punt_return_yards()", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Two new PlayResult enum values: MISSED_DK_RETURNED, MISSED_DK_RETURN_TD", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Integration into drive loop, composure system, possession/kickoff handling, stall handling, scoring", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "Stats tracking under existing kick return stat fields (game_kick_returns, game_kick_return_yards, game_kick_return_tds)", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "replit.md documentation update", "artifacts": ["replit.md"], "kind": "docs" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "20-game batch: 55 total DK misses, 14 live ball returns (25.5%), 2 return TDs (3.6%), 39 retained (70.9%). By distance: 25-49yd 0 live/15 retained, 50-54yd 1/3, 55-59yd 2/2, 60-64yd 3/7, 65-69yd 6/5, 70+yd 2/8.", "evidence_cited": "metrics", "checkable_against_repo": "unclear", "check_method": "Run 20-game batch sim and tabulate DK miss outcomes by distance bucket", "verified": "not_checked" },
+    { "claim": "All 20 test games completed without errors or state corruption.", "evidence_cited": "render/smoke", "checkable_against_repo": "unclear", "check_method": "Run 20-game batch sim and check for exceptions", "verified": "not_checked" }
+  ],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [
+    "A team with a 93-speed backup Keeper on return duty has an 8% TD rate on fielded missed DKs"
+  ],
+  "section_headers_original": [
+    "After Action Report: Missed Drop Kick Live Ball Returns",
+    "Objective",
+    "Problem Statement",
+    "Solution Implemented",
+    "Live Ball Rate Table (distance-dependent)",
+    "Return Mechanics",
+    "New Play Results",
+    "Drive/Scoring Integration",
+    "Stat Tracking",
+    "Test Results (20-Game Batch)",
+    "By Distance Bucket",
+    "Strategic Impact",
+    "Architectural Notes",
+    "No Regressions"
+  ],
+  "unmapped_content": "Files Modified: engine/game_engine.py, replit.md. Live ball check positioned BEFORE Finnish baseball retain-possession rule in simulate_drop_kick() so it applies on ALL downs. Field position orientation validated against existing punt return system to prevent inverted yard lines. Return TD chance by speed: base 4%, speed≥85 6%, speed≥92 8%.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date: February 23, 2026 — confirmed in document header. No explicit non_actions or residual risk sections."
+}

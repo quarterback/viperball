@@ -1,0 +1,64 @@
+{
+  "record_id": "viperball--undated--wvl-commissioner-mode-bug-fixes",
+  "source_path": "AAR_commissioner_mode.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": null,
+  "title": "After Action Report: WVL Commissioner Mode + Bug Fixes",
+  "scope": "Fix WVL owner mode crash, fix college dynasty multi-season issues, then build a new Commissioner Mode that lets users run the entire 64-team WVL without owning a team — with career tracking, Hall of Fame, and FIV integration.",
+  "rationale": [
+    { "item": "wvl_dynasty.py had local CLUBS_BY_KEY = {...} assignments inside two functions that shadowed the module-level import from wvl_config, causing KeyError crashes", "references": [] },
+    { "item": "Roster continuity broke across seasons because player_card.py lacked a card_to_player round-trip function, and the CVL→WVL bridge export wasn't surfaced in the API or UI", "references": [] }
+  ],
+  "delegation_events": [],
+  "actions": [
+    { "description": "Bug fix 1: WVL owner mode crash — removed local rebindings shadowing module-level CLUBS_BY_KEY import", "artifacts": ["engine/wvl_dynasty.py"], "kind": "modified" },
+    { "description": "Bug fix 2: College dynasty multi-season — added card_to_player() to player_card.py, graduating pool visibility in api/main.py, dynasty season transition roster preservation", "artifacts": ["engine/player_card.py", "engine/dynasty.py", "api/main.py"], "kind": "modified" },
+    { "description": "New engine: PlayerCareerTracker (353 lines) — tracks players across CVL/WVL/FIV", "artifacts": ["player_career_tracker.py"], "kind": "new" },
+    { "description": "New engine: HallOfFame (206 lines) — auto-induction on retirement, manual nominations, SQLite persistence", "artifacts": ["hall_of_fame.py"], "kind": "new" },
+    { "description": "New engine: WVLCommissioner dynasty engine (488 lines)", "artifacts": ["wvl_commissioner.py"], "kind": "new" },
+    { "description": "Persistence: db.py commissioner dynasty and HoF save/load/delete methods (+62 lines)", "artifacts": ["db.py"], "kind": "modified" },
+    { "description": "New UI: Commissioner mode 5-tab dashboard (743 lines)", "artifacts": ["wvl_commissioner.py (UI)"], "kind": "new" },
+    { "description": "Navigation: mode selector cards and auto-resume for existing commissioner saves", "artifacts": ["wvl_mode.py"], "kind": "modified" }
+  ],
+  "risk_posture": [
+    "Bug fixes were surgical. The owner mode crash was a 2-line delete."
+  ],
+  "validation_claims": [
+    { "claim": "Ran a 2-season end-to-end test confirming 5,197 players tracked, serialization round-trip, player moves, HoF nominations, and DB persistence all working before writing any UI code.", "evidence_cited": "manual verification", "checkable_against_repo": "unclear", "check_method": "Run wvl_commissioner.py engine through 2 simulated seasons and check player count + DB", "verified": "not_checked" }
+  ],
+  "non_actions": [
+    { "item": "Automated tests for career tracker and HoF auto-induction logic", "reason": "All validation was manual (inline Python script). Should have unit tests.", "category": "deferred", "status": "unknown" },
+    { "item": "FIV cycle integration — _resolve_fiv_code doesn't exist yet in FIV module", "reason": "run_fiv_cycle() exists and routes players by nationality, but _resolve_fiv_code doesn't exist yet in the FIV module, so the import will fail at runtime.", "category": "blocked", "status": "unknown" }
+  ],
+  "residual_risks": [
+    "Stat mapping gap — career yards/TDs will be 0 until player_season_stats keys are reconciled with career tracker lookup (player_season_stats keys by player_id, career tracker matches by name)",
+    "FIV _resolve_fiv_code needs to be implemented in engine/fiv.py for international play to work",
+    "Memory — 5,000+ PlayerCareerRecord objects serialize into dynasty blob; may get large after 20+ seasons",
+    "No undo for player moves — commissioner moves are instant and not journaled"
+  ],
+  "open_hooks": [
+    "Career tracker and HoF are standalone — can be used by owner mode too, not just commissioner mode",
+    "Recommendations for next session: fix stat key mismatch, add _resolve_fiv_code, add unit tests, wire Sim Full Season + Offseason one-click loop"
+  ],
+  "section_headers_original": [
+    "After Action Report: WVL Commissioner Mode + Bug Fixes",
+    "Objective",
+    "What was done",
+    "What went well",
+    "What went less well",
+    "Risks / Technical debt",
+    "Recommendations for next session"
+  ],
+  "unmapped_content": "Branch: claude/fix-wvl-owner-mode-jnF0R. Commits: 5 (2 bug fixes, 2 planning, 1 feature). Files changed: 11, Lines added: 2,285. Commissioner Mode layer table: Engine player_career_tracker.py 353 lines, hall_of_fame.py 206 lines, wvl_commissioner.py 488 lines; Persistence db.py +62 lines; UI wvl_commissioner.py 743 lines; Navigation wvl_mode.py +87 lines. Note: document title begins with ## (h2), not # (h1); first heading is at h2 level.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "No date appears anywhere in the document (checked: header metadata, first heading, body text, branch name). Branch name claude/fix-wvl-owner-mode-jnF0R contains no date. Filename has no date. Using undated. First heading is h2 (##), not h1 — verbatim title includes both words 'After Action Report' and the subtitle."
+}

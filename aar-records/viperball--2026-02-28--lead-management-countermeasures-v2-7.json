@@ -1,0 +1,66 @@
+{
+  "record_id": "viperball--2026-02-28--lead-management-countermeasures-v2-7",
+  "source_path": "docs/AAR_lead_management_countermeasures.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-28",
+  "title": "AAR: Lead Management Countermeasures (V2.7)",
+  "scope": "Lead management philosophy layer for coaching AI — each head coach now gets a lead management profile derived from existing attributes as a normalized blend of five countermeasure tendencies.",
+  "rationale": [
+    { "item": "The Delta Yards system creates a structural tension between scoring and field position, but the coaching AI treated this as a single-strategy problem. A Chain Gang coach up by 15 played identically to a Ball Control coach up by 15.", "references": ["Delta Yards system"] }
+  ],
+  "delegation_events": [
+    { "decision": "Make system bidirectional (leading AND trailing) because a Vault coach trailing by 14 still trusts the defense — it's a coaching identity, not a deficiency", "decided_by": "agent", "quote": "A Vault coach trailing by 14 still trusts the defense and grinds. That's a *coaching identity*, not a deficiency." },
+    { "decision": "Continuous sensitivity ramp instead of threshold to avoid behavioral cliffs", "decided_by": "agent", "quote": "Binary thresholds create cliffs in behavior. A coach who 'activates' at 7 points would play identically at 6 vs 0, then jump at 7." },
+    { "decision": "No new attributes — derive profile from existing personality slider space", "decided_by": "agent", "quote": "Adding a 'lead management tendency' slider would create redundancy with aggression/risk_tolerance/composure. Deriving the profile keeps the coaching card clean and produces emergent diversity from existing attributes." },
+    { "decision": "Layer on top of existing logic rather than replace it", "decided_by": "agent", "quote": "The countermeasure system adds a coaching-personality envelope *around* those decisions. A Vault coach still benefits from INT awareness when leading — they just *also* shift toward run-heavy play calling." }
+  ],
+  "actions": [
+    { "description": "Lead management profile: five tendencies (Avalanche/Thermostat/Vault/Counterpunch/Slow Drip) derived from existing personality sliders with classification/style bias bonuses", "artifacts": ["engine/coaching.py"], "kind": "modified" },
+    { "description": "Continuous sensitivity ramp per coach based on reactivity score", "artifacts": ["engine/coaching.py"], "kind": "modified" },
+    { "description": "Integration into 5 game engine decision points: play family weights, tempo, formation selection, kick mode entry, defensive yard suppression (Counterpunch)", "artifacts": ["engine/game_engine.py"], "kind": "modified" },
+    { "description": "ai_coach.py choose_defensive_call() updated with lead_management parameter", "artifacts": ["engine/ai_coach.py"], "kind": "modified" }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    { "claim": "Verified 5 extreme coaching archetype profiles. Sensitivity offset range spans 3.1 to 10.3 across the 5 test archetypes. No tendency is ever zero.", "evidence_cited": "manual verification", "checkable_against_repo": "unclear", "check_method": "Generate coaches with extreme slider profiles and inspect their lead management tendency vectors", "verified": "not_checked" }
+  ],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [
+    "Pre-game narratives enabled: 'Coach Stone's Vault defense meets Coach Blitz's Avalanche offense'",
+    "Coaching identity visible as named lead management philosophy for all 200+ teams"
+  ],
+  "section_headers_original": [
+    "AAR: Lead Management Countermeasures (V2.7)",
+    "Problem Statement",
+    "Solution: Five Countermeasure Tendencies",
+    "The Five Tendencies",
+    "Derivation from Existing Attributes",
+    "Continuous Sensitivity Ramp (Not Binary)",
+    "Integration Points",
+    "1. Play Family Weights (select_play_family)",
+    "2. Tempo / Time-of-Possession",
+    "3. Formation Selection (select_formation)",
+    "4. Kick Mode Entry (_fourth_down_decision)",
+    "5. Defensive Yard Suppression (Counterpunch only)",
+    "Verified Profile Diversity",
+    "Design Decisions",
+    "Why bidirectional (leading AND trailing)?",
+    "Why continuous ramp instead of threshold?",
+    "Why no new attributes?",
+    "Why layer on top instead of replace?",
+    "What This Enables"
+  ],
+  "unmapped_content": "Files Changed: engine/coaching.py, engine/game_engine.py, engine/ai_coach.py. Sensitivity formula verbatim: reactivity = agg(0.30) + chaos(0.25) + inv_stubborn(0.25) + inv_composure(0.20); sensitivity_offset = max(1.0, 12.0 - reactivity * 0.11); sensitivity_range = max(6.0, 15.0 - reactivity * 0.09); ramp = clamp(0, 1, (|score_diff| - offset) / range). Five tendency derivation formulas (weighted sums of personality sliders). Five verified extreme coaching archetype profiles with tendency vectors.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Date from document header metadata: 2026-02-28. No non_actions or residual risks explicitly stated."
+}
