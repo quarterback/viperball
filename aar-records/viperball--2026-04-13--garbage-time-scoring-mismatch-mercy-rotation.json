@@ -1,0 +1,175 @@
+{
+  "record_id": "viperball--2026-04-13--garbage-time-scoring-mismatch-mercy-rotation",
+  "source_path": "docs/AAR_garbage_time_and_mismatch_mercy.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-04-13",
+  "title": "AAR: Garbage-Time Scoring & Mismatch-Mercy Rotation",
+  "scope": null,
+  "rationale": [
+    {
+      "item": "The investigation started from a real sim artifact — an Illinois @ Rutgers Week 6 game that finished 103.0 – 0.5. Illinois, the statistically superior team on paper (avg OVR 84.9 vs Rutgers' 71.4), got blown out in an upset and failed to put a single point on the scoreboard despite the Delta Yards system spotting them drive after drive starting at the opponent's 20-yard line.",
+      "references": []
+    },
+    {
+      "item": "The V3.1 futility rule has no floor. It treats \"down 4\" and \"down 104\" identically... When the game is mathematically gone, the coaching goal shifts from win to don't get shut out.",
+      "references": []
+    },
+    {
+      "item": "A Power-6 program up 35 at halftime against an FCS opponent has no reason to keep starters on the field — but the existing thresholds (Q3+ 35 = tier 3) mean starters stayed in well into Q3 and could take unnecessary injury hits.",
+      "references": []
+    },
+    {
+      "item": "Illinois's starting Zeroback threw 3 kick-pass INTs at 22% completion and never got pulled. The existing V2 performance-benching hook fires at 3+ total turnovers — which technically caught the 3-INT case, but only after the third INT happened, by which point the game was over.",
+      "references": []
+    }
+  ],
+  "delegation_events": [
+    {
+      "decision": "Mismatch-mercy rotation is an early-season tool for outmatched opponents",
+      "decided_by": "owner",
+      "quote": "The user's framing: \"this is an early season tool to keep teams from burning starters in non-conference games against widely outmatched opponents.\""
+    },
+    {
+      "decision": "Mercy bump must dissipate if the lead does",
+      "decided_by": "owner",
+      "quote": "The user's explicit requirement: \"if the lead dissipates, that would go away\" is handled naturally by the score-based baseline tier computation."
+    },
+    {
+      "decision": "Mercy rotation should apply to both offense and defense",
+      "decided_by": "owner",
+      "quote": "The user noted this should apply to both sides of the ball."
+    },
+    {
+      "decision": "Change-of-pace ZB swap must be guarded by a game-state-aware talent gap",
+      "decided_by": "owner",
+      "quote": "\"I'm not gonna bring the OVR 40 backup to replace the OVR 77 zb IN A CLOSE game even if they're getting picked off a lot because that can't help us but if OVR 80 and OVR 78 zb exist, that's a different story potentially.\""
+    },
+    {
+      "decision": "Add a sooner, softer ZB benching trigger than the 3-turnover hook",
+      "decided_by": "owner",
+      "quote": "The user wanted a sooner, softer trigger — the Viperball equivalent of a real-world QB change-of-pace swap after two picks. Like pulling a struggling goalie."
+    }
+  ],
+  "actions": [
+    {
+      "description": "Added _is_garbage_time_trailing() — mirror of _is_blowout() from the trailing team's perspective (Q3+: deficit >= 20; Q2 with <=300s: deficit >= 25) — with three integration points: futility inversion (dk_futile/pk_futile forced False), 4th-down snap kick/chip-shot FG allowed in range, 5th-down kick allowed at looser thresholds.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Talent-gap-aware mercy tier escalation: added _team_avg_overall(team) and _leading_team_talent_edge(); _blowout_tier() applies a mercy bump only when talent_edge >= 6.0 (late Q2 30+ lead → tier 3; opening minute Q3 30+ lead → tier 3; any tier >=1 → min(3, N+1)); bump suppressed during upsets.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Change-of-pace ZB benching hook in evaluate_coaching_substitutions: fires for Zeroback with kp_ints >= 2, completion% below 40% on 6+ attempts, comparable backup available, quarter-scaled probability (Q1 30%, Q2 50%, Q3+ 70%), with game-state-aware max OVR gap (close game |diff| <= 14: gap 5; blowout: gap 12).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "Critically, the bump is suppressed during upsets. A weaker team leading by 30 doesn't trigger — their starters stay in to close out the win.",
+    "The mismatch bump deliberately targets tier 3 (not tier 2), which was already wired to pull both skill-position and defensive starters.",
+    "The hook fires in exactly the window it should, and stays silent when the swap would be strictly worse for the team."
+  ],
+  "validation_claims": [
+    {
+      "claim": "20-sim Illinois @ Rutgers batch after the fix: 14 blowouts, 0 shutouts, trailing-team scores ranging 18.0 – 72.5, average 41.8.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 20-sim Illinois @ Rutgers batch and check shutout count and trailing-team score range.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Mercy tier verification: Favorite up 40 in Q3 → tier 3 (already max); Favorite up 32 late Q2 → tier 2 pre-fix, tier 3 post-fix; Underdog upset up 32 at half → tier 2 (no mercy); Trailing team → 0 (unchanged).",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "yes",
+      "check_method": "Unit-test _blowout_tier() under the four scenarios.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Change-of-pace fire rates per 100: Close game, 4-OVR gap backup, Q3 → 65 (target ~70%); Close game, 45-OVR gap (mocked bad backup) → 0; Blowout, 45-OVR gap → 0.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "yes",
+      "check_method": "Simulate the three scenarios 100x each and count hook fires.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "V3.1 championship futility logic",
+      "reason": "unchanged for non-garbage-time Q4 situations. A team trailing by 5.5 with 1:00 left still correctly refuses a 3-point FG.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Red zone \"always chase the TD\" rule (fp >= 90)",
+      "reason": "unchanged. Garbage-time doesn't override the 9-point-TD preference in the red zone.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Existing turnovers hard-benching (3+ total turnovers)",
+      "reason": "unchanged. The new change-of-pace hook fires before this threshold in the 2-INT-without-fumbles window.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Defense-side garbage time",
+      "reason": "defenses don't \"give up\" differently in blowouts; the late-down clamp still fires at full intensity.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Fast-sim path changes",
+      "reason": "fast_sim.py doesn't model per-play kick decisions, so no changes needed.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Triggering the change-of-pace hook on fumbles",
+      "reason": "The existing fumbles >= 2 trigger already benches players for \"fumbles\" as a reason. Fumbles are a ball-security issue; INTs are a decision-making issue.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Players already benched stay benched (duration=\"game\") when a lead dissipates — teams that already pulled starters have to live with that choice (documented as intended behavior).",
+    "The fix — game-state-scaled OVR tolerance — is a general-purpose pattern that probably belongs in other performance-benching hooks too."
+  ],
+  "open_hooks": [
+    "Game-state-scaled OVR tolerance pattern could be extended to other performance-benching hooks."
+  ],
+  "section_headers_original": [
+    "AAR: Garbage-Time Scoring & Mismatch-Mercy Rotation",
+    "Origin: The Illinois 0.5 Box Score",
+    "Problem 1: The Unreachable Chip Shot",
+    "Why, mechanically",
+    "Root cause",
+    "Fix: `_is_garbage_time_trailing()`",
+    "Verification",
+    "Problem 2: Starters Left Exposed in Mismatch Blowouts",
+    "Fix: Talent-gap-aware tier escalation",
+    "Defense, too",
+    "Verification",
+    "Problem 3: The Backup ZB That Never Comes In",
+    "Fix: \"Change-of-pace\" ZB hook with talent-gap guard",
+    "Verification",
+    "Design Notes",
+    "What Was Not Changed",
+    "Commits",
+    "Lessons"
+  ],
+  "unmapped_content": "Header metadata: Branch claude/field-goal-strategy-analysis-rTVU9; Commit 27dde73; Files Changed engine/game_engine.py (+192 / −14 lines). Commits table: 1 — 27dde73 — Add garbage-time scoring logic and mismatch-mercy rotation.\n\nProblem 1 mechanics: Illinois started five drives at OPP 20 — a 30-yard field goal is a near-automatic chip shot (fg_distance <= 35, pk_success >= 0.75). They converted zero. Three interlocking rules formed a cage: (1) Downs 1–3 never kick — select_kick_decision() returns None on early downs; (2) Down 4 is \"ALWAYS KEEP DRIVING\" (V3 4th-down redesign); (3) The Q4 futility rule (V3.1) blocks kicks that can't tie or win — added after the Arizona State championship debacle where the AI kicked a 3-pt FG while trailing by 5.5; if deficit > 3, pk_futile = True; if deficit > 5, dk_futile = True. Drive 24 canonical shutout-preservation sequence (Q4, down by 102+, ball at OPP 15): 4:44 OPP 20 1&20 kick pass INCOMPLETE; 4:37 OPP 20 2&20 trick play → 3; 4:17 OPP 17 3&17 kick pass INCOMPLETE; 3:53 OPP 17 4&17 speed option → 2; 3:35 OPP 15 5&15 kick pass SACKED -3; 3:16 OPP 18 6&15 kick pass INTERCEPTED. The 0.5 is a bookkeeping artifact, not a score.\n\nFix integration thresholds: 4th-down snap kick allowed in range (fg_distance <= dk_comfort, dk_success >= 0.50), chip-shot FG inside 35 yds with pk_success >= 0.75; 5th-down snap kick at dk_success >= 0.40, FG inside 40 yds with pk_success >= 0.65.\n\nRoster depth context: Rutgers: 3 ZBs at 72/71/68 (all gaps within close-game tolerance); Illinois: 2 ZBs at 87/83 (gap 4, close-game-eligible).\n\nDesign Notes: Why same thresholds as blowout? Symmetry — when one team is _is_blowout(), the other should be _is_garbage_time_trailing(); different thresholds would create awkward windows where one team is pulling starters but the other is still playing to win. Why 6 OVR points as the mismatch threshold? Empirically corresponds to a \"big favorite\" in CVL prestige tiers; smaller gaps (1–5 OVR) are competitive enough that coaches might still play starters. What happens when the lead dissipates mid-game? The tier check runs between drives; if differential drops below threshold, baseline tier drops back to 0 — no new starters benched.\n\nLessons: 1. Every \"don't do X\" rule needs a lower bound — any rule that says \"don't do X because X can't achieve Y\" should check whether Y is even achievable. 2. Symmetric game states deserve symmetric logic — if a game-state query exists for one team, it should exist for both. 3. Talent-gap awareness prevents nonsensical rotations — the first pass of the change-of-pace hook didn't check backup quality; the user's correction was immediate and correct.",
+  "quality_vector": {
+    "has_scope": false,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "No explicit Scope line in header (has Date/Branch/Commit/Files instead). Rich delegation record with verbatim user quotes."
+}

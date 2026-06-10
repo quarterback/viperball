@@ -1,0 +1,134 @@
+{
+  "record_id": "viperball--2026-03-07--landing-page-modes-performance-fix",
+  "source_path": "docs/aar_2026-03-07_landing_page_modes_performance.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-07",
+  "title": "After Action Review — Landing Page Modes & Performance Fix",
+  "scope": "Fix broken landing page mode cards and improve page load performance on the Viperball NiceGUI app. 9 files changed, +117 / -50 lines",
+  "rationale": [
+    {
+      "item": "Tab rendering used hardcoded mode keys that didn't match the tab panel names, so clicking \"College Season\", \"Quick Game\", etc. from the landing page opened blank panels.",
+      "references": []
+    },
+    {
+      "item": "Four heavy page modules (game_simulator, season_simulator, dynasty_mode, dq_mode) were imported at module level, forcing all their transitive dependencies (pandas, plotly, engine) to load at startup.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Fixed tab rendering hardcoded mode keys mismatch; rewrote _render_tab() to use tab_panel context correctly (it previously loaded content into detached containers inside a timer callback without proper NiceGUI context).",
+      "artifacts": ["play.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Cached load_teams_from_directory()/load_team_identity() results in shared dict instead of reading every team JSON file from disk on every render.",
+      "artifacts": ["dynasty_mode.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Cached read_conferences_from_team_files() result in shared dict.",
+      "artifacts": ["season_simulator.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Moved four heavy page module imports (game_simulator, season_simulator, dynasty_mode, dq_mode) to lazy imports inside tab render functions.",
+      "artifacts": ["play.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Added isLooping() guards and frame-rate throttling to P5.js sketches that started immediately and ran continuously even when not visible.",
+      "artifacts": ["ambient_bg.js", "nav_glow.js", "page_transition.js"],
+      "kind": "modified"
+    },
+    {
+      "description": "Fixed play_tab forwarding: initial sync render lambda changed from `lambda n: _switch_to(n)` to `lambda n, **kw: _switch_to(n, **kw)` so mode cards can direct to specific sub-tabs.",
+      "artifacts": ["app.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Moved pandas and plotly imports to lazy imports inside the functions that use them.",
+      "artifacts": ["game_simulator.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Commits: d78bdf1 \"Fix landing page mode cards and improve load performance\"; 1b36b6e \"Improve performance: lazy imports, caching, and fix play_tab forwarding\".",
+      "artifacts": ["d78bdf1", "1b36b6e"],
+      "kind": "other"
+    }
+  ],
+  "risk_posture": [],
+  "validation_claims": [
+    {
+      "claim": "Mode card navigation should now correctly open the corresponding play tab",
+      "evidence_cited": "none",
+      "checkable_against_repo": "yes",
+      "check_method": "Run the NiceGUI app and click each landing page mode card, confirming the matching play tab opens.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Landing page should render faster due to deferred module loading and cached disk I/O",
+      "evidence_cited": "none",
+      "checkable_against_repo": "yes",
+      "check_method": "Profile startup/first-paint time before and after the commits.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "P5.js animations should consume less CPU when idle",
+      "evidence_cited": "none",
+      "checkable_against_repo": "yes",
+      "check_method": "Observe browser CPU usage with the page idle and verify isLooping guards in the sketches.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "_simulate() sync handler in game_simulator.py (load_team() is blocking I/O)",
+      "reason": "user-triggered, not on load path (severity Low)",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "get_available_teams() sync on initial load",
+      "reason": "Unavoidable — home page needs team metadata before first paint (severity Low)",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "_all_teams vs shared[\"teams\"] naming",
+      "reason": "Two different data shapes; could benefit from a docstring (severity Trivial)",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After Action Review — Landing Page Modes & Performance Fix",
+    "Mission",
+    "Commits",
+    "Scope",
+    "Issues Found & Fixed",
+    "Critical — Mode Cards Broken",
+    "High — Performance: Synchronous Disk I/O",
+    "High — Performance: Eager Module Loading",
+    "Medium — Performance: P5.js Sketches",
+    "Medium — UX Bug: play_tab Forwarding",
+    "Medium — Deferred Imports in game_simulator.py",
+    "Known Remaining Items",
+    "Testing Notes"
+  ],
+  "unmapped_content": "Branch: claude/fix-landing-page-modes-1FCor",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Testing Notes are expectations (\"should\") rather than measured results; recorded as validation claims with evidence_cited none. Date from header metadata (**Date:** 2026-03-07)."
+}

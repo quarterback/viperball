@@ -1,0 +1,110 @@
+{
+  "record_id": "viperball--2026-02-23--kick-pass-stat-tracking-fixes",
+  "source_path": "docs/AAR_kick_pass_stat_tracking.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-23",
+  "title": "After Action Report: Kick Pass Stat Tracking Fixes",
+  "scope": "Engine bug fix — kick pass yards double-counting and possession attribution",
+  "rationale": [
+    {
+      "item": "Fix a three-part bug where kick pass player-level stats (yards, attempts) diverged from team-level stats derived from Play objects. Player stats were overcounting yards on TDs and attempts were being attributed to the wrong team on turnovers.",
+      "references": []
+    },
+    {
+      "item": "Root cause: State mutation (`change_possession()`, TD yard override) happening before/after stat recording, creating inconsistencies between the two stat sources.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Bug 1 fix (TD yards double-counting): removed pre-TD yard tracking (old lines 6868-6869) and post-TD adjustment (old lines 6879-6880); added single yard tracking line after the TD determination using final yards_gained.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug 2 fix (INT possession attribution): save throwing_team = self.state.possession before change_possession(), use it in the Play object's possession field; applied to both INT and INT-return-TD paths.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Bug 3 fix (fumble possession attribution): save throwing_team_fum before any fumble-related change_possession() call, use it in all three Play objects (defense recovers; offense recovers but turnover on downs; offense recovers, gain continues).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "This same pattern likely exists in run fumble and lateral fumble paths but was not addressed in this fix (scope limited to kick pass tracking)."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Single-Game Trace (seed=42, Agnes Scott vs Air Force): attempts 18 vs 17 → 18 vs 18 (home), 8 vs 9 → 8 vs 8 (away); yards 274 vs 208 → 210 vs 208 (home), 218 vs 154 → 154 vs 154 (away).",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "yes",
+      "check_method": "Re-run seed=42 Agnes Scott vs Air Force and compare player vs Play-object kick pass stats.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Batch Test (20 games, 40 team-sides): attempts exact match ~90% → 100% (40/40); yards exact match ~60% → 85% (34/40); yards unaccounted diff Multiple → 0.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 20-game batch comparing player-level vs Play-object kick pass attempts and yards.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "The 6/40 remaining yards differences are all from the penalty system (pre-existing, separate issue)... These are NOT kick pass tracking bugs.",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "yes",
+      "check_method": "Inspect _apply_during_play_penalty() ordering relative to player stat recording.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Penalty yard replacement divergence (_apply_during_play_penalty() replaces play.yards_gained after player stats are recorded)",
+      "reason": "This affects ~15% of team-sides per batch and is a broader penalty system design question, not specific to kick passes. All other play types (run, lateral) have the same characteristic.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Applying the save-possession-before-mutation pattern to run fumble and lateral fumble paths",
+      "reason": "was not addressed in this fix (scope limited to kick pass tracking)",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Known Remaining Issue: Penalty Yard Replacement — offensive penalty on KP completion: player has original yards, Play has 0 → player overcounts; defensive penalty: player has original yards, Play has penalty yards → slight mismatch.",
+    "The save-possession pattern likely exists (unfixed) in run fumble and lateral fumble paths."
+  ],
+  "open_hooks": [
+    "Design principle established: \"Save possession before mutating state\" — any play that can change possession must save self.state.possession to a local variable before calling change_possession(), then use the saved value in the Play object."
+  ],
+  "section_headers_original": [
+    "After Action Report: Kick Pass Stat Tracking Fixes",
+    "Objective",
+    "Problem Statement",
+    "Bugs Found and Fixed",
+    "Bug 1: TD Yards Double-Counting",
+    "Bug 2: INT Possession Attribution",
+    "Bug 3: Fumble Possession Attribution",
+    "Verification",
+    "Single-Game Trace (seed=42, Agnes Scott vs Air Force)",
+    "Batch Test (20 games, 40 team-sides)",
+    "Known Remaining Issue: Penalty Yard Replacement",
+    "Design Principle Established",
+    "Files Changed"
+  ],
+  "unmapped_content": "Header: Commit 19b9b37. Problem Statement detail: Yards — player stats showed ~60-70 extra yards per game compared to Play object sums; the discrepancy tracked closely with TD play yardage. Attempts — one team would show +1, the other -1.\n\nBug 1 mechanism trace: 1. Breakaway check inflates yards_gained (e.g., 90 yards); 2. Line 6868: kicker.game_kick_pass_yards += 90 (pre-TD value); 3. TD check triggers: yards_gained = 100 - field_position = 64; 4. Line 6879: kicker.game_kick_pass_yards += (64 - total_yards) (adjustment); 5. Player total: 90 + (64 - 16) = 138 yards; 6. Play object: 64 yards; 7. Overcounting: 74 yards. When breakaway check inflated yards_gained beyond the actual TD distance, the player got both the inflated breakaway yards AND the TD adjustment.\n\nBug 2 mechanism trace: 1. Home team throws kick pass; 2. INT detected → change_possession() → state.possession = \"away\"; 3. Play created with possession = self.state.possession = \"away\"; 4. Result: Home's KP attempt counted as Away's play in the log; 5. Team-level: Home attempts -1, Away attempts +1.\n\nFiles Changed table: engine/game_engine.py, ~80 lines — moved yard tracking after TD check; saved possession before turnovers in 5 Play return paths. Design Principle: This ensures Play objects always record WHO initiated the play, not who ended up with the ball.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Header date \"February 23, 2026\" normalized to 2026-02-23."
+}

@@ -1,0 +1,148 @@
+{
+  "record_id": "viperball--2026-02-22--v2-3-sport-balance-turnovers-breakaways-defensive-bonus-possession",
+  "source_path": "AAR_2026-02-22_sport_balance_v2.3.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-22",
+  "title": "After-Action Report: V2.3 Sport Balance — Turnovers, Breakaways, Defensive Bonus Possession",
+  "scope": "Five interconnected balance changes to increase chaos, big-play frequency, and defensive agency",
+  "rationale": [
+    {
+      "item": "Viperball as a sport was too orderly. Drives were grinding forward with low turnover rates, laterals were too efficient for a chaos play, big breakaway plays (70+ yards) were nearly nonexistent, interceptions were a rarity, and the defense had no equivalent of the pesäpallo possession mechanic that the offense already benefits from.",
+      "references": ["playtesting"]
+    },
+    {
+      "item": "This workstream addressed five specific interventions from playtesting: 1. Dramatically increase turnovers 2. Reduce lateral chain efficiency by 20% 3. Make 70+ yard breakaway plays routine across all phases 4. Raise interception rate to ~5% with explosive return potential 5. Implement defensive bonus possession — interceptions give the ball back (pesäpallo for defense)",
+      "references": []
+    }
+  ],
+  "delegation_events": [
+    {
+      "decision": "Remove the breakaway extra-yards cap so 70+ yard plays become routine",
+      "decided_by": "owner",
+      "quote": "But the user's feedback was explicit: 70+ yard plays should be routine."
+    }
+  ],
+  "actions": [
+    {
+      "description": "Fumble rate overhaul: tripled fumble rates across all seven run play families (e.g. Dive Option 0.6% → 1.8%, Viper Jet 1.1% → 3.0%); lateral fumble base raised 8% → 12%, per-lateral escalation +4% → +5%",
+      "artifacts": ["engine/game_engine.py", "RUN_PLAY_CONFIG"],
+      "kind": "modified"
+    },
+    {
+      "description": "Lateral efficiency reduction (–20%): base yards gauss(1.5, 1.0) → gauss(0.8, 1.0); chain bonus 0.5/lateral → 0.4/lateral",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Breakaway system overhaul: EXPLOSIVE_CHANCE doubled+ across families (incl. new 22% for Kick Pass); breakaway trigger lowered 8+ yards → 5+ yards with tiered bonus chances; extra breakaway yards massively increased (e.g. 12+ yard gain: 8–25 extra → 40–85 extra); kick pass completions now run through _breakaway_check()",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Interception rate → ~5%: kick pass int_chance on incompletes raised 1% → 10%; lateral INT base raised 0.5% → 3.0% per lateral, clamp widened [0.1%, 1.5%] → [1.5%, 6.0%]; INT return yards boosted from gauss(30 + talent*20, 12) → gauss(50 + talent*30, 18)",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Defensive bonus possession (pesäpallo for defense): intercepting team receives a bonus possession after their current drive ends; cancelled by INT-back or half expiring; implemented via GameState.bonus_possession_team, _bonus_drives_remaining countdown in simulate_game() loop, and INT-back detection in simulate_drive()",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    }
+  ],
+  "risk_posture": [
+    "Fumble rates tripled, not doubled — The chaos level needed to be dramatic.",
+    "Breakaway extra yards uncapped — The old 25-yard cap prevented house calls by design. ... Removing the cap and raising the floor to 15–85 extra yards means a 12-yard run can become a 97-yard TD. This is intentional — viperball is an open-field sport with lateral motion; once a defender is beaten, nobody else is in position.",
+    "INT-back cancels without creating new bonus — rejected chain bonuses to avoid infinite possession ping-pong.",
+    "Bonus clears at halftime — Clean slate each half."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Key Metrics (30-game batch sim): Turnovers/game ~1.5 → 4.5 (Hit); Fumbles/game ~0.5 → 1.1 (Hit); INTs/game ~0.5 → 3.4 (Hit); KP INT rate 0.37% → 5.0% (target ~5%, Hit); Lateral INT rate ~1% → 10.6% (Hit); 30+ yard plays/game ~2 → 11.7; 50+ → 8.2; 70+ → 3.0; 80+ → 1.3; 90+ → 0.2; Avg drives/game ~28 → 35.4; Avg combined score ~100 → 166.5",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch sim at the V2.3 commit and compare turnover, breakaway, and scoring metrics",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Batch sim confirmed 5.0% actual [kick pass global INT rate]",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Batch-sim and measure kick pass INT rate",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Batch sim confirmed 10.6% per lateral play [lateral INT rate]",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Batch-sim and measure per-lateral-play INT rate",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Bonus possession narrative / UI support (play log entry or drive annotation)",
+      "reason": "The bonus possession triggers silently — there's no play log entry or narrative text announcing \"BONUS POSSESSION\" to the user. ... Next workstream should add a synthetic play entry or drive annotation.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Chain bonuses on INT-back (A throws INT → bonus for A, B throws INT-back → bonus for B)",
+      "reason": "This was rejected to avoid infinite possession ping-pong.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Combined scoring may be too high — 166.5 avg combined points is significantly above prior levels (~100). The primary driver is the bonus possession system adding ~7 extra drives per game. This may need a tuning pass.",
+    "Lateral INT rate (10.6%) may be too punishing — a 4-lateral chain faces ~23% total turnover risk. This may push lateral usage toward extinction for conservative teams. Monitor in next round.",
+    "No UI/narrative support for bonus possession — the drive log shows consecutive same-team drives, but without context it's confusing."
+  ],
+  "open_hooks": [
+    "Monitor scoring levels — consider bonus from the 15 instead of 25, or only granting bonus possession on kick pass interceptions",
+    "Lateral survival audit — check if lateral_spread offense style is still viable or if it's been killed",
+    "Deep ball YAC tuning — the YAC formula may need adjustment so long kicks have more breakaway potential than short screens",
+    "INT return TD rate check — if >50% of INTs are pick-sixes this may need dampening",
+    "Offensive response to high INT rate — the coaching decision AI may need INT-awareness",
+    "Bonus possession stat tracking in box score / game summary",
+    "Defensive identity scoring — consider adding defensive prestige bonuses for high-INT teams"
+  ],
+  "section_headers_original": [
+    "After-Action Report: V2.3 Sport Balance — Turnovers, Breakaways, Defensive Bonus Possession",
+    "Objective",
+    "Starting State",
+    "Work Performed",
+    "1. Fumble Rate Overhaul (`RUN_PLAY_CONFIG`)",
+    "2. Lateral Efficiency Reduction (–20%)",
+    "3. Breakaway System Overhaul",
+    "4. Interception Rate → ~5%",
+    "5. Defensive Bonus Possession (Pesäpallo for Defense)",
+    "Files Modified",
+    "Key Metrics (30-game batch sim)",
+    "Architecture Decisions",
+    "What Worked",
+    "The five changes are synergistic, not independent",
+    "Kick pass breakaway creates a missing play archetype",
+    "The bonus possession rule is clean and intuitive",
+    "What Didn't Work / Risks",
+    "Combined scoring may be too high",
+    "Lateral INT rate (10.6%) may be too punishing",
+    "No UI/narrative support for bonus possession",
+    "What's Next",
+    "Immediate",
+    "Short-term",
+    "Medium-term",
+    "Lessons Learned"
+  ],
+  "unmapped_content": "Header metadata: Branch: claude/balance-sport-mechanics-g67sa\n\nStarting State: Fumble rates 0.6–1.1% base per run play family; Lateral base yards gauss(1.5, 1.0) + 0.5/lateral chain bonus; Lateral fumble 8% base + 4%/extra lateral; Lateral interception 0.5% base per lateral, capped 0.1–1.5%; Kick pass INT rate 1% of incompletes → ~0.37% global; Breakaway required 8+ yard initial gain, max 25 extra yards; EXPLOSIVE_CHANCE 5–18% per play family; No defensive bonus possession mechanic; 70+ yard plays nearly zero per game; Total turnovers ~1–2 per game.\n\nFumble table (Before → After): Dive Option 0.6→1.8%, Power 0.7→2.0%, Sweep Option 0.8→2.4%, Speed Option 0.8→2.4%, Counter 0.7→2.2%, Draw 0.7→2.0%, Viper Jet 1.1→3.0%. Viper Jet retains the highest fumble risk — fitting for its high-reward, high-chaos identity.\n\nEXPLOSIVE_CHANCE table (Before → After): Dive 5→14%, Power 6→16%, Sweep 10→24%, Speed 9→22%, Counter 12→26%, Draw 7→18%, Viper Jet 15→30%, Lateral Spread 12→26%, Trick Play 18→32%, Kick Pass — → 22% (new).\n\nBreakaway extra yards table: 12+ yards 8–25 → 40–85 extra; 8–11 yards 5–18 → 25–70 extra; 5–7 yards N/A → 15–55 extra. Example: a 14-yard kick pass + 7 YAC = 21 yards triggers a breakaway check with a 22% base chance; if it fires: +25-70 more yards = 46-91 yard play.\n\nFiles Modified: engine/game_engine.py +125/-44 (all five balance changes in one commit).\n\nArchitecture Decisions detail: at 2x fumble rates batch sims still produced only ~0.8 fumbles/game; ball security (hands attribute) and coaching discipline still modulate the rate down. Kick pass breakaway justified because the receiver has already beaten coverage. INT rate set via incomplete conditional, not flat rate — an 80% completion kicker faces 2% INT risk, a 55% kicker 4.5%; skill matters. Bonus possession uses a countdown (set → arm → trigger), not immediate trigger, so the intercepting team gets their earned possession first; bonus drive starts from the 20-yard line (text also says 'force possession to bonus team at their 25').\n\nWhat Worked: The five changes are synergistic, not independent — combined effect greater than the sum of parts. Kick pass breakaway created more 70+ yard plays than all run-play breakaway tuning combined, because kick passes are ~35% of all plays. The bonus possession rule is a one-sentence rule any fan can understand; implementation complexity hidden from the game surface.\n\nLessons Learned: Explosive plays need explicit pathways, not just probability bumps — the missing mechanic was more important than the tuning of existing ones. Defensive agency makes the sport better — INTs are now possession multipliers; 'defense wins championships' narrative pathway. Balance changes compound — five moderate adjustments produced a 67% scoring increase; future balance passes should batch-sim after each individual change, not just after all changes together.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Internal inconsistency: bonus drive start is stated as 'the 20-yard line' in the rule text but 'their 25' in the implementation countdown description, and 'reducing the bonus starting position from the 25 to the 15' in risks. Recorded verbatim."
+}

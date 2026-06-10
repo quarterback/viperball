@@ -1,0 +1,132 @@
+{
+  "record_id": "viperball--2026-02-26--sitrep-pro-leagues-nvl-button-fix-international-leagues",
+  "source_path": "docs/sitrep_pro_leagues_2026_02_26.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "medium",
+  "date": "2026-02-26",
+  "title": "SITREP — Pro Leagues: NVL Button Fix + International Leagues",
+  "scope": "Two problems addressed in one commit: 1. NVL 'Start Season' button was non-functional. Clicking it did nothing visible — no season loaded, no error shown. Three separate root causes identified and fixed. 2. International leagues didn't exist. The Pro Leagues spec calls for 6 leagues total: NVL + 4 international (Eurasian League, AfroLeague, Pacific League, LigaAmerica) + Champions League (deferred). All 4 international leagues are now fully built — configs, team data, name pools, UI.",
+  "rationale": [
+    {
+      "item": "NVL start button root causes: (1) app.storage.user written inside run.io_bound thread pool — session ID never saved, NiceGUI's per-user cookie storage isn't safely accessible from background threads; (2) ui.navigate.to(\"/\") always loads 'Play' tab; (3) no try/except around season creation — exceptions silently swallowed with no user feedback.",
+      "references": []
+    },
+    {
+      "item": "The Pro Leagues spec calls for 6 leagues total: NVL + 4 international + Champions League.",
+      "references": ["Pro Leagues spec"]
+    },
+    {
+      "item": "The existing start_playoffs was hardcoded for NVL's 12-team, 4-division format (top 3 per division, 4 byes). International leagues use 4-team, 2-division playoffs (top 2 per division, 0 byes).",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Fixed NVL start button: split handler into _create_season_sync (thread pool, CPU work) and async _start (writes app.storage.user keys, navigates, wrapped in try/except with ui.notify on failure); added pro_league_pending_nav flag check in app.py to open Pro Leagues section on reload, flag consumed immediately.",
+      "artifacts": ["nicegui_app/pages/pro_leagues.py", "nicegui_app/app.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Built 4 international leagues as config + team data (no new code paths): Eurasian League (el, 10 teams, 2 divisions, 18 games), AfroLeague (al, 12 teams, 20 games), Pacific League (pl, 8 teams, 14 games), LigaAmerica (la_league, 10 teams, 18 games), each with 4-team playoffs and 0 byes. Added ALL_LEAGUE_CONFIGS and registered configs in the API.",
+      "artifacts": ["engine/pro_league.py", "api/main.py", "data/el_teams/*.json", "data/al_teams/*.json", "data/pl_teams/*.json", "data/la_teams/*.json", "scripts/generate_international_teams.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Fixed playoff logic for international leagues: per_div = max(1, self.config.playoff_teams // num_divs); non-bye division winners included in first round; dynamic round names (4-team: Semifinal → Championship; NVL: Wild Card → Divisional → Conference Championship → Championship).",
+      "artifacts": ["engine/pro_league.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Added culturally appropriate name pools: east_asian (87 first names, 83 surnames) and southeast_asian (78 first names, 75 surnames) plus city pools; wired pool_key_map, select_surname, select_hometown, REGION_TO_ORIGIN.",
+      "artifacts": ["scripts/generate_names.py", "data/name_pools/male_first_names.json", "data/name_pools/surnames.json", "data/name_pools/cities.json"],
+      "kind": "data"
+    },
+    {
+      "description": "UI changes: Pro Leagues page shows a card per league when no season is active (name, icon, description, calendar, team/division counts, expandable team list, Start Season button); active-season dashboard dynamically shows the correct league name/abbreviation instead of hardcoded 'NVL'.",
+      "artifacts": ["nicegui_app/pages/pro_leagues.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "Zero new code paths for leagues. ProLeagueSeason is fully parameterized. Each league is a ProLeagueConfig + a directory of team JSONs.",
+    "Note: LigaAmerica uses la_league as its ID to avoid collision with the NVL's Los Angeles Linx (la team key)."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Tested end-to-end via Python script that: created a season for each of the 5 leagues, simulated all regular season weeks, started and completed playoffs, verified a champion was crowned for each league, confirmed playoff bracket sizes (12-team for NVL, 4-team for internationals).",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "unclear",
+      "check_method": "The test script is not named or listed in files changed; re-create a season per league via ProLeagueSeason and run through playoffs.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Champions League (CL).",
+      "reason": "Requires completed seasons from 2+ leagues to populate 8-team field. Phase 2.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "DraftyQueenz multi-league integration.",
+      "reason": "DQ works per-session already, but the UI doesn't surface games from multiple leagues simultaneously.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "Season continuity.",
+      "reason": "No offseason, no season chaining, no draft. Each start is a clean slate.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "replit.md update.",
+      "reason": "Should document international league additions.",
+      "category": "deferred",
+      "status": "unknown"
+    },
+    {
+      "item": "No player movement between leagues — cross-league transfers and Champions League qualification.",
+      "reason": "Each league has its own self-contained roster. Phase 2.",
+      "category": "deferred",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Seasons are ephemeral. No persistence, no continuity between seasons. Each 'Start Season' creates a fresh ProLeagueSeason in memory. Server restart clears everything.",
+    "One season at a time per user. Starting a new league ends the previous one."
+  ],
+  "open_hooks": [
+    "WVL... not applicable — but: WVL not mentioned; open hook is Champions League Phase 2 once 2+ league seasons can populate an 8-team field."
+  ],
+  "section_headers_original": [
+    "SITREP — Pro Leagues: NVL Button Fix + International Leagues",
+    "Summary",
+    "Part 1: NVL Start Button Fix",
+    "Root Causes",
+    "Fix",
+    "Files Changed",
+    "Part 2: International Leagues",
+    "League Configurations",
+    "Teams Created",
+    "Playoff Fix for International Leagues",
+    "Name Pools Added",
+    "UI Changes",
+    "Files Changed",
+    "Architecture Notes",
+    "What's Not Done (Deferred)",
+    "Verification"
+  ],
+  "unmapped_content": "League configuration table: NVL (nvl) 24 teams, 4 divisions (East, North, Central, West), 22 games, 12-team playoffs with 4 byes, Sep–Feb, talent 65–95; EL (el) 10 teams, 2 divisions (Nordic, Continental), 18 games, 4-team playoffs, Mar–Jul, 58–85; AL (al) 12 teams (West, East), 20 games, Apr–Aug, 55–82; PL (pl) 8 teams (North, South), 14 games, Jan–May, 55–80; LA (la_league) 10 teams (Norte, Caribe), 18 games, Jun–Oct, 55–82. Teams created — Eurasian League: Stockholm Serpents, Helsinki Frost, Copenhagen Vikings, Oslo Trolls, Amsterdam Windmills; Brussels Wolves, Berlin Iron Eagles, Prague Golems, Warsaw Hussars, Zurich Alpines. AfroLeague: Lagos Lions, Accra Gold Stars, Dakar Teranga, Casablanca Atlas, Abidjan Elephants, Abuja Eagles; Nairobi Harambee, Johannesburg Springboks, Cairo Pharaohs, Dar es Salaam Dhows, Addis Ababa Runners, Kampala Cranes. Pacific League: Taipei Dragons, Manila Typhoons, Seoul Tigers, Osaka Samurai; Jakarta Komodos, Bangkok Muay, Ho Chi Minh City Phoenix, Singapore Merlions. LigaAmerica: Mexico City Aztecas, São Paulo Jaguares, Buenos Aires Gauchos, Bogotá Cóndores, Lima Incas; San Juan Huracanes, Santo Domingo Leones, Havana Cocodrilos, Montevideo Charrúas, Santiago Mineros. Fix pseudocode for _create_season_sync/_start and app.py pending_pro snippet. Note: 'European, African, and Latin American names already existed in the pool system.' Metadata: Branch: claude/fix-nvl-play-button-1oEky; Commit: 4bea975 — Fix NVL start button and add international pro leagues (EL, AL, PL, LA).",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Titled SITREP, not AAR, but follows the full AAR shape — genre_confidence medium. open_hooks first entry is awkwardly phrased by parser; substance: Champions League Phase 2 affordance. Architecture notes about ephemerality mapped to residual_risks as acknowledged limitations."
+}

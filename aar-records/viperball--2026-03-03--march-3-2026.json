@@ -1,0 +1,128 @@
+{
+  "record_id": "viperball--2026-03-03--march-3-2026",
+  "source_path": "docs/aar_2026-03-03_wvl_ties_boxscores_stats.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-03",
+  "title": "After-Action Review — March 3, 2026",
+  "scope": "wVL Mode: Tie Support, Box Score Parity, and /stats Wiring. Three distinct gaps existed between the wVL (Women's Viperball League) experience and the rest of the sim.",
+  "rationale": [
+    {
+      "item": "Draws were silently corrupted into double losses: when two teams scored equal points, both record_result calls evaluated won=False; both teams recorded a loss, neither got a point. Table points, standings, streak tracking, and div record were all wrong.",
+      "references": []
+    },
+    {
+      "item": "The wVL is a soccer-style pyramid with promotion and relegation — draws are a normal, common result (roughly 20–25% of professional soccer fixtures). Mis-counting them as losses could push a club into a relegation zone it didn't deserve to be in, or deny a promotion to a team that earned it via draws.",
+      "references": []
+    },
+    {
+      "item": "wVL box scores were abbreviated or blank: Offense/Defense/Kicking tabs were silently blank for fast-simmed games with no indication this was a fast-sim limitation rather than a bug; no quarterly scoring breakdown; /stats wvl/game.html missing Play Distribution and Plays Per Quarter sections; draw scores got score-loss styling on both teams.",
+      "references": []
+    },
+    {
+      "item": "Recent engineer work on the financial dashboard wasn't surfaced on /stats: none of the owner-mode financial data reached the /stats/wvl/{id}/team/{key} page for the owner's club.",
+      "references": ["previous engineer's financial dashboard work (get_owner_team_summary, dynasty financial_history, InvestmentAllocation)"]
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Full tie support in the engine: added ties/div_ties fields and a points property (3*wins + ties) to ProTeamRecord; pct now weights draws as half a win; record_result() signature changed from won: bool to won: Optional[bool] with won=None meaning draw; \"T\" valid in streak_type/last_5; sim_week() detects ties; get_standings() sorts by points and exposes ties/points/W-L-T div_record; get_team_detail() exposes ties/points and tags drawn games won=None.",
+      "artifacts": ["engine/pro_league.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Standings template: replaced single W-L column with PTS/W/L/T columns; last_5 loop assigns .t (amber) for draws; both ranked-tier and division sub-tables updated.",
+      "artifacts": ["stats_site/templates/wvl/season.html"],
+      "kind": "modified"
+    },
+    {
+      "description": "Added global CSS classes .t { color: var(--yellow); } and .score-tie { color: var(--yellow); font-weight: bold; }.",
+      "artifacts": ["stats_site/templates/base.html"],
+      "kind": "modified"
+    },
+    {
+      "description": "Game template: three-way win/loss/tie score conditionals; center label reads DRAW instead of FINAL when scores are equal; ported Play Distribution and Plays Per Quarter sections from college/game.html, guarded to appear only when data exists.",
+      "artifacts": ["stats_site/templates/wvl/game.html"],
+      "kind": "modified"
+    },
+    {
+      "description": "Schedule template: score cells in both schedule formats updated to three-way win/loss/draw CSS; intermediary as_/hs_ variables extracted to avoid evaluating g.get(...) twice.",
+      "artifacts": ["stats_site/templates/wvl/schedule.html"],
+      "kind": "modified"
+    },
+    {
+      "description": "Team template: record metric card shows W-L-T when ties > 0; schedule result column shows D (amber) for draws via three-way conditional on won_val; new Club Finances section (owner club only) showing bankroll, owner archetype, latest season revenue/expenses, and Investment Allocation table.",
+      "artifacts": ["stats_site/templates/wvl/team.html"],
+      "kind": "modified"
+    },
+    {
+      "description": "Router: wvl_team route now builds a financial snapshot dict (bankroll, archetype, investment categories, season_financials from financial_history) from the dynasty object in wvl_sessions, only when is_owner_club is true; passed to template as financial.",
+      "artifacts": ["stats_site/router.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "NiceGUI box score dialog: tie-aware score display (yellow tied scores, DRAW label); new _render_quarterly_scoring() walking play-by-play to compute per-quarter scores; new _render_drives() function and Drives tab reading box drive_summary; graceful empty-state message \"Player stats not available for fast-simmed games.\" in offense/defense/kicking tabs.",
+      "artifacts": ["nicegui_app/pages/pro_leagues.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "No dynasty methods were modified — the data was already computed and stored by the previous engineer's work; it just needed a read path to the stats site.",
+    "For fast-simmed games without play-by-play, all quarter cells show 0 and only the final score column is meaningful — this is acceptable since the game was not tracked play-by-play."
+  ],
+  "validation_claims": [],
+  "non_actions": [
+    {
+      "item": "CVL tie prevention in _fast_sim_game",
+      "reason": "CVL playoff brackets still force a winner by adding random points on a tied score. This is correct — CVL is an American college league with a playoff bracket where ties are impossible. The ProTeamRecord changes only affect ProLeagueSeason, not the CVL Season class.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "_generate_pro_forum_box_score / the Forum Export tab",
+      "reason": "The existing forum export function was left as-is. It reads team stats, not quarterly data, so it doesn't need the play_by_play walk.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Promotion/relegation cutoffs",
+      "reason": "The engine's promotion/relegation logic already uses get_standings() output for ranking — it reads position from the ranked list, which is now ordered by points. No additional change was needed there.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [
+    "Streak label for draws: the streak display shows T3 for a three-game unbeaten-draw run. Technically correct but unusual; some leagues might prefer U3 (unbeaten). Not changed since it would require a template-level style decision.",
+    "PCT column for soccer: in real soccer tables PCT isn't shown at all. The PCT column is harmless but could be replaced with a goal-difference-only tiebreaker display in a future pass.",
+    "Fast-sim quarterly scores show all zeros: zero-filled quarters could confuse a user who doesn't know what fast-sim means. A label like \"( fast-sim — quarterly breakdown unavailable )\" could be added conditionally.",
+    "Financial history on /stats requires a saved dynasty: if financial_history is empty the Club Finances section is suppressed. Correct behavior, but a note like \"No financial history yet\" could improve clarity."
+  ],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After-Action Review — March 3, 2026",
+    "wVL Mode: Tie Support, Box Score Parity, and /stats Wiring",
+    "Problem Statement",
+    "What We Did",
+    "1. Full Tie Support in the Engine (`engine/pro_league.py`)",
+    "2. Stats Site: Standings (`stats_site/templates/wvl/season.html`)",
+    "3. Stats Site: Game Template (`stats_site/templates/wvl/game.html`)",
+    "4. Stats Site: Schedule Template (`stats_site/templates/wvl/schedule.html`)",
+    "5. Stats Site: Team Template (`stats_site/templates/wvl/team.html`)",
+    "6. Stats Site Router (`stats_site/router.py`)",
+    "7. NiceGUI Box Score Dialog (`nicegui_app/pages/pro_leagues.py`)",
+    "What Was Not Changed",
+    "Known Limitations and Follow-Up Candidates"
+  ],
+  "unmapped_content": "Branch: claude/improve-wvl-mode-Ffp0p. Files Modified: engine/pro_league.py, nicegui_app/pages/pro_leagues.py, stats_site/router.py, stats_site/templates/base.html, stats_site/templates/wvl/season.html, stats_site/templates/wvl/game.html, stats_site/templates/wvl/schedule.html, stats_site/templates/wvl/team.html.\n\nImplementation note: Jinja2 `== true` and `== false` are used rather than Python `is True` / `is False` because Jinja2 evaluates `None == false` as truthy without the explicit equality check.\n\n_render_quarterly_scoring uses the same algorithm used in engine/box_score.py; renders a compact 6-column table (Team | Q1 | Q2 | Q3 | Q4 | F) placed above the tab bar in every box score dialog. The tab bar now has six tabs: Team Stats, Offense, Defense, Kicking, Drives, Forum Export.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": true,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date from first heading. No validation/testing section present in the document."
+}

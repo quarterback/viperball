@@ -1,0 +1,105 @@
+{
+  "record_id": "viperball--2026-02-27--february-27-2026",
+  "source_path": "docs/aar_2026-02-27_history_awards_overhaul.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-02-27",
+  "title": "After-Action Review — February 27, 2026",
+  "scope": "History Rankings, Awards System, and CVL Player Card Overhaul. The pre-created history generator and the end-of-season awards system had four distinct issues.",
+  "rationale": [
+    {
+      "item": "History table showed wrong data — the \"Top 5\" column listed the top 5 teams by regular-season win record, but the champion and runner-up came from the playoff bracket. The columns told contradictory stories.",
+      "references": []
+    },
+    {
+      "item": "Coach of the Year displayed a school name — both awards stored the team name in the player_name field instead of the actual head coach's name. The CoachCard objects with first_name and last_name were available on Season.coaching_staffs but never consulted.",
+      "references": []
+    },
+    {
+      "item": "All-League teams selected by ratings, not stats — a player who rode the bench all season but had elite attribute ratings would be selected over the league's rushing leader. This is the opposite of how real All-American teams work.",
+      "references": []
+    },
+    {
+      "item": "CVL award player names were not interactive — the CVL awards section rendered player names as flat text with no interactivity, unlike the NVL.",
+      "references": []
+    },
+    {
+      "item": "Why Final Four instead of Top 5? The original \"Top 5 by record\" was fundamentally misleading — it measured regular-season success, not postseason results. Showing the Final Four directly ties the history table to the bracket outcome.",
+      "references": []
+    },
+    {
+      "item": "Why per-game stats scoring? Raw volume stats would penalize players on teams that played fewer games or had byes. Dividing by games played levels the field. The team performance multiplier (0.88–1.10) still gives a modest edge to players on winning teams, which mirrors real-world voter behavior.",
+      "references": []
+    },
+    {
+      "item": "Why fallback to ratings? Fast-sim seasons (used in history generation and some AI-only weeks) don't produce per-player stats. Rather than breaking All-League selection for these cases, the system transparently falls back. This also means dynasty saves from before this change continue to work.",
+      "references": []
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Replaced Top 5 with Final Four: _fast_sim_bracket() now captures the 4 teams entering the semifinal round and returns (champion, runner_up, final_four); UI shows Champion, Runner-Up, Other Semifinalists columns. Edge cases handled for 1-team, 2-team, and 4+ team brackets.",
+      "artifacts": ["engine/season.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "API cleanup: added stripping of internal _records (dict) and _playoff_teams (set — not JSON-serializable) fields before returning history to clients.",
+      "artifacts": ["api/main.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Coach of the Year now uses coach names: added _get_head_coach_name(team_name, coaching_staffs) helper returning \"Coach Name (School)\" with fallback to school name; updated _select_team_awards(), _select_conference_individual_awards(), and compute_season_awards() call sites.",
+      "artifacts": ["engine/awards.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Stats-based All-League selection: four new functions — _aggregate_player_season_stats(season), _stat_score_for_group(stats, group, mult), _format_stat_line(stats, group), _build_season_stats_dict(stats, group) — with position-group scoring formulas and fallback to rating-based _player_score() when no stats exist. Added season_stats: Optional[Dict] field to AwardWinner dataclass.",
+      "artifacts": ["engine/awards.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Clickable CVL player cards: added async _show_cvl_player_card(session_id, team_name, player_name) opening an NVL-style dialog (header, bio, OVR badge, attribute chips, season stats). Made individual award cards, All-CVL tier tables, and All-Conference tier tables interactive via Quasar body-cell-Player slots and player_click events.",
+      "artifacts": ["nicegui_app/pages/league.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "The _fast_sim_bracket change was surgical — one function, three return values, no impact on the 15+ call sites that only use champion.",
+    "The fallback ensures backward compatibility — if a season was created without coaching staffs (older saves, sandbox mode without coaches), the display falls back to the school name.",
+    "This means the system degrades gracefully rather than producing empty All-League teams."
+  ],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [
+    "Stats-based selection in short seasons: with only 6-8 games, small sample sizes could produce volatile All-League picks. May want to add a minimum-games threshold (e.g., 4 GP) before stats are used.",
+    "History generation doesn't produce player stats: All-League selection for history years will always fall back to ratings. If history-era awards are ever displayed, they'll show \"Rating\" instead of stat lines.",
+    "Coach name persistence in dynasty saves: the historical award record will show the name at the time of the award. This is correct behavior — it matches how real record books work.",
+    "Dialog performance on large rosters: the player card dialog fetches the full roster + full player stats endpoint on every click. If the pattern is extended to batch operations, consider caching."
+  ],
+  "open_hooks": [],
+  "section_headers_original": [
+    "After-Action Review — February 27, 2026",
+    "History Rankings, Awards System, and CVL Player Card Overhaul",
+    "Problem Statement",
+    "What We Did",
+    "1. Replace Top 5 with Final Four (`engine/season.py`)",
+    "2. Coach of the Year Now Uses Coach Names (`engine/awards.py`)",
+    "3. Stats-Based All-League Selection (`engine/awards.py`)",
+    "4. Clickable CVL Player Cards (`nicegui_app/pages/league.py`)",
+    "Key Design Decisions",
+    "What Went Well",
+    "What to Watch"
+  ],
+  "unmapped_content": "Branch: claude/fix-history-rankings-0JXnL. Files Modified: engine/season.py, engine/awards.py, api/main.py, nicegui_app/pages/league.py.\n\nScoring formulas (per game, scaled by team performance multiplier):\nZeroback: (KP_yds × 0.4 + rush_yds × 0.3 + lat_yds × 0.2 + TDs × 15 + KP_TDs × 12) / GP\nViper: (yards × 0.4 + lat_yds × 0.3 + TDs × 20) / GP\nHalfback/Wingback: (rush_yds × 0.4 + YPC × 8 + TDs × 20) / GP\nLineman: (tackles × 2 + sacks × 12 + TFL × 6) / GP\nSafety/Keeper: (tackles × 2.5 + sacks × 10 + TFL × 5) / GP\n\nWhat Went Well (additional): Stats aggregation reuses the same field names as the existing season_player_stats API endpoint, so there's no translation layer needed. The clickable player card dialog shares the NVL's visual language (color-coded attribute chips, same layout) without duplicating code from pro_leagues.py.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": true
+  },
+  "parser_notes": "Date from first heading. No validation/testing section present; no explicit non-actions. Second-level heading carries the substantive title; scope field combines it with the problem statement opener."
+}

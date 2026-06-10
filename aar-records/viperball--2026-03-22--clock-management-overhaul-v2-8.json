@@ -1,0 +1,172 @@
+{
+  "record_id": "viperball--2026-03-22--clock-management-overhaul-v2-8",
+  "source_path": "docs/AAR_clock_management_overhaul.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": "2026-03-22",
+  "title": "AAR: Clock Management Overhaul (V2.8)",
+  "scope": "Feature: Play clock enforcement, timeout decision engine, victory formation rewrite, clock-run mode",
+  "rationale": [
+    {
+      "item": "The engine had per-play time consumption mechanics (15-42 seconds based on tempo), timeouts (3 per half), and a victory formation — but they didn't interact.",
+      "references": []
+    },
+    {
+      "item": "No enforceable play clock. The existing delay-of-game penalty was a random 0.5% dice roll with no mechanical basis. A team could stack clock-burn multipliers to 45-second play clocks without consequence.",
+      "references": []
+    },
+    {
+      "item": "Victory formation ignored defensive timeouts. The screenshot that triggered this work showed a team kneeling at 0:45, then 0:05, then 0:00 — three kneels in rapid succession with no defensive response.",
+      "references": []
+    },
+    {
+      "item": "No clock-run mode. A 10-point lead with 4 minutes left should produce run-heavy, clock-burning play selection. Instead, teams kept throwing kick passes and risking turnovers.",
+      "references": []
+    },
+    {
+      "item": "Timeout decisions were primitive. Two triggers: fatigued stars (40%) and trailing offense late (60%). The `timeout_hoarder` and `timeout_sprinter` traits existed in `coaching.py` but had empty effect dicts and were never wired in.",
+      "references": []
+    },
+    {
+      "item": "The hockey power-play analogy from the feature request captured it well: the leading team should be \"on the power play of time\".",
+      "references": ["feature request"]
+    }
+  ],
+  "delegation_events": [
+    {
+      "decision": "Clock does not stop on incompletions — only timeouts, scores, penalties, and the 3-minute warning",
+      "decided_by": "owner",
+      "quote": "The user chose \"keep clock always running\" — clock only stops for timeouts, scores, penalties, and the 3-minute warning."
+    },
+    {
+      "decision": "Comeback rarity target of ~1-2% of games for timeout-driven comebacks",
+      "decided_by": "owner",
+      "quote": "The user specified comebacks via timeout clock management should happen in ~1-2% of games."
+    },
+    {
+      "decision": "Derive clock_management as a composite attribute rather than a new coach slider",
+      "decided_by": "unclear",
+      "quote": "This was designed as a derived attribute rather than a new slider to avoid expanding the coach creation surface."
+    }
+  ],
+  "actions": [
+    {
+      "description": "Added clock_management derived composite coach attribute (instincts 0.40 + composure 0.35 + leadership 0.25) with sub-archetype bonuses (clock_surgeon +0.15, economist +0.05) in compute_gameday_modifiers().",
+      "artifacts": ["engine/coaching.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Play clock enforcement: added play_clock_limit: 40 to V2_ENGINE_CONFIG; avoidance roll 0.55 + 0.40 * clock_management; on failure, delay-of-game penalty (5 yards, replay down, 40s burned). Old random 0.5% delay-of-game in PENALTY_CATALOG zeroed out (prob: 0.0).",
+      "artifacts": ["engine/game_engine.py", "V2_ENGINE_CONFIG", "PENALTY_CATALOG"],
+      "kind": "modified"
+    },
+    {
+      "description": "Victory formation rewrite in _should_kneel(): computes kneels needed (ceil(time_remaining / 37)), downs available (7 - current_down), can-kneel-out check, and time-varying safe lead margins.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Defensive timeouts on kneels via _call_defensive_timeout_on_kneel(): call_prob = 0.70 + 0.25 * clock_management, modified by timeout_hoarder (0.80x) and timeout_sprinter (1.10x) traits; timeout stops clock and gives defense 15 energy recovery.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Clock-run mode in select_play_family(): when leading in Q4 with time_remaining > 60 and not in garbage time, boosts run plays and suppresses kick pass/lateral spread/trick play weights scaled by cr_intensity = 0.30 + 0.70 * clock_management.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "new"
+    },
+    {
+      "description": "Timeout decision engine: full rewrite of call_timeout() replacing 2-trigger system with 5 situational categories (strategic clock stop, star fatigue rest, injury timeout, personnel/scheme, offensive clock stop) with coach-skill gating, conservation logic, and trait wiring.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "This makes it rare (~0-1 per 100 games) but meaningful — exactly like real football.",
+    "Punt, snap kick, and field goal weights are untouched — punting for field position and taking safe points are fine.",
+    "Why is delay of game so rare? By design. ... The result: mechanically-driven delays that only happen when the system legitimately produces a slow play, not random dice rolls."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Measured impact (30-game sample): Q4 Leading 67% runs / 23% kick pass / 5% laterals; Q4 Trailing 32/50/9; Q1-Q3 baseline 45/36/7. The 22-point swing between leading (67% runs) and trailing (32% runs) is exactly the behavior the user requested.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch and tabulate play family shares by Q4 lead/trail situation.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "Verified behavior: in a seed-31 game, Portland (trailing 27-37) called 1 timeout on 2 kneels. Their second timeout roll failed (random). Lake Forest still kneeled it out because 42 seconds with 6 downs available was enough.",
+      "evidence_cited": "manual verification",
+      "checkable_against_repo": "yes",
+      "check_method": "Replay seed-31 game and inspect kneel/timeout sequence in the play log.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "30-game batch simulation: 28/30 games had kneels (93%); average 3.0 timeouts used per game; 0 delay-of-game penalties; 7/30 games were close (within 9 points); clock-run mode produced 67% run rate for Q4 leaders vs 45% baseline.",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch with the same setup and compare aggregate stats.",
+      "verified": "not_checked"
+    },
+    {
+      "claim": "10-game batch_sim.py run: All games completed without errors, play distribution within expected ranges.",
+      "evidence_cited": "render/smoke",
+      "checkable_against_repo": "yes",
+      "check_method": "Run batch_sim.py for 10 games and confirm no errors.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [
+    {
+      "item": "Clock stops on incompletions",
+      "reason": "This keeps the model simpler and avoids creating an outsized advantage for kick-pass-heavy trailing teams (which are already boosted by chase mode tempo overrides).",
+      "category": "declined_by_owner",
+      "status": "unknown"
+    },
+    {
+      "item": "Adding clock_management as a new coach slider",
+      "reason": "Keeps the coach creation surface at 6 core attributes + personality sliders; clock management is genuinely a composite skill; existing sub-archetypes provide differentiation within the derived scale.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    },
+    {
+      "item": "Defensive timeouts in Q1-Q3",
+      "reason": "Stopping the clock in Q1/Q3 has near-zero strategic value; real coaches almost never call defensive timeouts before the 4th quarter; it prevents the AI from wasting timeouts early.",
+      "category": "out_of_scope",
+      "status": "unknown"
+    }
+  ],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "AAR: Clock Management Overhaul (V2.8)",
+    "Problem Statement",
+    "Solution",
+    "1. Coach `clock_management` Attribute",
+    "2. Play Clock Enforcement",
+    "3. Victory Formation Rewrite",
+    "4. Defensive Timeouts on Kneels",
+    "5. Clock-Run Mode",
+    "6. Timeout Decision Engine (5 Categories)",
+    "Design Decisions",
+    "Why not clock stops on incompletions?",
+    "Why derive clock_management instead of adding a new slider?",
+    "Why is delay of game so rare?",
+    "Why not let the defense call timeouts in Q1-Q3?",
+    "Comeback rarity target",
+    "Verification",
+    "Files Modified",
+    "Integration Points"
+  ],
+  "unmapped_content": "Timeout Decision Engine 5-category table: Strategic clock stop (defense) — Q4 trailing by <=14, <5min, base 0.20 + urgency ramp, gate * (0.60 + 0.40 * clock_mgmt); Star fatigue rest (offense) — red zone, star energy <50, 0.15-0.30, inverse: bad managers waste TOs here; Injury timeout (official) — any play, any quarter, 0.3% flat, not coach-gated; Personnel/scheme (offense) — Q1-Q3, drive stalled, 2+ TOs, 0.05-0.08, bad managers more likely; Offensive clock stop (offense) — Q2/Q4 trailing, <120s, 0.18-0.53, gate * (0.50 + 0.50 * clock_mgmt). Conservation logic: good clock managers resist spending timeouts on fatigue/personnel issues; Q4 fatigue timeouts suppressed by 70% for coaches with clock_management > 0.6; personnel timeouts only available with 2+ TOs and Q1-Q3. Trait wiring: timeout_hoarder -30% on all non-Q4 timeouts; timeout_sprinter +25% on early-game timeouts. Injury timeout: 0.3% per play, official-called, not charged to either team. Both teams recover 10 energy. Adds narrative realism without strategic impact.\n\nClock-run mode weight formulas: cr_intensity = 0.30 + 0.70 * clock_management (0.30 to 1.0); Run plays (dive, power, sweep, counter, draw): * (1.0 + 0.60 * cr_intensity); Kick pass: * max(0.25, 1.0 - 0.50 * cr_intensity); Lateral spread: * max(0.20, 1.0 - 0.40 * cr_intensity); Trick play: * max(0.15, 1.0 - 0.60 * cr_intensity). This stacks on top of existing lead management (Vault tendency already boosts runs when leading).\n\nVictory formation safe lead margins: > 90s requires lead > 9 (double-digit); 45-90s requires lead > 5; <= 45s any lead. Old logic was a simple threshold: Q4, <=90s with lead > 5, or <=45s with any lead.\n\nComeback rarity mechanism: defensive timeouts only fire in Q4 with high urgency; good clock managers on the leading team still burn clock effectively even when forced to run plays; clock-run mode makes turnovers less likely (67% runs vs 36% kick pass baseline); the combination of needing a turnover + scoring + time management makes timeout-driven comebacks naturally rare.\n\nFiles Modified table: engine/coaching.py +17 lines (clock_management derived attribute computation with sub-archetype bonuses); engine/game_engine.py +292/-48 lines (play clock enforcement, victory formation rewrite, _call_defensive_timeout_on_kneel(), clock-run mode in select_play_family(), timeout engine rewrite with 5 categories).\n\nIntegration Points: Lead management (V2.7) — clock-run mode stacks on top of existing Vault/Thermostat tendencies; a Vault coach leading in Q4 gets both the Vault run boost AND the clock-run mode boost. Chase mode — trailing teams in chase mode still get tempo overrides that compress play clock, working against the leading team's clock burn. 3-minute warning — clock-run mode interacts with the 3-minute warning's trailing-team compression and leading-team burn multipliers. Bonus possession — the V2.8 turnover-cancels-bonus fix (previous commit) interacts with clock-run mode — if a leading team fumbles while grinding clock, the bonus possession system correctly waives any pending bonus.",
+  "quality_vector": {
+    "has_scope": true,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": true,
+    "has_residual_risk": false
+  },
+  "parser_notes": "Problem Statement says \"Three specific failures\" but lists four numbered items."
+}

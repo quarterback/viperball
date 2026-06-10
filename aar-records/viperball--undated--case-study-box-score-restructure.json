@@ -1,0 +1,85 @@
+{
+  "record_id": "viperball--undated--case-study-box-score-restructure",
+  "source_path": "docs/AAR_box_score_restructure.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": null,
+  "title": "Case Study AAR: The Box Score Restructure",
+  "scope": null,
+  "rationale": [
+    {
+      "item": "The original box score was a single table labeled \"Offensive Stats\" — 13 rows of numbers arranged in no particular philosophy. It was technically complete... But it told you nothing about *how* a team played.",
+      "references": []
+    },
+    {
+      "item": "The insight was that a box score should be readable the way a real football box score is — glance at it for three seconds and you know what kind of game it was.",
+      "references": []
+    },
+    {
+      "item": "Viperball has more offensive dimensions than traditional football (rushing, kick passing, laterals, kicking, trick plays), which makes the problem harder but the payoff bigger.",
+      "references": []
+    },
+    {
+      "item": "The debug tools page showed defensive performance (DC gameplan, suppression heatmaps, adaptation events) and player impact (VPA rankings), but had no equivalent offensive panel. You could see *how the defense shut things down* but not *what the offense was doing in the first place*.",
+      "references": []
+    },
+    {
+      "item": "The broader lesson is the same one that emerged from the Diving Wing case study: presentation should reflect the system's internal logic.",
+      "references": ["Diving Wing case study"]
+    }
+  ],
+  "delegation_events": [],
+  "actions": [
+    {
+      "description": "Restructured single-game box score: added Style Fingerprint header (two colored cards with offensive scheme and tempo classification pulled from the engine's OFFENSE_STYLES dict).",
+      "artifacts": ["OFFENSE_STYLES"],
+      "kind": "modified"
+    },
+    {
+      "description": "Replaced flat 13-row list with six distinct sections: Rushing, Kick Passing, Lateral Game, Kicking, Trick Plays, Team Totals.",
+      "artifacts": [],
+      "kind": "modified"
+    },
+    {
+      "description": "YPC now computed from the play family breakdown rather than estimated — counts run-family plays (dive_option, power, sweep_option, speed_option, counter, draw, viper_jet) against rushing yards; kick pass completion % displayed directly.",
+      "artifacts": ["play_family_breakdown"],
+      "kind": "modified"
+    },
+    {
+      "description": "Added Offensive Performance section in batch simulator results: summary cards (avg total yards, avg TDs, avg yds/play, avg plays), category breakdown table, and expandable play family distribution panel.",
+      "artifacts": [],
+      "kind": "new"
+    }
+  ],
+  "risk_posture": [],
+  "validation_claims": [],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "Case Study AAR: The Box Score Restructure",
+    "The Wall of Numbers Problem",
+    "The Style Fingerprint Concept",
+    "Version 1: The Flat List",
+    "Version 2: The Structured Box Score",
+    "Style Fingerprint Header",
+    "Separated Categories",
+    "The Reading Experience",
+    "The Debug Panel: Offensive Performance in Batch",
+    "What Was Added",
+    "Why This Matters for Tuning",
+    "Design Principle: Stat Blocks as Identity",
+    "Technical Notes"
+  ],
+  "unmapped_content": "Style identification targets: Ground & Pound: High carries, high rush yards, low KP attempts, few laterals; Boot Raid: High KP attempts, high completion rate, moderate rushing, snap kick volume; Chain Gang: Lateral chains everywhere, high lateral efficiency, distributed touches; Ghost Formation: Balanced but unpredictable, moderate across all categories; Lateral Spread: Lateral-heavy with kick pass integration, high play count from tempo. If you can't tell the difference between these at a glance, the box score has failed.\n\nVersion 1 flat list example table (Total Yards 454/389, Rush Yds 155/112, Receiving Yds 277/201, Lateral Yds 12/28, Yds/Play 8.11/6.94, Total Plays 56/56, Lat Chains 10/14, Lat Eff 60.0%/71.4%, Fumbles Lost 2/1, KP INTs 0/2, Lat INTs 0/1, Bonus Poss. 1/0, Penalties 3/35yds vs 2/20yds). Problems: No offensive style identification; Rushing buried among 13 undifferentiated rows; Kick passing stats scattered (attempts missing entirely — only yards shown); Lateral game stats mixed into the general pile; Kicking (DK/PK) only appears in the scoring section; Trick plays invisible; Every team's box score looks structurally identical. \"Receiving Yds\" is labeled generically — in Viperball these are kick pass yards, a fundamentally different mechanic than forward passing.\n\nThe Reading Experience: three-second style identification — See \"Ground & Pound | Slow\" in the header → check Rushing section → confirm 25+ carries, 140+ yards; See \"Boot Raid | Mid\" → check Kick Passing → confirm 20+ attempts, 55%+ completion; See \"Chain Gang | Fast\" → check Lateral Game → confirm 15+ chains, 65%+ efficiency; The kicking section reveals whether a team is leaning on DK as a scoring weapon or grinding field goals; Trick play count separates the conventional from the creative.\n\nWhy This Matters for Tuning: Previously: Run batch sim; See aggregate scores and VPA; Wonder why rushing yards are low; Manually grep through play-by-play logs to count play families; Adjust weights; Repeat. Now: Run batch sim; See offensive performance table — rushing avg 87.6 yds (below 100-120 target); Check play family distribution — run families at 22% share (should be 30%+ for ground_pound); Adjust weights with specific targets; Repeat. The feedback loop is faster because the data you need is surfaced rather than buried. The play family distribution is particularly useful for style verification. If a Ground & Pound team's play distribution shows 35% kick pass and 15% dive/power, something is wrong with the style weights. If a Chain Gang team shows 25% lateral_spread, the style is working. This is the tool you use to debug the playbook, not just the outcome.\n\nDesign Principle: A flat list of numbers is style-agnostic — it treats every team identically. A structured box score with style headers and categorized stats is style-aware — it tells you *which numbers to look at* based on who's playing. This is the difference between a database query and a scouting report.\n\nTechnical Notes: Style fingerprint reads result[\"home_style\"] / result[\"away_style\"] from engine output, maps through OFFENSE_STYLES dict for label and tempo; Tempo classification: ≥0.7 = Fast, ≥0.45 = Mid, <0.45 = Slow (maps to engine's tempo float which influences play clock); Rush carry count derived from play_family_breakdown rather than a dedicated counter; Kick pass completion % computed from kick_passes_completed / kick_passes_attempted; Trick play count pulled from play_family_breakdown[\"trick_play\"]; Batch offensive panel uses same stat keys but aggregated across N simulations with averages; Play family share percentages computed against total plays from breakdown dict, not total_plays stat (which includes non-family plays like penalties).",
+  "quality_vector": {
+    "has_scope": false,
+    "has_rationale": true,
+    "has_delegation_record": false,
+    "has_validation": false,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "No date anywhere in the document (checked header, title, body); no filename date either — recorded as undated. Case-study style narrative; no validation claims or explicit non-actions."
+}

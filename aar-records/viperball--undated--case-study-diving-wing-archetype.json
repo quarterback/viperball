@@ -1,0 +1,86 @@
+{
+  "record_id": "viperball--undated--case-study-diving-wing-archetype",
+  "source_path": "docs/AAR_diving_wing_case_study.md",
+  "repo": "viperball",
+  "parsed_at": "2026-06-10",
+  "genre_confidence": "high",
+  "date": null,
+  "title": "Case Study AAR: The Diving Wing Archetype",
+  "scope": null,
+  "rationale": [
+    {
+      "item": "In Viperball, where drop kicks are a primary scoring weapon (4-6 per team per game), the ability to block a kick isn't just a special teams curiosity — it's a defensive philosophy. The question was: how do you model a kick-block specialist in a sport where kicking is woven into the offensive identity?",
+      "references": []
+    },
+    {
+      "item": "V1 set the bar too high: across 187 teams, roughly zero players qualified from pre-generated rosters. Blocked drop kicks happened at 2.5% (the base rate), entirely uninfluenced by personnel. The Diving Wing was a ghost archetype.",
+      "references": []
+    }
+  ],
+  "delegation_events": [
+    {
+      "decision": "Reframe the archetype from rare unicorn to a scaled, accessible specialist indexed on attributes",
+      "decided_by": "owner",
+      "quote": "The user's observation was simple and correct: \"I think every level has their own version of a shutdown corner. It should just be indexed higher based on meeting attribute criteria.\""
+    }
+  ],
+  "actions": [
+    {
+      "description": "Lowered Diving Wing qualification thresholds: Tackling ≥ 72 (was 82), Speed ≥ 80 (was 88), Kicking awareness ≥ 45 (was 60).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Moved Diving Wing check from first to fourth priority in the flanker archetype cascade (Speed Flanker, Power Flanker, Elusive Flanker, Diving Wing, Reliable Flanker).",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    },
+    {
+      "description": "Replaced flat dk_block_bonus (+0.8%) with scaled attribute index: attr_index = tck_score × 0.45 + spd_score × 0.35 + kick_score × 0.20; block_bonus = 0.004 + attr_index × 0.008, ranging +0.4% to +1.2%.",
+      "artifacts": ["engine/game_engine.py"],
+      "kind": "modified"
+    }
+  ],
+  "risk_posture": [
+    "The overall block rate barely moved (2.5% → 2.6%) because the DW bonus is intentionally modest — this is a rare, high-impact play."
+  ],
+  "validation_claims": [
+    {
+      "claim": "Measured Results (30-game batch): Teams with a Diving Wing ~0% → 72%; Avg DW per team ~0 → 2.4; tier distribution 6% Low, 90% Mid, 4% High; overall DK block rate 2.5% (base only) → 2.6% (base + DW bonus).",
+      "evidence_cited": "metrics",
+      "checkable_against_repo": "unclear",
+      "check_method": "Re-run a 30-game batch and tabulate Diving Wing assignment rates and DK block rates.",
+      "verified": "not_checked"
+    }
+  ],
+  "non_actions": [],
+  "residual_risks": [],
+  "open_hooks": [],
+  "section_headers_original": [
+    "Case Study AAR: The Diving Wing Archetype",
+    "The Shutdown Corner Problem",
+    "Version 1: The Unicorn (Too Rare)",
+    "The Insight: Every Team Has a Shutdown Corner",
+    "Version 2: The Scaled System",
+    "Lowered Floor",
+    "Priority Ordering Fix",
+    "Scaled Block Bonus",
+    "Measured Results (30-game batch)",
+    "Design Lessons",
+    "1. Thresholds Create Cliffs, Indices Create Gradients",
+    "2. Archetype Priority Protects Offensive Identity",
+    "3. Small Bonuses, Large Population = Emergent Flavor",
+    "4. \"Every Level Has Their Version\"",
+    "Files Modified"
+  ],
+  "unmapped_content": "V1 details: thresholds Tackling ≥ 82, Speed ≥ 88, Kicking awareness ≥ 60; flat block bonus +0.8% on top of the 2.5% base rate. A flanker with 81 tackling and 87 speed — one tick below each threshold — contributed nothing to the block game.\n\nLowered Floor context: Average flanker attributes across the league sit at tck 72, spd 77, kick 71 — meaning the threshold is right at the population median for tackling, slightly above for speed, and well below for kicking.\n\nScaled bonus formula details: tck_score = (tackling - 70) / 30 (weight 45%); spd_score = (speed - 78) / 22 (weight 35%); kick_score = (kicking - 40) / 50 (weight 20%). Tier table: Low 0.0–0.3 → +0.55%, ~3.1% effective rate, \"Scrappy, gets a hand up sometimes\"; Mid 0.3–0.6 → +0.64–0.88%, ~3.2–3.4%, \"Solid contributor, times it well\"; High 0.6–0.85 → +0.88–1.08%, ~3.4–3.6%, \"Legitimate kick-block threat\"; Elite 0.85–1.0 → +1.08–1.2%, ~3.6–3.7%, \"Shutdown specialist, alters kicking gameplan\".\n\nDesign Lessons: 1. Thresholds Create Cliffs, Indices Create Gradients — the V2 approach creates a gradient where every point of tackling, speed, and kicking awareness contributes proportionally; there's no magic number where a player suddenly becomes a kick-block specialist. 2. Archetype Priority Protects Offensive Identity — a 95-speed flanker is a Speed Flanker who happens to be fast enough to block kicks; DW captures the \"tweeners\". 3. Small Bonuses, Large Population = Emergent Flavor — a +0.6% block bonus on one player doesn't change the game, but when 2-3 players per team carry that bonus it creates emergent matchup flavor and narrative pressure. 4. \"Every Level Has Their Version\" — argues against unicorn archetypes that only appear on elite rosters; keeps the mechanic relevant across the full 187-team league rather than being a feature only 5-10 teams ever see.",
+  "quality_vector": {
+    "has_scope": false,
+    "has_rationale": true,
+    "has_delegation_record": true,
+    "has_validation": true,
+    "has_negative_space": false,
+    "has_residual_risk": false
+  },
+  "parser_notes": "No date anywhere in the document or filename — recorded as undated. No explicit scope statement; case-study narrative format."
+}
