@@ -64,15 +64,16 @@ def _restore_db_from_hub():
     from engine import db as _vdb
 
     url = os.environ.get("RESTORE_DB_URL")
-    # EXPORT_TOKEN is the secret already shared with the hub (it equals the
-    # hub's VIPERBALL_SYNC_TOKEN), so no extra secret is needed.
+    # Optional auth: EXPORT_TOKEN is the secret already shared with the hub.
+    # The hub's download route is open when it has no tokens configured.
     token = os.environ.get("RESTORE_TOKEN") or os.environ.get("EXPORT_TOKEN")
     path = _vdb.get_db_path()
-    if not url or not token or path.exists():
+    if not url or path.exists():
         return
     log = logging.getLogger("viperball.restore")
     try:
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=120) as resp:
             path.parent.mkdir(parents=True, exist_ok=True)
             tmp = path.with_suffix(".restore")
@@ -103,10 +104,12 @@ def export_db(request: Request):
     from starlette.background import BackgroundTask
     from starlette.responses import FileResponse
 
+    # Open by default — this data is already public on the site itself.
+    # Setting EXPORT_TOKEN locks the route to requests carrying it.
     token = os.environ.get("EXPORT_TOKEN")
     supplied = request.headers.get("authorization", "").removeprefix("Bearer ").strip() \
         or request.query_params.get("token", "")
-    if not token or supplied != token:
+    if token and supplied != token:
         raise HTTPException(status_code=404)
     src_path = str(_vdb.get_db_path())
     if not os.path.exists(src_path):
