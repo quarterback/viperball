@@ -27,8 +27,8 @@ primary_region = 'ams'
 
   [http_service.concurrency]
     type = "connections"
-    hard_limit = 250
-    soft_limit = 200
+    hard_limit = 60
+    soft_limit = 40
 
 # Service-level health check: controls whether traffic is routed to this machine.
 # Uses [[http_service.checks]] (not top-level [checks] which blocks deployments on failure).
@@ -41,5 +41,5 @@ primary_region = 'ams'
   path = "/api/health"
 
 [[vm]]
-  size = "shared-cpu-2x"
-  memory = "2gb"
+  size = "performance-2x"
+  memory = "4gb"
