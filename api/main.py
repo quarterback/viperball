@@ -80,6 +80,11 @@ def _restore_db_from_hub():
             with open(tmp, "wb") as out:
                 while chunk := resp.read(1 << 20):
                     out.write(chunk)
+        if path.exists():
+            # Someone simmed while we were downloading — their fresh data
+            # beats our old snapshot.
+            tmp.unlink()
+            return
         tmp.replace(path)
         log.info("Restored saves DB from hub (%d bytes)", path.stat().st_size)
     except Exception:
@@ -87,7 +92,11 @@ def _restore_db_from_hub():
                     exc_info=True)
 
 
-_restore_db_from_hub()
+# Run in the background so the port opens immediately — a blocking 34MB+
+# download before bind() looks like "app not listening" to Fly's checks.
+import threading as _threading  # noqa: E402
+_threading.Thread(target=_restore_db_from_hub, daemon=True,
+                  name="db-restore").start()
 
 
 @app.get("/export/db")
