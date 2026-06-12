@@ -80,6 +80,11 @@ def _restore_db_from_hub():
             with open(tmp, "wb") as out:
                 while chunk := resp.read(1 << 20):
                     out.write(chunk)
+        if path.exists():
+            # Someone simmed while we were downloading — their fresh data
+            # beats our old snapshot.
+            tmp.unlink()
+            return
         tmp.replace(path)
         log.info("Restored saves DB from hub (%d bytes)", path.stat().st_size)
     except Exception:
@@ -87,7 +92,11 @@ def _restore_db_from_hub():
                     exc_info=True)
 
 
-_restore_db_from_hub()
+# Run in the background so the port opens immediately — a blocking 34MB+
+# download before bind() looks like "app not listening" to Fly's checks.
+import threading as _threading  # noqa: E402
+_threading.Thread(target=_restore_db_from_hub, daemon=True,
+                  name="db-restore").start()
 
 
 @app.get("/export/db")
@@ -125,6 +134,19 @@ def export_db(request: Request):
         raise HTTPException(status_code=404)
     if n == 0:
         raise HTTPException(status_code=404)
+    # Cheap change detection so the hub can skip unchanged downloads
+    # (DB + WAL sidecar; writes land in the WAL first).
+    from starlette.responses import Response as StarletteResponse
+    parts = []
+    for p in (src_path, src_path + "-wal"):
+        try:
+            st = os.stat(p)
+            parts.append(f"{st.st_mtime_ns}-{st.st_size}")
+        except OSError:
+            parts.append("0")
+    etag = '"' + ".".join(parts) + '"'
+    if request.headers.get("if-none-match") == etag:
+        return StarletteResponse(status_code=304)
     fd, snap_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     src = sqlite3.connect(f"file:{src_path}?mode=ro", uri=True)
@@ -133,7 +155,7 @@ def export_db(request: Request):
     dst.close()
     src.close()
     return FileResponse(snap_path, media_type="application/x-sqlite3",
-                        filename="viperball.db",
+                        filename="viperball.db", headers={"ETag": etag},
                         background=BackgroundTask(os.unlink, snap_path))
 
 
