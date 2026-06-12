@@ -49,6 +49,44 @@ from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
 
 
+def _restore_db_from_hub():
+    """Re-seed the saves DB from the hub's snapshot after a deploy.
+
+    This app has no volume, so every deploy wipes data/viperball.db with
+    the rootfs. The cross-sport hub (quarterback/vroomtv) pulls a snapshot
+    of it every sync interval and serves it back at /download/viperball —
+    so on boot, if the DB file is missing, we pull the latest snapshot
+    and saved leagues / box scores survive the deploy. No-op when the
+    file exists (plain machine restarts keep the disk) or when
+    RESTORE_DB_URL / RESTORE_TOKEN aren't configured.
+    """
+    import urllib.request
+    from engine import db as _vdb
+
+    url = os.environ.get("RESTORE_DB_URL")
+    token = os.environ.get("RESTORE_TOKEN")
+    path = _vdb.get_db_path()
+    if not url or not token or path.exists():
+        return
+    log = logging.getLogger("viperball.restore")
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_suffix(".restore")
+            with open(tmp, "wb") as out:
+                while chunk := resp.read(1 << 20):
+                    out.write(chunk)
+        tmp.replace(path)
+        log.info("Restored saves DB from hub (%d bytes)", path.stat().st_size)
+    except Exception:
+        log.warning("Saves DB restore skipped (hub unreachable or no snapshot)",
+                    exc_info=True)
+
+
+_restore_db_from_hub()
+
+
 @app.get("/export/db")
 def export_db(request: Request):
     """Stream a consistent snapshot of the saves DB.
@@ -70,6 +108,17 @@ def export_db(request: Request):
         raise HTTPException(status_code=404)
     src_path = str(_vdb.get_db_path())
     if not os.path.exists(src_path):
+        raise HTTPException(status_code=404)
+    # Never export an empty store: after a deploy wipes the (volume-less)
+    # disk, a fresh DB must not overwrite the hub's last good snapshot —
+    # that snapshot is what restores us.
+    try:
+        chk = sqlite3.connect(f"file:{src_path}?mode=ro", uri=True)
+        n = chk.execute("SELECT COUNT(*) FROM saves").fetchone()[0]
+        chk.close()
+    except sqlite3.Error:
+        raise HTTPException(status_code=404)
+    if n == 0:
         raise HTTPException(status_code=404)
     fd, snap_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)

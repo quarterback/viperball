@@ -11,6 +11,12 @@ primary_region = 'ams'
 [deploy]
   strategy = "rolling"
 
+[env]
+  # This app has no volume; deploys wipe the saves DB. On boot the app
+  # restores it from the hub's latest snapshot (see api/main.py). Set the
+  # RESTORE_TOKEN secret to the hub's SYNC_TOKEN value.
+  RESTORE_DB_URL = 'https://vroomtv.fly.dev/download/viperball'
+
 [http_service]
   internal_port = 8080
   force_https = true
