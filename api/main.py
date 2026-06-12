@@ -123,6 +123,12 @@ def export_db(request: Request):
     src_path = str(_vdb.get_db_path())
     if not os.path.exists(src_path):
         raise HTTPException(status_code=404)
+    # Drop box_score rows for sessions that no longer live in memory so
+    # the hub never sees ghost college leagues from abandoned runs.
+    try:
+        _vdb.prune_orphan_box_scores(sessions.keys())
+    except Exception:
+        logger.debug("box_score prune skipped", exc_info=True)
     # Never export an empty store: after a deploy wipes the (volume-less)
     # disk, a fresh DB must not overwrite the hub's last good snapshot —
     # that snapshot is what restores us.
@@ -1021,6 +1027,13 @@ def create_session():
         "created_at": now,
         "last_accessed": now,
     }
+    # Sweep box_scores from any prior session that didn't go through the
+    # explicit delete/evict paths (e.g. a process restart).
+    try:
+        from engine.db import prune_orphan_box_scores
+        prune_orphan_box_scores(sessions.keys())
+    except Exception:
+        logger.debug("box_score prune skipped", exc_info=True)
     return {"session_id": session_id, "created_at": now}
 
 
