@@ -14,7 +14,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from dataclasses import asdict
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -47,6 +47,40 @@ from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS
 
 
 app = FastAPI(title="Viperball Simulation API", version="1.0.0")
+
+
+@app.get("/export/db")
+def export_db(request: Request):
+    """Stream a consistent snapshot of the saves DB.
+
+    Token-protected feed for the cross-sport hub (quarterback/vroomtv).
+    Responds 404 unless EXPORT_TOKEN is configured and matched, so the
+    route is invisible on instances that haven't opted in.
+    """
+    import sqlite3
+    import tempfile
+    from engine import db as _vdb
+    from starlette.background import BackgroundTask
+    from starlette.responses import FileResponse
+
+    token = os.environ.get("EXPORT_TOKEN")
+    supplied = request.headers.get("authorization", "").removeprefix("Bearer ").strip() \
+        or request.query_params.get("token", "")
+    if not token or supplied != token:
+        raise HTTPException(status_code=404)
+    src_path = str(_vdb.get_db_path())
+    if not os.path.exists(src_path):
+        raise HTTPException(status_code=404)
+    fd, snap_path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    src = sqlite3.connect(f"file:{src_path}?mode=ro", uri=True)
+    dst = sqlite3.connect(snap_path)
+    src.backup(dst)  # consistent even mid-write (WAL-safe)
+    dst.close()
+    src.close()
+    return FileResponse(snap_path, media_type="application/x-sqlite3",
+                        filename="viperball.db",
+                        background=BackgroundTask(os.unlink, snap_path))
 
 
 from starlette.responses import RedirectResponse as StarletteRedirect
