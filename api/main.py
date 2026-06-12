@@ -125,6 +125,19 @@ def export_db(request: Request):
         raise HTTPException(status_code=404)
     if n == 0:
         raise HTTPException(status_code=404)
+    # Cheap change detection so the hub can skip unchanged downloads
+    # (DB + WAL sidecar; writes land in the WAL first).
+    from starlette.responses import Response as StarletteResponse
+    parts = []
+    for p in (src_path, src_path + "-wal"):
+        try:
+            st = os.stat(p)
+            parts.append(f"{st.st_mtime_ns}-{st.st_size}")
+        except OSError:
+            parts.append("0")
+    etag = '"' + ".".join(parts) + '"'
+    if request.headers.get("if-none-match") == etag:
+        return StarletteResponse(status_code=304)
     fd, snap_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     src = sqlite3.connect(f"file:{src_path}?mode=ro", uri=True)
@@ -133,7 +146,7 @@ def export_db(request: Request):
     dst.close()
     src.close()
     return FileResponse(snap_path, media_type="application/x-sqlite3",
-                        filename="viperball.db",
+                        filename="viperball.db", headers={"ETag": etag},
                         background=BackgroundTask(os.unlink, snap_path))
 
 
