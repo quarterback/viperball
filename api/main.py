@@ -64,7 +64,9 @@ def _restore_db_from_hub():
     from engine import db as _vdb
 
     url = os.environ.get("RESTORE_DB_URL")
-    token = os.environ.get("RESTORE_TOKEN")
+    # EXPORT_TOKEN is the secret already shared with the hub (it equals the
+    # hub's VIPERBALL_SYNC_TOKEN), so no extra secret is needed.
+    token = os.environ.get("RESTORE_TOKEN") or os.environ.get("EXPORT_TOKEN")
     path = _vdb.get_db_path()
     if not url or not token or path.exists():
         return
