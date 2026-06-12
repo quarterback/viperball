@@ -651,6 +651,47 @@ def _game_benchmarks_from_season(season):
 
 # ── HOME ─────────────────────────────────────────────────────────────────
 
+@router.get("/export/sessions.json")
+def export_sessions():
+    """Active session ids (college + pro). For the vroomtv hub: gives it
+    handles to ask /export/<sid>/standings.json against."""
+    api = _get_api()
+    return {
+        "college": [{"session_id": sid, "name": getattr(s.get("season"), "name", "Season")}
+                    for sid, s in api["sessions"].items() if s.get("season") is not None],
+        "pro": [{"key": k} for k in api["pro_sessions"]],
+    }
+
+
+@router.get("/export/college/{session_id}/standings.json")
+def export_college_standings(session_id: str):
+    """Computed KenPom-style standings — adjusted offensive/defensive
+    efficiency, tempo, luck. Pre-rolled the same way kenpom.html renders;
+    avoids re-deriving them in the hub."""
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    if not sess:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+    season = api["require_season"](sess)
+    rows = api["serialize_standings"](season)
+    out = []
+    for s in rows:
+        kp = s.get("kenpom", {})
+        out.append({
+            "team": s.get("team") or s.get("team_name"),
+            "conference": s.get("conference", ""),
+            "wins": s.get("wins", 0), "losses": s.get("losses", 0),
+            "raw_o": kp.get("raw_o"), "raw_d": kp.get("raw_d"),
+            "adj_o": kp.get("adj_o"), "adj_d": kp.get("adj_d"),
+            "tempo": kp.get("tempo"), "luck": kp.get("luck"),
+            "em": kp.get("em"),  # efficiency margin
+        })
+    return {"session_id": session_id,
+            "season": getattr(season, "name", "Season"),
+            "standings": out}
+
+
 @router.get("/", response_class=HTMLResponse)
 def stats_home(request: Request):
     college = _find_all_sessions()
