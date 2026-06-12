@@ -11,18 +11,6 @@ primary_region = 'ams'
 [deploy]
   strategy = "rolling"
 
-[env]
-  # Keep the saves DB on the persistent volume — without this, every
-  # deploy wipes all saved leagues and box scores with the rootfs.
-  VIPERBALL_DB_PATH = '/data/viperball.db'
-
-# If a deploy complains this volume doesn't exist, create it first in the
-# Fly dashboard (Volumes → Create): name viperball_data, region ams.
-[[mounts]]
-  source = 'viperball_data'
-  destination = '/data'
-  initial_size = '3gb'
-
 [http_service]
   internal_port = 8080
   force_https = true
