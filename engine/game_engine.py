@@ -5732,6 +5732,11 @@ class ViperballEngine:
             "delta_cost": drive_delta_cost,
             "bonus_drive": is_bonus_drive,
             "timeouts": drive_timeouts,
+            # Running scoreboard so consumers (Rocky Mountain News score
+            # worm chart, win-probability plots) don't have to recompute
+            # the score from drive results.
+            "home_score_after": self.state.home_score,
+            "away_score_after": self.state.away_score,
         })
 
         # Track consecutive opponent scoring drives for momentum timeout logic
