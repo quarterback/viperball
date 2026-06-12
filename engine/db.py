@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -30,10 +31,14 @@ from typing import Any, Optional
 
 _log = logging.getLogger("viperball.db")
 
-# Default database location — alongside the data/ directory
+# Default database location — alongside the data/ directory. In production
+# VIPERBALL_DB_PATH points at the Fly volume (/data/viperball.db) so saves
+# survive deploys; without it the machine's ephemeral disk wipes the DB on
+# every release.
 _DEFAULT_DB_PATH = Path(__file__).parent.parent / "data" / "viperball.db"
 
-_db_path: Path = _DEFAULT_DB_PATH
+_db_path: Path = Path(os.environ["VIPERBALL_DB_PATH"]) \
+    if os.environ.get("VIPERBALL_DB_PATH") else _DEFAULT_DB_PATH
 
 
 def set_db_path(path: str | Path):
