@@ -1470,6 +1470,37 @@ def delete_box_scores_for_session(session_id: str, user_id: str = "default"):
         conn.close()
 
 
+def prune_orphan_box_scores(active_session_ids, user_id: str = "default") -> int:
+    """Delete box_score rows whose session_id isn't in active_session_ids.
+
+    Box scores survive in the DB until their session is explicitly deleted
+    or evicted, so abandoned sessions accumulate stale rows that downstream
+    consumers (the vroomtv hub) surface as ghost college leagues. Run after
+    create_session and before /export/db to keep the snapshot honest.
+    """
+    active = set(active_session_ids)
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT save_key FROM saves WHERE user_id=? AND save_type=?",
+            (user_id, _BOX_SCORE_TYPE),
+        ).fetchall()
+        stale = []
+        for (key,) in rows:
+            sid = key.split("__w", 1)[0]
+            if sid not in active:
+                stale.append(key)
+        if stale:
+            conn.executemany(
+                "DELETE FROM saves WHERE user_id=? AND save_type=? AND save_key=?",
+                [(user_id, _BOX_SCORE_TYPE, k) for k in stale],
+            )
+            conn.commit()
+        return len(stale)
+    finally:
+        conn.close()
+
+
 def save_box_scores_bulk(
     session_id: str,
     games: list,
