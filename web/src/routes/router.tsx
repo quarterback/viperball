@@ -10,6 +10,7 @@ import { PlayerPage } from "../pages/league/PlayerPage";
 import { Compare } from "../pages/Compare";
 import { ProIndex } from "../pages/pro/ProIndex";
 import { ProHub } from "../pages/pro/ProHub";
+import { International } from "../pages/International";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -46,21 +47,7 @@ export const router = createBrowserRouter(
         },
         { path: "pro", element: <ProIndex /> },
         { path: "pro/:league/:sessionId", element: <ProHub /> },
-        {
-          path: "international",
-          element: (
-            <Placeholder
-              title="International (FIV)"
-              phase="Phase 4"
-              blurb="Confederations, World Cup, world rankings."
-              endpoints={[
-                "GET /api/fiv/rankings",
-                "GET /api/fiv/worldcup/groups",
-                "GET /api/fiv/worldcup/bracket",
-              ]}
-            />
-          ),
-        },
+        { path: "international", element: <International /> },
         {
           path: "export",
           element: (
