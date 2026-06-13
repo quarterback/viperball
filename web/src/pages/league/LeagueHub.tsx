@@ -8,7 +8,6 @@ import {
   InjuriesTab,
   AwardsTab,
   DtwTab,
-  RefereesTab,
 } from "./HubDepthTabs";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
@@ -407,7 +406,6 @@ export function LeagueHub() {
           <Tabs.Tab value="injuries">Injuries</Tabs.Tab>
           <Tabs.Tab value="awards">Awards</Tabs.Tab>
           <Tabs.Tab value="dtw">Luck (DTW)</Tabs.Tab>
-          <Tabs.Tab value="referees">Referees</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="standings" pt="md">
           <MantineReactTable table={standingsTable} />
@@ -435,9 +433,6 @@ export function LeagueHub() {
         </Tabs.Panel>
         <Tabs.Panel value="dtw" pt="md">
           <DtwTab sid={sessionId} />
-        </Tabs.Panel>
-        <Tabs.Panel value="referees" pt="md">
-          <RefereesTab sid={sessionId} />
         </Tabs.Panel>
       </Tabs>
     </Stack>

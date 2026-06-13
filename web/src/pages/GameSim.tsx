@@ -41,7 +41,10 @@ export function GameSim() {
   const [seed, setSeed] = useState(0);
   const [result, setResult] = useState<GameSimResult | null>(null);
 
-  const teamOpts = (teams.data ?? []).map((t) => ({ value: t.name, label: t.name }));
+  // value = file key (what /simulate's _load_team resolves); label = display name.
+  // Sending the name breaks for teams whose name doesn't derive their key
+  // (e.g. "Texas A&M" → texas_am, "California" → cal) → 500.
+  const teamOpts = (teams.data ?? []).map((t) => ({ value: t.key, label: t.name }));
 
   const sim = useMutation({
     mutationFn: () =>
