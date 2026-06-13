@@ -1,112 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Schedule — {{ tier_name }} — WVL — Viperball Stats{% endblock %}
-
-{% block breadcrumb %}
-<div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span><a href="/stats/wvl/{{ session_id }}/">{{ dynasty_name }} ({{ year }})</a><span class="sep">/</span>Schedule
-</div></div>
-{% endblock %}
+{% block title %}WVL {{ status.year }} — Schedule — Viperball Stats{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ tier_name }} &mdash; SCHEDULE</h1>
-  <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
-</div>
+{% set active = 'schedule' %}
+{% include "wvl/_header.html" with context %}
 
-<div class="tabs">
-  <a href="/stats/wvl/{{ session_id }}/">Standings</a>
-  <a href="/stats/wvl/{{ session_id }}/schedule" class="active">Schedule</a>
-  <a href="/stats/wvl/{{ session_id }}/playoffs">Playoffs</a>
-  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
-  <a href="/stats/wvl/{{ session_id }}/team-stats?tier={{ selected_tier }}">Team Stats</a>
-  <a href="/stats/wvl/{{ session_id }}/economy">Economy</a>
-  <a href="/stats/wvl/{{ session_id }}/coaching">Coaching</a>
-  <a href="/stats/wvl/{{ session_id }}/data">Data</a>
-</div>
-
-{# Tier selector #}
-<div style="margin-bottom:12px;font-size:11px;">
-  <strong>Tier:</strong>
-  {% for t in tier_list %}
-  {% if t == selected_tier %}
-  <span style="color:var(--accent);font-weight:bold">{{ tier_label(t) }}</span>
-  {% else %}
-  <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ t }}">{{ tier_label(t) }}</a>
-  {% endif %}
-  {% if not loop.last %} &middot; {% endif %}
+{% for wk in weeks %}
+<h2>Week {{ wk.week }} {% if wk.played %}<span class="tag tag-playoff">final</span>{% else %}<span class="tag">upcoming</span>{% endif %}</h2>
+<table>
+  <thead>
+    <tr><th>Away</th><th class="num">Score</th><th>Home</th><th class="num">Score</th></tr>
+  </thead>
+  <tbody>
+  {% for g in wk.games %}
+  <tr>
+    <td><a href="/stats/wvl/{{ league_id }}/team/{{ g.away_key }}">{{ g.away_name }}</a></td>
+    <td class="num {% if g.away_score is defined and g.home_score is defined and g.away_score > g.home_score %}score-win{% else %}score-loss{% endif %}">{{ g.away_score if g.away_score is defined else '—' }}</td>
+    <td><a href="/stats/wvl/{{ league_id }}/team/{{ g.home_key }}">{{ g.home_name }}</a></td>
+    <td class="num {% if g.away_score is defined and g.home_score is defined and g.home_score > g.away_score %}score-win{% else %}score-loss{% endif %}">{{ g.home_score if g.home_score is defined else '—' }}</td>
+  </tr>
   {% endfor %}
-</div>
-
-{% if schedule %}
-{% set weeks = schedule.get('weeks', schedule.get('schedule', [])) %}
-
-{# Handle dict format: {week_num: [games]} #}
-{% if weeks is mapping %}
-  {% for wk, games in weeks.items()|sort %}
-  <h2>Week {{ wk }}</h2>
-  <table>
-    <thead><tr><th>Away</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Home</th><th>Box</th></tr></thead>
-    <tbody>
-    {% for g in games %}
-    <tr>
-      <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('away_key', '') }}">{{ g.get('away_name', g.get('away_team', g.get('away', '?'))) }}</a></td>
-      {% set as_ = g.get('away_score', 0) %}{% set hs_ = g.get('home_score', 0) %}
-      <td class="num {% if as_ > hs_ %}score-win{% elif as_ < hs_ %}score-loss{% else %}score-tie{% endif %}">
-        {% if g.get('completed', g.get('away_score') is not none) %}{{ as_ }}{% else %}&mdash;{% endif %}
-      </td>
-      <td style="color:var(--fg-dim)">@</td>
-      <td class="num {% if hs_ > as_ %}score-win{% elif hs_ < as_ %}score-loss{% else %}score-tie{% endif %}">
-        {% if g.get('completed', g.get('home_score') is not none) %}{{ hs_ }}{% else %}&mdash;{% endif %}
-      </td>
-      <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('home_key', '') }}">{{ g.get('home_name', g.get('home_team', g.get('home', '?'))) }}</a></td>
-      <td>
-        {% if g.get('matchup_key') or g.get('matchup') %}
-        <a href="/stats/wvl/{{ session_id }}/game/{{ selected_tier }}/{{ wk }}/{{ g.get('matchup_key', g.get('matchup', '')) }}">Box</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endfor %}
-
-{# Handle list-of-week-objects format: [{"week": N, "games": [...]}] #}
-{% elif weeks is iterable and weeks is not string %}
-  {% for week_obj in weeks %}
-  {% set wk = week_obj.get('week', loop.index) if week_obj is mapping else loop.index %}
-  {% set games = week_obj.get('games', []) if week_obj is mapping else [] %}
-  {% if games %}
-  <h2>Week {{ wk }}</h2>
-  <table>
-    <thead><tr><th>Away</th><th class="num">Score</th><th></th><th class="num">Score</th><th>Home</th><th>Box</th></tr></thead>
-    <tbody>
-    {% for g in games %}
-    <tr>
-      <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('away_key', '') }}">{{ g.get('away_name', g.get('away_team', g.get('away', '?'))) }}</a></td>
-      {% set as_ = g.get('away_score', 0) %}{% set hs_ = g.get('home_score', 0) %}
-      <td class="num {% if as_ > hs_ %}score-win{% elif as_ < hs_ %}score-loss{% else %}score-tie{% endif %}">
-        {% if g.get('completed') %}{{ as_ }}{% else %}&mdash;{% endif %}
-      </td>
-      <td style="color:var(--fg-dim)">@</td>
-      <td class="num {% if hs_ > as_ %}score-win{% elif hs_ < as_ %}score-loss{% else %}score-tie{% endif %}">
-        {% if g.get('completed') %}{{ hs_ }}{% else %}&mdash;{% endif %}
-      </td>
-      <td><a href="/stats/wvl/{{ session_id }}/team/{{ g.get('home_key', '') }}">{{ g.get('home_name', g.get('home_team', g.get('home', '?'))) }}</a></td>
-      <td>
-        {% if g.get('matchup_key') or g.get('matchup') %}
-        <a href="/stats/wvl/{{ session_id }}/game/{{ selected_tier }}/{{ wk }}/{{ g.get('matchup_key', g.get('matchup', '')) }}">Box</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-  {% endfor %}
-{% else %}
-  <pre style="color:var(--fg-dim);font-size:11px;">{{ schedule | tojson(indent=2) }}</pre>
-{% endif %}
-{% else %}
-<div class="empty">No schedule data available.</div>
-{% endif %}
+  </tbody>
+</table>
+{% endfor %}
+{% if not weeks %}<div class="empty">No schedule generated.</div>{% endif %}
 {% endblock %}

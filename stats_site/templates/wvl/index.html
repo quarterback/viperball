@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}WVL — Women's Viperball League — Viperball Stats{% endblock %}
+{% block title %}WVL — Career League — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
 <div class="breadcrumb"><div class="container wide">
@@ -9,32 +9,44 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>WOMEN'S VIPERBALL LEAGUE</h1>
-  <div class="subtitle">Galactic Premiership &mdash; 64 teams, 4 tiers, promotion/relegation</div>
+  <h1>WVL — CAREER LEAGUE</h1>
+  <div class="subtitle">Galactic Premiership &mdash; where CVL graduates continue their careers</div>
 </div>
 
-{% if sessions %}
+{% if leagues %}
 <table>
   <thead>
-    <tr><th>Dynasty</th><th class="num">Year</th><th class="num">Tiers</th><th>Links</th></tr>
+    <tr>
+      <th>League</th>
+      <th class="num">Year</th>
+      <th class="num">Clubs</th>
+      <th class="num">Careers</th>
+      <th class="num">Seasons</th>
+      <th>Champion</th>
+      <th>Links</th>
+    </tr>
   </thead>
   <tbody>
-  {% for s in sessions %}
+  {% for s in leagues %}
+  {% set st = s.status %}
   <tr>
-    <td><a href="/stats/wvl/{{ s.session_id }}/">{{ s.dynasty_name }}</a></td>
-    <td class="num">{{ s.year }}</td>
-    <td class="num">{{ s.tier_count }}</td>
+    <td><a href="/stats/wvl/{{ s.league_id }}/">Galactic Premiership</a></td>
+    <td class="num">{{ st.year }}</td>
+    <td class="num">{{ st.clubs }}</td>
+    <td class="num">{{ st.tracked_players }}</td>
+    <td class="num">{{ st.seasons_completed }}</td>
+    <td>{% if st.champion %}<span class="stat-elite">{{ st.champion }}</span>{% else %}<span class="fg-dim">&mdash;</span>{% endif %}</td>
     <td>
-      <a href="/stats/wvl/{{ s.session_id }}/">Standings</a> &middot;
-      <a href="/stats/wvl/{{ s.session_id }}/schedule">Schedule</a> &middot;
-      <a href="/stats/wvl/{{ s.session_id }}/stats">Players</a> &middot;
-      <a href="/stats/wvl/{{ s.session_id }}/team-stats">Team Stats</a>
+      <a href="/stats/wvl/{{ s.league_id }}/">Standings</a> &middot;
+      <a href="/stats/wvl/{{ s.league_id }}/players">Careers</a> &middot;
+      <a href="/stats/wvl/{{ s.league_id }}/schedule">Schedule</a> &middot;
+      <a href="/stats/wvl/{{ s.league_id }}/history">History</a>
     </td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<div class="empty">No active WVL seasons. Start one from Owner Mode in the main app.</div>
+<div class="empty">No WVL career leagues yet. Create one in the app under WVL, then graduate a CVL class to fill it with real players.</div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,23 @@
+{# Shared WVL career-league header + tab nav. Expects: league_id, status (st), active #}
+{% set st = status %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>
+  <a href="/stats/wvl/">WVL</a><span class="sep">/</span>{{ st.year }}
+</div></div>
+
+<div class="page-header">
+  <h1>GALACTIC PREMIERSHIP &middot; {{ st.year }}</h1>
+  <div class="subtitle">
+    {% if st.phase == 'complete' %}Season complete{% else %}Week {{ st.current_week }}/{{ st.total_weeks }}{% endif %}
+    &middot; {{ st.tracked_players }} careers tracked &middot; {{ st.active_players }} active
+    &middot; {{ st.seasons_completed }} seasons done
+    {% if st.champion %}&middot; <span class="stat-elite">&#127942; {{ st.champion }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="/stats/wvl/{{ league_id }}/" {% if active == 'standings' %}class="active"{% endif %}>Standings</a>
+  <a href="/stats/wvl/{{ league_id }}/players" {% if active == 'players' %}class="active"{% endif %}>Careers</a>
+  <a href="/stats/wvl/{{ league_id }}/schedule" {% if active == 'schedule' %}class="active"{% endif %}>Schedule</a>
+  <a href="/stats/wvl/{{ league_id }}/history" {% if active == 'history' %}class="active"{% endif %}>History</a>
+</div>
