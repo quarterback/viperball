@@ -1,10 +1,6 @@
 import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import {
-  MantineReactTable,
-  useMantineReactTable,
-  type MRT_ColumnDef,
-} from "mantine-react-table";
+import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
   Stack,
   Group,
@@ -33,6 +29,7 @@ import {
   type PollEntry,
   type PlayerStat,
 } from "../../api/season";
+import { useDataGrid } from "../../components/DataGrid";
 
 function teamLink(sid: string, team: string) {
   return `/league/${sid}/team/${encodeURIComponent(team)}`;
@@ -270,16 +267,20 @@ export function LeagueHub() {
     [sessionId],
   );
 
-  const standingsTable = useGrid(standingsCols, standings.data ?? [], standings.isLoading, {
+  const standingsTable = useDataGrid(standingsCols, standings.data ?? [], {
+    isLoading: standings.isLoading,
     sorting: [{ id: "record", desc: true }],
   });
-  const scheduleTable = useGrid(scheduleCols, schedule.data ?? [], schedule.isLoading, {
+  const scheduleTable = useDataGrid(scheduleCols, schedule.data ?? [], {
+    isLoading: schedule.isLoading,
     sorting: [{ id: "week", desc: false }],
   });
-  const pollTable = useGrid(pollCols, polls.data ?? [], polls.isLoading, {
+  const pollTable = useDataGrid(pollCols, polls.data ?? [], {
+    isLoading: polls.isLoading,
     sorting: [{ id: "rank", desc: false }],
   });
-  const leaderTable = useGrid(leaderCols, leaders.data ?? [], leaders.isLoading, {
+  const leaderTable = useDataGrid(leaderCols, leaders.data ?? [], {
+    isLoading: leaders.isLoading,
     sorting: [{ id: "yards", desc: true }],
   });
 
@@ -374,28 +375,4 @@ export function LeagueHub() {
       </Tabs>
     </Stack>
   );
-}
-
-// Shared dense-grid config so every tab looks and behaves the same.
-function useGrid<T extends Record<string, any>>(
-  columns: MRT_ColumnDef<T>[],
-  data: T[],
-  isLoading: boolean,
-  initial?: { sorting?: { id: string; desc: boolean }[] },
-) {
-  return useMantineReactTable({
-    columns,
-    data,
-    state: { isLoading },
-    enableFacetedValues: true,
-    enablePagination: data.length > 50,
-    initialState: {
-      density: "xs",
-      pagination: { pageSize: 50, pageIndex: 0 },
-      showGlobalFilter: true,
-      ...(initial?.sorting ? { sorting: initial.sorting } : {}),
-    },
-    mantineTableProps: { striped: true, highlightOnHover: true },
-    mantineTableContainerProps: { style: { maxHeight: "65vh" } },
-  });
 }
