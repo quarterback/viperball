@@ -145,7 +145,7 @@ export function LeagueHub() {
 
   const scheduleCols = useMemo<MRT_ColumnDef<Game>[]>(
     () => [
-      { accessorKey: "week", header: "Wk", size: 60, filterVariant: "select" },
+      { accessorKey: "week", header: "Wk", size: 60 },
       {
         header: "Matchup",
         id: "matchup",

@@ -79,7 +79,7 @@ export function International() {
 
   const groupCols = useMemo<MRT_ColumnDef<FivGroupStanding>[]>(
     () => [
-      { accessorKey: "group", header: "Group", size: 90, filterVariant: "select" },
+      { accessorKey: "group", header: "Group", size: 90 },
       { accessorKey: "team", header: "Nation" },
       {
         header: "W-D-L",

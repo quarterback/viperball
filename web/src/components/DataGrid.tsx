@@ -24,7 +24,6 @@ export function useDataGrid<T extends Record<string, any>>(
     columns,
     data,
     state: { isLoading },
-    enableFacetedValues: true,
     enablePagination: data.length > paginateOver,
     initialState: {
       density: "xs",

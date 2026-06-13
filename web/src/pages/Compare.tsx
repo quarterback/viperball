@@ -119,7 +119,6 @@ export function Compare() {
   const table = useMantineReactTable({
     columns,
     data: rows,
-    enableFacetedValues: true,
     initialState: {
       density: "xs",
       sorting: [{ id: "spread", desc: true }],

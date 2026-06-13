@@ -88,10 +88,6 @@ export function SavesLibrary() {
             </Badge>
           );
         },
-        filterVariant: "select",
-        mantineFilterSelectProps: {
-          data: Object.keys(MODE_COLOR),
-        },
       },
       { accessorKey: "teams", header: "Teams" },
       { accessorKey: "progress", header: "Progress", size: 150 },
@@ -140,7 +136,6 @@ export function SavesLibrary() {
     state: { isLoading },
     enableRowActions: true,
     positionActionsColumn: "last",
-    enableFacetedValues: true,
     initialState: {
       density: "xs",
       sorting: [{ id: "lastSimmedAt", desc: true }],

@@ -56,7 +56,7 @@ export function MyTeam() {
   const rosterCols = useMemo<MRT_ColumnDef<MyTeamPlayer>[]>(
     () => [
       { accessorKey: "name", header: "Player" },
-      { accessorKey: "position", header: "Pos", size: 70, filterVariant: "select" },
+      { accessorKey: "position", header: "Pos", size: 70 },
       { accessorKey: "year", header: "Yr", size: 90 },
       {
         accessorKey: "overall",
@@ -97,7 +97,7 @@ export function MyTeam() {
   const portalCols = useMemo<MRT_ColumnDef<PortalEntry>[]>(
     () => [
       { accessorKey: "name", header: "Player" },
-      { accessorKey: "position", header: "Pos", size: 70, filterVariant: "select" },
+      { accessorKey: "position", header: "Pos", size: 70 },
       { accessorKey: "year", header: "Yr", size: 90 },
       {
         accessorKey: "overall",
