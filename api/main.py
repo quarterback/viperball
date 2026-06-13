@@ -232,9 +232,9 @@ if os.path.isdir(_SPA_DIR):
     def _app_redirect():
         return RedirectResponse("/app/", status_code=301)
     app.mount("/app", _SPAStaticFiles(directory=_SPA_DIR, html=True), name="spa")
-    logger.info("React SPA mounted at /app")
+    logging.getLogger("viperball.api").info("React SPA mounted at /app")
 else:
-    logger.info("React SPA not built (web/dist missing) — /app disabled")
+    logging.getLogger("viperball.api").info("React SPA not built (web/dist missing) — /app disabled")
 
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
