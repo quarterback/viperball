@@ -7,6 +7,7 @@ import { NewSeason } from "../pages/league/NewSeason";
 import { LeagueHub } from "../pages/league/LeagueHub";
 import { TeamPage } from "../pages/league/TeamPage";
 import { PlayerPage } from "../pages/league/PlayerPage";
+import { Compare } from "../pages/Compare";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -25,22 +26,7 @@ export const router = createBrowserRouter(
           path: "league/:sessionId/team/:teamName/player/:playerName",
           element: <PlayerPage />,
         },
-        {
-          path: "compare",
-          element: (
-            <Placeholder
-              title="Compare Runs"
-              phase="Phase 3"
-              blurb="Side-by-side diff of two or more saves — the experiment payoff. Compare final standings, champions, stat leaders, and DTW/luck across runs."
-              endpoints={[
-                "GET /api/saves",
-                "GET /sessions/{id}/season/standings",
-                "GET /sessions/{id}/season/awards",
-                "GET /sessions/{id}/season/dtw",
-              ]}
-            />
-          ),
-        },
+        { path: "compare", element: <Compare /> },
         {
           path: "team",
           element: (
