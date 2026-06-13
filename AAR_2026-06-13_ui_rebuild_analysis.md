@@ -20,7 +20,13 @@ any styling.
 Deliverables produced and committed to `claude/cool-galileo-d3yyng`:
 1. `UI_REBUILD_PLAN.md` — full migration plan (saves-library-first).
 2. `web/` — React + Mantine SPA scaffold (shell + Saves Library), builds clean.
-3. This AAR.
+3. **Phase 0 backend, wired & deployable** — unified `/api/saves`, SPA served at
+   `/app`, DB moved to a Fly volume, multi-stage Docker build.
+4. This AAR.
+
+The owner directed "everything has to be wired and deployable, I don't do this stuff
+locally" and "rebuild without tiptoeing" — so Phase 0 was implemented immediately rather
+than left as a plan, and the SPA is now served by the same Fly app.
 
 ---
 
@@ -94,6 +100,34 @@ comparative sims, this is the core pain, more than aesthetics.
   (816 kB JS / 35 kB-gz CSS; chunk-splitting is a later optimization, not a blocker).
 
 ---
+
+### What Was Built (Phase 0 backend — wired & deployable)
+
+Discovery that made this fast: **`engine/db.py` already persists every mode** in a single
+`saves` table keyed by `(save_type, save_key)`, with `list_saves`/`save_blob`/`delete_blob`
+helpers. The "three fragmented systems" could therefore be unified behind one read surface
+with **no schema migration**.
+
+- **`api/saves_api.py`** (new) — `GET /api/saves` aggregates `college`/`dynasty`/`pro_league`/
+  `wvl_season`/`wvl_commissioner`/`season_archive` rows into one normalized `SaveSummary[]`;
+  plus `PATCH` (rename + tags/notes via a `save_meta` sidecar blob), `POST /{id}/fork`,
+  `DELETE /{id}`. Stable id = `"<save_type>::<save_key>"` (matched with a `:path` param).
+- **`engine/db.py`** — `VIPERBALL_DB_PATH` env points the DB at the volume; new
+  `update_save_label` and `fork_save` (pure row-copy; clones a college save's box scores under
+  the new session id so a fork keeps its played games).
+- **`api/main.py`** — includes the saves router; mounts the built SPA at `/app` via an
+  `_SPAStaticFiles` subclass that falls back to `index.html` on 404 so client-side routes work.
+  Mount is added before NiceGUI's root catch-all, so `/app` and `/api/saves` win.
+- **`Dockerfile`** — stage 1 `node:20-slim` runs `npm ci && npm run build`; stage 2 copies
+  `web/dist` into the Python image after `COPY . .`.
+- **`fly.toml`** — `[mounts]` volume `viperball_data` → `/data`; `VIPERBALL_DB_PATH=/data/...`.
+  First boot still seeds the DB once from the hub snapshot (the restore is gated on
+  `path.exists()`), then the volume persists.
+
+**Verification (local sandbox):** frontend `npm ci` + `npm run build` ✓; `engine.db` fork/
+rename/delete exercised ✓; full `GET/PATCH/POST-fork/DELETE` cycle green under a real FastAPI
+`TestClient` ✓. Docker/Fly build runs in Fly's remote builder at deploy (Docker not in sandbox;
+the `npm ci` + `vite build` steps it depends on were validated locally).
 
 ### Migration Plan (recorded in `UI_REBUILD_PLAN.md`)
 
