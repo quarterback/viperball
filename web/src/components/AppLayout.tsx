@@ -9,6 +9,7 @@ import {
   IconSearch,
   IconChartBar,
   IconCrown,
+  IconDice5,
 } from "@tabler/icons-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { spotlight } from "@mantine/spotlight";
@@ -16,6 +17,7 @@ import { CommandPalette } from "./CommandPalette";
 
 const NAV = [
   { to: "/", label: "Saves", icon: IconLayoutGrid, end: true },
+  { to: "/game", label: "Game Sim", icon: IconDice5 },
   { to: "/league", label: "League Hub", icon: IconTrophy },
   { to: "/dynasty", label: "Dynasty", icon: IconCrown },
   { to: "/compare", label: "Compare Runs", icon: IconChartBar },
