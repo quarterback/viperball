@@ -930,8 +930,11 @@ def bowl_tiers():
 
 @app.post("/simulate")
 async def simulate(req: SimulateRequest):
-    home_team = _load_team(req.home)
-    away_team = _load_team(req.away)
+    try:
+        home_team = _load_team(req.home)
+        away_team = _load_team(req.away)
+    except (FileNotFoundError, OSError):
+        raise HTTPException(status_code=400, detail=f"Unknown team: {req.home!r} or {req.away!r}")
     engine = ViperballEngine(home_team, away_team, seed=req.seed, style_overrides=req.styles, weather=req.weather)
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(_sim_executor, engine.simulate_game)
