@@ -8,6 +8,8 @@ import { LeagueHub } from "../pages/league/LeagueHub";
 import { TeamPage } from "../pages/league/TeamPage";
 import { PlayerPage } from "../pages/league/PlayerPage";
 import { Compare } from "../pages/Compare";
+import { ProIndex } from "../pages/pro/ProIndex";
+import { ProHub } from "../pages/pro/ProHub";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -42,21 +44,8 @@ export const router = createBrowserRouter(
             />
           ),
         },
-        {
-          path: "pro",
-          element: (
-            <Placeholder
-              title="Pro Leagues"
-              phase="Phase 4"
-              blurb="Pro season standings, schedule, playoffs, stat leaders."
-              endpoints={[
-                "GET /api/pro/{league}/{id}/standings",
-                "GET /api/pro/{league}/{id}/schedule",
-                "POST /api/pro/{league}/{id}/sim-week",
-              ]}
-            />
-          ),
-        },
+        { path: "pro", element: <ProIndex /> },
+        { path: "pro/:league/:sessionId", element: <ProHub /> },
         {
           path: "international",
           element: (
