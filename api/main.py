@@ -206,6 +206,7 @@ _stats_app.include_router(stats_router)
 
 # Serve generated pixel-art face images at /stats/static/faces/<player_id>.png
 from starlette.staticfiles import StaticFiles as _StaticFiles
+from starlette.exceptions import HTTPException as _StarletteHTTPException
 _STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "stats_site", "static")
 os.makedirs(os.path.join(_STATIC_DIR, "faces"), exist_ok=True)
 _stats_app.mount("/static", _StaticFiles(directory=_STATIC_DIR), name="stats-static")
@@ -221,7 +222,16 @@ app.include_router(_saves_router)
 # mount falls back to index.html so client-side routes (/app/league, …) work.
 class _SPAStaticFiles(_StaticFiles):
     async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
+        # Starlette's StaticFiles RAISES HTTPException(404) for missing paths
+        # (it does not return a 404 response), so deep links / hard refreshes on
+        # client-side routes (/app/dq, /app/league, …) must catch the exception
+        # and fall back to index.html — checking response.status_code misses it.
+        try:
+            response = await super().get_response(path, scope)
+        except _StarletteHTTPException as exc:
+            if exc.status_code == 404:
+                return await super().get_response("index.html", scope)
+            raise
         if response.status_code == 404:
             return await super().get_response("index.html", scope)
         return response
