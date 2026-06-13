@@ -22,6 +22,7 @@ import {
   type FivRanking,
   type FivGroupStanding,
 } from "../api/fiv";
+import { ConfederationsTab, WCStatsTab } from "./FivDepth";
 
 export function International() {
   const qc = useQueryClient();
@@ -204,11 +205,19 @@ export function International() {
       <Tabs defaultValue="rankings" keepMounted={false}>
         <Tabs.List>
           <Tabs.Tab value="rankings">World Rankings</Tabs.Tab>
+          <Tabs.Tab value="confederations">Confederations</Tabs.Tab>
           <Tabs.Tab value="groups">World Cup Groups</Tabs.Tab>
           <Tabs.Tab value="bracket">Knockout</Tabs.Tab>
+          <Tabs.Tab value="wcstats">WC Awards</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="rankings" pt="md">
           <MantineReactTable table={rankTable} />
+        </Tabs.Panel>
+        <Tabs.Panel value="confederations" pt="md">
+          <ConfederationsTab />
+        </Tabs.Panel>
+        <Tabs.Panel value="wcstats" pt="md">
+          <WCStatsTab />
         </Tabs.Panel>
         <Tabs.Panel value="groups" pt="md">
           {groups.data && groups.data.length > 0 ? (

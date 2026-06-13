@@ -48,7 +48,40 @@ export interface FivCycleSummary {
   world_cup?: { phase?: string; champion?: string | null };
 }
 
+export const CONFEDERATIONS = [
+  { id: "cav", name: "Américaine (CAV)" },
+  { id: "ifav", name: "African & Middle East (IFAV)" },
+  { id: "evv", name: "European (EVV)" },
+  { id: "aav", name: "Asian (AAV)" },
+  { id: "cmv", name: "Maritime (CMV)" },
+];
+
+export interface StatLeader {
+  name?: string;
+  player?: string;
+  team?: string;
+  code?: string;
+  value?: number;
+  goals?: number;
+  tds?: number;
+  [k: string]: unknown;
+}
+
 export const fivApi = {
+  confStandings: (conf: string) =>
+    apiGet<{ standings?: FivGroupStanding[]; group_name?: string }>(
+      `/api/fiv/continental/${conf}/standings`,
+    ).then((r) => (r.standings ?? []).map((s) => ({ ...s, group: r.group_name }))),
+  confBracket: (conf: string) =>
+    apiGet<{ knockout_rounds: FivBracketRound[]; champion: string | null }>(
+      `/api/fiv/continental/${conf}/bracket`,
+    ).catch(() => ({ knockout_rounds: [], champion: null })),
+  confSimAll: (conf: string) => apiSend("POST", `/api/fiv/continental/${conf}/sim-all`),
+  worldcupStats: () =>
+    apiGet<{ golden_boot: StatLeader | null; mvp: StatLeader | null }>(
+      "/api/fiv/worldcup/stats",
+    ).catch(() => ({ golden_boot: null, mvp: null })),
+
   // Active cycle may not exist (404/empty) — caller handles null.
   activeCycle: () =>
     apiGet<FivCycleSummary>("/api/fiv/cycle/active").catch(() => null),
