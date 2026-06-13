@@ -131,22 +131,76 @@ export const seasonApi = {
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
-  simWeek: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-week`),
-  simRest: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-rest`),
+  // fastSim=false runs the full play-by-play engine; true uses the fast sim.
+  simWeek: (sid: string, fastSim: boolean) =>
+    apiSend("POST", `/sessions/${sid}/season/simulate-week`, { fast_sim: fastSim }),
+  simRest: (sid: string, fastSim: boolean) =>
+    apiSend("POST", `/sessions/${sid}/season/simulate-rest`, { fast_sim: fastSim }),
+
+  // Pre-season transfer portal (phase "portal" before "regular").
+  portal: (sid: string) =>
+    apiGet<{
+      entries: SeasonPortalEntry[];
+      committed: SeasonPortalEntry[];
+      transfers_remaining: number;
+      human_team: string;
+    }>(`/sessions/${sid}/season/portal`).catch(() => null),
+  portalCommit: (sid: string, team_name: string, entry_index: number) =>
+    apiSend("POST", `/sessions/${sid}/season/portal/commit`, { team_name, entry_index }),
+  portalSkip: (sid: string) => apiSend("POST", `/sessions/${sid}/season/portal/skip`),
 
   teams: () =>
-    apiGet<{ teams: { key: string; name: string }[] }>("/teams").then((r) => r.teams),
+    apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),
+
+  styles: () => apiGet<StylesResponse>("/styles"),
+
+  conferenceDefaults: () =>
+    apiGet<{ conferences: Record<string, string[]> }>("/conference-defaults").then(
+      (r) => r.conferences,
+    ),
 };
+
+export interface TeamMeta {
+  key: string;
+  name: string;
+  mascot?: string;
+  conference?: string;
+}
+
+export interface StyleOption {
+  label: string;
+  description: string;
+}
+export interface StylesResponse {
+  offense_styles: Record<string, StyleOption>;
+  defense_styles: Record<string, StyleOption>;
+  st_schemes: Record<string, StyleOption>;
+}
+
+export type TeamStyle = { offense_style: string; defense_style: string; st_scheme: string };
+
+export interface SeasonPortalEntry {
+  global_index: number;
+  name?: string;
+  player_name?: string;
+  position?: string;
+  overall?: number;
+  year?: string;
+  origin_team?: string;
+  former_team?: string;
+}
 
 export interface NewSeasonConfig {
   name: string;
   human_teams: string[];
+  human_configs: Record<string, TeamStyle>;
   ai_seed: number;
   games_per_team: number;
   playoff_size: number;
   bowl_count: number;
   num_conferences: number;
   history_years: number;
+  conferences: Record<string, string[]>;
 }
 
 // Create a fresh session + season in one call, returning the new session id.

@@ -93,7 +93,7 @@ export function ProHub() {
 
   const standingsCols = useMemo<MRT_ColumnDef<ProStandingRow>[]>(
     () => [
-      { accessorKey: "division", header: "Div", size: 110, filterVariant: "select" },
+      { accessorKey: "division", header: "Div", size: 110 },
       { accessorKey: "team_name", header: "Team" },
       {
         header: "Record",
@@ -126,7 +126,7 @@ export function ProHub() {
 
   const scheduleCols = useMemo<MRT_ColumnDef<ProGame>[]>(
     () => [
-      { accessorKey: "week", header: "Wk", size: 60, filterVariant: "select" },
+      { accessorKey: "week", header: "Wk", size: 60 },
       {
         header: "Matchup",
         id: "matchup",

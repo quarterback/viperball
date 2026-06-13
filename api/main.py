@@ -2704,9 +2704,21 @@ def dynasty_status(session_id: str):
 
 @app.get("/dynasties")
 def list_dynasties_endpoint():
-    """List all saved dynasties."""
-    from engine.db import list_dynasties as db_list_dynasties
-    return {"dynasties": db_list_dynasties()}
+    """List all saved dynasties with display fields (name, coach, team, year)."""
+    from engine.db import list_dynasties as db_list_dynasties, load_blob
+    out = []
+    for meta in db_list_dynasties():
+        data = load_blob("dynasty", meta["save_key"]) or {}
+        coach = data.get("coach", {}) or {}
+        out.append({
+            "save_key": meta["save_key"],
+            "dynasty_name": data.get("dynasty_name", meta.get("label", meta["save_key"])),
+            "coach_name": coach.get("name", ""),
+            "coach_team": coach.get("team_name", coach.get("team", "")),
+            "current_year": data.get("current_year", 0),
+            "seasons_played": len(coach.get("season_records", {}) or {}),
+        })
+    return {"dynasties": out}
 
 
 @app.post("/sessions/{session_id}/dynasty/load")

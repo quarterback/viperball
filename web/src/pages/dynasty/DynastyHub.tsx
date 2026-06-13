@@ -23,6 +23,7 @@ import {
   type TeamHistory,
   type SeasonAwards,
 } from "../../api/dynasty";
+import { DynastyCommand } from "./DynastyCommand";
 
 const RECORD_LABELS: Record<string, string> = {
   most_wins_season: "Most wins (season)",
@@ -183,6 +184,8 @@ export function DynastyHub() {
           </Group>
         </Group>
       </Card>
+
+      <DynastyCommand sid={sessionId} status={s} />
 
       <Tabs defaultValue="histories" keepMounted={false}>
         <Tabs.List>

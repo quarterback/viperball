@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
   Stack,
@@ -13,9 +14,19 @@ import {
   Loader,
   Center,
   Progress,
+  Button,
+  NumberInput,
 } from "@mantine/core";
-import { IconUsers, IconCoin } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  IconUsers,
+  IconCoin,
+  IconPlayerPlay,
+  IconCheck,
+  IconArrowRight,
+  IconRefresh,
+} from "@tabler/icons-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { useDataGrid } from "../components/DataGrid";
 import { seasonApi } from "../api/season";
 import {
@@ -28,7 +39,16 @@ import {
 const money = (n: number) => `$${(n / 1000).toFixed(0)}k`;
 
 export function MyTeam() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [sid, setSid] = useState<string | null>(null);
+  const [retainAmt, setRetainAmt] = useState<Record<string, number>>({});
+  const [bidAmt, setBidAmt] = useState<Record<number, number>>({});
+
+  const refetch = () =>
+    ["my-team", "my-team-retention", "my-team-portal"].forEach((k) =>
+      qc.invalidateQueries({ queryKey: [k, sid] }),
+    );
 
   // Only college sessions with a human team can use the roster builder.
   const sessions = useQuery({
@@ -53,10 +73,52 @@ export function MyTeam() {
     enabled: !!sid,
   });
 
+  const lock = useMutation({
+    mutationFn: ({ id, amount }: { id: string; amount: number }) =>
+      myTeamApi.lock(sid!, id, amount),
+    onSuccess: refetch,
+    onError: () => notifications.show({ message: "Retain failed", color: "red" }),
+  });
+  const bid = useMutation({
+    mutationFn: ({ i, amount }: { i: number; amount: number }) =>
+      myTeamApi.bid(sid!, i, amount),
+    onSuccess: refetch,
+    onError: () => notifications.show({ message: "Bid failed", color: "red" }),
+  });
+  const advancePortal = useMutation({
+    mutationFn: () => myTeamApi.advancePortal(sid!),
+    onSuccess: () => {
+      notifications.show({ message: "Portal round advanced", color: "indigo" });
+      refetch();
+    },
+  });
+  const finalize = useMutation({
+    mutationFn: () => myTeamApi.finalize(sid!),
+    onSuccess: () => {
+      notifications.show({ message: "Roster finalized", color: "indigo" });
+      refetch();
+    },
+  });
+  const simulate = useMutation({
+    mutationFn: () => myTeamApi.simulate(sid!),
+    onSuccess: () => {
+      notifications.show({ message: "Season simulated", color: "indigo" });
+      navigate(`/league/${sid}`);
+    },
+    onError: () => notifications.show({ message: "Simulate failed", color: "red" }),
+  });
+  const runItBack = useMutation({
+    mutationFn: () => myTeamApi.runItBack(sid!),
+    onSuccess: () => {
+      notifications.show({ message: "Reset for another run", color: "indigo" });
+      refetch();
+    },
+  });
+
   const rosterCols = useMemo<MRT_ColumnDef<MyTeamPlayer>[]>(
     () => [
       { accessorKey: "name", header: "Player" },
-      { accessorKey: "position", header: "Pos", size: 70, filterVariant: "select" },
+      { accessorKey: "position", header: "Pos", size: 70 },
       { accessorKey: "year", header: "Yr", size: 90 },
       {
         accessorKey: "overall",
@@ -97,7 +159,7 @@ export function MyTeam() {
   const portalCols = useMemo<MRT_ColumnDef<PortalEntry>[]>(
     () => [
       { accessorKey: "name", header: "Player" },
-      { accessorKey: "position", header: "Pos", size: 70, filterVariant: "select" },
+      { accessorKey: "position", header: "Pos", size: 70 },
       { accessorKey: "year", header: "Yr", size: 90 },
       {
         accessorKey: "overall",
@@ -124,10 +186,77 @@ export function MyTeam() {
   });
   const retentionTable = useDataGrid(retentionCols, retention.data?.risks ?? [], {
     isLoading: retention.isLoading,
+    extra: {
+      enableRowActions: true,
+      positionActionsColumn: "last",
+      renderRowActions: ({ row }: { row: { original: RetentionRisk } }) =>
+        row.original.retained ? (
+          <Badge color="teal" variant="light">
+            locked
+          </Badge>
+        ) : (
+          <Group gap={4} wrap="nowrap">
+            <NumberInput
+              size="xs"
+              w={110}
+              placeholder="NIL $"
+              min={0}
+              step={1000}
+              hideControls
+              value={retainAmt[row.original.player_id] ?? ""}
+              onChange={(v) =>
+                setRetainAmt((m) => ({ ...m, [row.original.player_id]: Number(v) || 0 }))
+              }
+            />
+            <Button
+              size="compact-xs"
+              onClick={() =>
+                lock.mutate({
+                  id: row.original.player_id,
+                  amount: retainAmt[row.original.player_id] ?? 0,
+                })
+              }
+            >
+              Retain
+            </Button>
+          </Group>
+        ),
+    },
   });
   const portalTable = useDataGrid(portalCols, portal.data?.available ?? [], {
     isLoading: portal.isLoading,
     sorting: [{ id: "overall", desc: true }],
+    extra: {
+      enableRowActions: true,
+      positionActionsColumn: "last",
+      renderRowActions: ({ row }: { row: { original: PortalEntry } }) => (
+        <Group gap={4} wrap="nowrap">
+          <NumberInput
+            size="xs"
+            w={110}
+            placeholder="NIL $"
+            min={0}
+            step={1000}
+            hideControls
+            value={bidAmt[row.original.global_index] ?? ""}
+            onChange={(v) =>
+              setBidAmt((m) => ({ ...m, [row.original.global_index]: Number(v) || 0 }))
+            }
+          />
+          <Button
+            size="compact-xs"
+            onClick={() =>
+              bid.mutate({
+                i: row.original.global_index,
+                amount: bidAmt[row.original.global_index] ?? 0,
+              })
+            }
+          >
+            Bid
+          </Button>
+        </Group>
+      ),
+    },
   });
 
   return (
@@ -209,6 +338,41 @@ export function MyTeam() {
               </Card>
             ))}
           </SimpleGrid>
+
+          <Group gap="xs">
+            <Button
+              variant="light"
+              leftSection={<IconArrowRight size={16} />}
+              onClick={() => advancePortal.mutate()}
+              loading={advancePortal.isPending}
+            >
+              Advance portal round
+            </Button>
+            <Button
+              variant="light"
+              leftSection={<IconCheck size={16} />}
+              onClick={() => finalize.mutate()}
+              loading={finalize.isPending}
+            >
+              Finalize roster
+            </Button>
+            <Button
+              leftSection={<IconPlayerPlay size={16} />}
+              onClick={() => simulate.mutate()}
+              loading={simulate.isPending}
+            >
+              Simulate season
+            </Button>
+            <Button
+              variant="subtle"
+              color="gray"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => runItBack.mutate()}
+              loading={runItBack.isPending}
+            >
+              Run it back
+            </Button>
+          </Group>
 
           <Tabs defaultValue="roster" keepMounted={false}>
             <Tabs.List>

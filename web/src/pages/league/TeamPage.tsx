@@ -54,7 +54,7 @@ export function TeamPage() {
           </Anchor>
         ),
       },
-      { accessorKey: "position", header: "Pos", size: 70, filterVariant: "select" },
+      { accessorKey: "position", header: "Pos", size: 70 },
       { accessorKey: "year_abbr", header: "Yr", size: 60 },
       {
         accessorKey: "overall",
@@ -95,7 +95,6 @@ export function TeamPage() {
     columns: cols,
     data: roster.data?.roster ?? [],
     state: { isLoading: roster.isLoading },
-    enableFacetedValues: true,
     initialState: {
       density: "xs",
       sorting: [{ id: "overall", desc: true }],

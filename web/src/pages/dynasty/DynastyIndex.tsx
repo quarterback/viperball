@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Stack,
   Group,
@@ -10,8 +10,9 @@ import {
   SimpleGrid,
   Loader,
   Center,
+  Button,
 } from "@mantine/core";
-import { IconCrown, IconChevronRight } from "@tabler/icons-react";
+import { IconCrown, IconChevronRight, IconPlus } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { dynastyApi } from "../../api/dynasty";
 
@@ -30,12 +31,17 @@ export function DynastyIndex() {
 
   return (
     <Stack gap="md">
-      <Stack gap={2}>
-        <Title order={2}>Dynasties</Title>
-        <Text c="dimmed" size="sm">
-          Saved multi-year careers. Open one to browse its history, records, and awards.
-        </Text>
-      </Stack>
+      <Group justify="space-between" align="flex-end">
+        <Stack gap={2}>
+          <Title order={2}>Dynasties</Title>
+          <Text c="dimmed" size="sm">
+            Saved multi-year careers. Open one to play seasons, run the offseason, and browse history.
+          </Text>
+        </Stack>
+        <Button component={Link} to="/dynasty/new" leftSection={<IconPlus size={16} />} variant="filled">
+          New Dynasty
+        </Button>
+      </Group>
 
       {isLoading && (
         <Center py="xl">

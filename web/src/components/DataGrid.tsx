@@ -17,14 +17,14 @@ export function useDataGrid<T extends Record<string, any>>(
     sorting?: MRT_SortingState;
     maxHeight?: string;
     paginateOver?: number;
+    extra?: Record<string, unknown>;
   } = {},
 ) {
-  const { isLoading = false, sorting, maxHeight = "65vh", paginateOver = 50 } = opts;
+  const { isLoading = false, sorting, maxHeight = "65vh", paginateOver = 50, extra } = opts;
   return useMantineReactTable({
     columns,
     data,
     state: { isLoading },
-    enableFacetedValues: true,
     enablePagination: data.length > paginateOver,
     initialState: {
       density: "xs",
@@ -34,5 +34,6 @@ export function useDataGrid<T extends Record<string, any>>(
     },
     mantineTableProps: { striped: true, highlightOnHover: true },
     mantineTableContainerProps: { style: { maxHeight } },
+    ...(extra ?? {}),
   });
 }
