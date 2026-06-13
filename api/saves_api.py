@@ -28,6 +28,7 @@ _TYPE_TO_MODE = {
     "college": "college",
     "dynasty": "dynasty",
     "pro_league": "pro",
+    "wvl_career_league": "wvl",
     "wvl_season": "wvl",
     "wvl_commissioner": "wvl",
     "season_archive": "fiv",  # archives are mostly completed college/FIV cycles
