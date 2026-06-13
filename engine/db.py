@@ -30,8 +30,15 @@ from typing import Any, Optional
 
 _log = logging.getLogger("viperball.db")
 
-# Default database location — alongside the data/ directory
-_DEFAULT_DB_PATH = Path(__file__).parent.parent / "data" / "viperball.db"
+# Default database location. In production the DB lives on a Fly volume so it
+# survives deploys/restarts — point VIPERBALL_DB_PATH at the mount (e.g.
+# /data/viperball.db). Falls back to the repo's data/ dir for local runs.
+import os as _os
+
+_DEFAULT_DB_PATH = Path(
+    _os.environ.get("VIPERBALL_DB_PATH")
+    or (Path(__file__).parent.parent / "data" / "viperball.db")
+)
 
 _db_path: Path = _DEFAULT_DB_PATH
 
@@ -220,6 +227,81 @@ def delete_all_for_user(user_id: str = "default"):
     try:
         conn.execute("DELETE FROM saves WHERE user_id=?", (user_id,))
         conn.commit()
+    finally:
+        conn.close()
+
+
+def update_save_label(
+    save_type: str,
+    save_key: str,
+    label: str,
+    user_id: str = "default",
+) -> bool:
+    """Rename a save (its display label). Returns True if a row was updated."""
+    conn = _connect()
+    try:
+        cur = conn.execute(
+            "UPDATE saves SET label=?, updated_at=? WHERE user_id=? AND save_type=? AND save_key=?",
+            (label, time.time(), user_id, save_type, save_key),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def fork_save(
+    save_type: str,
+    save_key: str,
+    new_key: str,
+    new_label: str | None = None,
+    user_id: str = "default",
+) -> bool:
+    """Duplicate a save's blob under a new key — branches an experiment.
+
+    Pure row copy, so it works for any save_type without engine deserialization.
+    For college saves, also clones the session's box_score rows (re-keyed to the
+    new session id) so the forked league keeps its played games.
+    """
+    now = time.time()
+    conn = _connect()
+    try:
+        row = conn.execute(
+            "SELECT label, data FROM saves WHERE user_id=? AND save_type=? AND save_key=?",
+            (user_id, save_type, save_key),
+        ).fetchone()
+        if row is None:
+            return False
+        label = new_label if new_label is not None else f"{row['label']} (fork)"
+        conn.execute(
+            """
+            INSERT INTO saves (user_id, save_type, save_key, label, data, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, save_type, save_key)
+            DO UPDATE SET data=excluded.data, label=excluded.label, updated_at=excluded.updated_at
+            """,
+            (user_id, save_type, new_key, label, row["data"], now, now),
+        )
+        # College sessions store box scores keyed "{session_id}__w{week}__...".
+        # Clone them under the new session id so the fork keeps its game history.
+        if save_type == "college":
+            box_rows = conn.execute(
+                "SELECT save_key, label, data FROM saves "
+                "WHERE user_id=? AND save_type=? AND save_key LIKE ?",
+                (user_id, _BOX_SCORE_TYPE, f"{save_key}__%"),
+            ).fetchall()
+            for b in box_rows:
+                cloned_key = b["save_key"].replace(save_key, new_key, 1)
+                conn.execute(
+                    """
+                    INSERT INTO saves (user_id, save_type, save_key, label, data, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(user_id, save_type, save_key) DO NOTHING
+                    """,
+                    (user_id, _BOX_SCORE_TYPE, cloned_key, b["label"], b["data"], now, now),
+                )
+        conn.commit()
+        return True
     finally:
         conn.close()
 

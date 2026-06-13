@@ -25,8 +25,10 @@ export interface SaveSummary {
   lastSimmedAt: string; // ISO
 }
 
-// ─── Real endpoints (Phase 0) ────────────────────────────────────
-const USE_MOCK_FALLBACK = true;
+// ─── Real endpoints (Phase 0, live) ──────────────────────────────
+// The /api/saves backend exists, so we hit it directly. Flip this to true
+// only for local UI work without a backend running.
+const USE_MOCK_FALLBACK = false;
 
 export async function listSaves(): Promise<SaveSummary[]> {
   try {

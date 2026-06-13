@@ -12,10 +12,19 @@ primary_region = 'ams'
   strategy = "rolling"
 
 [env]
-  # This app has no volume; deploys wipe the saves DB. On boot the app
-  # restores it from the hub's latest snapshot (see api/main.py),
-  # authenticating with the EXPORT_TOKEN secret it already has.
+  # Saves DB now lives on a persistent volume (see [mounts]) so deploys and
+  # restarts keep every experiment. On the volume's very first boot the file
+  # is missing, so the app still seeds it once from the hub snapshot
+  # (see api/main.py _restore_db_from_hub); thereafter the volume wins.
   RESTORE_DB_URL = 'https://vroomtv.fly.dev/download/viperball'
+  VIPERBALL_DB_PATH = '/data/viperball.db'
+
+# Persistent volume for the saves DB. `fly deploy` auto-creates it on first
+# deploy for the running machine; size grows as experiments accumulate.
+[mounts]
+  source = 'viperball_data'
+  destination = '/data'
+  initial_size = '1gb'
 
 [http_service]
   internal_port = 8080

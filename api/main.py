@@ -212,6 +212,30 @@ _stats_app.mount("/static", _StaticFiles(directory=_STATIC_DIR), name="stats-sta
 
 app.mount("/stats", _stats_app)
 
+# ─── Unified Saves / Experiments API (powers the React Saves Library) ───
+from api.saves_api import router as _saves_router
+app.include_router(_saves_router)
+
+# ─── Serve the React SPA at /app (strangler migration target) ───
+# Built by the Docker web stage to web/dist (base="/app/"). A 404 inside the
+# mount falls back to index.html so client-side routes (/app/league, …) work.
+class _SPAStaticFiles(_StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            return await super().get_response("index.html", scope)
+        return response
+
+_SPA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "dist")
+if os.path.isdir(_SPA_DIR):
+    @app.get("/app", include_in_schema=False)
+    def _app_redirect():
+        return RedirectResponse("/app/", status_code=301)
+    app.mount("/app", _SPAStaticFiles(directory=_SPA_DIR, html=True), name="spa")
+    logger.info("React SPA mounted at /app")
+else:
+    logger.info("React SPA not built (web/dist missing) — /app disabled")
+
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
 sessions: Dict[str, dict] = {}
