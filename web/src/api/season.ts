@@ -133,4 +133,25 @@ export const seasonApi = {
 
   simWeek: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-week`),
   simRest: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-rest`),
+
+  teams: () =>
+    apiGet<{ teams: { key: string; name: string }[] }>("/teams").then((r) => r.teams),
 };
+
+export interface NewSeasonConfig {
+  name: string;
+  human_teams: string[];
+  ai_seed: number;
+  games_per_team: number;
+  playoff_size: number;
+  bowl_count: number;
+  num_conferences: number;
+  history_years: number;
+}
+
+// Create a fresh session + season in one call, returning the new session id.
+export async function createSeason(config: NewSeasonConfig): Promise<string> {
+  const { session_id } = await apiSend<{ session_id: string }>("POST", "/sessions");
+  await apiSend("POST", `/sessions/${session_id}/season`, config);
+  return session_id;
+}

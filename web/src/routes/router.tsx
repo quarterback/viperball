@@ -3,6 +3,7 @@ import { AppLayout } from "../components/AppLayout";
 import { SavesLibrary } from "../pages/SavesLibrary";
 import { Placeholder } from "../pages/Placeholder";
 import { LeagueIndex } from "../pages/league/LeagueIndex";
+import { NewSeason } from "../pages/league/NewSeason";
 import { LeagueHub } from "../pages/league/LeagueHub";
 import { TeamPage } from "../pages/league/TeamPage";
 import { PlayerPage } from "../pages/league/PlayerPage";
@@ -17,6 +18,7 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <SavesLibrary /> },
         { path: "league", element: <LeagueIndex /> },
+        { path: "league/new", element: <NewSeason /> },
         { path: "league/:sessionId", element: <LeagueHub /> },
         { path: "league/:sessionId/team/:teamName", element: <TeamPage /> },
         {

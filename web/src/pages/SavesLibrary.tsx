@@ -24,7 +24,7 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import dayjs from "dayjs";
 import {
   listSaves,
@@ -195,7 +195,12 @@ export function SavesLibrary() {
             Every run is a save you can open, fork, compare, and export.
           </Text>
         </Stack>
-        <Button leftSection={<IconPlus size={16} />} variant="filled">
+        <Button
+          component={Link}
+          to="/league/new"
+          leftSection={<IconPlus size={16} />}
+          variant="filled"
+        >
           New experiment
         </Button>
       </Group>

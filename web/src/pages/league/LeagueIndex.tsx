@@ -11,8 +11,9 @@ import {
   Loader,
   Center,
   Progress,
+  Button,
 } from "@mantine/core";
-import { IconTrophy, IconChevronRight } from "@tabler/icons-react";
+import { IconTrophy, IconChevronRight, IconPlus } from "@tabler/icons-react";
 import { seasonApi } from "../../api/season";
 
 export function LeagueIndex() {
@@ -23,12 +24,22 @@ export function LeagueIndex() {
 
   return (
     <Stack gap="md">
-      <Stack gap={2}>
-        <Title order={2}>College — League Hub</Title>
-        <Text c="dimmed" size="sm">
-          Pick an active season to view standings, schedule, polls, and leaders.
-        </Text>
-      </Stack>
+      <Group justify="space-between" align="flex-end">
+        <Stack gap={2}>
+          <Title order={2}>College — League Hub</Title>
+          <Text c="dimmed" size="sm">
+            Pick an active season to view standings, schedule, polls, and leaders.
+          </Text>
+        </Stack>
+        <Button
+          component={Link}
+          to="/league/new"
+          leftSection={<IconPlus size={16} />}
+          variant="filled"
+        >
+          New Season
+        </Button>
+      </Group>
 
       {isLoading && (
         <Center py="xl">
