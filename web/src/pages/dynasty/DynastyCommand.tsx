@@ -149,7 +149,8 @@ function StartSeasonForm({
       onStarted();
       navigate(`/league/${sid}`);
     },
-    onError: () => notifications.show({ message: "Couldn't start the season", color: "red" }),
+    onError: (e: unknown) =>
+      notifications.show({ message: String(e instanceof Error ? e.message : e), color: "red", autoClose: 8000 }),
   });
 
   const opts = (rec: Record<string, { label: string }> | undefined) =>

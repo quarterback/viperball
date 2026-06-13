@@ -162,12 +162,29 @@ export interface RosterPlayer {
   stamina: number;
   kicking: number;
   tackling: number;
+  kick_power?: number;
+  kick_accuracy?: number;
+  lateral_skill?: number;
+  potential?: number;
+  year?: string;
   height: string;
   weight: number;
   hometown_city: string;
   hometown_state: string;
   depth_status: string;
 }
+
+export const VIPERBALL_POSITIONS = [
+  "Viper",
+  "Zeroback",
+  "Halfback",
+  "Wingback",
+  "Slotback",
+  "Keeper",
+  "Offensive Line",
+  "Defensive Line",
+];
+export const CLASS_YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"];
 
 export const seasonApi = {
   listSessions: () =>
@@ -259,6 +276,30 @@ export const seasonApi = {
     apiGet<{ games: Game[] }>(
       `/sessions/${sid}/season/schedule?week=${week}&include_full_result=true`,
     ).then((r) => r.games),
+
+  // ── Editor ──
+  editPlayer: (sid: string, team: string, player: string, fields: Record<string, unknown>) =>
+    apiSend("PATCH", `/sessions/${sid}/season/player/${enc(team)}/${enc(player)}`, { fields }),
+  movePlayer: (sid: string, player_name: string, from_team: string, to_team: string) =>
+    apiSend("POST", `/sessions/${sid}/season/player/move`, { player_name, from_team, to_team }),
+  addPlayer: (
+    sid: string,
+    team: string,
+    name: string,
+    position: string,
+    attributes: Record<string, unknown>,
+  ) => apiSend("POST", `/sessions/${sid}/season/player/add`, { team, name, position, attributes }),
+  renameTeam: (sid: string, team: string, new_name: string) =>
+    apiSend<{ new_name: string }>(
+      "PATCH",
+      `/sessions/${sid}/season/team/${enc(team)}/rename`,
+      { new_name },
+    ),
+  editTeamMeta: (
+    sid: string,
+    team: string,
+    body: { city?: string; state?: string; prestige?: number; mascot?: string },
+  ) => apiSend("PATCH", `/sessions/${sid}/season/team/${enc(team)}/meta`, body),
 
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),

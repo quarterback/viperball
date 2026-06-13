@@ -1370,6 +1370,10 @@ def serialize_dynasty(dynasty) -> dict:
     if next_rosters:
         data["next_season_rosters"] = next_rosters
 
+    # Program registry: custom (added) programs + retired (frozen) program names.
+    data["custom_programs"] = list(getattr(dynasty, "custom_programs", []) or [])
+    data["retired_programs"] = list(getattr(dynasty, "retired_programs", []) or [])
+
     # Career tracker (alumni / hall-of-fame data)
     tracker = getattr(dynasty, 'career_tracker', None)
     if tracker and tracker.careers:
@@ -1455,6 +1459,9 @@ def deserialize_dynasty(data: dict):
     next_rosters = data.get("next_season_rosters")
     if next_rosters:
         dynasty._next_season_rosters = next_rosters
+
+    dynasty.custom_programs = list(data.get("custom_programs", []) or [])
+    dynasty.retired_programs = list(data.get("retired_programs", []) or [])
 
     # Career tracker (alumni / hall-of-fame data)
     if data.get("career_tracker"):

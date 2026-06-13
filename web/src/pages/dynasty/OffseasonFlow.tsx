@@ -23,6 +23,7 @@ import {
   type PortalEntry,
   type Recruit,
 } from "../../api/dynasty";
+import { RecruitEditModal, AssignRecruitModal } from "./RecruitEditor";
 
 const PHASES = ["nil", "portal", "recruiting", "ready"];
 const money = (n: number) => `$${(n / 1000).toFixed(0)}k`;
@@ -194,6 +195,8 @@ function PortalPhase({ sid, onDone }: { sid: string; onDone: () => void }) {
 // ── Recruiting ──────────────────────────────────────────────────
 function RecruitingPhase({ sid, onDone }: { sid: string; onDone: () => void }) {
   const qc = useQueryClient();
+  const [editing, setEditing] = useState<Recruit | null>(null);
+  const [assigning, setAssigning] = useState<Recruit | null>(null);
   const rec = useQuery({
     queryKey: ["offseason-recruiting", sid],
     queryFn: () => offseasonApi.recruiting(sid),
@@ -273,6 +276,12 @@ function RecruitingPhase({ sid, onDone }: { sid: string; onDone: () => void }) {
           <Button size="compact-xs" onClick={() => offer.mutate(row.original.pool_index)}>
             Offer
           </Button>
+          <Button size="compact-xs" variant="light" color="gray" onClick={() => setEditing(row.original)}>
+            Edit
+          </Button>
+          <Button size="compact-xs" variant="light" color="grape" onClick={() => setAssigning(row.original)}>
+            Sign
+          </Button>
         </Group>
       ),
     },
@@ -280,6 +289,8 @@ function RecruitingPhase({ sid, onDone }: { sid: string; onDone: () => void }) {
 
   return (
     <Stack gap="sm">
+      <RecruitEditModal opened={!!editing} onClose={() => setEditing(null)} sid={sid} recruit={editing} />
+      <AssignRecruitModal opened={!!assigning} onClose={() => setAssigning(null)} sid={sid} recruit={assigning} />
       {rec.data?.board && (
         <Group gap="lg">
           <Text size="sm">

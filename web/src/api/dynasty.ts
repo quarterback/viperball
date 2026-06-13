@@ -23,6 +23,27 @@ export interface DynastyCoach {
   years_coached: number;
 }
 
+export interface Program {
+  name: string;
+  conference: string | null;
+  retired: boolean;
+  custom: boolean;
+  prestige: number;
+  wins: number;
+  losses: number;
+  championships: number;
+}
+export interface AddProgramBody {
+  team_name: string;
+  conference: string;
+  abbreviation?: string;
+  mascot?: string;
+  city?: string;
+  state?: string;
+  prestige?: number;
+  program_archetype?: string | null;
+}
+
 export interface DynastyStatus {
   dynasty_name: string;
   current_year: number;
@@ -70,6 +91,17 @@ export const dynastyApi = {
   },
 
   status: (sid: string) => apiGet<DynastyStatus>(`/sessions/${sid}/dynasty/status`),
+
+  programs: (sid: string) =>
+    apiGet<{ programs: Program[]; conferences: string[]; active_count: number; even: boolean }>(
+      `/sessions/${sid}/dynasty/programs`,
+    ),
+  addProgram: (sid: string, body: AddProgramBody) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/add`, body),
+  retireProgram: (sid: string, team: string) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/retire`, { team }),
+  restoreProgram: (sid: string, team: string, conference?: string) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/restore`, { team, conference }),
 
   teamHistories: (sid: string) =>
     apiGet<{ team_histories: Record<string, TeamHistory> }>(
@@ -174,6 +206,19 @@ export interface Recruit {
   pool_index: number;
   scout_level: "none" | "basic" | "full" | string;
   true_overall?: number;
+  // best-effort pre-fill (present once scouted); editor defaults the rest
+  true_speed?: number;
+  true_power?: number;
+  true_agility?: number;
+  true_hands?: number;
+  true_awareness?: number;
+  true_stamina?: number;
+  true_tackling?: number;
+  true_kicking?: number;
+  true_potential?: number;
+  true_development?: string;
+  gpa?: number;
+  sat_score?: number;
 }
 
 export const offseasonApi = {
@@ -214,6 +259,12 @@ export const offseasonApi = {
   recruitOffer: (sid: string, recruit_index: number) =>
     apiSend("POST", `/sessions/${sid}/offseason/recruiting/offer`, { recruit_index }),
   recruitResolve: (sid: string) => apiSend("POST", `/sessions/${sid}/offseason/recruiting/resolve`),
+
+  // Edit a recruit's fields, or directly assign (sign) one to any team.
+  editRecruit: (sid: string, index: number, fields: Record<string, unknown>) =>
+    apiSend("PATCH", `/sessions/${sid}/offseason/recruiting/${index}`, { fields }),
+  assignRecruit: (sid: string, recruit_index: number, team: string) =>
+    apiSend("POST", `/sessions/${sid}/offseason/recruiting/assign`, { recruit_index, team }),
 
   complete: (sid: string) => apiSend("POST", `/sessions/${sid}/offseason/complete`),
 };

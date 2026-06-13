@@ -15,8 +15,19 @@ export class ApiError extends Error {
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new ApiError(res.status, `GET ${path} → ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status, await _detail(res, `GET ${path}`));
   return res.json() as Promise<T>;
+}
+
+// Pull FastAPI's {detail: "..."} out of an error response for a useful message.
+async function _detail(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    if (body && typeof body.detail === "string") return body.detail;
+  } catch {
+    /* ignore */
+  }
+  return `${fallback} → ${res.status}`;
 }
 
 export async function apiSend<T>(
@@ -33,7 +44,7 @@ export async function apiSend<T>(
     headers: sendBody !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: sendBody !== undefined ? JSON.stringify(sendBody) : undefined,
   });
-  if (!res.ok) throw new ApiError(res.status, `${method} ${path} → ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status, await _detail(res, `${method} ${path}`));
   // Some endpoints return 204 / empty bodies.
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;

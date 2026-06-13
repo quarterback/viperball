@@ -995,6 +995,172 @@ async def simulate_many(req: SimulateManyRequest):
     return summary
 
 
+# ═══════════════════════════════════════════════════════════════
+# WVL — Career League (the destination for CVL graduates)
+# ═══════════════════════════════════════════════════════════════
+# WVL's only purpose for the owner is to let CVL (college) graduates
+# CONTINUE their careers: the same PlayerCards are imported and their
+# careers persist, season after season, simulated game-by-game with the
+# real engine. State is durably persisted (save_blob), so leagues survive
+# restarts/deploys; wvl_sessions is just an in-memory cache.
+def _cache_wvl(league):
+    wvl_sessions[league.league_id] = {"league": league, "last_accessed": time.time()}
+
+
+def _get_career_league(league_id: str):
+    """Load a career league from the in-memory cache, falling back to the DB."""
+    from engine.wvl_career import load_league
+    cached = wvl_sessions.get(league_id)
+    if cached and cached.get("league") is not None:
+        cached["last_accessed"] = time.time()
+        return cached["league"]
+    league = load_league(league_id)
+    if league is None:
+        raise HTTPException(status_code=404, detail="WVL career league not found")
+    _cache_wvl(league)
+    return league
+
+
+@app.post("/api/wvl/new")
+def wvl_new(year: int = 2027):
+    """Create a fresh WVL career league, importing any available CVL graduates."""
+    from engine.wvl_career import create_league
+    try:
+        league = create_league(year=year)
+    except Exception as exc:
+        logger.exception("WVL career league creation failed")
+        raise HTTPException(status_code=400, detail=f"Could not create league: {exc}")
+    _cache_wvl(league)
+    return {"league_id": league.league_id, "session_id": league.league_id, "status": league.status()}
+
+
+@app.get("/api/wvl/active")
+def wvl_active():
+    """List persisted career leagues (loaded from the DB)."""
+    from engine.wvl_career import list_leagues, load_league
+    out = []
+    for meta in list_leagues():
+        key = meta.get("save_key")
+        if not key:
+            continue
+        try:
+            league = _get_career_league(key)
+        except HTTPException:
+            league = load_league(key)
+        if league is None:
+            continue
+        out.append({"league_id": key, "session_id": key, "status": league.status()})
+    return {"sessions": out}
+
+
+@app.get("/api/wvl/graduate-pools")
+def wvl_graduate_pools():
+    """Show CVL graduate classes available to import (unconsumed bridge pools)."""
+    from engine.db import load_graduating_pools
+    pools = load_graduating_pools(unconsumed_only=True)
+    return {
+        "pools": [
+            {
+                "save_key": p.get("save_key"),
+                "dynasty": p.get("source_dynasty"),
+                "year": p.get("source_year"),
+                "player_count": p.get("player_count", len(p.get("players", []))),
+            }
+            for p in pools
+        ]
+    }
+
+
+@app.get("/api/wvl/{league_id}/status")
+def wvl_status(league_id: str):
+    return _get_career_league(league_id).status()
+
+
+@app.get("/api/wvl/{league_id}/standings")
+def wvl_standings(league_id: str):
+    return {"standings": _get_career_league(league_id).standings_table()}
+
+
+@app.get("/api/wvl/{league_id}/schedule")
+def wvl_schedule(league_id: str):
+    return {"weeks": _get_career_league(league_id).schedule_view()}
+
+
+@app.get("/api/wvl/{league_id}/players")
+def wvl_players(league_id: str, include_retired: bool = True):
+    return {"players": _get_career_league(league_id).players_view(include_retired=include_retired)}
+
+
+@app.get("/api/wvl/{league_id}/leaders")
+def wvl_leaders(league_id: str):
+    return _get_career_league(league_id).leaders()
+
+
+@app.get("/api/wvl/{league_id}/history")
+def wvl_history(league_id: str):
+    return {"history": _get_career_league(league_id).history}
+
+
+@app.get("/api/wvl/{league_id}/player/{player_id}")
+def wvl_player(league_id: str, player_id: str):
+    detail = _get_career_league(league_id).player_detail(player_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Player not found in this league")
+    return detail
+
+
+@app.get("/api/wvl/{league_id}/roster/{club_key}")
+def wvl_roster(league_id: str, club_key: str):
+    return _get_career_league(league_id).roster_view(club_key)
+
+
+@app.post("/api/wvl/{league_id}/sim-week")
+def wvl_sim_week(league_id: str):
+    league = _get_career_league(league_id)
+    try:
+        res = league.sim_week()
+    except Exception as exc:
+        logger.exception("WVL sim-week failed")
+        raise HTTPException(status_code=400, detail=f"Sim failed: {exc}")
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
+@app.post("/api/wvl/{league_id}/sim-all")
+def wvl_sim_all(league_id: str):
+    league = _get_career_league(league_id)
+    try:
+        res = league.sim_all()
+    except Exception as exc:
+        logger.exception("WVL sim-all failed")
+        raise HTTPException(status_code=400, detail=f"Sim failed: {exc}")
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
+@app.post("/api/wvl/{league_id}/advance-season")
+def wvl_advance_season(league_id: str):
+    """Close the season, age/retire players, import the next CVL class."""
+    league = _get_career_league(league_id)
+    try:
+        res = league.advance_season()
+    except Exception as exc:
+        logger.exception("WVL advance-season failed")
+        raise HTTPException(status_code=400, detail=f"Advance failed: {exc}")
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
+@app.post("/api/wvl/{league_id}/import-graduates")
+def wvl_import_graduates(league_id: str):
+    """Manually pull any newly-available CVL graduate pools into the league."""
+    league = _get_career_league(league_id)
+    res = league.import_graduates(consume=True)
+    league.setup_season()
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
 @app.post("/debug/play")
 def debug_play(req: DebugPlayRequest):
     teams = get_available_teams()
@@ -1226,8 +1392,8 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
         raise HTTPException(status_code=400, detail=f"Cannot simulate week in phase '{session['phase']}'")
 
     week = req.week
-    dq_mgr = session.get("dq_manager")
-    dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
+    # DraftyQueenz is a read-only overlay — it no longer feeds boosts into the sim.
+    dq_boosts = None
 
     loop = asyncio.get_event_loop()
     games = await loop.run_in_executor(
@@ -1748,6 +1914,164 @@ def update_team_roster(session_id: str, team_name: str, updates: List[UpdatePlay
     if errors:
         result["errors"] = errors
     return result
+
+
+# ─── College editor: rename teams, edit/move/add players ─────────
+_EDITABLE_PLAYER_FIELDS = {
+    "name", "number", "position", "speed", "stamina", "kicking", "lateral_skill",
+    "tackling", "agility", "power", "awareness", "hands", "kick_power", "kick_accuracy",
+    "year", "height", "weight", "hometown_city", "hometown_state", "hometown_country",
+    "high_school", "nationality", "potential", "development", "redshirt", "archetype",
+    "variance_archetype",
+}
+
+
+class EditPlayerRequest(BaseModel):
+    fields: Dict[str, object]
+
+
+class MovePlayerRequest(BaseModel):
+    player_name: str
+    from_team: str
+    to_team: str
+
+
+class AddPlayerRequest(BaseModel):
+    team: str
+    name: str
+    position: str = "RB"
+    attributes: Dict[str, object] = {}
+
+
+class RenameTeamRequest(BaseModel):
+    new_name: str
+
+
+def _find_player(team, player_name):
+    return next((p for p in team.players if p.name == player_name), None)
+
+
+@app.patch("/sessions/{session_id}/season/player/{team_name}/{player_name}")
+def edit_player(session_id: str, team_name: str, player_name: str, req: EditPlayerRequest):
+    """Edit a player's name and attributes in place."""
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    player = _find_player(team, player_name)
+    if not player:
+        raise HTTPException(status_code=404, detail=f"Player '{player_name}' not found")
+    applied = []
+    for k, v in req.fields.items():
+        if k in _EDITABLE_PLAYER_FIELDS and hasattr(player, k):
+            try:
+                setattr(player, k, v)
+                applied.append(k)
+            except Exception:
+                pass
+    return {"updated": applied, "player": _serialize_player(player)}
+
+
+@app.post("/sessions/{session_id}/season/player/move")
+def move_player(session_id: str, req: MovePlayerRequest):
+    """Move a player from one team to another."""
+    season = _require_season(_get_session(session_id))
+    src = season.teams.get(req.from_team)
+    dst = season.teams.get(req.to_team)
+    if not src or not dst:
+        raise HTTPException(status_code=404, detail="Team not found")
+    player = _find_player(src, req.player_name)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    src.players.remove(player)
+    # avoid number clash on the destination roster
+    used = {p.number for p in dst.players}
+    if player.number in used:
+        player.number = next((n for n in range(1, 100) if n not in used), player.number)
+    dst.players.append(player)
+    return {"moved": True, "to_team": req.to_team}
+
+
+@app.post("/sessions/{session_id}/season/player/add")
+def add_player(session_id: str, req: AddPlayerRequest):
+    """Create a new player on a team (assign a recruit/player anywhere)."""
+    from engine.game_engine import Player, assign_archetype
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(req.team)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{req.team}' not found")
+    used = {p.number for p in team.players}
+    attrs = req.attributes or {}
+    number = int(attrs.get("number", next((n for n in range(1, 100) if n not in used), 99)))
+    base = dict(speed=70, stamina=70, kicking=70, lateral_skill=70, tackling=70)
+    for k in base:
+        if k in attrs:
+            base[k] = int(attrs[k])
+    player = Player(number=number, name=req.name, position=req.position, **base)
+    for k, v in attrs.items():
+        if k in _EDITABLE_PLAYER_FIELDS and hasattr(player, k) and k not in base and k != "number":
+            try:
+                setattr(player, k, v)
+            except Exception:
+                pass
+    try:
+        assign_archetype(player)
+    except Exception:
+        pass
+    team.players.append(player)
+    return {"added": True, "player": _serialize_player(player)}
+
+
+def _rename_team_everywhere(season, old: str, new: str):
+    """Rename a team across every reference: roster key, schedule, conferences."""
+    team = season.teams.pop(old)
+    if hasattr(team, "name"):
+        team.name = new
+    season.teams[new] = team
+    if getattr(season, "team_conferences", None) and old in season.team_conferences:
+        season.team_conferences[new] = season.team_conferences.pop(old)
+    if getattr(season, "conferences", None):
+        for conf, members in list(season.conferences.items()):
+            season.conferences[conf] = [new if m == old else m for m in members]
+    sc = getattr(season, "style_configs", None)
+    if sc and old in sc:
+        sc[new] = sc.pop(old)
+    game_lists = [getattr(season, "schedule", []) or [],
+                  getattr(season, "playoff_bracket", []) or []]
+    for glist in game_lists:
+        for g in glist:
+            if getattr(g, "home_team", None) == old:
+                g.home_team = new
+            if getattr(g, "away_team", None) == old:
+                g.away_team = new
+    for bg in getattr(season, "bowl_games", []) or []:
+        g = getattr(bg, "game", None)
+        if g:
+            if getattr(g, "home_team", None) == old:
+                g.home_team = new
+            if getattr(g, "away_team", None) == old:
+                g.away_team = new
+    rec = getattr(team, "record", None)
+    if rec is not None and hasattr(rec, "team_name"):
+        rec.team_name = new
+
+
+@app.patch("/sessions/{session_id}/season/team/{team_name}/rename")
+def rename_team(session_id: str, team_name: str, req: RenameTeamRequest):
+    """Rename a team across the whole season (best done before/early in the sim)."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+    new = req.new_name.strip()
+    if team_name not in season.teams:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    if not new:
+        raise HTTPException(status_code=400, detail="New name is empty")
+    if new in season.teams:
+        raise HTTPException(status_code=400, detail=f"'{new}' already exists")
+    _rename_team_everywhere(season, team_name, new)
+    ht = session.get("human_teams") or []
+    session["human_teams"] = [new if t == team_name else t for t in ht]
+    return {"renamed": True, "old_name": team_name, "new_name": new}
 
 
 @app.get("/sessions/{session_id}/season/player-stats")
@@ -2468,6 +2792,71 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
     conf_dict = dynasty.get_conferences_dict()
 
+    # ── Program registry: add custom programs, drop retired ones ──
+    # Applied here (the season boundary) so the schedule rebuilds around the new
+    # team set and constraints (even counts, etc.) are enforced by create_season.
+    from engine.game_engine import generate_team_on_the_fly as _gen_team
+    for spec in getattr(dynasty, "custom_programs", []) or []:
+        tname = spec.get("team_name")
+        if not tname or tname in teams:
+            continue
+        try:
+            t = _gen_team(
+                team_name=tname,
+                abbreviation=spec.get("abbreviation") or tname[:4].upper(),
+                mascot=spec.get("mascot") or "Team",
+                program_archetype=spec.get("program_archetype"),
+            )
+            t.city = spec.get("city", "")
+            t.state = spec.get("state", "")
+            t.prestige = int(spec.get("prestige", 50))
+            teams[tname] = t
+            team_states[tname] = spec.get("state", "")
+            dynasty.team_prestige[tname] = int(spec.get("prestige", 50))
+            style_configs[tname] = ai_configs.get(
+                tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
+            )
+        except Exception:
+            logger.warning("custom program %s failed to generate", tname, exc_info=True)
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
+    if retired:
+        # Don't delete a retired program's non-graduating players — randomly
+        # reassign them to active teams (free-agent dispersal). Coaches stay
+        # attached to the frozen program (preserved, not deleted).
+        leftovers = []
+        for rt in retired:
+            rteam = teams.get(rt)
+            if rteam:
+                for p in rteam.players:
+                    if str(getattr(p, "year", "")).lower() != "graduate":
+                        leftovers.append(p)
+        conf_dict = {c: [t for t in members if t not in retired] for c, members in conf_dict.items()}
+        for rt in retired:
+            teams.pop(rt, None)
+        active = [n for n in teams if any(n in m for m in conf_dict.values())]
+        disp_rng = random.Random(dynasty.current_year + 7)
+        for p in leftovers:
+            if not active:
+                break
+            tgt = teams[disp_rng.choice(active)]
+            used = {pp.number for pp in tgt.players}
+            if p.number in used:
+                p.number = next((n for n in range(1, 100) if n not in used), p.number)
+            tgt.players.append(p)
+    # Schedule only teams that are actually in a conference.
+    conf_team_set = {t for members in conf_dict.values() for t in members}
+    teams = {n: t for n, t in teams.items() if n in conf_team_set}
+
+    # Enforce an even number of active programs so the schedule pairs cleanly.
+    if len(teams) % 2 != 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Active program count is odd ({len(teams)}). Add or retire a program "
+                "so the total is even before starting the season (Dynasty → Programs)."
+            ),
+        )
+
     rivalries_dict = auto_assign_rivalries(
         conferences=conf_dict,
         team_states=team_states,
@@ -2476,12 +2865,13 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     )
     dynasty.rivalries = rivalries_dict
 
-    # Generate coaching staffs if not yet created (first dynasty season)
-    if not dynasty._coaching_staffs:
-        from engine.coaching import generate_coaching_staff
-        all_team_names = list(dynasty.team_histories.keys())
-        staff_rng = random.Random(dynasty.current_year + 42)
-        for team_name in dynasty.team_histories:
+    # Ensure every active team has a coaching staff (first season → all; later
+    # seasons → just newly-added programs that don't have one yet).
+    from engine.coaching import generate_coaching_staff
+    all_team_names = list(teams.keys())
+    staff_rng = random.Random(dynasty.current_year + 42)
+    for team_name in teams:
+        if team_name not in dynasty._coaching_staffs:
             prestige = dynasty.team_prestige.get(team_name, 50)
             dynasty._coaching_staffs[team_name] = generate_coaching_staff(
                 team_name=team_name, prestige=prestige, year=dynasty.current_year, rng=staff_rng,
@@ -2529,6 +2919,165 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     return _serialize_season_status(session)
 
 
+# ─── Program registry (dynasty): add / retire / restore programs ──
+class AddProgramRequest(BaseModel):
+    team_name: str
+    conference: str
+    abbreviation: str = ""
+    mascot: str = "Team"
+    city: str = ""
+    state: str = ""
+    prestige: int = 45
+    program_archetype: Optional[str] = None
+
+
+class ProgramRequest(BaseModel):
+    team: str
+    conference: Optional[str] = None
+
+
+@app.get("/sessions/{session_id}/dynasty/programs")
+def list_programs(session_id: str):
+    """All programs in the dynasty: active (with conference) and retired (frozen)."""
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
+    custom = {s.get("team_name") for s in getattr(dynasty, "custom_programs", []) or []}
+    team_conf = {}
+    for conf_name, conf in dynasty.conferences.items():
+        for t in conf.teams:
+            team_conf[t] = conf_name
+    out = []
+    seen = set()
+    for name, conf in team_conf.items():
+        seen.add(name)
+        h = dynasty.team_histories.get(name)
+        out.append({
+            "name": name, "conference": conf, "retired": name in retired,
+            "custom": name in custom,
+            "prestige": dynasty.team_prestige.get(name, 50),
+            "wins": getattr(h, "total_wins", 0) if h else 0,
+            "losses": getattr(h, "total_losses", 0) if h else 0,
+            "championships": getattr(h, "total_championships", 0) if h else 0,
+        })
+    for name in retired:
+        if name in seen:
+            continue
+        h = dynasty.team_histories.get(name)
+        out.append({
+            "name": name, "conference": None, "retired": True,
+            "custom": name in custom, "prestige": dynasty.team_prestige.get(name, 50),
+            "wins": getattr(h, "total_wins", 0) if h else 0,
+            "losses": getattr(h, "total_losses", 0) if h else 0,
+            "championships": getattr(h, "total_championships", 0) if h else 0,
+        })
+    out.sort(key=lambda p: p["name"])
+    active_count = sum(1 for p in out if not p["retired"])
+    return {
+        "programs": out,
+        "conferences": list(dynasty.conferences.keys()),
+        "active_count": active_count,
+        "even": active_count % 2 == 0,
+    }
+
+
+@app.post("/sessions/{session_id}/dynasty/program/add")
+def add_program(session_id: str, req: AddProgramRequest):
+    """Add a new program — joins the league at the next start-season (schedule rebuilds)."""
+    from engine.dynasty import Conference, TeamHistory
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    name = req.team_name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Empty name")
+    if name in dynasty.team_histories or any(name in c.teams for c in dynasty.conferences.values()):
+        raise HTTPException(status_code=400, detail=f"'{name}' already exists")
+    if req.conference not in dynasty.conferences:
+        dynasty.conferences[req.conference] = Conference(name=req.conference, teams=[])
+    dynasty.conferences[req.conference].teams.append(name)
+    dynasty.team_histories[name] = TeamHistory(team_name=name)
+    dynasty.team_prestige[name] = int(req.prestige)
+    if not hasattr(dynasty, "custom_programs") or dynasty.custom_programs is None:
+        dynasty.custom_programs = []
+    dynasty.custom_programs.append({
+        "team_name": name, "abbreviation": req.abbreviation or name[:4].upper(),
+        "mascot": req.mascot, "city": req.city, "state": req.state,
+        "prestige": int(req.prestige), "program_archetype": req.program_archetype,
+        "conference": req.conference,
+    })
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"added": True, "team_name": name, "applies": "next season"}
+
+
+@app.post("/sessions/{session_id}/dynasty/program/retire")
+def retire_program(session_id: str, req: ProgramRequest):
+    """Retire (freeze) a program: excluded from future seasons, history preserved.
+    Its non-graduating players disperse to active teams at the next start-season."""
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    if not hasattr(dynasty, "retired_programs") or dynasty.retired_programs is None:
+        dynasty.retired_programs = []
+    if req.team not in dynasty.retired_programs:
+        dynasty.retired_programs.append(req.team)
+    for conf in dynasty.conferences.values():
+        if req.team in conf.teams:
+            conf.teams.remove(req.team)
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"retired": True, "team": req.team, "applies": "next season"}
+
+
+@app.post("/sessions/{session_id}/dynasty/program/restore")
+def restore_program(session_id: str, req: ProgramRequest):
+    """Un-retire a program and place it back into a conference."""
+    from engine.dynasty import Conference
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    retired = getattr(dynasty, "retired_programs", None) or []
+    if req.team in retired:
+        retired.remove(req.team)
+    dynasty.retired_programs = retired
+    conf = req.conference or (next(iter(dynasty.conferences), None))
+    if conf:
+        if conf not in dynasty.conferences:
+            dynasty.conferences[conf] = Conference(name=conf, teams=[])
+        if req.team not in dynasty.conferences[conf].teams:
+            dynasty.conferences[conf].teams.append(req.team)
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"restored": True, "team": req.team, "conference": conf}
+
+
+class TeamMetaRequest(BaseModel):
+    city: Optional[str] = None
+    state: Optional[str] = None
+    prestige: Optional[int] = None
+    mascot: Optional[str] = None
+
+
+@app.patch("/sessions/{session_id}/season/team/{team_name}/meta")
+def edit_team_meta(session_id: str, team_name: str, req: TeamMetaRequest):
+    """Edit a team's location/prestige/mascot in the live season."""
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    for field in ("city", "state", "mascot"):
+        v = getattr(req, field)
+        if v is not None and hasattr(team, field):
+            setattr(team, field, v)
+    if req.prestige is not None and hasattr(team, "prestige"):
+        team.prestige = int(req.prestige)
+    return {
+        "team": team_name,
+        "city": getattr(team, "city", ""),
+        "state": getattr(team, "state", ""),
+        "prestige": getattr(team, "prestige", 50),
+        "mascot": getattr(team, "mascot", ""),
+    }
+
+
 @app.post("/sessions/{session_id}/dynasty/advance")
 def dynasty_advance(session_id: str):
     from engine.nil_system import NILProgram, auto_nil_program, generate_nil_budget, assess_retention_risks, estimate_market_tier, compute_team_prestige
@@ -2549,10 +3098,8 @@ def dynasty_advance(session_id: str):
     tracker = session.get("injury_tracker")
     rng = random.Random(dynasty.current_year + 7)
 
-    dq_manager_pre = session.get("dq_manager")
+    # DQ decoupled from the sim — no team boosts feed into season advancement.
     dq_team_boosts_map = None
-    if dq_manager_pre:
-        dq_team_boosts_map = dq_manager_pre.get_all_team_boosts()
     dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng,
                            dq_team_boosts=dq_team_boosts_map)
 
@@ -2572,9 +3119,9 @@ def dynasty_advance(session_id: str):
         )
 
     dq_manager = session.get("dq_manager")
+    # DQ decoupled — empty boosts, so the offseason applies no DQ effects.
     dq_boosts = {}
     if dq_manager:
-        dq_boosts = dq_manager.get_active_boosts(team_name=human_team)
         facilities_boost = dq_boosts.get("facilities", 0)
         if facilities_boost > 0 and human_team in dynasty.team_prestige:
             dynasty.team_prestige[human_team] = min(
@@ -3329,6 +3876,71 @@ def offseason_recruiting_offer(session_id: str, req: RecruitOfferRequest):
     }
 
 
+# ─── Recruit editor / direct assignment (commissioner) ───────────
+_EDITABLE_RECRUIT_FIELDS = {
+    "first_name", "last_name", "position", "region", "hometown", "high_school",
+    "height", "weight", "stars",
+    "true_speed", "true_stamina", "true_agility", "true_power", "true_awareness",
+    "true_hands", "true_kicking", "true_kick_power", "true_kick_accuracy",
+    "true_lateral_skill", "true_tackling", "true_potential", "true_development",
+    "field_intelligence", "coachability", "gpa", "sat_score",
+}
+
+
+class EditRecruitRequest(BaseModel):
+    fields: Dict[str, object]
+
+
+class AssignRecruitRequest(BaseModel):
+    recruit_index: int
+    team: str
+
+
+@app.patch("/sessions/{session_id}/offseason/recruiting/{recruit_index}")
+def edit_recruit(session_id: str, recruit_index: int, req: EditRecruitRequest):
+    """Edit a recruit's name/attributes/stars in the session's recruit pool."""
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    if recruit_index < 0 or recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+    recruit = recruit_pool[recruit_index]
+    applied = []
+    for k, v in req.fields.items():
+        if k in _EDITABLE_RECRUIT_FIELDS and hasattr(recruit, k):
+            try:
+                setattr(recruit, k, v)
+                applied.append(k)
+            except Exception:
+                pass
+    return {"updated": applied, "recruit": _serialize_recruit(recruit)}
+
+
+@app.post("/sessions/{session_id}/offseason/recruiting/assign")
+def assign_recruit(session_id: str, req: AssignRecruitRequest):
+    """Directly assign (sign) a recruit to any team — the in-session, roster-landing
+    replacement for the disconnected /stats commissioner force-sign.
+
+    Routes through offseason['manual_signings'], which offseason/complete also
+    promotes to rosters, so it survives resolve() overwriting _pending_signed_recruits.
+    """
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    if req.recruit_index < 0 or req.recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+    recruit = recruit_pool[req.recruit_index]
+    recruit.committed_to = req.team
+    recruit.signed = True
+    if hasattr(recruit, "status"):
+        recruit.status = "signed"
+    if hasattr(recruit, "signing_phase"):
+        recruit.signing_phase = "override"
+    manual = offseason.setdefault("manual_signings", {})
+    manual.setdefault(req.team, []).append(recruit)
+    return {"assigned": True, "team": req.team, "recruit": _serialize_recruit(recruit)}
+
+
 @app.post("/sessions/{session_id}/offseason/recruiting/resolve")
 def offseason_recruiting_resolve(session_id: str):
     from engine.recruiting import auto_recruit_team, simulate_phased_signing
@@ -3485,11 +4097,26 @@ def offseason_complete(session_id: str):
             player_cards[team_name] = [c for c in cards if c.year != "Graduate"]
 
         # Promote signed recruits to PlayerCards on their new team's roster.
-        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
-        for team_name, recruits in signed_recruits.items():
+        # Includes both the AI-resolved signings and any manual in-session
+        # commissioner assignments (offseason['manual_signings']); dedup by id.
+        _added_recruit_ids = set()
+
+        def _land(team_name, recruits):
             roster = player_cards.setdefault(team_name, [])
             for recruit in recruits:
+                rid = getattr(recruit, "recruit_id", None)
+                if rid and rid in _added_recruit_ids:
+                    continue
+                if rid:
+                    _added_recruit_ids.add(rid)
                 roster.append(recruit.to_player_card(team_name))
+
+        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
+        for team_name, recruits in signed_recruits.items():
+            _land(team_name, recruits)
+        manual_signings = (session.get("offseason") or {}).get("manual_signings", {})
+        for team_name, recruits in manual_signings.items():
+            _land(team_name, recruits)
         dynasty._pending_signed_recruits = None
 
         # Serialize rosters for persistence
@@ -4518,8 +5145,8 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
     if next_week is None:
         raise HTTPException(status_code=400, detail="Regular season is complete")
 
-    dq_boosts = mgr.get_all_team_boosts()
-    games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts,
+    # DQ decoupled from the sim — no team boosts.
+    games = season.simulate_week(week=next_week, dq_team_boosts=None,
                                   use_fast_sim=req.fast_sim)
 
     if season.is_regular_season_complete():
