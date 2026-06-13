@@ -13,6 +13,7 @@ import { ProHub } from "../pages/pro/ProHub";
 import { International } from "../pages/International";
 import { DynastyIndex } from "../pages/dynasty/DynastyIndex";
 import { DynastyHub } from "../pages/dynasty/DynastyHub";
+import { MyTeam } from "../pages/MyTeam";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -34,21 +35,7 @@ export const router = createBrowserRouter(
         { path: "compare", element: <Compare /> },
         { path: "dynasty", element: <DynastyIndex /> },
         { path: "dynasty/:sessionId", element: <DynastyHub /> },
-        {
-          path: "team",
-          element: (
-            <Placeholder
-              title="My Team"
-              phase="Phase 4"
-              blurb="Roster, chemistry, retention/portal — the single-team management view."
-              endpoints={[
-                "GET /sessions/{id}/my-team",
-                "GET /sessions/{id}/teams/{team}/chemistry",
-                "GET /sessions/{id}/my-team/portal",
-              ]}
-            />
-          ),
-        },
+        { path: "team", element: <MyTeam /> },
         { path: "pro", element: <ProIndex /> },
         { path: "pro/:league/:sessionId", element: <ProHub /> },
         { path: "international", element: <International /> },
