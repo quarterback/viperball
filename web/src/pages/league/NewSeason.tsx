@@ -19,18 +19,12 @@ import {
   Radio,
   Slider,
   Badge,
-  ScrollArea,
   Loader,
   Center,
   Divider,
 } from "@mantine/core";
-import {
-  IconChevronRight,
-  IconDice5,
-  IconRocket,
-  IconTrash,
-  IconChevronDown,
-} from "@tabler/icons-react";
+import { IconChevronRight, IconDice5, IconRocket, IconTrash } from "@tabler/icons-react";
+import { ConferenceEditor } from "../../components/ConferenceEditor";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import {
@@ -73,7 +67,6 @@ export function NewSeason() {
 
   // Team-picker UI state
   const [confFilter, setConfFilter] = useState<string>("__all__");
-  const [openConf, setOpenConf] = useState<string | null>(null);
 
   // Seed conference alignment from the geographic defaults once loaded.
   useEffect(() => {
@@ -91,12 +84,6 @@ export function NewSeason() {
     () => Array.from(new Set(Object.values(teamConf))).sort(),
     [teamConf],
   );
-  const teamsByConf = useMemo(() => {
-    const m: Record<string, string[]> = {};
-    for (const [t, c] of Object.entries(teamConf)) (m[c] ??= []).push(t);
-    for (const c of Object.keys(m)) m[c].sort();
-    return m;
-  }, [teamConf]);
 
   const playoffOptions = PLAYOFF_OPTIONS.filter((p) => p <= totalTeams || totalTeams === 0);
   const maxBowls = Math.max(0, Math.min(16, Math.floor((totalTeams - playoffSize) / 2)));
@@ -295,62 +282,10 @@ export function NewSeason() {
           {/* ── Step 2: conferences ── */}
           <Stepper.Step label="Conferences" description="Alignment">
             <Stack gap="sm" mt="md">
-              <Text size="sm" c="dimmed">
-                {confNames.length} conferences, {Object.keys(teamConf).length} teams. Click a
-                conference to reassign its teams.
-              </Text>
-              <ScrollArea.Autosize mah={420}>
-                <Stack gap={4}>
-                  {confNames.map((conf) => {
-                    const open = openConf === conf;
-                    const members = teamsByConf[conf] ?? [];
-                    return (
-                      <Card key={conf} padding="xs" withBorder>
-                        <Group
-                          justify="space-between"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => setOpenConf(open ? null : conf)}
-                        >
-                          <Group gap="xs">
-                            <IconChevronDown
-                              size={16}
-                              style={{
-                                transform: open ? "rotate(0)" : "rotate(-90deg)",
-                                transition: "transform .15s",
-                              }}
-                            />
-                            <Text fw={600} size="sm">
-                              {conf}
-                            </Text>
-                            <Badge size="xs" variant="light" color="gray">
-                              {members.length}
-                            </Badge>
-                          </Group>
-                        </Group>
-                        {open && (
-                          <Stack gap={4} mt="xs">
-                            {members.map((t) => (
-                              <Group key={t} justify="space-between" wrap="nowrap">
-                                <Text size="sm">{t}</Text>
-                                <Select
-                                  size="xs"
-                                  w={200}
-                                  data={confNames.map((c) => ({ value: c, label: c }))}
-                                  value={teamConf[t]}
-                                  onChange={(v) =>
-                                    v && setTeamConf((m) => ({ ...m, [t]: v }))
-                                  }
-                                  comboboxProps={{ withinPortal: true }}
-                                />
-                              </Group>
-                            ))}
-                          </Stack>
-                        )}
-                      </Card>
-                    );
-                  })}
-                </Stack>
-              </ScrollArea.Autosize>
+              <ConferenceEditor
+                teamConf={teamConf}
+                onReassign={(t, c) => setTeamConf((m) => ({ ...m, [t]: c }))}
+              />
             </Stack>
           </Stepper.Step>
 

@@ -11,6 +11,7 @@ import { ProIndex } from "../pages/pro/ProIndex";
 import { ProHub } from "../pages/pro/ProHub";
 import { International } from "../pages/International";
 import { DynastyIndex } from "../pages/dynasty/DynastyIndex";
+import { DynastyCreate } from "../pages/dynasty/DynastyCreate";
 import { DynastyHub } from "../pages/dynasty/DynastyHub";
 import { MyTeam } from "../pages/MyTeam";
 import { Export } from "../pages/Export";
@@ -34,6 +35,7 @@ export const router = createBrowserRouter(
         },
         { path: "compare", element: <Compare /> },
         { path: "dynasty", element: <DynastyIndex /> },
+        { path: "dynasty/new", element: <DynastyCreate /> },
         { path: "dynasty/:sessionId", element: <DynastyHub /> },
         { path: "team", element: <MyTeam /> },
         { path: "pro", element: <ProIndex /> },
