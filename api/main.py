@@ -519,6 +519,36 @@ def _require_dynasty(session: dict) -> Dynasty:
     return session["dynasty"]
 
 
+def _ensure_hs_pipeline(dynasty):
+    """Ensure a dynasty has its HS recruiting pipeline built so the incoming
+    recruit class can be scanned *before* the offseason. Builds it from the
+    dynasty's own team data (no live Season needed); no-op if already present.
+    """
+    if getattr(dynasty, "_hs_pipeline", None) is not None:
+        return dynasty._hs_pipeline
+    try:
+        import random as _rnd
+        from engine.hs_league import create_hs_league, simulate_hs_season
+        from engine.recruiting import HSRecruitingPipeline
+
+        year = getattr(dynasty, "current_year", 2026)
+        rng = _rnd.Random(year)
+        dynasty._hs_league = create_hs_league(year, rng=rng)
+        dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=rng)
+
+        prestige = getattr(dynasty, "team_prestige", {}) or {}
+        team_names = list(prestige.keys())
+        class_size = max(300, (len(team_names) or 200) * 8)
+        dynasty._hs_pipeline = HSRecruitingPipeline()
+        dynasty._hs_pipeline.generate_initial_pipeline(
+            base_seed=year, size_per_class=class_size,
+            team_names=team_names, team_prestige=prestige or None,
+        )
+    except Exception:
+        logger.debug("HS pipeline build failed", exc_info=True)
+    return getattr(dynasty, "_hs_pipeline", None)
+
+
 def _serialize_team_record(rec: TeamRecord) -> dict:
     return {
         "team_name": rec.team_name,
@@ -3318,31 +3348,39 @@ def load_dynasty_endpoint(session_id: str, save_key: str = Query(...)):
     session["injury_tracker"] = None
     session["human_teams"] = [dynasty.coach.team_name]
 
-    # Restore HS league + pipeline if not already present from the save
-    if dynasty._hs_pipeline is None:
-        try:
-            import random as _rnd
-            from engine.hs_league import create_hs_league, simulate_hs_season
-            from engine.recruiting import HSRecruitingPipeline
-
-            _year = dynasty.current_year
-            _rng = _rnd.Random(_year)
-            dynasty._hs_league = create_hs_league(_year, rng=_rng)
-            dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
-
-            _num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
-            _class_size = max(300, _num_teams * 8)
-            _t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
-            _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
-            dynasty._hs_pipeline = HSRecruitingPipeline()
-            dynasty._hs_pipeline.generate_initial_pipeline(
-                base_seed=_year, size_per_class=_class_size,
-                team_names=_t_names, team_prestige=_t_prestige,
-            )
-        except Exception:
-            pass
+    # Restore the HS recruiting pipeline (built from the dynasty's own team
+    # data) so the incoming recruit class is scannable right after loading.
+    _ensure_hs_pipeline(dynasty)
 
     return _serialize_dynasty_status(session)
+
+
+@app.get("/sessions/{session_id}/dynasty/recruiting-pipeline")
+def dynasty_recruiting_pipeline(session_id: str, grade: str = "12th", top_n: int = 150):
+    """Scan the incoming recruit class for a dynasty — before the offseason.
+
+    Read-only board of HS prospects (default the graduating 12th-grade class
+    that feeds college recruiting) with per-grade summary stats.
+    """
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    pipeline = _ensure_hs_pipeline(dynasty)
+    if pipeline is None:
+        return {"summary": {}, "grade": grade, "grades": [], "board": []}
+    try:
+        summary = pipeline.pipeline_summary()
+    except Exception:
+        summary = {}
+    grades = list(getattr(pipeline, "classes", {}).keys())
+    board = pipeline.get_rankings_board(grade, top_n=top_n) if grade in grades else []
+    return {
+        "dynasty_name": getattr(dynasty, "dynasty_name", ""),
+        "year": getattr(dynasty, "current_year", None),
+        "summary": summary,
+        "grade": grade,
+        "grades": grades,
+        "board": board,
+    }
 
 
 @app.delete("/dynasties/{save_key}")

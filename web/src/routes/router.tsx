@@ -23,6 +23,7 @@ import { DynastyHub } from "../pages/dynasty/DynastyHub";
 import { MyTeam } from "../pages/MyTeam";
 import { Export } from "../pages/Export";
 import { GameSim } from "../pages/GameSim";
+import { Recruiting } from "../pages/Recruiting";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -45,6 +46,7 @@ export const router = createBrowserRouter(
           element: <PlayerPage />,
         },
         { path: "compare", element: <Compare /> },
+        { path: "recruiting", element: <Recruiting /> },
         { path: "dynasty", element: <DynastyIndex /> },
         { path: "dynasty/new", element: <DynastyCreate /> },
         { path: "dynasty/:sessionId", element: <DynastyHub /> },
