@@ -996,109 +996,169 @@ async def simulate_many(req: SimulateManyRequest):
 
 
 # ═══════════════════════════════════════════════════════════════
-# WVL (Women's / World Viperball League) — multi-tier JSON API
+# WVL — Career League (the destination for CVL graduates)
 # ═══════════════════════════════════════════════════════════════
-def _default_wvl_assignments() -> Dict[str, int]:
-    from engine.wvl_config import ALL_WVL_TIERS
-    return {k: t.tier_number for t in ALL_WVL_TIERS for k in t.team_keys}
+# WVL's only purpose for the owner is to let CVL (college) graduates
+# CONTINUE their careers: the same PlayerCards are imported and their
+# careers persist, season after season, simulated game-by-game with the
+# real engine. State is durably persisted (save_blob), so leagues survive
+# restarts/deploys; wvl_sessions is just an in-memory cache.
+def _cache_wvl(league):
+    wvl_sessions[league.league_id] = {"league": league, "last_accessed": time.time()}
 
 
-def _wvl_tier_name(n: int) -> str:
-    from engine.wvl_config import TIER_BY_NUMBER
-    t = TIER_BY_NUMBER.get(n)
-    return t.tier_name if t else f"Tier {n}"
-
-
-def _wvl_status(season) -> dict:
-    tiers = []
-    for tn, s in sorted(season.tier_seasons.items()):
-        tiers.append({
-            "tier": tn,
-            "name": _wvl_tier_name(tn),
-            "team_count": len(getattr(s, "teams", {}) or {}),
-            "total_weeks": getattr(s, "total_weeks", 0),
-        })
-    return {"phase": season.phase, "current_week": season.current_week, "tiers": tiers}
-
-
-def _get_wvl(session_id: str):
-    data = wvl_sessions.get(session_id)
-    if not data or not data.get("season"):
-        raise HTTPException(status_code=404, detail="WVL season not found")
-    return data["season"]
+def _get_career_league(league_id: str):
+    """Load a career league from the in-memory cache, falling back to the DB."""
+    from engine.wvl_career import load_league
+    cached = wvl_sessions.get(league_id)
+    if cached and cached.get("league") is not None:
+        cached["last_accessed"] = time.time()
+        return cached["league"]
+    league = load_league(league_id)
+    if league is None:
+        raise HTTPException(status_code=404, detail="WVL career league not found")
+    _cache_wvl(league)
+    return league
 
 
 @app.post("/api/wvl/new")
-def wvl_new():
-    """Create a fresh multi-tier WVL season (default club tier assignments)."""
-    from engine.wvl_season import WVLMultiTierSeason
-    season = WVLMultiTierSeason(_default_wvl_assignments())
-    sid = str(uuid.uuid4())
-    wvl_sessions[sid] = {"season": season}
-    return {"session_id": sid, "status": _wvl_status(season)}
+def wvl_new(year: int = 2027):
+    """Create a fresh WVL career league, importing any available CVL graduates."""
+    from engine.wvl_career import create_league
+    try:
+        league = create_league(year=year)
+    except Exception as exc:
+        logger.exception("WVL career league creation failed")
+        raise HTTPException(status_code=400, detail=f"Could not create league: {exc}")
+    _cache_wvl(league)
+    return {"league_id": league.league_id, "session_id": league.league_id, "status": league.status()}
 
 
 @app.get("/api/wvl/active")
 def wvl_active():
+    """List persisted career leagues (loaded from the DB)."""
+    from engine.wvl_career import list_leagues, load_league
     out = []
-    for sid, data in wvl_sessions.items():
-        season = data.get("season")
-        if season is None:
+    for meta in list_leagues():
+        key = meta.get("save_key")
+        if not key:
             continue
-        out.append({"session_id": sid, "status": _wvl_status(season)})
+        try:
+            league = _get_career_league(key)
+        except HTTPException:
+            league = load_league(key)
+        if league is None:
+            continue
+        out.append({"league_id": key, "session_id": key, "status": league.status()})
     return {"sessions": out}
 
 
-@app.get("/api/wvl/{session_id}/status")
-def wvl_status(session_id: str):
-    return _wvl_status(_get_wvl(session_id))
-
-
-@app.get("/api/wvl/{session_id}/standings")
-def wvl_standings(session_id: str):
-    season = _get_wvl(session_id)
-    standings = season.get_all_standings()
+@app.get("/api/wvl/graduate-pools")
+def wvl_graduate_pools():
+    """Show CVL graduate classes available to import (unconsumed bridge pools)."""
+    from engine.db import load_graduating_pools
+    pools = load_graduating_pools(unconsumed_only=True)
     return {
-        "tiers": [
-            {"tier": tn, "name": _wvl_tier_name(tn), "standings": st}
-            for tn, st in sorted(standings.items())
+        "pools": [
+            {
+                "save_key": p.get("save_key"),
+                "dynasty": p.get("source_dynasty"),
+                "year": p.get("source_year"),
+                "player_count": p.get("player_count", len(p.get("players", []))),
+            }
+            for p in pools
         ]
     }
 
 
-@app.get("/api/wvl/{session_id}/schedule")
-def wvl_schedule(session_id: str, tier: int = 1):
-    return _get_wvl(session_id).get_schedule(tier)
+@app.get("/api/wvl/{league_id}/status")
+def wvl_status(league_id: str):
+    return _get_career_league(league_id).status()
 
 
-@app.post("/api/wvl/{session_id}/sim-week")
-def wvl_sim_week(session_id: str):
-    season = _get_wvl(session_id)
+@app.get("/api/wvl/{league_id}/standings")
+def wvl_standings(league_id: str):
+    return {"standings": _get_career_league(league_id).standings_table()}
+
+
+@app.get("/api/wvl/{league_id}/schedule")
+def wvl_schedule(league_id: str):
+    return {"weeks": _get_career_league(league_id).schedule_view()}
+
+
+@app.get("/api/wvl/{league_id}/players")
+def wvl_players(league_id: str, include_retired: bool = True):
+    return {"players": _get_career_league(league_id).players_view(include_retired=include_retired)}
+
+
+@app.get("/api/wvl/{league_id}/leaders")
+def wvl_leaders(league_id: str):
+    return _get_career_league(league_id).leaders()
+
+
+@app.get("/api/wvl/{league_id}/history")
+def wvl_history(league_id: str):
+    return {"history": _get_career_league(league_id).history}
+
+
+@app.get("/api/wvl/{league_id}/player/{player_id}")
+def wvl_player(league_id: str, player_id: str):
+    detail = _get_career_league(league_id).player_detail(player_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Player not found in this league")
+    return detail
+
+
+@app.get("/api/wvl/{league_id}/roster/{club_key}")
+def wvl_roster(league_id: str, club_key: str):
+    return _get_career_league(league_id).roster_view(club_key)
+
+
+@app.post("/api/wvl/{league_id}/sim-week")
+def wvl_sim_week(league_id: str):
+    league = _get_career_league(league_id)
     try:
-        season.sim_week_all_tiers()
+        res = league.sim_week()
     except Exception as exc:
+        logger.exception("WVL sim-week failed")
         raise HTTPException(status_code=400, detail=f"Sim failed: {exc}")
-    return {"status": _wvl_status(season)}
+    league.save()
+    return {"result": res, "status": league.status()}
 
 
-@app.post("/api/wvl/{session_id}/sim-all")
-def wvl_sim_all(session_id: str):
-    season = _get_wvl(session_id)
-    guard = 0
-    while season.phase in ("pre_season", "regular_season") and guard < 80:
-        try:
-            season.sim_week_all_tiers()
-        except Exception:
-            break
-        guard += 1
-    guard = 0
-    while season.phase in ("playoffs_pending", "playoffs") and guard < 30:
-        try:
-            season.advance_playoffs_all()
-        except Exception:
-            break
-        guard += 1
-    return {"status": _wvl_status(season)}
+@app.post("/api/wvl/{league_id}/sim-all")
+def wvl_sim_all(league_id: str):
+    league = _get_career_league(league_id)
+    try:
+        res = league.sim_all()
+    except Exception as exc:
+        logger.exception("WVL sim-all failed")
+        raise HTTPException(status_code=400, detail=f"Sim failed: {exc}")
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
+@app.post("/api/wvl/{league_id}/advance-season")
+def wvl_advance_season(league_id: str):
+    """Close the season, age/retire players, import the next CVL class."""
+    league = _get_career_league(league_id)
+    try:
+        res = league.advance_season()
+    except Exception as exc:
+        logger.exception("WVL advance-season failed")
+        raise HTTPException(status_code=400, detail=f"Advance failed: {exc}")
+    league.save()
+    return {"result": res, "status": league.status()}
+
+
+@app.post("/api/wvl/{league_id}/import-graduates")
+def wvl_import_graduates(league_id: str):
+    """Manually pull any newly-available CVL graduate pools into the league."""
+    league = _get_career_league(league_id)
+    res = league.import_graduates(consume=True)
+    league.setup_season()
+    league.save()
+    return {"result": res, "status": league.status()}
 
 
 @app.post("/debug/play")
