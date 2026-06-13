@@ -1383,6 +1383,36 @@ async def run_playoffs(session_id: str):
     }
 
 
+@app.get("/api/sessions/college")
+def list_college_sessions():
+    """Active in-memory college seasons — the React League Hub's picker.
+
+    College seasons live in memory (only box scores / archives persist), so
+    this lists what's currently loaded and playable, newest first.
+    """
+    out = []
+    for sid, sess in sessions.items():
+        season = sess.get("season")
+        if season is None:
+            continue
+        try:
+            out.append({
+                "session_id": sid,
+                "name": getattr(season, "name", "Season"),
+                "phase": sess.get("phase", "setup"),
+                "current_week": season.get_last_completed_week(),
+                "total_weeks": season.get_total_weeks(),
+                "team_count": len(season.teams),
+                "champion": season.champion,
+                "human_teams": sess.get("human_teams", []),
+                "created_at": sess.get("created_at", 0),
+            })
+        except Exception:
+            continue
+    out.sort(key=lambda s: s.get("created_at", 0), reverse=True)
+    return {"sessions": out}
+
+
 @app.get("/sessions/{session_id}/season/status")
 def season_status(session_id: str):
     session = _get_session(session_id)

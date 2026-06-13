@@ -2,6 +2,10 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { SavesLibrary } from "../pages/SavesLibrary";
 import { Placeholder } from "../pages/Placeholder";
+import { LeagueIndex } from "../pages/league/LeagueIndex";
+import { LeagueHub } from "../pages/league/LeagueHub";
+import { TeamPage } from "../pages/league/TeamPage";
+import { PlayerPage } from "../pages/league/PlayerPage";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -12,23 +16,12 @@ export const router = createBrowserRouter(
       element: <AppLayout />,
       children: [
         { index: true, element: <SavesLibrary /> },
+        { path: "league", element: <LeagueIndex /> },
+        { path: "league/:sessionId", element: <LeagueHub /> },
+        { path: "league/:sessionId/team/:teamName", element: <TeamPage /> },
         {
-          path: "league",
-          element: (
-            <Placeholder
-              title="College Season — League Hub"
-              phase="Phase 2"
-              blurb="The flagship. Dense standings/schedule/polls/leaders grids with instant drill-down to team and player pages, each on its own URL."
-              endpoints={[
-                "GET /sessions/{id}/season/standings",
-                "GET /sessions/{id}/season/schedule",
-                "GET /sessions/{id}/season/polls",
-                "GET /sessions/{id}/season/player-stats",
-                "GET /sessions/{id}/team/{team}",
-                "POST /sessions/{id}/season/simulate-week",
-              ]}
-            />
-          ),
+          path: "league/:sessionId/team/:teamName/player/:playerName",
+          element: <PlayerPage />,
         },
         {
           path: "compare",
