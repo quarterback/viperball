@@ -3,7 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import { SegmentedControl } from "@mantine/core";
 import { SeasonPortalPanel } from "./SeasonPortalPanel";
 import { PostseasonPanel } from "./PostseasonPanel";
-import { ConferencesTab, InjuriesTab, AwardsTab } from "./HubDepthTabs";
+import {
+  ConferencesTab,
+  InjuriesTab,
+  AwardsTab,
+  DtwTab,
+  RefereesTab,
+} from "./HubDepthTabs";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
   Stack,
@@ -197,7 +203,15 @@ export function LeagueHub() {
             );
           const awayWon = g.away_score > g.home_score;
           return (
-            <Text size="sm" ff="monospace">
+            <Anchor
+              component={Link}
+              to={`/league/${sessionId}/game/${g.week}/${encodeURIComponent(
+                g.away_team,
+              )}/${encodeURIComponent(g.home_team)}`}
+              size="sm"
+              ff="monospace"
+              title="Box score"
+            >
               <b style={{ color: awayWon ? "var(--mantine-color-teal-7)" : undefined }}>
                 {g.away_score}
               </b>{" "}
@@ -205,7 +219,7 @@ export function LeagueHub() {
               <b style={{ color: !awayWon ? "var(--mantine-color-teal-7)" : undefined }}>
                 {g.home_score}
               </b>
-            </Text>
+            </Anchor>
           );
         },
       },
@@ -392,6 +406,8 @@ export function LeagueHub() {
           <Tabs.Tab value="postseason">Postseason</Tabs.Tab>
           <Tabs.Tab value="injuries">Injuries</Tabs.Tab>
           <Tabs.Tab value="awards">Awards</Tabs.Tab>
+          <Tabs.Tab value="dtw">Luck (DTW)</Tabs.Tab>
+          <Tabs.Tab value="referees">Referees</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="standings" pt="md">
           <MantineReactTable table={standingsTable} />
@@ -416,6 +432,12 @@ export function LeagueHub() {
         </Tabs.Panel>
         <Tabs.Panel value="awards" pt="md">
           <AwardsTab sid={sessionId} />
+        </Tabs.Panel>
+        <Tabs.Panel value="dtw" pt="md">
+          <DtwTab sid={sessionId} />
+        </Tabs.Panel>
+        <Tabs.Panel value="referees" pt="md">
+          <RefereesTab sid={sessionId} />
         </Tabs.Panel>
       </Tabs>
     </Stack>

@@ -45,6 +45,29 @@ export interface Standing {
   dtw?: { luck_differential: number; expected_wins: number };
 }
 
+export interface BoxPlayerStat {
+  name: string;
+  tag?: string;
+  position?: string;
+  yards?: number;
+  tds?: number;
+  touches?: number;
+  tackles?: number;
+  [k: string]: string | number | undefined;
+}
+export interface TeamGameStats {
+  total_yards?: number;
+  touchdowns?: number;
+  turnovers?: number;
+  fumbles_lost?: number;
+  [k: string]: number | undefined;
+}
+export interface FullResult {
+  final_score: { home: { team: string; score: number }; away: { team: string; score: number } };
+  stats: { home: TeamGameStats; away: TeamGameStats };
+  player_stats: { home: BoxPlayerStat[]; away: BoxPlayerStat[] };
+}
+
 export interface Game {
   week: number;
   home_team: string;
@@ -54,6 +77,49 @@ export interface Game {
   completed: boolean;
   is_conference_game: boolean;
   is_rivalry_game: boolean;
+  full_result?: FullResult | null;
+}
+
+export interface LuckRow {
+  team: string;
+  games_played: number;
+  actual_wins: number;
+  expected_wins: number;
+  lucky_wins: number;
+  unlucky_losses: number;
+}
+export interface RefRow {
+  name: string;
+  career_games?: number;
+  [k: string]: string | number | undefined;
+}
+export interface CoachCardLite {
+  name?: string;
+  role?: string;
+  classification?: string;
+  overall?: number;
+  [k: string]: string | number | undefined;
+}
+export interface CoachingStaffResp {
+  team: string;
+  staff: CoachCardLite[] | Record<string, CoachCardLite>;
+  dev_aura?: number;
+  dev_aura_max_boost_pct?: number;
+}
+export interface ChemPlayer {
+  name: string;
+  position: string;
+  overall: number;
+  voice: number;
+  glue: number;
+  pull: number;
+  reach: number;
+  drama_current?: number;
+  fit?: number;
+}
+export interface ChemistryResp {
+  hc?: { name?: string; classification?: string; chemistry_archetype?: string; message?: string };
+  players: ChemPlayer[];
 }
 
 export interface PollEntry {
@@ -175,6 +241,24 @@ export const seasonApi = {
     apiGet<{ conferences: Record<string, ConferenceBlock>; champions: Record<string, string> }>(
       `/sessions/${sid}/season/conferences`,
     ),
+
+  dtw: (sid: string) =>
+    apiGet<{ rankings: LuckRow[]; games_analyzed: number }>(`/sessions/${sid}/season/dtw`),
+  referees: (sid: string) =>
+    apiGet<{ referees: RefRow[]; total: number; active: number }>(
+      `/sessions/${sid}/season/referees`,
+    ),
+  coachingStaff: (sid: string, team: string) =>
+    apiGet<CoachingStaffResp>(
+      `/sessions/${sid}/season/coaching-staff?team=${encodeURIComponent(team)}`,
+    ),
+  chemistry: (sid: string, team: string) =>
+    apiGet<ChemistryResp>(`/sessions/${sid}/teams/${encodeURIComponent(team)}/chemistry`),
+  // A single week's games with embedded box scores (for game detail).
+  scheduleWeek: (sid: string, week: number) =>
+    apiGet<{ games: Game[] }>(
+      `/sessions/${sid}/season/schedule?week=${week}&include_full_result=true`,
+    ).then((r) => r.games),
 
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),

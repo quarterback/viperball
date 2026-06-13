@@ -8,6 +8,8 @@ import {
   type InjuryRecord,
   type AwardEntry,
   type Standing,
+  type LuckRow,
+  type RefRow,
 } from "../../api/season";
 
 // ── Conferences: standings grouped by conference ────────────────
@@ -100,6 +102,68 @@ export function InjuriesTab({ sid }: { sid: string }) {
   });
   if (!q.isLoading && !(q.data?.active ?? []).length)
     return <Text c="dimmed">No active injuries.</Text>;
+  return <MantineReactTable table={table} />;
+}
+
+// ── DTW: deserve-to-win luck rankings ───────────────────────────
+export function DtwTab({ sid }: { sid: string }) {
+  const q = useQuery({ queryKey: ["dtw", sid], queryFn: () => seasonApi.dtw(sid) });
+  const cols = useMemo<MRT_ColumnDef<LuckRow>[]>(
+    () => [
+      { accessorKey: "team", header: "Team" },
+      { accessorKey: "games_played", header: "G", size: 60 },
+      { accessorKey: "actual_wins", header: "Wins", size: 70 },
+      {
+        accessorKey: "expected_wins",
+        header: "xWins",
+        size: 80,
+        Cell: ({ cell }) => (cell.getValue<number>() ?? 0).toFixed(1),
+      },
+      {
+        header: "Luck",
+        id: "luck",
+        size: 80,
+        accessorFn: (r) => Number((r.actual_wins - r.expected_wins).toFixed(1)),
+        Cell: ({ cell }) => {
+          const v = cell.getValue<number>();
+          return (
+            <Text size="sm" c={v > 0 ? "orange" : v < 0 ? "blue" : "dimmed"}>
+              {v > 0 ? "+" : ""}
+              {v}
+            </Text>
+          );
+        },
+      },
+      { accessorKey: "lucky_wins", header: "Lucky W", size: 90 },
+      { accessorKey: "unlucky_losses", header: "Unlucky L", size: 100 },
+    ],
+    [],
+  );
+  const table = useDataGrid(cols, q.data?.rankings ?? [], {
+    isLoading: q.isLoading,
+    sorting: [{ id: "luck", desc: true }],
+  });
+  if (!q.isLoading && !(q.data?.rankings ?? []).length)
+    return <Text c="dimmed">No completed games with luck data yet.</Text>;
+  return <MantineReactTable table={table} />;
+}
+
+// ── Referees ────────────────────────────────────────────────────
+export function RefereesTab({ sid }: { sid: string }) {
+  const q = useQuery({ queryKey: ["referees", sid], queryFn: () => seasonApi.referees(sid) });
+  const cols = useMemo<MRT_ColumnDef<RefRow>[]>(
+    () => [
+      { accessorKey: "name", header: "Referee" },
+      { accessorKey: "career_games", header: "Games", size: 90 },
+    ],
+    [],
+  );
+  const table = useDataGrid(cols, q.data?.referees ?? [], {
+    isLoading: q.isLoading,
+    sorting: [{ id: "career_games", desc: true }],
+  });
+  if (!q.isLoading && !(q.data?.referees ?? []).length)
+    return <Text c="dimmed">No referee activity yet.</Text>;
   return <MantineReactTable table={table} />;
 }
 
