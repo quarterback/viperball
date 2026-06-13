@@ -212,6 +212,30 @@ _stats_app.mount("/static", _StaticFiles(directory=_STATIC_DIR), name="stats-sta
 
 app.mount("/stats", _stats_app)
 
+# ─── Unified Saves / Experiments API (powers the React Saves Library) ───
+from api.saves_api import router as _saves_router
+app.include_router(_saves_router)
+
+# ─── Serve the React SPA at /app (strangler migration target) ───
+# Built by the Docker web stage to web/dist (base="/app/"). A 404 inside the
+# mount falls back to index.html so client-side routes (/app/league, …) work.
+class _SPAStaticFiles(_StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 404:
+            return await super().get_response("index.html", scope)
+        return response
+
+_SPA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "dist")
+if os.path.isdir(_SPA_DIR):
+    @app.get("/app", include_in_schema=False)
+    def _app_redirect():
+        return RedirectResponse("/app/", status_code=301)
+    app.mount("/app", _SPAStaticFiles(directory=_SPA_DIR, html=True), name="spa")
+    logger.info("React SPA mounted at /app")
+else:
+    logger.info("React SPA not built (web/dist missing) — /app disabled")
+
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 
 sessions: Dict[str, dict] = {}
@@ -1357,6 +1381,36 @@ async def run_playoffs(session_id: str):
         "bracket": bracket,
         "phase": session["phase"],
     }
+
+
+@app.get("/api/sessions/college")
+def list_college_sessions():
+    """Active in-memory college seasons — the React League Hub's picker.
+
+    College seasons live in memory (only box scores / archives persist), so
+    this lists what's currently loaded and playable, newest first.
+    """
+    out = []
+    for sid, sess in sessions.items():
+        season = sess.get("season")
+        if season is None:
+            continue
+        try:
+            out.append({
+                "session_id": sid,
+                "name": getattr(season, "name", "Season"),
+                "phase": sess.get("phase", "setup"),
+                "current_week": season.get_last_completed_week(),
+                "total_weeks": season.get_total_weeks(),
+                "team_count": len(season.teams),
+                "champion": season.champion,
+                "human_teams": sess.get("human_teams", []),
+                "created_at": sess.get("created_at", 0),
+            })
+        except Exception:
+            continue
+    out.sort(key=lambda s: s.get("created_at", 0), reverse=True)
+    return {"sessions": out}
 
 
 @app.get("/sessions/{session_id}/season/status")
