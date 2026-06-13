@@ -131,8 +131,23 @@ export const seasonApi = {
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
-  simWeek: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-week`),
-  simRest: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-rest`),
+  // fastSim=false runs the full play-by-play engine; true uses the fast sim.
+  simWeek: (sid: string, fastSim: boolean) =>
+    apiSend("POST", `/sessions/${sid}/season/simulate-week`, { fast_sim: fastSim }),
+  simRest: (sid: string, fastSim: boolean) =>
+    apiSend("POST", `/sessions/${sid}/season/simulate-rest`, { fast_sim: fastSim }),
+
+  // Pre-season transfer portal (phase "portal" before "regular").
+  portal: (sid: string) =>
+    apiGet<{
+      entries: SeasonPortalEntry[];
+      committed: SeasonPortalEntry[];
+      transfers_remaining: number;
+      human_team: string;
+    }>(`/sessions/${sid}/season/portal`).catch(() => null),
+  portalCommit: (sid: string, team_name: string, entry_index: number) =>
+    apiSend("POST", `/sessions/${sid}/season/portal/commit`, { team_name, entry_index }),
+  portalSkip: (sid: string) => apiSend("POST", `/sessions/${sid}/season/portal/skip`),
 
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),
@@ -163,6 +178,17 @@ export interface StylesResponse {
 }
 
 export type TeamStyle = { offense_style: string; defense_style: string; st_scheme: string };
+
+export interface SeasonPortalEntry {
+  global_index: number;
+  name?: string;
+  player_name?: string;
+  position?: string;
+  overall?: number;
+  year?: string;
+  origin_team?: string;
+  former_team?: string;
+}
 
 export interface NewSeasonConfig {
   name: string;

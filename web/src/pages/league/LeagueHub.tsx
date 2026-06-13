@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { SegmentedControl } from "@mantine/core";
+import { SeasonPortalPanel } from "./SeasonPortalPanel";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
   Stack,
@@ -65,21 +67,26 @@ export function LeagueHub() {
       qc.invalidateQueries({ queryKey: [k, sessionId] }),
     );
 
+  // Per the old mode: choose the full play-by-play engine or the fast sim.
+  const [fastSim, setFastSim] = useState(true);
+
   const simWeek = useMutation({
-    mutationFn: () => seasonApi.simWeek(sessionId),
+    mutationFn: () => seasonApi.simWeek(sessionId, fastSim),
     onSuccess: () => {
       notifications.show({ message: "Simulated a week", color: "indigo" });
       invalidateAll();
     },
-    onError: () => notifications.show({ message: "Sim failed", color: "red" }),
+    onError: (e: unknown) =>
+      notifications.show({ message: `Sim failed: ${String(e)}`, color: "red" }),
   });
   const simRest = useMutation({
-    mutationFn: () => seasonApi.simRest(sessionId),
+    mutationFn: () => seasonApi.simRest(sessionId, fastSim),
     onSuccess: () => {
       notifications.show({ message: "Simulated rest of season", color: "indigo" });
       invalidateAll();
     },
-    onError: () => notifications.show({ message: "Sim failed", color: "red" }),
+    onError: (e: unknown) =>
+      notifications.show({ message: `Sim failed: ${String(e)}`, color: "red" }),
   });
 
   // ── Columns ──────────────────────────────────────────────────
@@ -307,6 +314,8 @@ export function LeagueHub() {
   }
 
   const s = status.data!;
+  const isPortal = s.phase === "portal";
+  const seasonOver = s.games_played >= s.total_games;
 
   return (
     <Stack gap="md">
@@ -332,26 +341,44 @@ export function LeagueHub() {
             )}
           </Group>
         </Stack>
-        <Group gap="xs">
-          <Button
-            leftSection={<IconPlayerTrackNext size={16} />}
-            onClick={() => simWeek.mutate()}
-            loading={simWeek.isPending}
-            disabled={s.games_played >= s.total_games}
-          >
-            Sim Week
-          </Button>
-          <Button
-            variant="default"
-            leftSection={<IconPlayerSkipForward size={16} />}
-            onClick={() => simRest.mutate()}
-            loading={simRest.isPending}
-            disabled={s.games_played >= s.total_games}
-          >
-            Sim Rest
-          </Button>
-        </Group>
+        {!isPortal && (
+          <Group gap="xs" align="center">
+            <SegmentedControl
+              size="xs"
+              value={fastSim ? "fast" : "full"}
+              onChange={(v) => setFastSim(v === "fast")}
+              data={[
+                { label: "Full engine", value: "full" },
+                { label: "Fast sim", value: "fast" },
+              ]}
+            />
+            <Button
+              leftSection={<IconPlayerTrackNext size={16} />}
+              onClick={() => simWeek.mutate()}
+              loading={simWeek.isPending}
+              disabled={seasonOver}
+            >
+              Sim Week
+            </Button>
+            <Button
+              variant="default"
+              leftSection={<IconPlayerSkipForward size={16} />}
+              onClick={() => simRest.mutate()}
+              loading={simRest.isPending}
+              disabled={seasonOver}
+            >
+              Sim Rest
+            </Button>
+          </Group>
+        )}
       </Group>
+
+      {isPortal && (
+        <SeasonPortalPanel
+          sid={sessionId}
+          onDone={() => qc.invalidateQueries({ queryKey: ["season-status", sessionId] })}
+        />
+      )}
 
       <Tabs defaultValue="standings" keepMounted={false}>
         <Tabs.List>

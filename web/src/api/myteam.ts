@@ -1,5 +1,5 @@
 // My Team — pre-season roster builder (NIL / retention / portal) for a human team.
-import { apiGet } from "./client";
+import { apiGet, apiSend } from "./client";
 
 export interface NilBudget {
   annual_budget: number;
@@ -60,4 +60,14 @@ export const myTeamApi = {
       transfers_remaining: number;
       portal_remaining: number;
     }>(`/sessions/${sid}/my-team/portal`),
+
+  // Actions
+  lock: (sid: string, player_id: string, amount: number) =>
+    apiSend("POST", `/sessions/${sid}/my-team/retention/lock`, { player_id, amount }),
+  bid: (sid: string, entry_index: number, nil_amount: number) =>
+    apiSend("POST", `/sessions/${sid}/my-team/portal/bid`, { entry_index, nil_amount }),
+  advancePortal: (sid: string) => apiSend("POST", `/sessions/${sid}/my-team/portal/advance`),
+  finalize: (sid: string) => apiSend("POST", `/sessions/${sid}/my-team/finalize`),
+  simulate: (sid: string) => apiSend("POST", `/sessions/${sid}/my-team/simulate`),
+  runItBack: (sid: string) => apiSend("POST", `/sessions/${sid}/my-team/run-it-back`),
 };
