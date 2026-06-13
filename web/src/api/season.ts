@@ -153,6 +153,29 @@ export const seasonApi = {
   archive: (key: string) =>
     apiGet<ArchiveSnapshot>(`/archives/${encodeURIComponent(key)}`),
 
+  // ── Postseason ──
+  simPlayoffs: (sid: string) => apiSend("POST", `/sessions/${sid}/season/playoffs`),
+  simBowls: (sid: string) => apiSend("POST", `/sessions/${sid}/season/bowls`),
+  playoffBracket: (sid: string) =>
+    apiGet<{ bracket: Game[]; champion: string | null }>(
+      `/sessions/${sid}/season/playoff-bracket`,
+    ),
+  bowlResults: (sid: string) =>
+    apiGet<{ bowl_results: BowlResult[] }>(`/sessions/${sid}/season/bowl-results`).then(
+      (r) => r.bowl_results,
+    ),
+
+  // ── Hub depth ──
+  awards: (sid: string) => apiGet<SeasonAwardsResp>(`/sessions/${sid}/season/awards`),
+  injuries: (sid: string) =>
+    apiGet<{ active: InjuryRecord[]; season_log: InjuryRecord[] }>(
+      `/sessions/${sid}/season/injuries`,
+    ),
+  conferences: (sid: string) =>
+    apiGet<{ conferences: Record<string, ConferenceBlock>; champions: Record<string, string> }>(
+      `/sessions/${sid}/season/conferences`,
+    ),
+
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),
 
@@ -182,6 +205,50 @@ export interface StylesResponse {
 }
 
 export type TeamStyle = { offense_style: string; defense_style: string; st_scheme: string };
+
+export interface BowlResult {
+  name: string;
+  tier: string;
+  team_1_seed?: number;
+  team_2_seed?: number;
+  team_1_record?: string;
+  team_2_record?: string;
+  game: Game;
+}
+
+export interface InjuryRecord {
+  player_name: string;
+  team_name: string;
+  position: string;
+  category: string;
+  description: string;
+  body_part: string;
+  week_injured: number;
+  weeks_out: number;
+  is_season_ending: boolean;
+  game_status?: string;
+}
+
+export interface ConferenceBlock {
+  teams: string[];
+  standings: Standing[];
+}
+
+export interface AwardEntry {
+  award_name: string;
+  player_name: string;
+  team_name: string;
+  position: string;
+  year_in_school?: string;
+  overall_rating?: number;
+  reason?: string;
+}
+export interface SeasonAwardsResp {
+  individual_awards?: AwardEntry[];
+  all_american_first?: AwardEntry[];
+  coach_of_year?: { name?: string; team_name?: string } | string | null;
+  error?: string;
+}
 
 export interface ArchiveSnapshot {
   type: string;

@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { SegmentedControl } from "@mantine/core";
 import { SeasonPortalPanel } from "./SeasonPortalPanel";
+import { PostseasonPanel } from "./PostseasonPanel";
+import { ConferencesTab, InjuriesTab, AwardsTab } from "./HubDepthTabs";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
   Stack,
@@ -386,6 +388,10 @@ export function LeagueHub() {
           <Tabs.Tab value="schedule">Schedule</Tabs.Tab>
           <Tabs.Tab value="polls">Polls</Tabs.Tab>
           <Tabs.Tab value="leaders">Leaders</Tabs.Tab>
+          <Tabs.Tab value="conferences">Conferences</Tabs.Tab>
+          <Tabs.Tab value="postseason">Postseason</Tabs.Tab>
+          <Tabs.Tab value="injuries">Injuries</Tabs.Tab>
+          <Tabs.Tab value="awards">Awards</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="standings" pt="md">
           <MantineReactTable table={standingsTable} />
@@ -398,6 +404,18 @@ export function LeagueHub() {
         </Tabs.Panel>
         <Tabs.Panel value="leaders" pt="md">
           <MantineReactTable table={leaderTable} />
+        </Tabs.Panel>
+        <Tabs.Panel value="conferences" pt="md">
+          <ConferencesTab sid={sessionId} />
+        </Tabs.Panel>
+        <Tabs.Panel value="postseason" pt="md">
+          <PostseasonPanel sid={sessionId} />
+        </Tabs.Panel>
+        <Tabs.Panel value="injuries" pt="md">
+          <InjuriesTab sid={sessionId} />
+        </Tabs.Panel>
+        <Tabs.Panel value="awards" pt="md">
+          <AwardsTab sid={sessionId} />
         </Tabs.Panel>
       </Tabs>
     </Stack>
