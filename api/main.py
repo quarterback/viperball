@@ -1226,8 +1226,8 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
         raise HTTPException(status_code=400, detail=f"Cannot simulate week in phase '{session['phase']}'")
 
     week = req.week
-    dq_mgr = session.get("dq_manager")
-    dq_boosts = dq_mgr.get_all_team_boosts() if dq_mgr else None
+    # DraftyQueenz is a read-only overlay — it no longer feeds boosts into the sim.
+    dq_boosts = None
 
     loop = asyncio.get_event_loop()
     games = await loop.run_in_executor(
@@ -2932,10 +2932,8 @@ def dynasty_advance(session_id: str):
     tracker = session.get("injury_tracker")
     rng = random.Random(dynasty.current_year + 7)
 
-    dq_manager_pre = session.get("dq_manager")
+    # DQ decoupled from the sim — no team boosts feed into season advancement.
     dq_team_boosts_map = None
-    if dq_manager_pre:
-        dq_team_boosts_map = dq_manager_pre.get_all_team_boosts()
     dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng,
                            dq_team_boosts=dq_team_boosts_map)
 
@@ -2955,9 +2953,9 @@ def dynasty_advance(session_id: str):
         )
 
     dq_manager = session.get("dq_manager")
+    # DQ decoupled — empty boosts, so the offseason applies no DQ effects.
     dq_boosts = {}
     if dq_manager:
-        dq_boosts = dq_manager.get_active_boosts(team_name=human_team)
         facilities_boost = dq_boosts.get("facilities", 0)
         if facilities_boost > 0 and human_team in dynasty.team_prestige:
             dynasty.team_prestige[human_team] = min(
@@ -4981,8 +4979,8 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
     if next_week is None:
         raise HTTPException(status_code=400, detail="Regular season is complete")
 
-    dq_boosts = mgr.get_all_team_boosts()
-    games = season.simulate_week(week=next_week, dq_team_boosts=dq_boosts,
+    # DQ decoupled from the sim — no team boosts.
+    games = season.simulate_week(week=next_week, dq_team_boosts=None,
                                   use_fast_sim=req.fast_sim)
 
     if season.is_regular_season_complete():
