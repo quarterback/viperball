@@ -149,6 +149,10 @@ export const seasonApi = {
     apiSend("POST", `/sessions/${sid}/season/portal/commit`, { team_name, entry_index }),
   portalSkip: (sid: string) => apiSend("POST", `/sessions/${sid}/season/portal/skip`),
 
+  // Read-only saved season (archive snapshot) — reuses live serializer shapes.
+  archive: (key: string) =>
+    apiGet<ArchiveSnapshot>(`/archives/${encodeURIComponent(key)}`),
+
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),
 
@@ -178,6 +182,17 @@ export interface StylesResponse {
 }
 
 export type TeamStyle = { offense_style: string; defense_style: string; st_scheme: string };
+
+export interface ArchiveSnapshot {
+  type: string;
+  label: string;
+  season_name: string;
+  champion: string | null;
+  standings: Standing[];
+  schedule: Game[];
+  polls: { week: number; rankings: PollEntry[] }[];
+  team_rosters: Record<string, { players: RosterPlayer[]; mascot?: string }>;
+}
 
 export interface SeasonPortalEntry {
   global_index: number;

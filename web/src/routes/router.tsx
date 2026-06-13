@@ -6,6 +6,7 @@ import { NewSeason } from "../pages/league/NewSeason";
 import { LeagueHub } from "../pages/league/LeagueHub";
 import { TeamPage } from "../pages/league/TeamPage";
 import { PlayerPage } from "../pages/league/PlayerPage";
+import { ArchiveView } from "../pages/league/ArchiveView";
 import { Compare } from "../pages/Compare";
 import { ProIndex } from "../pages/pro/ProIndex";
 import { ProHub } from "../pages/pro/ProHub";
@@ -27,6 +28,7 @@ export const router = createBrowserRouter(
         { index: true, element: <SavesLibrary /> },
         { path: "league", element: <LeagueIndex /> },
         { path: "league/new", element: <NewSeason /> },
+        { path: "league/archive/:archiveKey", element: <ArchiveView /> },
         { path: "league/:sessionId", element: <LeagueHub /> },
         { path: "league/:sessionId/team/:teamName", element: <TeamPage /> },
         {
