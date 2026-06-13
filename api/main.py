@@ -2626,6 +2626,61 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
     conf_dict = dynasty.get_conferences_dict()
 
+    # ── Program registry: add custom programs, drop retired ones ──
+    # Applied here (the season boundary) so the schedule rebuilds around the new
+    # team set and constraints (even counts, etc.) are enforced by create_season.
+    from engine.game_engine import generate_team_on_the_fly as _gen_team
+    for spec in getattr(dynasty, "custom_programs", []) or []:
+        tname = spec.get("team_name")
+        if not tname or tname in teams:
+            continue
+        try:
+            t = _gen_team(
+                team_name=tname,
+                abbreviation=spec.get("abbreviation") or tname[:4].upper(),
+                mascot=spec.get("mascot") or "Team",
+                program_archetype=spec.get("program_archetype"),
+            )
+            t.city = spec.get("city", "")
+            t.state = spec.get("state", "")
+            t.prestige = int(spec.get("prestige", 50))
+            teams[tname] = t
+            team_states[tname] = spec.get("state", "")
+            dynasty.team_prestige[tname] = int(spec.get("prestige", 50))
+            style_configs[tname] = ai_configs.get(
+                tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
+            )
+        except Exception:
+            logger.warning("custom program %s failed to generate", tname, exc_info=True)
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
+    if retired:
+        # Don't delete a retired program's non-graduating players — randomly
+        # reassign them to active teams (free-agent dispersal). Coaches stay
+        # attached to the frozen program (preserved, not deleted).
+        leftovers = []
+        for rt in retired:
+            rteam = teams.get(rt)
+            if rteam:
+                for p in rteam.players:
+                    if str(getattr(p, "year", "")).lower() != "graduate":
+                        leftovers.append(p)
+        conf_dict = {c: [t for t in members if t not in retired] for c, members in conf_dict.items()}
+        for rt in retired:
+            teams.pop(rt, None)
+        active = [n for n in teams if any(n in m for m in conf_dict.values())]
+        disp_rng = random.Random(dynasty.current_year + 7)
+        for p in leftovers:
+            if not active:
+                break
+            tgt = teams[disp_rng.choice(active)]
+            used = {pp.number for pp in tgt.players}
+            if p.number in used:
+                p.number = next((n for n in range(1, 100) if n not in used), p.number)
+            tgt.players.append(p)
+    # Schedule only teams that are actually in a conference.
+    conf_team_set = {t for members in conf_dict.values() for t in members}
+    teams = {n: t for n, t in teams.items() if n in conf_team_set}
+
     rivalries_dict = auto_assign_rivalries(
         conferences=conf_dict,
         team_states=team_states,
@@ -2634,12 +2689,13 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     )
     dynasty.rivalries = rivalries_dict
 
-    # Generate coaching staffs if not yet created (first dynasty season)
-    if not dynasty._coaching_staffs:
-        from engine.coaching import generate_coaching_staff
-        all_team_names = list(dynasty.team_histories.keys())
-        staff_rng = random.Random(dynasty.current_year + 42)
-        for team_name in dynasty.team_histories:
+    # Ensure every active team has a coaching staff (first season → all; later
+    # seasons → just newly-added programs that don't have one yet).
+    from engine.coaching import generate_coaching_staff
+    all_team_names = list(teams.keys())
+    staff_rng = random.Random(dynasty.current_year + 42)
+    for team_name in teams:
+        if team_name not in dynasty._coaching_staffs:
             prestige = dynasty.team_prestige.get(team_name, 50)
             dynasty._coaching_staffs[team_name] = generate_coaching_staff(
                 team_name=team_name, prestige=prestige, year=dynasty.current_year, rng=staff_rng,
@@ -2685,6 +2741,159 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         )
 
     return _serialize_season_status(session)
+
+
+# ─── Program registry (dynasty): add / retire / restore programs ──
+class AddProgramRequest(BaseModel):
+    team_name: str
+    conference: str
+    abbreviation: str = ""
+    mascot: str = "Team"
+    city: str = ""
+    state: str = ""
+    prestige: int = 45
+    program_archetype: Optional[str] = None
+
+
+class ProgramRequest(BaseModel):
+    team: str
+    conference: Optional[str] = None
+
+
+@app.get("/sessions/{session_id}/dynasty/programs")
+def list_programs(session_id: str):
+    """All programs in the dynasty: active (with conference) and retired (frozen)."""
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
+    custom = {s.get("team_name") for s in getattr(dynasty, "custom_programs", []) or []}
+    team_conf = {}
+    for conf_name, conf in dynasty.conferences.items():
+        for t in conf.teams:
+            team_conf[t] = conf_name
+    out = []
+    seen = set()
+    for name, conf in team_conf.items():
+        seen.add(name)
+        h = dynasty.team_histories.get(name)
+        out.append({
+            "name": name, "conference": conf, "retired": name in retired,
+            "custom": name in custom,
+            "prestige": dynasty.team_prestige.get(name, 50),
+            "wins": getattr(h, "total_wins", 0) if h else 0,
+            "losses": getattr(h, "total_losses", 0) if h else 0,
+            "championships": getattr(h, "total_championships", 0) if h else 0,
+        })
+    for name in retired:
+        if name in seen:
+            continue
+        h = dynasty.team_histories.get(name)
+        out.append({
+            "name": name, "conference": None, "retired": True,
+            "custom": name in custom, "prestige": dynasty.team_prestige.get(name, 50),
+            "wins": getattr(h, "total_wins", 0) if h else 0,
+            "losses": getattr(h, "total_losses", 0) if h else 0,
+            "championships": getattr(h, "total_championships", 0) if h else 0,
+        })
+    out.sort(key=lambda p: p["name"])
+    return {"programs": out, "conferences": list(dynasty.conferences.keys())}
+
+
+@app.post("/sessions/{session_id}/dynasty/program/add")
+def add_program(session_id: str, req: AddProgramRequest):
+    """Add a new program — joins the league at the next start-season (schedule rebuilds)."""
+    from engine.dynasty import Conference, TeamHistory
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    name = req.team_name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Empty name")
+    if name in dynasty.team_histories or any(name in c.teams for c in dynasty.conferences.values()):
+        raise HTTPException(status_code=400, detail=f"'{name}' already exists")
+    if req.conference not in dynasty.conferences:
+        dynasty.conferences[req.conference] = Conference(name=req.conference, teams=[])
+    dynasty.conferences[req.conference].teams.append(name)
+    dynasty.team_histories[name] = TeamHistory(team_name=name)
+    dynasty.team_prestige[name] = int(req.prestige)
+    if not hasattr(dynasty, "custom_programs") or dynasty.custom_programs is None:
+        dynasty.custom_programs = []
+    dynasty.custom_programs.append({
+        "team_name": name, "abbreviation": req.abbreviation or name[:4].upper(),
+        "mascot": req.mascot, "city": req.city, "state": req.state,
+        "prestige": int(req.prestige), "program_archetype": req.program_archetype,
+        "conference": req.conference,
+    })
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"added": True, "team_name": name, "applies": "next season"}
+
+
+@app.post("/sessions/{session_id}/dynasty/program/retire")
+def retire_program(session_id: str, req: ProgramRequest):
+    """Retire (freeze) a program: excluded from future seasons, history preserved.
+    Its non-graduating players disperse to active teams at the next start-season."""
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    if not hasattr(dynasty, "retired_programs") or dynasty.retired_programs is None:
+        dynasty.retired_programs = []
+    if req.team not in dynasty.retired_programs:
+        dynasty.retired_programs.append(req.team)
+    for conf in dynasty.conferences.values():
+        if req.team in conf.teams:
+            conf.teams.remove(req.team)
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"retired": True, "team": req.team, "applies": "next season"}
+
+
+@app.post("/sessions/{session_id}/dynasty/program/restore")
+def restore_program(session_id: str, req: ProgramRequest):
+    """Un-retire a program and place it back into a conference."""
+    from engine.dynasty import Conference
+    from engine.db import save_dynasty as db_save_dynasty
+    session = _get_session(session_id)
+    dynasty = _require_dynasty(session)
+    retired = getattr(dynasty, "retired_programs", None) or []
+    if req.team in retired:
+        retired.remove(req.team)
+    dynasty.retired_programs = retired
+    conf = req.conference or (next(iter(dynasty.conferences), None))
+    if conf:
+        if conf not in dynasty.conferences:
+            dynasty.conferences[conf] = Conference(name=conf, teams=[])
+        if req.team not in dynasty.conferences[conf].teams:
+            dynasty.conferences[conf].teams.append(req.team)
+    db_save_dynasty(dynasty, save_key=session_id)
+    return {"restored": True, "team": req.team, "conference": conf}
+
+
+class TeamMetaRequest(BaseModel):
+    city: Optional[str] = None
+    state: Optional[str] = None
+    prestige: Optional[int] = None
+    mascot: Optional[str] = None
+
+
+@app.patch("/sessions/{session_id}/season/team/{team_name}/meta")
+def edit_team_meta(session_id: str, team_name: str, req: TeamMetaRequest):
+    """Edit a team's location/prestige/mascot in the live season."""
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    for field in ("city", "state", "mascot"):
+        v = getattr(req, field)
+        if v is not None and hasattr(team, field):
+            setattr(team, field, v)
+    if req.prestige is not None and hasattr(team, "prestige"):
+        team.prestige = int(req.prestige)
+    return {
+        "team": team_name,
+        "city": getattr(team, "city", ""),
+        "state": getattr(team, "state", ""),
+        "prestige": getattr(team, "prestige", 50),
+        "mascot": getattr(team, "mascot", ""),
+    }
 
 
 @app.post("/sessions/{session_id}/dynasty/advance")

@@ -295,6 +295,11 @@ export const seasonApi = {
       `/sessions/${sid}/season/team/${enc(team)}/rename`,
       { new_name },
     ),
+  editTeamMeta: (
+    sid: string,
+    team: string,
+    body: { city?: string; state?: string; prestige?: number; mascot?: string },
+  ) => apiSend("PATCH", `/sessions/${sid}/season/team/${enc(team)}/meta`, body),
 
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),

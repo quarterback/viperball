@@ -24,6 +24,7 @@ import {
   type SeasonAwards,
 } from "../../api/dynasty";
 import { DynastyCommand } from "./DynastyCommand";
+import { ProgramsManager } from "./ProgramsManager";
 
 const RECORD_LABELS: Record<string, string> = {
   most_wins_season: "Most wins (season)",
@@ -190,11 +191,15 @@ export function DynastyHub() {
       <Tabs defaultValue="histories" keepMounted={false}>
         <Tabs.List>
           <Tabs.Tab value="histories">Team Histories</Tabs.Tab>
+          <Tabs.Tab value="programs">Programs</Tabs.Tab>
           <Tabs.Tab value="awards">Awards</Tabs.Tab>
           <Tabs.Tab value="records">Record Book</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="histories" pt="md">
           <MantineReactTable table={histTable} />
+        </Tabs.Panel>
+        <Tabs.Panel value="programs" pt="md">
+          <ProgramsManager sid={sessionId} />
         </Tabs.Panel>
         <Tabs.Panel value="awards" pt="md">
           <MantineReactTable table={awardTable} />

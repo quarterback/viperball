@@ -23,6 +23,27 @@ export interface DynastyCoach {
   years_coached: number;
 }
 
+export interface Program {
+  name: string;
+  conference: string | null;
+  retired: boolean;
+  custom: boolean;
+  prestige: number;
+  wins: number;
+  losses: number;
+  championships: number;
+}
+export interface AddProgramBody {
+  team_name: string;
+  conference: string;
+  abbreviation?: string;
+  mascot?: string;
+  city?: string;
+  state?: string;
+  prestige?: number;
+  program_archetype?: string | null;
+}
+
 export interface DynastyStatus {
   dynasty_name: string;
   current_year: number;
@@ -70,6 +91,15 @@ export const dynastyApi = {
   },
 
   status: (sid: string) => apiGet<DynastyStatus>(`/sessions/${sid}/dynasty/status`),
+
+  programs: (sid: string) =>
+    apiGet<{ programs: Program[]; conferences: string[] }>(`/sessions/${sid}/dynasty/programs`),
+  addProgram: (sid: string, body: AddProgramBody) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/add`, body),
+  retireProgram: (sid: string, team: string) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/retire`, { team }),
+  restoreProgram: (sid: string, team: string, conference?: string) =>
+    apiSend("POST", `/sessions/${sid}/dynasty/program/restore`, { team, conference }),
 
   teamHistories: (sid: string) =>
     apiGet<{ team_histories: Record<string, TeamHistory> }>(

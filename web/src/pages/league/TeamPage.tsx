@@ -22,6 +22,7 @@ import {
   Tooltip,
   Modal,
   TextInput,
+  NumberInput,
 } from "@mantine/core";
 import {
   IconChevronRight,
@@ -59,18 +60,44 @@ export function TeamPage() {
   const [editPlayer, setEditPlayer] = useState<RosterPlayer | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [movePlayer, setMovePlayer] = useState<RosterPlayer | null>(null);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameVal, setRenameVal] = useState(team);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sName, setSName] = useState(team);
+  const [sCity, setSCity] = useState("");
+  const [sState, setSState] = useState("");
+  const [sMascot, setSMascot] = useState("");
+  const [sPrestige, setSPrestige] = useState<number>(50);
 
-  const rename = useMutation({
-    mutationFn: () => seasonApi.renameTeam(sessionId, team, renameVal.trim()),
-    onSuccess: (res) => {
-      notifications.show({ message: "Team renamed", color: "indigo" });
-      qc.invalidateQueries({ queryKey: ["standings", sessionId] });
-      setRenameOpen(false);
-      navigate(`/league/${sessionId}/team/${encodeURIComponent(res.new_name)}`, { replace: true });
+  const openSettings = () => {
+    setSName(team);
+    setSCity("");
+    setSState("");
+    setSMascot("");
+    setSPrestige(roster.data?.prestige ?? 50);
+    setSettingsOpen(true);
+  };
+
+  const saveSettings = useMutation({
+    mutationFn: async () => {
+      await seasonApi.editTeamMeta(sessionId, team, {
+        city: sCity || undefined,
+        state: sState || undefined,
+        mascot: sMascot || undefined,
+        prestige: sPrestige,
+      });
+      const nm = sName.trim();
+      if (nm && nm !== team) return seasonApi.renameTeam(sessionId, team, nm);
+      return { new_name: team };
     },
-    onError: () => notifications.show({ message: "Rename failed (name taken?)", color: "red" }),
+    onSuccess: (res: { new_name: string }) => {
+      notifications.show({ message: "Team settings saved", color: "indigo" });
+      qc.invalidateQueries({ queryKey: ["standings", sessionId] });
+      qc.invalidateQueries({ queryKey: ["roster", sessionId, team] });
+      setSettingsOpen(false);
+      if (res.new_name !== team) {
+        navigate(`/league/${sessionId}/team/${encodeURIComponent(res.new_name)}`, { replace: true });
+      }
+    },
+    onError: () => notifications.show({ message: "Save failed (name taken?)", color: "red" }),
   });
 
   const cols = useMemo<MRT_ColumnDef<RosterPlayer>[]>(
@@ -172,15 +199,8 @@ export function TeamPage() {
         <Stack gap={2}>
           <Group gap={6}>
             <Title order={2}>{team}</Title>
-            <Tooltip label="Rename team">
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                onClick={() => {
-                  setRenameVal(team);
-                  setRenameOpen(true);
-                }}
-              >
+            <Tooltip label="Team settings (name, location, prestige)">
+              <ActionIcon variant="subtle" color="gray" onClick={openSettings}>
                 <IconPencil size={18} />
               </ActionIcon>
             </Tooltip>
@@ -261,27 +281,27 @@ export function TeamPage() {
         player={movePlayer}
         teams={teamNames}
       />
-      <Modal opened={renameOpen} onClose={() => setRenameOpen(false)} title="Rename team" size="sm">
+      <Modal opened={settingsOpen} onClose={() => setSettingsOpen(false)} title="Team settings" size="md">
         <Stack gap="sm">
-          <TextInput
-            label="New team name"
-            value={renameVal}
-            onChange={(e) => setRenameVal(e.currentTarget.value)}
-            data-autofocus
-          />
+          <TextInput label="Team name" value={sName} onChange={(e) => setSName(e.currentTarget.value)} data-autofocus />
+          <Group grow>
+            <TextInput label="City" value={sCity} onChange={(e) => setSCity(e.currentTarget.value)} placeholder="(unchanged if blank)" />
+            <TextInput label="State" value={sState} onChange={(e) => setSState(e.currentTarget.value)} placeholder="(unchanged if blank)" />
+          </Group>
+          <Group grow>
+            <TextInput label="Mascot" value={sMascot} onChange={(e) => setSMascot(e.currentTarget.value)} placeholder="(unchanged if blank)" />
+            <NumberInput label="Prestige" value={sPrestige} min={0} max={99} onChange={(v) => setSPrestige(Number(v) || 0)} />
+          </Group>
           <Text size="xs" c="dimmed">
-            Updates the schedule, conferences, and standings. Best done before simming far.
+            Renaming updates the schedule, conferences, and standings — best done before simming far.
+            Blank city/state/mascot are left unchanged.
           </Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setRenameOpen(false)}>
+            <Button variant="default" onClick={() => setSettingsOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={() => rename.mutate()}
-              loading={rename.isPending}
-              disabled={!renameVal.trim() || renameVal.trim() === team}
-            >
-              Rename
+            <Button onClick={() => saveSettings.mutate()} loading={saveSettings.isPending} disabled={!sName.trim()}>
+              Save
             </Button>
           </Group>
         </Stack>
