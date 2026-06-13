@@ -9,6 +9,9 @@ import { PlayerPage } from "../pages/league/PlayerPage";
 import { ArchiveView } from "../pages/league/ArchiveView";
 import { GameBoxScore } from "../pages/league/GameBoxScore";
 import { Compare } from "../pages/Compare";
+import { DQLayout } from "../pages/dq/DQLayout";
+import { DQHome } from "../pages/dq/DQHome";
+import { DQBoard } from "../pages/dq/DQBoard";
 import { ProIndex } from "../pages/pro/ProIndex";
 import { ProHub } from "../pages/pro/ProHub";
 import { International } from "../pages/International";
@@ -46,6 +49,14 @@ export const router = createBrowserRouter(
         { path: "pro/:league/:sessionId", element: <ProHub /> },
         { path: "international", element: <International /> },
         { path: "export", element: <Export /> },
+      ],
+    },
+    {
+      path: "dq",
+      element: <DQLayout />,
+      children: [
+        { index: true, element: <DQHome /> },
+        { path: ":sessionId", element: <DQBoard /> },
       ],
     },
   ],
