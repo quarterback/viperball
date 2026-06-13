@@ -116,6 +116,14 @@ recruiting hub, coach, play-by-play) as each lands. Retire matching NiceGUI page
 **Phase 5 — Cutover**
 SPA becomes `/`; NiceGUI removed; delete dead Streamlit `ui/` dir.
 
+**Phase 6 — Carry the design to `/stats` (deferred, owner-requested)**
+Once the SPA is validated as the real tool, bring the new design to the public Jinja
+`/stats` site so the two surfaces match. Two options to decide then:
+1. Restyle the Jinja templates in place with the new tokens/components (keeps `/stats`
+   server-rendered — good for shareable, SEO-friendly, no-JS export pages).
+2. Serve the SPA's read-only views at `/stats` routes (one codebase, loses SSR).
+Do NOT start this until the SPA is confirmed working 1:1.
+
 ## 7. Effort (rough, single developer-agent)
 
 | Phase | Scope | Rough size |
