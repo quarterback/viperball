@@ -45,6 +45,29 @@ export interface Standing {
   dtw?: { luck_differential: number; expected_wins: number };
 }
 
+export interface BoxPlayerStat {
+  name: string;
+  tag?: string;
+  position?: string;
+  yards?: number;
+  tds?: number;
+  touches?: number;
+  tackles?: number;
+  [k: string]: string | number | undefined;
+}
+export interface TeamGameStats {
+  total_yards?: number;
+  touchdowns?: number;
+  turnovers?: number;
+  fumbles_lost?: number;
+  [k: string]: number | undefined;
+}
+export interface FullResult {
+  final_score: { home: { team: string; score: number }; away: { team: string; score: number } };
+  stats: { home: TeamGameStats; away: TeamGameStats };
+  player_stats: { home: BoxPlayerStat[]; away: BoxPlayerStat[] };
+}
+
 export interface Game {
   week: number;
   home_team: string;
@@ -54,6 +77,49 @@ export interface Game {
   completed: boolean;
   is_conference_game: boolean;
   is_rivalry_game: boolean;
+  full_result?: FullResult | null;
+}
+
+export interface LuckRow {
+  team: string;
+  games_played: number;
+  actual_wins: number;
+  expected_wins: number;
+  lucky_wins: number;
+  unlucky_losses: number;
+}
+export interface RefRow {
+  name: string;
+  career_games?: number;
+  [k: string]: string | number | undefined;
+}
+export interface CoachCardLite {
+  name?: string;
+  role?: string;
+  classification?: string;
+  overall?: number;
+  [k: string]: string | number | undefined;
+}
+export interface CoachingStaffResp {
+  team: string;
+  staff: CoachCardLite[] | Record<string, CoachCardLite>;
+  dev_aura?: number;
+  dev_aura_max_boost_pct?: number;
+}
+export interface ChemPlayer {
+  name: string;
+  position: string;
+  overall: number;
+  voice: number;
+  glue: number;
+  pull: number;
+  reach: number;
+  drama_current?: number;
+  fit?: number;
+}
+export interface ChemistryResp {
+  hc?: { name?: string; classification?: string; chemistry_archetype?: string; message?: string };
+  players: ChemPlayer[];
 }
 
 export interface PollEntry {
@@ -149,6 +215,51 @@ export const seasonApi = {
     apiSend("POST", `/sessions/${sid}/season/portal/commit`, { team_name, entry_index }),
   portalSkip: (sid: string) => apiSend("POST", `/sessions/${sid}/season/portal/skip`),
 
+  // Read-only saved season (archive snapshot) — reuses live serializer shapes.
+  archive: (key: string) =>
+    apiGet<ArchiveSnapshot>(`/archives/${encodeURIComponent(key)}`),
+
+  // ── Postseason ──
+  simPlayoffs: (sid: string) => apiSend("POST", `/sessions/${sid}/season/playoffs`),
+  simBowls: (sid: string) => apiSend("POST", `/sessions/${sid}/season/bowls`),
+  playoffBracket: (sid: string) =>
+    apiGet<{ bracket: Game[]; champion: string | null }>(
+      `/sessions/${sid}/season/playoff-bracket`,
+    ),
+  bowlResults: (sid: string) =>
+    apiGet<{ bowl_results: BowlResult[] }>(`/sessions/${sid}/season/bowl-results`).then(
+      (r) => r.bowl_results,
+    ),
+
+  // ── Hub depth ──
+  awards: (sid: string) => apiGet<SeasonAwardsResp>(`/sessions/${sid}/season/awards`),
+  injuries: (sid: string) =>
+    apiGet<{ active: InjuryRecord[]; season_log: InjuryRecord[] }>(
+      `/sessions/${sid}/season/injuries`,
+    ),
+  conferences: (sid: string) =>
+    apiGet<{ conferences: Record<string, ConferenceBlock>; champions: Record<string, string> }>(
+      `/sessions/${sid}/season/conferences`,
+    ),
+
+  dtw: (sid: string) =>
+    apiGet<{ rankings: LuckRow[]; games_analyzed: number }>(`/sessions/${sid}/season/dtw`),
+  referees: (sid: string) =>
+    apiGet<{ referees: RefRow[]; total: number; active: number }>(
+      `/sessions/${sid}/season/referees`,
+    ),
+  coachingStaff: (sid: string, team: string) =>
+    apiGet<CoachingStaffResp>(
+      `/sessions/${sid}/season/coaching-staff?team=${encodeURIComponent(team)}`,
+    ),
+  chemistry: (sid: string, team: string) =>
+    apiGet<ChemistryResp>(`/sessions/${sid}/teams/${encodeURIComponent(team)}/chemistry`),
+  // A single week's games with embedded box scores (for game detail).
+  scheduleWeek: (sid: string, week: number) =>
+    apiGet<{ games: Game[] }>(
+      `/sessions/${sid}/season/schedule?week=${week}&include_full_result=true`,
+    ).then((r) => r.games),
+
   teams: () =>
     apiGet<{ teams: TeamMeta[] }>("/teams").then((r) => r.teams),
 
@@ -178,6 +289,61 @@ export interface StylesResponse {
 }
 
 export type TeamStyle = { offense_style: string; defense_style: string; st_scheme: string };
+
+export interface BowlResult {
+  name: string;
+  tier: string;
+  team_1_seed?: number;
+  team_2_seed?: number;
+  team_1_record?: string;
+  team_2_record?: string;
+  game: Game;
+}
+
+export interface InjuryRecord {
+  player_name: string;
+  team_name: string;
+  position: string;
+  category: string;
+  description: string;
+  body_part: string;
+  week_injured: number;
+  weeks_out: number;
+  is_season_ending: boolean;
+  game_status?: string;
+}
+
+export interface ConferenceBlock {
+  teams: string[];
+  standings: Standing[];
+}
+
+export interface AwardEntry {
+  award_name: string;
+  player_name: string;
+  team_name: string;
+  position: string;
+  year_in_school?: string;
+  overall_rating?: number;
+  reason?: string;
+}
+export interface SeasonAwardsResp {
+  individual_awards?: AwardEntry[];
+  all_american_first?: AwardEntry[];
+  coach_of_year?: { name?: string; team_name?: string } | string | null;
+  error?: string;
+}
+
+export interface ArchiveSnapshot {
+  type: string;
+  label: string;
+  season_name: string;
+  champion: string | null;
+  standings: Standing[];
+  schedule: Game[];
+  polls: { week: number; rankings: PollEntry[] }[];
+  team_rosters: Record<string, { players: RosterPlayer[]; mascot?: string }>;
+}
 
 export interface SeasonPortalEntry {
   global_index: number;

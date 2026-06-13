@@ -17,9 +17,11 @@ import {
   Center,
   Card,
 } from "@mantine/core";
+import { Tabs } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { seasonApi, type RosterPlayer } from "../../api/season";
+import { ChemistryTab, CoachingTab } from "./TeamDetailTabs";
 
 export function TeamPage() {
   const { sessionId = "", teamName = "" } = useParams();
@@ -156,7 +158,22 @@ export function TeamPage() {
           <Loader />
         </Center>
       ) : (
-        <MantineReactTable table={table} />
+        <Tabs defaultValue="roster" keepMounted={false}>
+          <Tabs.List>
+            <Tabs.Tab value="roster">Roster</Tabs.Tab>
+            <Tabs.Tab value="chemistry">Chemistry</Tabs.Tab>
+            <Tabs.Tab value="coaching">Coaching</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel value="roster" pt="md">
+            <MantineReactTable table={table} />
+          </Tabs.Panel>
+          <Tabs.Panel value="chemistry" pt="md">
+            <ChemistryTab sid={sessionId} team={team} />
+          </Tabs.Panel>
+          <Tabs.Panel value="coaching" pt="md">
+            <CoachingTab sid={sessionId} team={team} />
+          </Tabs.Panel>
+        </Tabs>
       )}
     </Stack>
   );

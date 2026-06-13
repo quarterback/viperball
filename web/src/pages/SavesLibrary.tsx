@@ -25,6 +25,7 @@ import {
 } from "@tabler/icons-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
+import { notifications } from "@mantine/notifications";
 import dayjs from "dayjs";
 import {
   listSaves,
@@ -33,6 +34,7 @@ import {
   type SaveSummary,
   type SaveMode,
 } from "../api/saves";
+import { dynastyApi } from "../api/dynasty";
 
 const MODE_COLOR: Record<SaveMode, string> = {
   college: "indigo",
@@ -59,6 +61,22 @@ export function SavesLibrary() {
     mutationFn: deleteSave,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["saves"] }),
   });
+  const openDynasty = useMutation({
+    mutationFn: (saveKey: string) => dynastyApi.open(saveKey),
+    onSuccess: (sid) => navigate(`/dynasty/${sid}`),
+    onError: () => notifications.show({ message: "Couldn't open dynasty", color: "red" }),
+  });
+
+  // Open a save into the right place based on its type.
+  const openSave = (save: SaveSummary) => {
+    const sep = save.id.indexOf("::");
+    const type = save.id.slice(0, sep);
+    const key = save.id.slice(sep + 2);
+    if (type === "season_archive") navigate(`/league/archive/${encodeURIComponent(key)}`);
+    else if (type === "dynasty") openDynasty.mutate(key);
+    else if (type === "pro_league") navigate("/pro");
+    else notifications.show({ message: `Open ${save.mode} from its tab`, color: "gray" });
+  };
 
   const columns = useMemo<MRT_ColumnDef<SaveSummary>[]>(
     () => [
@@ -144,10 +162,7 @@ export function SavesLibrary() {
     renderRowActions: ({ row }) => (
       <Group gap={4} wrap="nowrap">
         <Tooltip label="Open">
-          <ActionIcon
-            variant="subtle"
-            onClick={() => navigate(`/league?save=${row.original.id}`)}
-          >
+          <ActionIcon variant="subtle" onClick={() => openSave(row.original)}>
             <IconPlayerPlay size={16} />
           </ActionIcon>
         </Tooltip>

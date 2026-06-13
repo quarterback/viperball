@@ -71,12 +71,25 @@ def _to_summary(save_type: str, meta_row: dict) -> SaveSummary:
     save_key = meta_row["save_key"]
     save_id = f"{save_type}{SEP}{save_key}"
     extra = _meta_for(save_id)
+    mode = _TYPE_TO_MODE.get(save_type, save_type)
+    teams = extra.get("teams", "")
+    progress = extra.get("progress", "")
+    # Season archives carry their own type/champion/counts in a sidecar meta blob.
+    if save_type == "season_archive":
+        am = vdb.load_season_archive_meta(save_key) or {}
+        mode = am.get("type", "college") if am.get("type") in ("college", "fiv") else "college"
+        if not teams and am.get("team_count"):
+            teams = f"{am['team_count']} teams"
+        if not progress:
+            champ = am.get("champion")
+            gp, tg = am.get("games_played", 0), am.get("total_games", 0)
+            progress = f"🏆 {champ}" if champ else (f"{gp}/{tg} games" if tg else "")
     return SaveSummary(
         id=save_id,
         name=meta_row.get("label") or save_key,
-        mode=_TYPE_TO_MODE.get(save_type, save_type),
-        teams=extra.get("teams", ""),
-        progress=extra.get("progress", ""),
+        mode=mode,
+        teams=teams,
+        progress=progress,
         seed=extra.get("seed"),
         tags=extra.get("tags", []),
         notes=extra.get("notes", ""),
@@ -156,4 +169,13 @@ def delete(save_id: str):
             vdb.delete_season_archive(save_key)
         except Exception:
             pass
+    elif save_type == "season_archive":
+        # Removes both the snapshot and its summary meta.
+        try:
+            vdb.delete_season_archive(save_key)
+        except Exception:
+            pass
+        # Auto-saved college runs are keyed "college_<session_id>"; drop their box scores.
+        if save_key.startswith("college_"):
+            vdb.delete_box_scores_for_session(save_key[len("college_"):])
     return None

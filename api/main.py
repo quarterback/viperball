@@ -1024,6 +1024,9 @@ def _persist_box_scores(session_id: str, games):
         save_box_scores_bulk(session_id, games)
     except Exception:
         logger.debug("Box score persistence skipped (db unavailable)", exc_info=True)
+    # Also upsert a durable, reloadable college save so experiments survive
+    # restarts/deploys and appear in the Saves Library.
+    _autosave_college(session_id)
 
 
 @app.post("/sessions")
@@ -2036,13 +2039,13 @@ def season_awards(session_id: str):
 # SEASON ARCHIVES — persist completed season data to SQLite
 # ═══════════════════════════════════════════════════════════════
 
-def _build_college_archive(session: dict, session_id: str) -> dict:
+def _build_college_archive(session: dict, session_id: str, include_full_result: bool = True) -> dict:
     """Build a self-contained archive snapshot of a college season."""
     from engine.awards import compute_season_awards
     season = _require_season(session)
 
     standings = _serialize_standings(season)
-    schedule = [_serialize_game(g, include_full_result=True) for g in season.schedule]
+    schedule = [_serialize_game(g, include_full_result=include_full_result) for g in season.schedule]
 
     polls = []
     prestige_map = {}
@@ -2157,6 +2160,26 @@ def archive_college_season(session_id: str):
     archive_key = f"college_{session_id}_{int(time.time())}"
     save_season_archive(archive_key, snapshot)
     return {"archive_key": archive_key, "label": snapshot["label"], "message": "Season archived successfully"}
+
+
+def _autosave_college(session_id: str):
+    """Persist the live college season as a durable, reloadable save (upsert).
+
+    Keeps experiments from vanishing on restart/deploy and surfaces them in the
+    Saves Library. Uses a stable key per session so it overwrites rather than
+    piling up snapshots. Light (no embedded play-by-play; box scores live in
+    their own table), so it's cheap to write after every sim.
+    """
+    from engine.db import save_season_archive
+    session = sessions.get(session_id)
+    if not session or session.get("season") is None:
+        return
+    try:
+        snapshot = _build_college_archive(session, session_id, include_full_result=False)
+        snapshot["auto"] = True
+        save_season_archive(f"college_{session_id}", snapshot)
+    except Exception:
+        logger.debug("college autosave skipped", exc_info=True)
 
 
 @app.post("/archives/fiv")
