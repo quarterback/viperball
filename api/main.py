@@ -3487,6 +3487,71 @@ def offseason_recruiting_offer(session_id: str, req: RecruitOfferRequest):
     }
 
 
+# ─── Recruit editor / direct assignment (commissioner) ───────────
+_EDITABLE_RECRUIT_FIELDS = {
+    "first_name", "last_name", "position", "region", "hometown", "high_school",
+    "height", "weight", "stars",
+    "true_speed", "true_stamina", "true_agility", "true_power", "true_awareness",
+    "true_hands", "true_kicking", "true_kick_power", "true_kick_accuracy",
+    "true_lateral_skill", "true_tackling", "true_potential", "true_development",
+    "field_intelligence", "coachability", "gpa", "sat_score",
+}
+
+
+class EditRecruitRequest(BaseModel):
+    fields: Dict[str, object]
+
+
+class AssignRecruitRequest(BaseModel):
+    recruit_index: int
+    team: str
+
+
+@app.patch("/sessions/{session_id}/offseason/recruiting/{recruit_index}")
+def edit_recruit(session_id: str, recruit_index: int, req: EditRecruitRequest):
+    """Edit a recruit's name/attributes/stars in the session's recruit pool."""
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    if recruit_index < 0 or recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+    recruit = recruit_pool[recruit_index]
+    applied = []
+    for k, v in req.fields.items():
+        if k in _EDITABLE_RECRUIT_FIELDS and hasattr(recruit, k):
+            try:
+                setattr(recruit, k, v)
+                applied.append(k)
+            except Exception:
+                pass
+    return {"updated": applied, "recruit": _serialize_recruit(recruit)}
+
+
+@app.post("/sessions/{session_id}/offseason/recruiting/assign")
+def assign_recruit(session_id: str, req: AssignRecruitRequest):
+    """Directly assign (sign) a recruit to any team — the in-session, roster-landing
+    replacement for the disconnected /stats commissioner force-sign.
+
+    Routes through offseason['manual_signings'], which offseason/complete also
+    promotes to rosters, so it survives resolve() overwriting _pending_signed_recruits.
+    """
+    session = _get_session(session_id)
+    offseason = _require_offseason(session)
+    recruit_pool = offseason.get("recruit_pool", [])
+    if req.recruit_index < 0 or req.recruit_index >= len(recruit_pool):
+        raise HTTPException(status_code=400, detail="Invalid recruit index")
+    recruit = recruit_pool[req.recruit_index]
+    recruit.committed_to = req.team
+    recruit.signed = True
+    if hasattr(recruit, "status"):
+        recruit.status = "signed"
+    if hasattr(recruit, "signing_phase"):
+        recruit.signing_phase = "override"
+    manual = offseason.setdefault("manual_signings", {})
+    manual.setdefault(req.team, []).append(recruit)
+    return {"assigned": True, "team": req.team, "recruit": _serialize_recruit(recruit)}
+
+
 @app.post("/sessions/{session_id}/offseason/recruiting/resolve")
 def offseason_recruiting_resolve(session_id: str):
     from engine.recruiting import auto_recruit_team, simulate_phased_signing
@@ -3643,11 +3708,26 @@ def offseason_complete(session_id: str):
             player_cards[team_name] = [c for c in cards if c.year != "Graduate"]
 
         # Promote signed recruits to PlayerCards on their new team's roster.
-        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
-        for team_name, recruits in signed_recruits.items():
+        # Includes both the AI-resolved signings and any manual in-session
+        # commissioner assignments (offseason['manual_signings']); dedup by id.
+        _added_recruit_ids = set()
+
+        def _land(team_name, recruits):
             roster = player_cards.setdefault(team_name, [])
             for recruit in recruits:
+                rid = getattr(recruit, "recruit_id", None)
+                if rid and rid in _added_recruit_ids:
+                    continue
+                if rid:
+                    _added_recruit_ids.add(rid)
                 roster.append(recruit.to_player_card(team_name))
+
+        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
+        for team_name, recruits in signed_recruits.items():
+            _land(team_name, recruits)
+        manual_signings = (session.get("offseason") or {}).get("manual_signings", {})
+        for team_name, recruits in manual_signings.items():
+            _land(team_name, recruits)
         dynasty._pending_signed_recruits = None
 
         # Serialize rosters for persistence

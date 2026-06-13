@@ -12,6 +12,19 @@ from starlette.templating import Jinja2Templates
 
 router = APIRouter()
 
+# ─── Deprecated: /stats recruiting hub ───────────────────────────
+# This recruiting flow was only meant to be an editor but ended up recreating
+# a parallel, disconnected recruiting pool (changes here never landed on rosters
+# in the running game). Recruiting editing/assignment now lives in the app
+# (viperball.fly.dev/app — Dynasty → offseason), operating on the live session.
+# Registered before the routes below so it shadows the whole /recruiting/* tree.
+@router.api_route("/recruiting", methods=["GET", "POST"], include_in_schema=False)
+@router.api_route("/recruiting/", methods=["GET", "POST"], include_in_schema=False)
+@router.api_route("/recruiting/{rest:path}", methods=["GET", "POST"], include_in_schema=False)
+def _recruiting_deprecated(rest: str = ""):
+    return RedirectResponse("/app/dynasty", status_code=307)
+
+
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
