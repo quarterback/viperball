@@ -548,28 +548,34 @@ def _find_all_pro_sessions():
 
 
 def _find_all_wvl_sessions():
-    """Return all active WVL sessions."""
-    api = _get_api()
+    """Return all persisted WVL career leagues (DB-backed)."""
+    from engine.wvl_career import list_leagues, load_league
     result = []
-    for sid, data in api["wvl_sessions"].items():
-        season = data.get("season")
-        result.append({
-            "session_id": sid,
-            "dynasty_name": data.get("dynasty_name", "WVL Dynasty"),
-            "year": data.get("year", "?"),
-            "club_key": data.get("club_key", ""),
-            "tier_count": len(season.tier_seasons) if season else 0,
-        })
+    for meta in list_leagues():
+        key = meta.get("save_key")
+        if not key:
+            continue
+        try:
+            league = load_league(key)
+        except Exception:
+            continue
+        if league is None:
+            continue
+        result.append({"league_id": key, "status": league.status()})
     return result
 
 
-def _get_wvl_session(session_id: str):
-    """Get a WVL session by ID."""
-    api = _get_api()
-    data = api["wvl_sessions"].get(session_id)
-    if not data:
-        raise HTTPException(404, "WVL session not found")
-    return data
+def _get_wvl_league(league_id: str):
+    """Load a WVL career league by id, or 404."""
+    from engine.wvl_career import load_league
+    try:
+        league = load_league(league_id)
+    except Exception:
+        league = None
+    if league is None:
+        raise HTTPException(404, "WVL career league not found")
+    return league
+
 
 
 def _ctx(request, **kwargs):
@@ -4304,997 +4310,79 @@ def pro_player(request: Request, league: str, session_id: str, team_key: str, pl
     ))
 
 
-# ── WVL (Women's Viperball League) ──────────────────────────────────────
-
-def _wvl_tier_label(tier_num):
-    """Tier number to display name."""
-    labels = {1: "Galactic Premiership", 2: "Galactic League 1", 3: "Galactic League 2", 4: "Galactic League 3"}
-    return labels.get(tier_num, f"Tier {tier_num}")
-
-
-def _wvl_zone_class(zone):
-    """CSS class for a pro/rel zone."""
-    return {"promotion": "stat-good", "relegation": "stat-bad", "playoff": "stat-elite"}.get(zone, "")
-
+# ── WVL — Career League (CVL graduates continue their careers) ──────────
+# The /stats WVL section reads the DB-backed WVLCareerLeague produced by the
+# SPA. Same player cards, careers persist; these pages are read-only display.
 
 @router.get("/wvl/", response_class=HTMLResponse)
 def wvl_index(request: Request):
-    sessions = _find_all_wvl_sessions()
+    leagues = _find_all_wvl_sessions()
     return templates.TemplateResponse("wvl/index.html", _ctx(
-        request, section="wvl", sessions=sessions,
+        request, section="wvl", leagues=leagues,
     ))
 
 
-@router.get("/wvl/{session_id}/", response_class=HTMLResponse)
-def wvl_season(request: Request, session_id: str):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-
-    # Gather standings for all tiers with pro/rel zone annotations
-    all_standings = season.get_all_standings()
-
-    # Get tier configs for display
-    try:
-        from engine.wvl_config import TIER_BY_NUMBER, CLUBS_BY_KEY, RIVALRIES
-    except ImportError:
-        TIER_BY_NUMBER = {}
-        CLUBS_BY_KEY = {}
-        RIVALRIES = []
-
-    tier_data = []
-    for tier_num in sorted(season.tier_seasons.keys()):
-        tier_standings = all_standings.get(tier_num, {})
-        ranked = tier_standings.get("ranked", [])
-        # Enrich with club info
-        for team in ranked:
-            key = team.get("team_key", "")
-            club = CLUBS_BY_KEY.get(key)
-            if club:
-                team["country"] = club.country
-                team["narrative_tag"] = club.narrative_tag
-            team["is_owner_club"] = key == data.get("club_key", "")
-
-        tier_season = season.tier_seasons.get(tier_num)
-        champion = tier_season.champion if tier_season else None
-
-        tier_data.append({
-            "tier_num": tier_num,
-            "tier_name": _wvl_tier_label(tier_num),
-            "ranked": ranked,
-            "champion": champion,
-            "divisions": tier_standings.get("divisions", {}),
-        })
-
+@router.get("/wvl/{league_id}/", response_class=HTMLResponse)
+def wvl_season(request: Request, league_id: str):
+    league = _get_wvl_league(league_id)
     return templates.TemplateResponse("wvl/season.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        tier_data=tier_data,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        club_key=data.get("club_key", ""),
-        zone_class=_wvl_zone_class,
+        request, section="wvl", league_id=league_id,
+        status=league.status(),
+        standings=league.standings_table(),
+        leaders=league.leaders(limit=10),
     ))
 
 
-@router.get("/wvl/{session_id}/schedule", response_class=HTMLResponse)
-def wvl_schedule(request: Request, session_id: str, tier: int = 1):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-    tier_season = season.tier_seasons.get(tier)
-    if not tier_season:
-        raise HTTPException(404, f"Tier {tier} not found")
-
-    schedule = tier_season.get_schedule()
-    tier_list = sorted(season.tier_seasons.keys())
-
+@router.get("/wvl/{league_id}/schedule", response_class=HTMLResponse)
+def wvl_schedule(request: Request, league_id: str):
+    league = _get_wvl_league(league_id)
     return templates.TemplateResponse("wvl/schedule.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        schedule=schedule, selected_tier=tier,
-        tier_name=_wvl_tier_label(tier),
-        tier_list=tier_list,
-        tier_label=_wvl_tier_label,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
+        request, section="wvl", league_id=league_id,
+        status=league.status(),
+        weeks=league.schedule_view(),
     ))
 
 
-def _compute_wvl_playoff_achievements(bracket_data):
-    """Given get_playoff_bracket() output, compute per-team achievement labels."""
-    rounds = bracket_data.get("rounds", [])
-    champion = bracket_data.get("champion")
-    total_rounds = len(rounds)
-
-    team_depth = {}  # team_key → (max_round_idx, team_name)
-    for round_idx, rnd in enumerate(rounds):
-        for m in rnd.get("matchups", []):
-            home = m.get("home", {})
-            away = m.get("away")
-            if home.get("team_key"):
-                k = home["team_key"]
-                if k not in team_depth or round_idx > team_depth[k][0]:
-                    team_depth[k] = (round_idx, home.get("team_name", k))
-            if away and away.get("team_key"):
-                k = away["team_key"]
-                if k not in team_depth or round_idx > team_depth[k][0]:
-                    team_depth[k] = (round_idx, away.get("team_name", k))
-        for bt in rnd.get("bye_teams", []):
-            k = bt.get("team_key")
-            if k and (k not in team_depth or round_idx > team_depth[k][0]):
-                team_depth[k] = (round_idx, bt.get("team_name", k))
-
-    results = {}
-    for team_key, (depth, name) in team_depth.items():
-        if team_key == champion:
-            label, css = "Champion", "achievement-champion"
-        elif depth == total_rounds - 1 and total_rounds > 0:
-            label, css = "Finalist", "achievement-finalist"
-        elif total_rounds <= 2:
-            label, css = "Playoff Qualifier", "achievement-qualifier"
-        elif depth == total_rounds - 2:
-            label, css = "Semifinalist", "achievement-semifinalist"
-        elif depth == total_rounds - 3:
-            label, css = "Quarterfinalist", "achievement-quarterfinalist"
-        else:
-            label, css = "Playoff Qualifier", "achievement-qualifier"
-        results[team_key] = {"label": label, "team_name": name, "round_depth": depth, "css_class": css}
-    return results
-
-
-@router.get("/wvl/{session_id}/playoffs", response_class=HTMLResponse)
-def wvl_playoffs(request: Request, session_id: str):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-
-    tier_brackets = []
-    for tier_num in sorted(season.tier_seasons.keys()):
-        ts = season.tier_seasons[tier_num]
-        bracket = ts.get_playoff_bracket()
-        achievements = _compute_wvl_playoff_achievements(bracket)
-        tier_brackets.append({
-            "tier_num": tier_num,
-            "tier_name": _wvl_tier_label(tier_num),
-            "bracket": bracket,
-            "achievements": achievements,
-        })
-
-    return templates.TemplateResponse("wvl/playoffs.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        tier_brackets=tier_brackets,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        club_key=data.get("club_key", ""),
+@router.get("/wvl/{league_id}/players", response_class=HTMLResponse)
+def wvl_players(request: Request, league_id: str):
+    league = _get_wvl_league(league_id)
+    return templates.TemplateResponse("wvl/players.html", _ctx(
+        request, section="wvl", league_id=league_id,
+        status=league.status(),
+        players=league.players_view(include_retired=True),
     ))
 
 
-@router.get("/wvl/{session_id}/game/{tier}/{week}/{matchup}", response_class=HTMLResponse)
-def wvl_game(request: Request, session_id: str, tier: int, week: int, matchup: str):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-    tier_season = season.tier_seasons.get(tier)
-    if not tier_season:
-        raise HTTPException(404, f"Tier {tier} not found")
-
-    box = tier_season.get_box_score(week, matchup)
-    if not box:
-        raise HTTPException(404, "Game not found")
-
-    _normalize_box_score_stats(box)
-
-    # Check if it's a rivalry match
-    try:
-        from engine.wvl_config import is_rivalry_match
-        home_key = box.get("home_key", "")
-        away_key = box.get("away_key", "")
-        rivalry = is_rivalry_match(home_key, away_key)
-    except ImportError:
-        rivalry = None
-
-    benchmarks = _game_benchmarks_from_season(tier_season)
-
-    _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
-    return templates.TemplateResponse("wvl/game.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        box=box, week=week, matchup=matchup, tier=tier,
-        tier_name=_wvl_tier_label(tier),
-        benchmarks=benchmarks,
-        rivalry=rivalry,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        stadium_url=_stadium_url_for(_home_key),
-    ))
-
-
-@router.get("/wvl/{session_id}/team/{team_key}", response_class=HTMLResponse)
-def wvl_team(request: Request, session_id: str, team_key: str):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-
-    # Find which tier this team is in
-    team_tier = season.tier_assignments.get(team_key)
-    if team_tier is None:
-        raise HTTPException(404, f"Team '{team_key}' not found")
-
-    tier_season = season.tier_seasons.get(team_tier)
-    if not tier_season:
-        raise HTTPException(404, f"Tier {team_tier} not found")
-
-    detail = tier_season.get_team_detail(team_key)
-    if not detail:
-        raise HTTPException(404, f"Team '{team_key}' not found")
-
-    # Enrich with WVL club info
-    try:
-        from engine.wvl_config import CLUBS_BY_KEY
-        club = CLUBS_BY_KEY.get(team_key)
-        if club:
-            detail["country"] = club.country
-            detail["city"] = club.city
-            detail["narrative_tag"] = club.narrative_tag
-            detail["prestige"] = club.prestige
-    except ImportError:
-        pass
-
-    is_owner_club = team_key == data.get("club_key", "")
-
-    # Build financial snapshot for the owner's club page
-    financial = None
-    if is_owner_club:
-        dynasty = data.get("dynasty")
-        if dynasty and hasattr(dynasty, "owner"):
-            owner = dynasty.owner
-            investment = getattr(dynasty, "investment", None)
-            current_year = data.get("year", "?")
-            fin_hist = getattr(dynasty, "financial_history", {})
-            latest_fin = fin_hist.get(current_year) or (
-                fin_hist.get(max(fin_hist.keys())) if fin_hist else None
-            )
-            financial = {
-                "bankroll": getattr(owner, "bankroll", None),
-                "archetype": getattr(owner, "archetype", ""),
-                "investment": {
-                    "training": getattr(investment, "training", 0) if investment else 0,
-                    "coaching": getattr(investment, "coaching", 0) if investment else 0,
-                    "stadium": getattr(investment, "stadium", 0) if investment else 0,
-                    "youth": getattr(investment, "youth", 0) if investment else 0,
-                    "science": getattr(investment, "science", 0) if investment else 0,
-                    "marketing": getattr(investment, "marketing", 0) if investment else 0,
-                } if investment else {},
-                "season_financials": latest_fin,
-            }
-
-    # Compute playoff achievement for this team
-    team_achievement = None
-    bracket = tier_season.get_playoff_bracket()
-    if bracket.get("rounds"):
-        achievements = _compute_wvl_playoff_achievements(bracket)
-        team_achievement = achievements.get(team_key)
-
-    return templates.TemplateResponse("wvl/team.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        team=detail, team_key=team_key, tier=team_tier,
-        tier_name=_wvl_tier_label(team_tier),
-        is_owner_club=is_owner_club,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        financial=financial,
-        team_achievement=team_achievement,
-        stadium_url=_stadium_url_for(team_key),
-        banner_url=_banner_url_for(team_key),
-    ))
-
-
-@router.get("/wvl/{session_id}/stats", response_class=HTMLResponse)
-def wvl_stats(request: Request, session_id: str, tier: int = 0, category: str = "all"):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-
-    # If tier == 0, aggregate across all tiers
-    all_leaders = {}
-    tier_list = sorted(season.tier_seasons.keys())
-
-    if tier > 0 and tier in season.tier_seasons:
-        leaders = season.tier_seasons[tier].get_stat_leaders(category)
-        all_leaders[tier] = leaders
-    else:
-        for t_num in tier_list:
-            leaders = season.tier_seasons[t_num].get_stat_leaders(category)
-            all_leaders[t_num] = leaders
-
-    return templates.TemplateResponse("wvl/stats.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        all_leaders=all_leaders, category=category,
-        selected_tier=tier, tier_list=tier_list,
-        tier_label=_wvl_tier_label,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-    ))
-
-
-@router.get("/wvl/{session_id}/economy", response_class=HTMLResponse)
-def wvl_economy(request: Request, session_id: str):
-    data = _get_wvl_session(session_id)
-    dynasty = data.get("dynasty")
-    if not dynasty:
-        raise HTTPException(503, "Dynasty not loaded in this session")
-
-    # Build team economy table
-    from engine.wvl_owner import _BROADCAST_REVENUE, _TIER_STARTING_FANBASE, AI_OWNER_PROFILES
-    from engine.wvl_config import ALL_CLUBS, CLUBS_BY_KEY
-
-    eco_rows = []
-    for club in sorted(ALL_CLUBS, key=lambda c: (dynasty.tier_assignments.get(c.key, 5), -c.prestige)):
-        tier = dynasty.tier_assignments.get(club.key, 4)
-        is_owner = club.key == dynasty.owner.club_key
-        if is_owner:
-            owner_label = f"Human ({dynasty.owner.archetype.replace('_', ' ').title()})"
-            fanbase = int(dynasty.fanbase)
-            bankroll = round(dynasty.owner.bankroll, 1)
-            if dynasty.financial_history:
-                last_fin = dynasty.financial_history[max(dynasty.financial_history.keys())]
-                revenue = last_fin.get("total_revenue", 0)
-                expenses = last_fin.get("total_expenses", 0)
-                payroll = last_fin.get("roster_cost", 0)
-            else:
-                bcast = _BROADCAST_REVENUE.get(tier, 1.0)
-                revenue = bcast
-                expenses = 5.0
-                payroll = 0
-        else:
-            ai_key = dynasty.ai_team_owners.get(club.key, "balanced")
-            owner_label = f"AI ({ai_key.replace('_', ' ').title()})"
-            base = _TIER_STARTING_FANBASE.get(tier, 5_000)
-            fanbase = int(base * (0.5 + club.prestige / 100))
-            ai_p = AI_OWNER_PROFILES.get(ai_key, AI_OWNER_PROFILES["balanced"])
-            bcast = _BROADCAST_REVENUE.get(tier, 1.0)
-            est_ticket = round(fanbase * 30 * 12 / 1_000_000, 2)
-            revenue = round(bcast + est_ticket, 1)
-            payroll = round(revenue * ai_p["spending_ratio"], 1)
-            expenses = round(payroll + 5.0, 1)
-            bankroll = round(club.prestige * 0.5, 1)
-        eco_rows.append({
-            "club_key": club.key,
-            "team": club.name,
-            "tier": tier,
-            "owner": owner_label,
-            "is_owner": is_owner,
-            "payroll": payroll,
-            "revenue": revenue,
-            "expenses": expenses,
-            "fanbase": fanbase,
-            "bankroll": bankroll,
-        })
-
-    # Bourse exchange rate history
-    rate_history = []
-    bourse_hist = getattr(dynasty, "bourse_rate_history", {})
-    for yr in sorted(bourse_hist.keys()):
-        rec = bourse_hist[yr]
-        rate_history.append({
-            "year": yr,
-            "rate": rec.get("rate", 1.0),
-            "delta_pct": rec.get("delta_pct", 0),
-            "label": rec.get("label", ""),
-        })
-
-    current_rate = getattr(dynasty, "bourse_rate", 1.0)
-
-    # Build fanbase trend history from financial records
-    fanbase_history = []
-    fin_hist = getattr(dynasty, "financial_history", {})
-    for yr in sorted(fin_hist.keys()):
-        fb = fin_hist[yr].get("fanbase_after", fin_hist[yr].get("fanbase_end", 0))
-        if fb:
-            fanbase_history.append({"year": yr, "fanbase": int(fb)})
-
-    # Build year-by-year financial history for charts
-    financial_years = []
-    for yr in sorted(fin_hist.keys()):
-        rec = fin_hist[yr]
-        financial_years.append({
-            "year": yr,
-            "total_revenue": round(rec.get("total_revenue", 0), 2),
-            "ticket_revenue": round(rec.get("ticket_revenue", 0), 2),
-            "broadcast_revenue": round(rec.get("broadcast_revenue", 0), 2),
-            "sponsorship_revenue": round(rec.get("sponsorship_revenue", 0), 2),
-            "merchandise_revenue": round(rec.get("merchandise_revenue", 0), 2),
-            "prize_money": round(rec.get("prize_money", 0), 2),
-            "total_expenses": round(rec.get("total_expenses", 0), 2),
-            "roster_cost": round(rec.get("roster_cost", 0), 2),
-            "president_cost": round(rec.get("president_cost", 0), 2),
-            "base_ops_cost": round(rec.get("base_ops_cost", 0), 2),
-            "investment_spend": round(rec.get("investment_spend", 0), 2),
-            "loan_payments": round(rec.get("loan_payments", 0), 2),
-            "net_income": round(rec.get("net_income", 0), 2),
-            "bankroll_end": round(rec.get("bankroll_end", 0), 2),
-            "attendance_avg": rec.get("attendance_avg", 0),
-        })
-
-    # Active loans
-    loans = getattr(dynasty, "loans", [])
-
-    # Infrastructure levels
-    infrastructure = getattr(dynasty, "infrastructure", {})
-
-    return templates.TemplateResponse("wvl/economy.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        eco_rows=eco_rows,
-        rate_history=rate_history,
-        current_rate=current_rate,
-        fanbase_history=fanbase_history,
-        financial_years=financial_years,
-        loans=loans,
-        infrastructure=infrastructure,
-    ))
-
-
-@router.get("/wvl/{session_id}/coaching", response_class=HTMLResponse)
-def wvl_coaching(request: Request, session_id: str):
-    data = _get_wvl_session(session_id)
-    dynasty = data.get("dynasty")
-    season = data["season"]
-    if not dynasty:
-        raise HTTPException(503, "Dynasty not loaded in this session")
-
-    # Load coaching staffs from all WVL tier team JSON files
-    import json as _json
-    from engine.coaching import CoachCard, CLASSIFICATION_LABELS
-    from engine.wvl_config import ALL_WVL_TIERS, CLUBS_BY_KEY
-    from pathlib import Path
-
-    all_staffs = []
-    data_dir = Path(__file__).parent.parent / "data"
-
-    for tier_cfg in ALL_WVL_TIERS:
-        tier_dir = data_dir.parent / tier_cfg.teams_dir
-        if not tier_dir.exists():
-            continue
-        for team_file in sorted(tier_dir.glob("*.json")):
-            try:
-                with open(team_file) as f:
-                    raw = _json.load(f)
-                team_key = team_file.stem
-                team_name = raw.get("team_info", {}).get("school", team_key)
-                cs = raw.get("coaching_staff")
-                if not cs:
-                    continue
-                tier = dynasty.tier_assignments.get(team_key, 0)
-                is_owner = team_key == dynasty.owner.club_key
-                staff_entries = []
-                for role in ["head_coach", "oc", "dc", "stc"]:
-                    card_data = cs.get(role)
-                    if not card_data or not isinstance(card_data, dict):
-                        continue
-                    card = CoachCard.from_dict(card_data)
-                    staff_entries.append({
-                        "role": role,
-                        "role_label": {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, role),
-                        "name": card.full_name,
-                        "overall": round(card.visible_score, 1),
-                        "star_rating": card.star_rating,
-                        "classification": card.classification,
-                        "classification_label": card.classification_label,
-                        "composure_label": card.composure_label,
-                        "leadership": card.leadership,
-                        "composure": card.composure,
-                        "rotations": card.rotations,
-                        "development": card.development,
-                        "recruiting": card.recruiting,
-                        "career_wins": card.career_wins,
-                        "career_losses": card.career_losses,
-                        "win_pct": round(card.win_percentage, 3),
-                        "championships": card.championships,
-                        "contract_salary": card.contract_salary,
-                        "contract_years": card.contract_years_remaining,
-                        "philosophy": card.philosophy,
-                        "coaching_style": card.coaching_style,
-                    })
-                if staff_entries:
-                    all_staffs.append({
-                        "team_key": team_key,
-                        "team_name": team_name,
-                        "tier": tier,
-                        "is_owner": is_owner,
-                        "staff": staff_entries,
-                    })
-            except Exception:
-                continue
-
-    all_staffs.sort(key=lambda s: (s["tier"], s["team_name"]))
-
-    return templates.TemplateResponse("wvl/coaching.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        all_staffs=all_staffs,
-    ))
-
-
-@router.get("/wvl/{session_id}/player/{team_key}/{player_name}", response_class=HTMLResponse)
-def wvl_player(request: Request, session_id: str, team_key: str, player_name: str):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-
-    team_tier = season.tier_assignments.get(team_key)
-    if team_tier is None:
-        raise HTTPException(404, f"Team '{team_key}' not found")
-    tier_season = season.tier_seasons.get(team_tier)
-    if not tier_season:
-        raise HTTPException(404, f"Tier {team_tier} not found")
-
-    # Find the player on the team
-    team = tier_season.teams.get(team_key)
-    if not team:
-        raise HTTPException(404, f"Team '{team_key}' not found in tier")
-
-    player = None
-    for p in getattr(team, "players", []):
-        if p.name == player_name:
-            player = p
-            break
-    if not player:
-        raise HTTPException(404, f"Player '{player_name}' not found on {team_key}")
-
-    # Build player card
-    card = None
-    try:
-        from engine.player_card import player_to_card
-        pc = player_to_card(player, team_key)
-        card = pc.to_dict()
-    except Exception:
-        pass
-
-    # Build season stats from completed games
-    season_totals = {
-        "games": 0, "touches": 0, "yards": 0, "rushing_yards": 0,
-        "lateral_yards": 0, "tds": 0, "fumbles": 0, "laterals_thrown": 0,
-        "kick_att": 0, "kick_made": 0, "pk_att": 0, "pk_made": 0,
-        "dk_att": 0, "dk_made": 0, "tackles": 0, "tfl": 0, "sacks": 0,
-        "hurries": 0, "kick_pass_yards": 0, "kick_pass_tds": 0,
-        "kick_passes_thrown": 0, "kick_passes_completed": 0,
-        "kick_return_yards": 0, "punt_return_yards": 0,
-        # Rushing detail
-        "rush_carries": 0, "rushing_tds": 0,
-        # Lateral chain
-        "lateral_receptions": 0, "lateral_assists": 0, "lateral_tds": 0,
-        # Kick pass detail
-        "kick_pass_interceptions_thrown": 0, "kick_pass_receptions": 0,
-        "kick_pass_ints": 0,
-        # Special teams
-        "kick_returns": 0, "kick_return_tds": 0,
-        "punt_returns": 0, "punt_return_tds": 0,
-        "muffs": 0, "st_tackles": 0,
-        # Keeper
-        "keeper_tackles": 0, "keeper_bells": 0,
-        "kick_deflections": 0, "coverage_snaps": 0,
-        "keeper_return_yards": 0,
-        "points_allowed_in_coverage": 0.0,
-        "completions_allowed_in_coverage": 0,
-        # Line play
-        "blocks": 0, "pancakes": 0,
-        # Snap counts
-        "offensive_snaps": 0, "defensive_snaps": 0,
-        # Impact
-        "wpa": 0.0, "plays_involved": 0,
-    }
-    game_log = []
-    for week_num, week_games in tier_season.results.items():
-        for matchup_key, game_data in week_games.items():
-            if not game_data:
-                continue
-            home_key = game_data.get("home_key", "")
-            away_key = game_data.get("away_key", "")
-            if home_key != team_key and away_key != team_key:
-                continue
-            side = "home" if home_key == team_key else "away"
-            opponent_key = away_key if side == "home" else home_key
-            opponent_name = game_data.get(f"{'away' if side == 'home' else 'home'}_name", opponent_key)
-            result = game_data.get("result", {})
-            ps = result.get("player_stats", {}).get(side, [])
-            for pg in ps:
-                if pg.get("name") == player_name:
-                    home_score = game_data.get("home_score", 0)
-                    away_score = game_data.get("away_score", 0)
-                    my_score = home_score if side == "home" else away_score
-                    opp_score = away_score if side == "home" else home_score
-                    entry = {
-                        "week": week_num,
-                        "opponent": opponent_name,
-                        "is_home": side == "home",
-                        "won": my_score > opp_score,
-                        "team_score": my_score,
-                        "opp_score": opp_score,
-                    }
-                    entry.update(pg)
-                    game_log.append(entry)
-                    season_totals["games"] += 1
-                    for stat in [
-                        "touches", "yards", "rushing_yards", "lateral_yards",
-                        "tds", "fumbles", "laterals_thrown",
-                        "kick_att", "kick_made", "pk_att", "pk_made",
-                        "dk_att", "dk_made", "tackles", "tfl", "sacks",
-                        "hurries",
-                        "kick_pass_yards", "kick_pass_tds",
-                        "kick_passes_thrown", "kick_passes_completed",
-                        "kick_return_yards", "punt_return_yards",
-                        "rush_carries", "rushing_tds",
-                        "lateral_receptions", "lateral_assists", "lateral_tds",
-                        "kick_pass_interceptions_thrown", "kick_pass_receptions",
-                        "kick_pass_ints",
-                        "kick_returns", "kick_return_tds",
-                        "punt_returns", "punt_return_tds",
-                        "muffs", "st_tackles",
-                        "keeper_tackles", "keeper_bells",
-                        "kick_deflections", "coverage_snaps",
-                        "keeper_return_yards",
-                        "points_allowed_in_coverage",
-                        "completions_allowed_in_coverage",
-                        "blocks", "pancakes",
-                        "offensive_snaps", "defensive_snaps",
-                        "wpa", "plays_involved",
-                    ]:
-                        season_totals[stat] += pg.get(stat, 0)
-                    break
-
-    for _yk in ("yards", "rushing_yards", "lateral_yards", "kick_pass_yards",
-                "kick_return_yards", "punt_return_yards", "keeper_return_yards"):
-        season_totals[_yk] = int(round(season_totals.get(_yk, 0)))
-    season_totals["ypc"] = round(
-        season_totals["rushing_yards"] / max(1, season_totals["touches"]), 1
-    )
-    season_totals["yards_per_touch"] = season_totals["ypc"]
-    season_totals["kp_pct"] = round(
-        season_totals["kick_passes_completed"] / max(1, season_totals["kick_passes_thrown"]) * 100, 1
-    )
-    season_totals["kick_pct"] = round(
-        season_totals["kick_made"] / max(1, season_totals["kick_att"]) * 100, 1
-    )
-    season_totals["total_return_yards"] = (
-        season_totals["kick_return_yards"] + season_totals["punt_return_yards"]
-    )
-    season_totals["kick_return_avg"] = round(
-        season_totals["kick_return_yards"] / max(1, season_totals["kick_returns"]), 1
-    )
-    season_totals["punt_return_avg"] = round(
-        season_totals["punt_return_yards"] / max(1, season_totals["punt_returns"]), 1
-    )
-    season_totals["wpa_per_play"] = round(
-        season_totals["wpa"] / max(1, season_totals["plays_involved"]), 3
-    )
-    # Keeper analytics — KPR (higher=better) and ERA (lower=better)
-    if season_totals.get("coverage_snaps", 0) >= 10:
-        from engine.awards import _compute_kpr, _compute_keeper_era
-        season_totals["kpr"] = _compute_kpr(season_totals)
-        season_totals["keeper_era"] = _compute_keeper_era(season_totals)
-    else:
-        season_totals["kpr"] = 0.0
-        season_totals["keeper_era"] = 0.0
-
-    from engine.wvl_config import CLUBS_BY_KEY
-    club = CLUBS_BY_KEY.get(team_key)
-    team_name = club.name if club else team_key
-
-    # Pool-based pixel-art face
-    _pid = getattr(player, "player_id", "")
-    _face_src = _face_url_for(_pid) if _pid else None
-
+@router.get("/wvl/{league_id}/player/{player_id}", response_class=HTMLResponse)
+def wvl_player(request: Request, league_id: str, player_id: str):
+    league = _get_wvl_league(league_id)
+    detail = league.player_detail(player_id)
+    if detail is None:
+        raise HTTPException(404, "Player not found in this league")
     return templates.TemplateResponse("wvl/player.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        player=player, card=card,
-        team_key=team_key, team_name=team_name,
-        tier=team_tier, tier_name=_wvl_tier_label(team_tier),
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        year=data.get("year", "?"),
-        game_log=sorted(game_log, key=lambda g: g["week"]),
-        season_totals=season_totals, face_src=_face_src,
-        stadium_url=_stadium_url_for(team_key),
+        request, section="wvl", league_id=league_id,
+        status=league.status(), p=detail,
     ))
 
 
-@router.get("/wvl/{session_id}/team-stats", response_class=HTMLResponse)
-def wvl_team_stats(request: Request, session_id: str, tier: int = 1, sort: str = "total_yards"):
-    data = _get_wvl_session(session_id)
-    season = data["season"]
-    tier_season = season.tier_seasons.get(tier)
-    if not tier_season:
-        raise HTTPException(404, f"Tier {tier} not found")
-
-    tier_list = sorted(season.tier_seasons.keys())
-
-    # Full aggregate — same logic as pro_team_stats
-    # Collects both offensive (own) and defensive (opponent) stats
-    team_agg = {}
-    _WVL_INIT = {
-        "games": 0,
-        "points_for": 0.0, "points_against": 0.0,
-        "total_yards": 0, "total_plays": 0, "touchdowns": 0,
-        "rushing_yards": 0, "rushing_carries": 0, "rushing_tds": 0,
-        "kp_yards": 0, "kp_att": 0, "kp_comp": 0, "kp_tds": 0, "kp_ints": 0,
-        "lateral_chains": 0, "lateral_yards": 0, "successful_laterals": 0,
-        "dk_made": 0, "dk_att": 0, "pk_made": 0, "pk_att": 0,
-        "kr_yards": 0, "kr_count": 0, "kr_tds": 0,
-        "pr_yards": 0, "pr_count": 0, "pr_tds": 0, "muffs": 0,
-        "opp_total_yards": 0, "opp_total_plays": 0, "opp_touchdowns": 0,
-        "opp_rushing_yards": 0, "opp_rushing_carries": 0, "opp_rushing_tds": 0,
-        "opp_kp_yards": 0, "opp_kp_att": 0, "opp_kp_comp": 0, "opp_kp_tds": 0, "opp_kp_ints": 0,
-        "opp_lateral_yards": 0, "opp_lateral_chains": 0,
-        "opp_kr_yards": 0, "opp_kr_count": 0, "opp_kr_tds": 0,
-        "opp_pr_yards": 0, "opp_pr_count": 0, "opp_pr_tds": 0,
-        "fumbles": 0, "tod": 0, "opp_fumbles": 0, "opp_tod": 0,
-        "penalties": 0, "penalty_yards": 0, "opp_penalties": 0, "opp_penalty_yards": 0,
-        "delta_yards": 0, "delta_drives": 0, "delta_scores": 0,
-        "bonus_possessions": 0, "bonus_scores": 0, "bonus_yards": 0,
-        "epa": 0, "viper_eff_sum": 0, "team_rating_sum": 0,
-        "viper_eff_n": 0, "team_rating_n": 0,
-        "down_4_att": 0, "down_4_conv": 0,
-        "down_5_att": 0, "down_5_conv": 0,
-        "down_6_att": 0, "down_6_conv": 0,
-    }
-    for week_num, week_games in tier_season.results.items():
-        for matchup_key, game in week_games.items():
-            result = game.get("result", {})
-            stats = result.get("stats", {})
-            for side, opp_side in [("home", "away"), ("away", "home")]:
-                t_key = game.get(f"{side}_key", "")
-                t_name = game.get(f"{side}_name", t_key)
-                s = stats.get(side)
-                opp_s = stats.get(opp_side)
-                if not s or not t_key:
-                    continue
-                if t_key not in team_agg:
-                    team_agg[t_key] = {"team_key": t_key, "team": t_name, **{k: v for k, v in _WVL_INIT.items()}}
-                a = team_agg[t_key]
-                a["games"] += 1
-                my_score = game.get(f"{side}_score", 0) or 0
-                opp_score = game.get(f"{opp_side}_score", 0) or 0
-                a["points_for"] += my_score
-                a["points_against"] += opp_score
-                a["total_yards"] += s.get("total_yards", 0)
-                a["total_plays"] += s.get("total_plays", 0)
-                a["touchdowns"] += s.get("touchdowns", 0)
-                a["rushing_yards"] += s.get("rushing_yards", 0)
-                a["rushing_carries"] += s.get("rushing_carries", 0)
-                a["rushing_tds"] += s.get("rushing_touchdowns", 0)
-                a["kp_yards"] += s.get("kick_pass_yards", 0)
-                a["kp_att"] += s.get("kick_passes_attempted", 0)
-                a["kp_comp"] += s.get("kick_passes_completed", 0)
-                a["kp_tds"] += s.get("kick_pass_tds", 0)
-                a["kp_ints"] += s.get("kick_pass_interceptions", 0)
-                a["lateral_chains"] += s.get("lateral_chains", 0)
-                a["lateral_yards"] += s.get("lateral_yards", 0)
-                a["successful_laterals"] += s.get("successful_laterals", 0)
-                a["dk_made"] += s.get("drop_kicks_made", 0)
-                a["dk_att"] += s.get("drop_kicks_attempted", 0)
-                a["pk_made"] += s.get("place_kicks_made", 0)
-                a["pk_att"] += s.get("place_kicks_attempted", 0)
-                a["kr_yards"] += s.get("kick_return_yards", 0)
-                a["kr_count"] += s.get("kick_returns", 0)
-                a["kr_tds"] += s.get("kick_return_tds", 0)
-                a["pr_yards"] += s.get("punt_return_yards", 0)
-                a["pr_count"] += s.get("punt_returns", 0)
-                a["pr_tds"] += s.get("punt_return_tds", 0)
-                a["muffs"] += s.get("muffs", 0)
-                if opp_s:
-                    a["opp_total_yards"] += opp_s.get("total_yards", 0)
-                    a["opp_total_plays"] += opp_s.get("total_plays", 0)
-                    a["opp_touchdowns"] += opp_s.get("touchdowns", 0)
-                    a["opp_rushing_yards"] += opp_s.get("rushing_yards", 0)
-                    a["opp_rushing_carries"] += opp_s.get("rushing_carries", 0)
-                    a["opp_rushing_tds"] += opp_s.get("rushing_touchdowns", 0)
-                    a["opp_kp_yards"] += opp_s.get("kick_pass_yards", 0)
-                    a["opp_kp_att"] += opp_s.get("kick_passes_attempted", 0)
-                    a["opp_kp_comp"] += opp_s.get("kick_passes_completed", 0)
-                    a["opp_kp_tds"] += opp_s.get("kick_pass_tds", 0)
-                    a["opp_kp_ints"] += opp_s.get("kick_pass_interceptions", 0)
-                    a["opp_lateral_yards"] += opp_s.get("lateral_yards", 0)
-                    a["opp_lateral_chains"] += opp_s.get("lateral_chains", 0)
-                    a["opp_kr_yards"] += opp_s.get("kick_return_yards", 0)
-                    a["opp_kr_count"] += opp_s.get("kick_returns", 0)
-                    a["opp_kr_tds"] += opp_s.get("kick_return_tds", 0)
-                    a["opp_pr_yards"] += opp_s.get("punt_return_yards", 0)
-                    a["opp_pr_count"] += opp_s.get("punt_returns", 0)
-                    a["opp_pr_tds"] += opp_s.get("punt_return_tds", 0)
-                    a["opp_fumbles"] += opp_s.get("fumbles_lost", 0)
-                    a["opp_tod"] += opp_s.get("turnovers_on_downs", 0)
-                    a["opp_penalties"] += opp_s.get("penalties", 0)
-                    a["opp_penalty_yards"] += opp_s.get("penalty_yards", 0)
-                a["fumbles"] += s.get("fumbles_lost", 0)
-                a["tod"] += s.get("turnovers_on_downs", 0)
-                a["penalties"] += s.get("penalties", 0)
-                a["penalty_yards"] += s.get("penalty_yards", 0)
-                a["delta_yards"] += s.get("delta_yards", 0)
-                a["delta_drives"] += s.get("delta_drives", 0)
-                a["delta_scores"] += s.get("delta_scores", 0)
-                a["bonus_possessions"] += s.get("bonus_possessions", 0)
-                a["bonus_scores"] += s.get("bonus_possession_scores", 0)
-                a["bonus_yards"] += s.get("bonus_possession_yards", 0)
-                epa_val = s.get("epa", 0)
-                if isinstance(epa_val, dict):
-                    a["epa"] += epa_val.get("total_epa", epa_val.get("wpa", 0))
-                elif isinstance(epa_val, (int, float)):
-                    a["epa"] += epa_val
-                ve = s.get("viper_efficiency")
-                if ve is not None:
-                    a["viper_eff_sum"] += ve
-                    a["viper_eff_n"] += 1
-                vm = s.get("viperball_metrics", {})
-                tr = vm.get("team_rating") if vm else None
-                if tr is not None:
-                    a["team_rating_sum"] += tr
-                    a["team_rating_n"] += 1
-                dc = s.get("down_conversions", {})
-                for d in [4, 5, 6]:
-                    dd = dc.get(d, dc.get(str(d), {}))
-                    a[f"down_{d}_att"] += dd.get("attempts", 0)
-                    a[f"down_{d}_conv"] += dd.get("converted", 0)
-
-    teams = list(team_agg.values())
-    for t in teams:
-        n = max(1, t["games"])
-        t["ppg"] = round(t["points_for"] / n, 1)
-        t["opp_ppg"] = round(t["points_against"] / n, 1)
-        t["scoring_margin"] = round((t["points_for"] - t["points_against"]) / n, 1)
-        t["total_yards"] = int(round(t["total_yards"]))
-        t["rushing_yards"] = int(round(t.get("rushing_yards", 0)))
-        t["lateral_yards"] = int(round(t.get("lateral_yards", 0)))
-        t["penalty_yards"] = int(round(t.get("penalty_yards", 0)))
-        t["delta_yards"] = int(round(t.get("delta_yards", 0)))
-        t["bonus_yards"] = int(round(t.get("bonus_yards", 0)))
-        t["kr_yards"] = int(round(t.get("kr_yards", 0)))
-        t["pr_yards"] = int(round(t.get("pr_yards", 0)))
-        t["avg_yards"] = round(t["total_yards"] / n, 1)
-        t["avg_rushing"] = round(t["rushing_yards"] / n, 1)
-        t["yards_per_play"] = round(t["total_yards"] / max(1, t["total_plays"]), 1)
-        t["yards_per_carry"] = round(t["rushing_yards"] / max(1, t["rushing_carries"]), 1)
-        t["kp_comp_pct"] = round(t["kp_comp"] / max(1, t["kp_att"]) * 100, 1)
-        t["kp_ypg"] = round(t["kp_yards"] / n, 1)
-        t["lateral_pct"] = round(t["successful_laterals"] / max(1, t["lateral_chains"]) * 100, 1)
-        t["kr_avg"] = round(t["kr_yards"] / max(1, t["kr_count"]), 1)
-        t["pr_avg"] = round(t["pr_yards"] / max(1, t["pr_count"]), 1)
-        t["st_return_yards"] = t["kr_yards"] + t["pr_yards"]
-        t["st_return_tds"] = t["kr_tds"] + t["pr_tds"]
-        t["opp_total_yards"] = int(round(t["opp_total_yards"]))
-        t["opp_rushing_yards"] = int(round(t["opp_rushing_yards"]))
-        t["opp_kp_yards"] = int(round(t["opp_kp_yards"]))
-        t["opp_lateral_yards"] = int(round(t.get("opp_lateral_yards", 0)))
-        t["opp_kr_yards"] = int(round(t.get("opp_kr_yards", 0)))
-        t["opp_pr_yards"] = int(round(t.get("opp_pr_yards", 0)))
-        t["opp_penalty_yards"] = int(round(t.get("opp_penalty_yards", 0)))
-        t["opp_avg_yards"] = round(t["opp_total_yards"] / n, 1)
-        t["opp_yards_per_play"] = round(t["opp_total_yards"] / max(1, t["opp_total_plays"]), 1)
-        t["opp_avg_rushing"] = round(t["opp_rushing_yards"] / n, 1)
-        t["opp_yards_per_carry"] = round(t["opp_rushing_yards"] / max(1, t["opp_rushing_carries"]), 1)
-        t["opp_kp_ypg"] = round(t["opp_kp_yards"] / n, 1)
-        t["opp_kp_comp_pct"] = round(t["opp_kp_comp"] / max(1, t["opp_kp_att"]) * 100, 1)
-        t["opp_kr_avg"] = round(t["opp_kr_yards"] / max(1, t["opp_kr_count"]), 1)
-        t["opp_pr_avg"] = round(t["opp_pr_yards"] / max(1, t["opp_pr_count"]), 1)
-        t["opp_st_return_yards"] = t["opp_kr_yards"] + t["opp_pr_yards"]
-        t["opp_st_return_tds"] = t["opp_kr_tds"] + t["opp_pr_tds"]
-        t["turnovers_lost"] = t["fumbles"] + t["tod"] + t["kp_ints"]
-        t["takeaways"] = t["opp_fumbles"] + t["opp_tod"] + t["opp_kp_ints"]
-        t["turnover_margin"] = t["takeaways"] - t["turnovers_lost"]
-        t["avg_epa"] = round(t["epa"] / n, 2)
-        t["avg_team_rating"] = round(t["team_rating_sum"] / max(1, t["team_rating_n"]), 1) if t["team_rating_n"] else 0
-        t["avg_viper_eff"] = round(t["viper_eff_sum"] / max(1, t["viper_eff_n"]), 3) if t["viper_eff_n"] else 0
-        for d in [4, 5, 6]:
-            att = t[f"down_{d}_att"]
-            conv = t[f"down_{d}_conv"]
-            t[f"down_{d}_rate"] = round(conv / max(1, att) * 100, 1) if att > 0 else 0.0
-        t["kill_rate"] = round(t["delta_scores"] / max(1, t["delta_drives"]) * 100, 1) if t["delta_drives"] > 0 else None
-        rec = tier_season.standings.get(t["team_key"])
-        if rec:
-            t["wins"] = rec.wins
-            t["losses"] = rec.losses
-        else:
-            t["wins"] = 0
-            t["losses"] = 0
-
-    _LOWER_IS_BETTER = {
-        "opp_ppg", "opp_total_yards", "opp_avg_yards", "opp_yards_per_play",
-        "opp_rushing_yards", "opp_avg_rushing", "opp_kp_yards", "opp_kp_ypg",
-        "opp_kp_comp_pct", "opp_touchdowns", "opp_st_return_yards", "opp_kr_avg",
-        "turnovers_lost",
-    }
-    valid_sorts = {
-        "total_yards": "total_yards", "avg_yards": "avg_yards",
-        "touchdowns": "touchdowns", "rushing_yards": "rushing_yards",
-        "kp_yards": "kp_yards", "lateral_yards": "lateral_yards",
-        "epa": "epa", "avg_epa": "avg_epa",
-        "avg_team_rating": "avg_team_rating", "avg_viper_eff": "avg_viper_eff",
-        "delta_yards": "delta_yards", "fumbles": "fumbles",
-        "penalties": "penalties", "yards_per_play": "yards_per_play",
-        "bonus_possessions": "bonus_possessions",
-        "ppg": "ppg", "scoring_margin": "scoring_margin", "opp_ppg": "opp_ppg",
-        "opp_total_yards": "opp_total_yards", "opp_avg_yards": "opp_avg_yards",
-        "opp_yards_per_play": "opp_yards_per_play", "opp_touchdowns": "opp_touchdowns",
-        "opp_rushing_yards": "opp_rushing_yards", "opp_avg_rushing": "opp_avg_rushing",
-        "opp_kp_yards": "opp_kp_yards", "opp_kp_ypg": "opp_kp_ypg",
-        "st_return_yards": "st_return_yards", "kr_avg": "kr_avg", "pr_avg": "pr_avg",
-        "opp_st_return_yards": "opp_st_return_yards", "opp_kr_avg": "opp_kr_avg",
-        "turnover_margin": "turnover_margin", "takeaways": "takeaways", "turnovers_lost": "turnovers_lost",
-        "penalty_yards": "penalty_yards", "opp_penalties": "opp_penalties",
-    }
-    sort_key = valid_sorts.get(sort, "total_yards")
-    reverse = sort_key not in _LOWER_IS_BETTER
-    teams.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
-
-    benchmarks = _compute_benchmarks(teams, [
-        "epa", "avg_epa", "avg_team_rating", "avg_viper_eff",
-        "yards_per_play",
-    ])
-
-    return templates.TemplateResponse("wvl/team_stats.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        teams=teams, sort=sort, selected_tier=tier,
-        tier_name=_wvl_tier_label(tier),
-        tier_list=tier_list, tier_label=_wvl_tier_label,
-        dynasty_name=data.get("dynasty_name", "WVL"),
-        benchmarks=benchmarks,
-        year=data.get("year", "?"),
+@router.get("/wvl/{league_id}/team/{club_key}", response_class=HTMLResponse)
+def wvl_team(request: Request, league_id: str, club_key: str):
+    league = _get_wvl_league(league_id)
+    return templates.TemplateResponse("wvl/team.html", _ctx(
+        request, section="wvl", league_id=league_id,
+        status=league.status(),
+        roster=league.roster_view(club_key),
     ))
 
 
-# ── WVL DYNASTY DATA ─────────────────────────────────────────────────────
-
-@router.get("/wvl/{session_id}/data", response_class=HTMLResponse)
-def wvl_data(request: Request, session_id: str):
-    data = _get_wvl_session(session_id)
-    dynasty = data.get("dynasty")
-    if not dynasty:
-        raise HTTPException(404, "No dynasty active in this WVL session")
-
-    return templates.TemplateResponse("wvl/data.html", _ctx(
-        request, section="wvl", session_id=session_id,
-        dynasty_name=dynasty.dynasty_name,
-        year=dynasty.current_year,
-        team_count=len(dynasty.team_histories),
+@router.get("/wvl/{league_id}/history", response_class=HTMLResponse)
+def wvl_history(request: Request, league_id: str):
+    league = _get_wvl_league(league_id)
+    return templates.TemplateResponse("wvl/history.html", _ctx(
+        request, section="wvl", league_id=league_id,
+        status=league.status(),
+        history=list(reversed(league.history)),
     ))
-
-
-@router.get("/wvl/{session_id}/data/download")
-def wvl_data_download(request: Request, session_id: str):
-    import json as _json
-    from fastapi.responses import Response
-    from engine.db import serialize_dynasty
-
-    data = _get_wvl_session(session_id)
-    dynasty = data.get("dynasty")
-    if not dynasty:
-        raise HTTPException(404, "No dynasty active in this WVL session")
-
-    serialized = serialize_dynasty(dynasty)
-    content = _json.dumps(serialized, indent=2)
-    filename = f"WVL_{dynasty.dynasty_name.replace(' ', '_')}_Y{dynasty.current_year}.json"
-    return Response(
-        content=content,
-        media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
-
-
-@router.post("/wvl/{session_id}/data/upload")
-async def wvl_data_upload(request: Request, session_id: str):
-    import json as _json
-    from fastapi.responses import JSONResponse
-    from engine.db import deserialize_dynasty
-
-    data = _get_wvl_session(session_id)
-    if not data.get("dynasty"):
-        raise HTTPException(404, "No dynasty active in this WVL session")
-
-    form = await request.form()
-    file = form.get("file")
-    if not file:
-        raise HTTPException(400, "No file provided")
-
-    try:
-        contents = await file.read()
-        parsed = _json.loads(contents)
-        dynasty = deserialize_dynasty(parsed)
-        data["dynasty"] = dynasty
-        return JSONResponse({"message": f"Dynasty '{dynasty.dynasty_name}' loaded (Year {dynasty.current_year})."})
-    except Exception as e:
-        raise HTTPException(400, f"Failed to load dynasty file: {e}")
 
 
 # ── INTERNATIONAL (FIV) ─────────────────────────────────────────────────

@@ -1,131 +1,112 @@
 {% extends "base.html" %}
-{% block title %}{{ dynasty_name }} ({{ year }}) — WVL — Viperball Stats{% endblock %}
-
-{% block breadcrumb %}
-<div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/wvl/">WVL</a><span class="sep">/</span>{{ dynasty_name }} ({{ year }})
-</div></div>
-{% endblock %}
+{% block title %}WVL {{ status.year }} — Standings — Viperball Stats{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ dynasty_name }} &mdash; YEAR {{ year }}</h1>
-  <div class="subtitle">Women's Viperball League &mdash; 4-Tier Pyramid with Promotion/Relegation</div>
-</div>
+{% set active = 'standings' %}
+{% include "wvl/_header.html" with context %}
 
-<div class="tabs">
-  <a href="/stats/wvl/{{ session_id }}/" class="active">Standings</a>
-  <a href="/stats/wvl/{{ session_id }}/schedule">Schedule</a>
-  <a href="/stats/wvl/{{ session_id }}/playoffs">Playoffs</a>
-  <a href="/stats/wvl/{{ session_id }}/stats">Players</a>
-  <a href="/stats/wvl/{{ session_id }}/team-stats">Team Stats</a>
-  <a href="/stats/wvl/{{ session_id }}/economy">Economy</a>
-  <a href="/stats/wvl/{{ session_id }}/coaching">Coaching</a>
-  <a href="/stats/wvl/{{ session_id }}/data">Data</a>
-</div>
-
-{% for tier in tier_data %}
-<h2>
-  <a href="/stats/wvl/{{ session_id }}/schedule?tier={{ tier.tier_num }}" style="color:var(--fg-bright);text-decoration:none;">Tier {{ tier.tier_num }} &mdash; {{ tier.tier_name }}</a>
-  {% if tier.champion %} &middot; <span class="stat-elite">Champion: {{ tier.champion }}</span>{% endif %}
-</h2>
-
-{% if tier.ranked %}
-<div style="overflow-x:auto;">
+<h2>Standings</h2>
 <table>
   <thead>
     <tr>
-      <th class="num">#</th><th>Team</th><th>Country</th>
-      <th class="num" title="Table points (W=3, D=1)">PTS</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">PCT</th>
-      <th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th>
-      <th>DIV</th><th>STRK</th><th>L5</th><th>Zone</th>
+      <th class="num">#</th>
+      <th>Club</th>
+      <th class="num">W</th>
+      <th class="num">L</th>
+      <th class="num">T</th>
+      <th class="num">PF</th>
+      <th class="num">PA</th>
+      <th class="num">Diff</th>
     </tr>
   </thead>
   <tbody>
-  {% for t in tier.ranked %}
-  {% set tkey = t.get('team_key', '') %}
-  {% set zone = t.get('zone', 'safe') %}
-  <tr {% if t.get('is_owner_club') %}style="background:#1a1a00"{% elif zone == 'promotion' %}style="background:#0a1a0a"{% elif zone == 'relegation' %}style="background:#1a0a0a"{% endif %}>
-    <td class="num rank">{{ t.get('position', loop.index) }}</td>
-    <td>
-      <a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a>
-      {% if t.get('is_owner_club') %} <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">YOU</span>{% endif %}
-    </td>
-    <td style="color:var(--fg-dim);font-size:10px">{{ t.get('country', '') }}</td>
-    <td class="num" style="font-weight:bold;color:var(--fg-bright)">{{ t.get('points', t.get('wins', 0) * 3) }}</td>
-    <td class="num"><span class="w">{{ t.get('wins', 0) }}</span></td>
-    <td class="num"><span class="l">{{ t.get('losses', 0) }}</span></td>
-    <td class="num" style="color:var(--fg-dim)">{{ t.get('ties', 0) }}</td>
-    <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
-    <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
-    <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
-    <td class="num {% if t.get('diff', 0) > 0 %}stat-good{% elif t.get('diff', 0) < 0 %}stat-bad{% endif %}">{{ "%+d"|format(t.get('diff', 0)) }}</td>
-    <td style="font-size:10px;color:var(--fg-dim)">{{ t.get('div_record', '') }}</td>
-    <td style="font-size:10px;">
-      {% set strk = t.get('streak', '-') %}
-      <span class="{% if strk and strk[0] == 'W' %}stat-good{% elif strk and strk[0] == 'L' %}stat-bad{% endif %}">{{ strk }}</span>
-    </td>
-    <td style="font-size:10px;letter-spacing:1px;">
-      {% for ch in t.get('last_5', '') %}
-      <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% else %}t{% endif %}">{{ ch }}</span>
-      {% endfor %}
-    </td>
-    <td>
-      {% if zone == 'promotion' %}<span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span>
-      {% elif zone == 'relegation' %}<span class="tag" style="border-color:var(--red);color:var(--red)">REL</span>
-      {% elif zone == 'playoff' %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span>
-      {% else %}<span style="color:var(--fg-dim)">&mdash;</span>{% endif %}
-    </td>
+  {% for r in standings %}
+  <tr>
+    <td class="num">{{ r.position }}</td>
+    <td><a href="/stats/wvl/{{ league_id }}/team/{{ r.team_key }}">{{ r.team_name }}</a></td>
+    <td class="num w">{{ r.wins }}</td>
+    <td class="num l">{{ r.losses }}</td>
+    <td class="num t">{{ r.ties }}</td>
+    <td class="num">{{ r.pf }}</td>
+    <td class="num">{{ r.pa }}</td>
+    <td class="num {% if r.diff > 0 %}stat-good{% elif r.diff < 0 %}stat-bad{% endif %}">{{ '+' if r.diff > 0 else '' }}{{ r.diff }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
-</div>
-{% elif tier.divisions %}
-  {% for div_name, div_teams in tier.divisions.items() %}
-  <h3>{{ div_name }}</h3>
-  <table>
-    <thead>
-      <tr><th class="num">#</th><th>Team</th><th class="num" title="Table points (W=3, D=1)">PTS</th><th class="num">W</th><th class="num">L</th><th class="num">T</th><th class="num">PCT</th><th class="num">PF</th><th class="num">PA</th><th class="num">DIFF</th><th>STRK</th><th>L5</th></tr>
-    </thead>
-    <tbody>
-    {% for t in div_teams %}
-    {% set tkey = t.get('team_key', t.get('team_name', '')) %}
-    <tr>
-      <td class="num rank">{{ loop.index }}</td>
-      <td><a href="/stats/wvl/{{ session_id }}/team/{{ tkey }}">{{ t.get('team_name', tkey) }}</a></td>
-      <td class="num" style="font-weight:bold;color:var(--fg-bright)">{{ t.get('points', t.get('wins', 0) * 3) }}</td>
-      <td class="num"><span class="w">{{ t.get('wins', 0) }}</span></td>
-      <td class="num"><span class="l">{{ t.get('losses', 0) }}</span></td>
-      <td class="num" style="color:var(--fg-dim)">{{ t.get('ties', 0) }}</td>
-      <td class="num">{{ '%.3f'|format(t.get('pct', 0)) }}</td>
-      <td class="num">{{ t.get('pf', t.get('points_for', 0)) }}</td>
-      <td class="num">{{ t.get('pa', t.get('points_against', 0)) }}</td>
-      <td class="num {% if t.get('diff', 0) > 0 %}stat-good{% elif t.get('diff', 0) < 0 %}stat-bad{% endif %}">{{ "%+d"|format(t.get('diff', 0)) }}</td>
-      <td style="font-size:10px;">
-        {% set strk = t.get('streak', '-') %}
-        <span class="{% if strk and strk[0] == 'W' %}stat-good{% elif strk and strk[0] == 'L' %}stat-bad{% endif %}">{{ strk }}</span>
-      </td>
-      <td style="font-size:10px;letter-spacing:1px;">
-        {% for ch in t.get('last_5', '') %}
-        <span class="{% if ch == 'W' %}w{% elif ch == 'L' %}l{% else %}t{% endif %}">{{ ch }}</span>
-        {% endfor %}
-      </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% endfor %}
-{% else %}
-<div class="empty">No standings data available for this tier.</div>
-{% endif %}
-{% endfor %}
 
-<div style="margin-top:16px;padding:8px;border:1px solid var(--border);font-size:11px;">
-  <strong style="color:var(--fg-bright)">Promotion/Relegation Key:</strong>
-  <span class="tag" style="border-color:var(--green);color:var(--green)">PROM</span> Auto-promoted
-  &middot; <span class="tag" style="border-color:var(--red);color:var(--red)">REL</span> Auto-relegated
-  &middot; <span class="tag" style="border-color:var(--yellow);color:var(--yellow)">P/O</span> Playoff spot
-  &middot; <span style="background:#1a1a00;padding:0 4px;border:1px solid var(--border);">Owner</span> highlights your club
+<div class="grid-2">
+  <div>
+    <h2>Career Yards</h2>
+    <table>
+      <thead><tr><th class="num">#</th><th>Player</th><th>Club</th><th class="num">Yards</th></tr></thead>
+      <tbody>
+      {% for p in leaders.career_yards %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><a href="/stats/wvl/{{ league_id }}/player/{{ p.player_id }}">{{ p.name }}</a></td>
+        <td>{{ p.club }}</td>
+        <td class="num stat-elite">{{ p.career_yards }}</td>
+      </tr>
+      {% endfor %}
+      {% if not leaders.career_yards %}<tr><td colspan="4" class="empty">No data yet.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h2>Career Touchdowns</h2>
+    <table>
+      <thead><tr><th class="num">#</th><th>Player</th><th>Club</th><th class="num">TD</th></tr></thead>
+      <tbody>
+      {% for p in leaders.career_touchdowns %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><a href="/stats/wvl/{{ league_id }}/player/{{ p.player_id }}">{{ p.name }}</a></td>
+        <td>{{ p.club }}</td>
+        <td class="num stat-elite">{{ p.career_touchdowns }}</td>
+      </tr>
+      {% endfor %}
+      {% if not leaders.career_touchdowns %}<tr><td colspan="4" class="empty">No data yet.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div>
+    <h2>Season Yards</h2>
+    <table>
+      <thead><tr><th class="num">#</th><th>Player</th><th>Club</th><th class="num">Yards</th></tr></thead>
+      <tbody>
+      {% for p in leaders.season_yards %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><a href="/stats/wvl/{{ league_id }}/player/{{ p.player_id }}">{{ p.name }}</a></td>
+        <td>{{ p.club }}</td>
+        <td class="num">{{ p.season_yards }}</td>
+      </tr>
+      {% endfor %}
+      {% if not leaders.season_yards %}<tr><td colspan="4" class="empty">No games simmed yet.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h2>Season Touchdowns</h2>
+    <table>
+      <thead><tr><th class="num">#</th><th>Player</th><th>Club</th><th class="num">TD</th></tr></thead>
+      <tbody>
+      {% for p in leaders.season_tds %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><a href="/stats/wvl/{{ league_id }}/player/{{ p.player_id }}">{{ p.name }}</a></td>
+        <td>{{ p.club }}</td>
+        <td class="num">{{ p.season_tds }}</td>
+      </tr>
+      {% endfor %}
+      {% if not leaders.season_tds %}<tr><td colspan="4" class="empty">No games simmed yet.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

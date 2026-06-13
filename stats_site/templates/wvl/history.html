@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}WVL {{ status.year }} — History — Viperball Stats{% endblock %}
+{% block breadcrumb %}{% endblock %}
+
+{% block content %}
+{% set active = 'history' %}
+{% include "wvl/_header.html" with context %}
+
+<h2>Champions</h2>
+{% if history %}
+<table>
+  <thead><tr><th class="num">Year</th><th>Champion</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+  <tr>
+    <td class="num">{{ h.year }}</td>
+    <td class="stat-elite">&#127942; {{ h.champion if h.champion else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No completed seasons yet. Finish a season in the app, then advance to the next year.</div>
+{% endif %}
+{% endblock %}

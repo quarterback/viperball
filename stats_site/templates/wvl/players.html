@@ -1,50 +1,46 @@
 {% extends "base.html" %}
-{% block title %}{{ roster.club_name }} — WVL — Viperball Stats{% endblock %}
-
-{% block breadcrumb %}
-<div class="breadcrumb"><div class="container wide">
-  <a href="/stats/">Home</a><span class="sep">/</span>
-  <a href="/stats/wvl/">WVL</a><span class="sep">/</span>
-  <a href="/stats/wvl/{{ league_id }}/">{{ status.year }}</a><span class="sep">/</span>{{ roster.club_name }}
-</div></div>
-{% endblock %}
+{% block title %}WVL {{ status.year }} — Careers — Viperball Stats{% endblock %}
+{% block breadcrumb %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>{{ roster.club_name }}</h1>
-  <div class="subtitle">{{ roster.graduate_count }} CVL graduate{{ '' if roster.graduate_count == 1 else 's' }} on this club</div>
-</div>
+{% set active = 'players' %}
+{% include "wvl/_header.html" with context %}
 
-<h2>Imported Careers</h2>
+<h2>Player Careers</h2>
+<div class="subtitle" style="margin-bottom:8px;color:var(--fg-dim)">CVL graduates whose careers continue in the WVL. Click a name for full season-by-season history.</div>
 <table>
   <thead>
     <tr>
       <th>Player</th>
       <th>Pos</th>
+      <th>Club</th>
       <th class="num">OVR</th>
       <th class="num">Age</th>
       <th>Status</th>
       <th class="num">Sea</th>
+      <th class="num">G</th>
       <th class="num">Career Yds</th>
       <th class="num">Career TD</th>
       <th class="num">Yr Yds</th>
     </tr>
   </thead>
   <tbody>
-  {% for p in roster.graduates %}
+  {% for p in players %}
   <tr>
     <td><a href="/stats/wvl/{{ league_id }}/player/{{ p.player_id }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
+    <td>{{ p.club }}</td>
     <td class="num">{{ p.overall }}</td>
     <td class="num">{{ p.age if p.age is not none else '—' }}</td>
     <td>{% if p.status == 'retired' %}<span class="fg-dim">retired</span>{% else %}<span class="stat-good">active</span>{% endif %}</td>
     <td class="num">{{ p.career_seasons }}</td>
+    <td class="num">{{ p.career_games }}</td>
     <td class="num stat-elite">{{ p.career_yards }}</td>
     <td class="num">{{ p.career_touchdowns }}</td>
     <td class="num">{{ p.season_yards }}</td>
   </tr>
   {% endfor %}
-  {% if not roster.graduates %}<tr><td colspan="9" class="empty">No CVL graduates on this club yet.</td></tr>{% endif %}
+  {% if not players %}<tr><td colspan="11" class="empty">No tracked careers yet.</td></tr>{% endif %}
   </tbody>
 </table>
 {% endblock %}
