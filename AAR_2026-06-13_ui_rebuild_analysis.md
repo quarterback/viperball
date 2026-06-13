@@ -129,6 +129,42 @@ rename/delete exercised ✓; full `GET/PATCH/POST-fork/DELETE` cycle green under
 `TestClient` ✓. Docker/Fly build runs in Fly's remote builder at deploy (Docker not in sandbox;
 the `npm ci` + `vite build` steps it depends on were validated locally).
 
+### What Was Built (Phases 1–3 — the College workbench, standalone)
+
+The SPA at `/app` now does the full college loop without touching NiceGUI:
+
+- **Saves Library** (`/app`) — `/api/saves`-backed list with open / fork / rename / tag / delete.
+- **New Season wizard** (`/app/league/new`) — 2-step Stepper (identity + **seed** / format);
+  `POST /sessions` then `POST /sessions/{id}/season`, then routes into the hub. The seed dice
+  makes runs reproducible — the basis for experiments.
+- **League Hub** (`/app/league`, `/league/:sid`) — session picker via new
+  `GET /api/sessions/college`; four dense `mantine-react-table` grids (Standings / Schedule /
+  Polls / Leaders) with Sim-Week / Sim-Rest controls that invalidate and refresh in place.
+- **Drill-down** — standings → **Team page** (roster grid) → **Player page** (attribute card),
+  each a real deep-linkable URL with breadcrumbs and a working Back button (the #1 fix).
+- **Compare Runs** (`/app/compare`) — pick 2–4 active seasons; a team-keyed pivot shows each
+  team's record per run with a **Δ Wins** spread column sorted to surface divergence. This is
+  the experiment payoff.
+
+Every step verified with `tsc` + `vite build`; new Python endpoint compiles. Pushed to PR #310.
+
+### Dead Code & Cutover Plan (answering "will you remove the dead code after launch?")
+
+**Yes — but at Phase 5 cutover, not now.** Removing NiceGUI today breaks every mode the SPA
+hasn't ported (Dynasty, Pro, WVL, International, My Team, recruiting, DraftyQueenz, export
+formats, asset generation). Verified dependency picture:
+
+- **Live, must stay until NiceGUI retires:** all of `nicegui_app/`, and `ui/api_client.py`
+  (imported by `nicegui_app/app.py`).
+- **Already dead now** (nothing live imports them — verified by grep): the Streamlit app
+  `ui/app.py` + `ui/page_modules/**` + `ui/helpers.py` (used only by those dead page modules),
+  and the Tkinter desktop app `viperball_gui.py` + `launch_gui.sh`.
+
+Safe sequence: port each mode → retire its NiceGUI page as the SPA replacement ships → once
+`/app` covers everything, promote SPA to `/` and delete `nicegui_app/` + `ui/api_client.py`.
+The already-dead Streamlit/Tkinter files can be removed at any time (a verified low-risk sweep),
+independent of the cutover.
+
 ### Migration Plan (recorded in `UI_REBUILD_PLAN.md`)
 
 - **Phase 0** — Unify saves into one model + DB-backed workspace + Fly volume + `/api/saves*`
