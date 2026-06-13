@@ -1,7 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { SavesLibrary } from "../pages/SavesLibrary";
-import { Placeholder } from "../pages/Placeholder";
 import { LeagueIndex } from "../pages/league/LeagueIndex";
 import { NewSeason } from "../pages/league/NewSeason";
 import { LeagueHub } from "../pages/league/LeagueHub";
@@ -14,6 +13,7 @@ import { International } from "../pages/International";
 import { DynastyIndex } from "../pages/dynasty/DynastyIndex";
 import { DynastyHub } from "../pages/dynasty/DynastyHub";
 import { MyTeam } from "../pages/MyTeam";
+import { Export } from "../pages/Export";
 
 // Real, deep-linkable URLs — the #1 fix over the old single-"/" NiceGUI app.
 // basename matches Vite's base ("/app") so prod + dev routing line up.
@@ -39,21 +39,7 @@ export const router = createBrowserRouter(
         { path: "pro", element: <ProIndex /> },
         { path: "pro/:league/:sessionId", element: <ProHub /> },
         { path: "international", element: <International /> },
-        {
-          path: "export",
-          element: (
-            <Placeholder
-              title="Export"
-              phase="Phase 2"
-              blurb="One-click export of standings, box scores, and history in the formats already generated."
-              endpoints={[
-                "POST /archives/college/{id}",
-                "GET /archives",
-                "GET /stats/export/college/{id}/standings.json",
-              ]}
-            />
-          ),
-        },
+        { path: "export", element: <Export /> },
       ],
     },
   ],
