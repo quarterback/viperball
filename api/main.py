@@ -4672,7 +4672,28 @@ def dq_start_week(session_id: str, week: int):
             "already_started": True,
         }
 
-    week_games = [g for g in season.schedule if g.week == week and not g.completed]
+    from engine.pro_league import ProLeagueSeason
+    from types import SimpleNamespace
+    if isinstance(season, ProLeagueSeason):
+        # ProLeagueSeason.schedule is List[List[Matchup]]; weeks are 1-indexed.
+        # Completion is tracked via season.current_week, not a per-game flag.
+        week_idx = week - 1
+        if week <= season.current_week or week_idx < 0 or week_idx >= len(season.schedule):
+            week_games = []
+        else:
+            week_games = [
+                SimpleNamespace(
+                    home_team=season.teams[m.home_key].name if m.home_key in season.teams else m.home_key,
+                    away_team=season.teams[m.away_key].name if m.away_key in season.teams else m.away_key,
+                    week=m.week,
+                    matchup_key=m.matchup_key,
+                    home_key=m.home_key,
+                    away_key=m.away_key,
+                )
+                for m in season.schedule[week_idx]
+            ]
+    else:
+        week_games = [g for g in season.schedule if g.week == week and not g.completed]
     if not week_games:
         raise HTTPException(status_code=400, detail=f"No unplayed games for week {week}")
 
