@@ -1041,11 +1041,11 @@ def fast_sim_game(home_team, away_team,
         # a slight edge, but either can win.
         home_edge = home_str / max(1, home_str + away_str)
         if rng.random() < home_edge:
-            home_scoring["score"] += SCORING["touchdown"]
-            home_scoring["rush_tds"] += 1
+            home_scoring["score"] += SCORING["td"]
+            home_scoring["touchdowns"] += 1
         else:
-            away_scoring["score"] += SCORING["touchdown"]
-            away_scoring["rush_tds"] += 1
+            away_scoring["score"] += SCORING["td"]
+            away_scoring["touchdowns"] += 1
 
     home_stats = _generate_team_stats(home_scoring, home_team, away_def, rng)
     away_stats = _generate_team_stats(away_scoring, away_team, home_def, rng)

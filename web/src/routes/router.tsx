@@ -15,6 +15,8 @@ import { DQBoard } from "../pages/dq/DQBoard";
 import { ProIndex } from "../pages/pro/ProIndex";
 import { ProHub } from "../pages/pro/ProHub";
 import { International } from "../pages/International";
+import { WVLIndex } from "../pages/wvl/WVLIndex";
+import { WVLHub } from "../pages/wvl/WVLHub";
 import { DynastyIndex } from "../pages/dynasty/DynastyIndex";
 import { DynastyCreate } from "../pages/dynasty/DynastyCreate";
 import { DynastyHub } from "../pages/dynasty/DynastyHub";
@@ -50,6 +52,8 @@ export const router = createBrowserRouter(
         { path: "pro", element: <ProIndex /> },
         { path: "pro/:league/:sessionId", element: <ProHub /> },
         { path: "international", element: <International /> },
+        { path: "wvl", element: <WVLIndex /> },
+        { path: "wvl/:sessionId", element: <WVLHub /> },
         { path: "export", element: <Export /> },
       ],
     },

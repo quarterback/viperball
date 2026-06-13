@@ -995,6 +995,112 @@ async def simulate_many(req: SimulateManyRequest):
     return summary
 
 
+# ═══════════════════════════════════════════════════════════════
+# WVL (Women's / World Viperball League) — multi-tier JSON API
+# ═══════════════════════════════════════════════════════════════
+def _default_wvl_assignments() -> Dict[str, int]:
+    from engine.wvl_config import ALL_WVL_TIERS
+    return {k: t.tier_number for t in ALL_WVL_TIERS for k in t.team_keys}
+
+
+def _wvl_tier_name(n: int) -> str:
+    from engine.wvl_config import TIER_BY_NUMBER
+    t = TIER_BY_NUMBER.get(n)
+    return t.tier_name if t else f"Tier {n}"
+
+
+def _wvl_status(season) -> dict:
+    tiers = []
+    for tn, s in sorted(season.tier_seasons.items()):
+        tiers.append({
+            "tier": tn,
+            "name": _wvl_tier_name(tn),
+            "team_count": len(getattr(s, "teams", {}) or {}),
+            "total_weeks": getattr(s, "total_weeks", 0),
+        })
+    return {"phase": season.phase, "current_week": season.current_week, "tiers": tiers}
+
+
+def _get_wvl(session_id: str):
+    data = wvl_sessions.get(session_id)
+    if not data or not data.get("season"):
+        raise HTTPException(status_code=404, detail="WVL season not found")
+    return data["season"]
+
+
+@app.post("/api/wvl/new")
+def wvl_new():
+    """Create a fresh multi-tier WVL season (default club tier assignments)."""
+    from engine.wvl_season import WVLMultiTierSeason
+    season = WVLMultiTierSeason(_default_wvl_assignments())
+    sid = str(uuid.uuid4())
+    wvl_sessions[sid] = {"season": season}
+    return {"session_id": sid, "status": _wvl_status(season)}
+
+
+@app.get("/api/wvl/active")
+def wvl_active():
+    out = []
+    for sid, data in wvl_sessions.items():
+        season = data.get("season")
+        if season is None:
+            continue
+        out.append({"session_id": sid, "status": _wvl_status(season)})
+    return {"sessions": out}
+
+
+@app.get("/api/wvl/{session_id}/status")
+def wvl_status(session_id: str):
+    return _wvl_status(_get_wvl(session_id))
+
+
+@app.get("/api/wvl/{session_id}/standings")
+def wvl_standings(session_id: str):
+    season = _get_wvl(session_id)
+    standings = season.get_all_standings()
+    return {
+        "tiers": [
+            {"tier": tn, "name": _wvl_tier_name(tn), "standings": st}
+            for tn, st in sorted(standings.items())
+        ]
+    }
+
+
+@app.get("/api/wvl/{session_id}/schedule")
+def wvl_schedule(session_id: str, tier: int = 1):
+    return _get_wvl(session_id).get_schedule(tier)
+
+
+@app.post("/api/wvl/{session_id}/sim-week")
+def wvl_sim_week(session_id: str):
+    season = _get_wvl(session_id)
+    try:
+        season.sim_week_all_tiers()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Sim failed: {exc}")
+    return {"status": _wvl_status(season)}
+
+
+@app.post("/api/wvl/{session_id}/sim-all")
+def wvl_sim_all(session_id: str):
+    season = _get_wvl(session_id)
+    guard = 0
+    while season.phase in ("pre_season", "regular_season") and guard < 80:
+        try:
+            season.sim_week_all_tiers()
+        except Exception:
+            break
+        guard += 1
+    guard = 0
+    while season.phase in ("playoffs_pending", "playoffs") and guard < 30:
+        try:
+            season.advance_playoffs_all()
+        except Exception:
+            break
+        guard += 1
+    return {"status": _wvl_status(season)}
+
+
 @app.post("/debug/play")
 def debug_play(req: DebugPlayRequest):
     teams = get_available_teams()

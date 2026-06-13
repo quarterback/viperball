@@ -116,6 +116,14 @@ recruiting hub, coach, play-by-play) as each lands. Retire matching NiceGUI page
 **Phase 5 — Cutover**
 SPA becomes `/`; NiceGUI removed; delete dead Streamlit `ui/` dir.
 
+**WVL — purpose note (owner, 2026-06-13).** WVL's only value to the owner is as the
+**destination for college (CVL) graduates** — the talent pipeline out of the college game,
+not a standalone league. The CVL→WVL bridge already exists in the engine
+(`engine/wvl_dynasty.py` auto-imports via `load_graduating_pools`/`consume_graduating_pool`;
+`api/main.py` tags players with `cvl_source`). The SPA currently ships a basic WVL league
+(create / multi-tier standings with pro-rel zones / sim) but does **not yet surface the
+graduate import** — that pipeline UI is the remaining WVL work if/when prioritized.
+
 **`/stats` redesign — CANCELLED (owner decision, 2026-06-13).**
 The owner is keeping the `/stats` site's existing dense/terminal design as-is and does not
 want the SPA's look carried over to it. `/stats` stays untouched (only the DraftyQueenz

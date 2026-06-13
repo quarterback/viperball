@@ -23,6 +23,7 @@ const NAV = [
   { to: "/compare", label: "Compare Runs", icon: IconChartBar },
   { to: "/team", label: "My Team", icon: IconUsers },
   { to: "/pro", label: "Pro Leagues", icon: IconBallFootball },
+  { to: "/wvl", label: "WVL", icon: IconWorld },
   { to: "/international", label: "International", icon: IconWorld },
   { to: "/export", label: "Export", icon: IconDownload },
 ];
