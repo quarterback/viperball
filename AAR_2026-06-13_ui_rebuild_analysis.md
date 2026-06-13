@@ -1,234 +1,175 @@
-# AAR: viperball.fly.dev UI Analysis & React/Mantine Rebuild Kickoff
-## Web UI modernization — June 2026
-
-### Summary
-
-User report: "the viperball.fly.dev — not the jinja template site that broadcasts the
-exports — has never been upgraded, the UI is messy and mostly clunky to use." The ask was
-analysis of where it can improve and whether it's feasible to rebuild the UI stack so it
-feels like "a SaaS app meets Baseball Mogul / OOTP / Football Manager with the ease of a
-consumer-grade work platform."
-
-Over the session this converged from open-ended analysis into a concrete, owner-steered
-plan and a working Phase-1 scaffold. The headline outcome: **the rebuild is feasible and
-low-risk because the simulation engine and REST API are already cleanly separated from the
-UI** — this is a frontend project, not an engine rewrite. The single most important
-requirement to surface was not visual: it's that the tool is a **multi-experiment
-workbench**, so durable, unified, forkable **saves** are the spine of the rebuild, ahead of
-any styling.
-
-Deliverables produced and committed to `claude/cool-galileo-d3yyng`:
-1. `UI_REBUILD_PLAN.md` — full migration plan (saves-library-first).
-2. `web/` — React + Mantine SPA scaffold (shell + Saves Library), builds clean.
-3. **Phase 0 backend, wired & deployable** — unified `/api/saves`, SPA served at
-   `/app`, DB moved to a Fly volume, multi-stage Docker build.
-4. This AAR.
-
-The owner directed "everything has to be wired and deployable, I don't do this stuff
-locally" and "rebuild without tiptoeing" — so Phase 0 was implemented immediately rather
-than left as a plan, and the SPA is now served by the same Fly app.
+# AAR: viperball.fly.dev UI Rebuild — React/Mantine SPA
+## Comprehensive after-action — June 13, 2026
 
 ---
 
-### What Was Found
+## 1. Assignment
 
-#### 1. There are two distinct sites; only one is in scope
-- `viperball.fly.dev/` is the **NiceGUI app** (`nicegui_app/`, ~21.5k lines Python) — the
-  clunky interactive sandbox the user wants rebuilt.
-- `/stats/` is the **Jinja2 stats site** (`stats_site/`, ~7.5k-line router + 84 templates) —
-  the read-only "broadcasts the exports" site, explicitly **out of scope**.
-- Both share one FastAPI + SQLite backend (~126 JSON endpoints + ~90 HTML endpoints).
+> "the viperball.fly.dev — not the jinja template site that broadcasts the exports — has
+> never been upgraded, the UI is messy and mostly clunky to use… analysis around where it can
+> be improved including whether it's feasible to rebuild the UI stack so that it's easier and
+> more pleasant to use — think SaaS app meets Baseball Mogul/OOTP/Football Manager with the
+> ease of using a consumer-grade work platform."
 
-#### 2. Why the NiceGUI app feels clunky (root causes, not vibes)
-- **No real routing.** The whole app is one `@ui.page("/")`; tab switches `clear()` and
-  re-render in place (`nicegui_app/app.py:442`). No bookmarkable URLs, broken Back button,
-  refresh dumps you to Home. This is the dominant "old web app" feeling.
-- **Theming is a 300-line hack.** `APP_CSS` (`app.py:186-241`) re-maps hundreds of
-  hard-coded light-theme Tailwind classes to dark with `!important` — pages were authored
-  light, then bulk-overridden. Brittle and inconsistent.
-- **Monolithic pages.** `wvl_mode.py` 3,218 / `pro_leagues.py` 2,314 / `league.py` 2,187
-  lines, each mixing fetch + layout + formatting + handlers. The team's own
-  `ARCHITECTURE_REDESIGN.md` flags this as unfinished "Phase 3."
-- **Every click round-trips** over a socket.io WebSocket to Python — the opposite of the
-  instant, dense, keyboard-driven feel of OOTP/FM.
-- **Fragile state.** Live sim is an **in-memory dict, 4h TTL, single uvicorn worker, wiped
-  on deploy** (restored from a `vroomtv.fly.dev` snapshot per `fly.toml`).
-
-#### 3. The state model is the real architectural debt
-The API audit confirmed saves are fragmented across three half-systems — `/archives`
-(snapshots), `/history` (versions), `/dynasties` (saved dynasties) — with no unified "all my
-experiments" surface, and the live workspace is ephemeral. For a user running many
-comparative sims, this is the core pain, more than aesthetics.
+What began as an analysis request became a full, owner-steered rebuild executed in one session:
+analysis → migration plan → API audit → a working React + Mantine SPA covering every mode →
+a verified dead-code sweep. All on branch `claude/cool-galileo-d3yyng` / PR #310.
 
 ---
 
-### Decisions Locked With the Owner
+## 2. Starting point (what was wrong)
+
+`viperball.fly.dev/` is the **NiceGUI app** (`nicegui_app/`, ~21.5k lines Python on Quasar/Vue
+over a socket.io WebSocket). The `/stats/` Jinja site (the "export broadcaster") was explicitly
+out of scope. Root causes of the clunk, verified in code, not vibes:
+
+- **No routing.** Whole app is one `@ui.page("/")`; tab switches `clear()`+re-render in place
+  (`nicegui_app/app.py:442`). No bookmarkable URLs, broken Back button, refresh resets you.
+- **Theming was a 300-line hack.** `APP_CSS` re-mapped hundreds of hard-coded light Tailwind
+  classes to dark with `!important` (`app.py:186-241`).
+- **Monolith pages.** `wvl_mode.py` 3,218 / `pro_leagues.py` 2,314 / `league.py` 2,187 lines.
+- **Every click round-trips** over the WebSocket — the opposite of the dense, instant OOTP feel.
+- **Ephemeral state.** Live sim is an in-memory dict (4h TTL, single uvicorn worker, wiped on
+  deploy, restored from a hub snapshot). Saves were fragmented across `/archives`, `/history`,
+  `/dynasties` with no unified "experiments" view.
+
+**Verdict: feasible and low-risk** — the engine and a ~126-endpoint REST API are already
+decoupled from the UI. This was a frontend project, not an engine rewrite.
+
+---
+
+## 3. Decisions locked with the owner
 
 | Topic | Decision |
 |---|---|
-| Audience | **Single-user.** No auth, accounts, multiplayer, or "play"/intervention features. |
-| Purpose | Sim (detailed/fast) → generate history → **save / reload / fork / compare** → export. |
-| Approach | **Option B** — modern SPA on the existing API, strangler migration page-by-page. |
-| Framework | React + TypeScript on **Vite** (ruled out Preact/Astro). |
-| UI kit | **Mantine v7**; dense grids via **mantine-react-table**; **TanStack Query**; **React Router**. |
-| Theme | **Light only**, authored natively with Mantine tokens (no dark-class overrides). |
-| Feel | **Hybrid**: calm SaaS shell (Linear/Notion/Vercel + One Page Love aesthetic, `⌘K` palette) wrapping FM-style hubs and OOTP-dense grids. |
-| Flagship | **College Season / League hub**; must nail **fast navigation/drill-down** (real URLs, working Back). |
-| Persistence | **Attach a Fly volume** so experiments survive deploys/restarts. |
-| First build | **SPA shell + Saves Library**, with the saves API stubbed via an in-browser mock. |
+| Audience | **Single-user.** No auth/accounts/multiplayer/"play" features. |
+| Purpose | Sim (detailed/fast) → generate history → **save / reload / fork / compare** → export. The unit of work is a *save / experiment*, not a session. |
+| Stack | **React + TypeScript on Vite** (no meta-framework), **Mantine v7**, **mantine-react-table**, **TanStack Query**, **React Router v6**. |
+| Theme | **Light only**, authored natively with Mantine tokens (brand indigo carried from `--vb-accent`). |
+| Feel | **Hybrid**: calm SaaS shell (Linear/Notion/Vercel + One Page Love) with `⌘K` palette, wrapping FM-style hubs and OOTP-dense grids. |
+| Flagship | College Season / League hub; must nail **fast navigation/drill-down**. |
+| Persistence | **Fly volume** for durable saves. |
+| Migration | **Strangler** — SPA served at `/app`, NiceGUI stays at `/` until parity. |
 
 ---
 
-### What Was Built (Phase 1 scaffold, `web/`)
+## 4. What was built (by phase)
 
-- **Stack wired & verified:** Vite + React 18 + TS, Mantine v7, mantine-react-table,
-  TanStack Query, React Router v6 (basename `/app`), `@mantine/spotlight` command palette.
-- **`src/theme.ts`** — native light theme; brand indigo carried from the old `--vb-accent`;
-  semantic colors for win/loss, TD/turnover, hot/cold.
-- **`src/components/AppLayout.tsx`** — Mantine AppShell: sidebar nav + topbar + `⌘K` search.
-- **Saves Library (`src/pages/SavesLibrary.tsx`)** — the home screen: a dense
-  mantine-react-table of experiments with mode/teams/progress/**seed**/tags columns, faceted
-  filters, and row actions (open / **fork** / delete). Seed is a first-class column because
-  reproducible experiments are the point.
-- **`src/api/saves.ts`** — the saves **contract** the Phase-0 backend must implement
-  (`GET/POST/PATCH/DELETE /api/saves`, `POST /api/saves/{id}/fork`), with a localStorage
-  **mock fallback** so the Library is fully clickable today; delete the mock when the backend
-  lands.
-- **Placeholders** for League Hub / Compare / My Team / Pro / International / Export that each
-  name the exact existing endpoints that will back them — encoding the build order.
-- **Verification:** `npm install` (140 pkgs), `tsc -b` clean, `vite build` succeeds
-  (816 kB JS / 35 kB-gz CSS; chunk-splitting is a later optimization, not a blocker).
+**Phase 0 — Foundations (backend), deployable.**
+Discovery: `engine/db.py` already persists every mode in one `saves` table, so the fragmented
+save systems could be unified behind one read surface with **no schema migration**.
+- `api/saves_api.py` — `GET /api/saves` aggregates college/dynasty/pro/wvl/archive rows into one
+  normalized `SaveSummary[]`; `PATCH` (rename + tags/notes sidecar), `POST /{id}/fork`, `DELETE`.
+  Id = `"<save_type>::<save_key>"`.
+- `engine/db.py` — `VIPERBALL_DB_PATH` env points the DB at the volume; `fork_save` (clones a
+  college save's box scores under the new id) + `update_save_label`.
+- `api/main.py` — serves the built SPA at `/app` via an `_SPAStaticFiles` 404→index.html
+  fallback; includes the saves router; adds `GET /api/sessions/college` (the hub's picker).
+- `Dockerfile` — multi-stage: node builds the SPA, python image copies `web/dist`.
+- `fly.toml` — `[mounts]` volume `viperball_data` → `/data`; first boot still seeds the DB once
+  from the hub snapshot (restore gated on `path.exists()`), then the volume persists.
 
----
+**Phase 1 — Shell + Saves Library.** Vite/React/Mantine AppShell (sidebar + topbar + `⌘K`),
+TanStack Query, router. Home = Saves Library: open / fork / rename / tag / delete experiments.
 
-### What Was Built (Phase 0 backend — wired & deployable)
+**Phase 2 — College / League hub (flagship).** Session picker; four dense grids (Standings /
+Schedule / Polls / Leaders); Sim-Week / Sim-Rest; **drill-down** standings → team page → player
+page, each a real deep-linkable URL with breadcrumbs + working Back.
 
-Discovery that made this fast: **`engine/db.py` already persists every mode** in a single
-`saves` table keyed by `(save_type, save_key)`, with `list_saves`/`save_blob`/`delete_blob`
-helpers. The "three fragmented systems" could therefore be unified behind one read surface
-with **no schema migration**.
+**Phase 2.5 — New Season wizard.** 2-step Stepper (identity + **seed** / format); `POST /sessions`
+then `/sessions/{id}/season`; seed dice for reproducible experiments. SPA is now standalone for
+college — create → sim → browse without touching NiceGUI.
 
-- **`api/saves_api.py`** (new) — `GET /api/saves` aggregates `college`/`dynasty`/`pro_league`/
-  `wvl_season`/`wvl_commissioner`/`season_archive` rows into one normalized `SaveSummary[]`;
-  plus `PATCH` (rename + tags/notes via a `save_meta` sidecar blob), `POST /{id}/fork`,
-  `DELETE /{id}`. Stable id = `"<save_type>::<save_key>"` (matched with a `:path` param).
-- **`engine/db.py`** — `VIPERBALL_DB_PATH` env points the DB at the volume; new
-  `update_save_label` and `fork_save` (pure row-copy; clones a college save's box scores under
-  the new session id so a fork keeps its played games).
-- **`api/main.py`** — includes the saves router; mounts the built SPA at `/app` via an
-  `_SPAStaticFiles` subclass that falls back to `index.html` on 404 so client-side routes work.
-  Mount is added before NiceGUI's root catch-all, so `/app` and `/api/saves` win.
-- **`Dockerfile`** — stage 1 `node:20-slim` runs `npm ci && npm run build`; stage 2 copies
-  `web/dist` into the Python image after `COPY . .`.
-- **`fly.toml`** — `[mounts]` volume `viperball_data` → `/data`; `VIPERBALL_DB_PATH=/data/...`.
-  First boot still seeds the DB once from the hub snapshot (the restore is gated on
-  `path.exists()`), then the volume persists.
+**Phase 3 — Compare runs.** Pick 2–4 active seasons; a team-keyed pivot shows each team's record
+per run with a **Δ Wins** spread column sorted to surface divergence. The experiment payoff.
 
-**Verification (local sandbox):** frontend `npm ci` + `npm run build` ✓; `engine.db` fork/
-rename/delete exercised ✓; full `GET/PATCH/POST-fork/DELETE` cycle green under a real FastAPI
-`TestClient` ✓. Docker/Fly build runs in Fly's remote builder at deploy (Docker not in sandbox;
-the `npm ci` + `vite build` steps it depends on were validated locally).
+**Phase 4 — All remaining modes** (shapes extracted by a background agent; shared `useDataGrid`):
+- **Pro Leagues** — start any of 5 leagues; division standings, schedule, category stat leaders,
+  playoff bracket, sim.
+- **International (FIV)** — world rankings, World Cup groups + knockout, New-Cycle / Sim-Stage.
+- **Dynasty** — load a saved career into a session; coach card, team histories, awards, records.
+- **My Team** — roster-builder dashboard: NIL budget pools, roster, retention risks, portal.
+- **Export** — standings-JSON download, archive action, archive browser.
+- Engineering: vendor chunk splitting → app bundle ~14 KB gzip.
 
-### What Was Built (Phases 1–3 — the College workbench, standalone)
-
-The SPA at `/app` now does the full college loop without touching NiceGUI:
-
-- **Saves Library** (`/app`) — `/api/saves`-backed list with open / fork / rename / tag / delete.
-- **New Season wizard** (`/app/league/new`) — 2-step Stepper (identity + **seed** / format);
-  `POST /sessions` then `POST /sessions/{id}/season`, then routes into the hub. The seed dice
-  makes runs reproducible — the basis for experiments.
-- **League Hub** (`/app/league`, `/league/:sid`) — session picker via new
-  `GET /api/sessions/college`; four dense `mantine-react-table` grids (Standings / Schedule /
-  Polls / Leaders) with Sim-Week / Sim-Rest controls that invalidate and refresh in place.
-- **Drill-down** — standings → **Team page** (roster grid) → **Player page** (attribute card),
-  each a real deep-linkable URL with breadcrumbs and a working Back button (the #1 fix).
-- **Compare Runs** (`/app/compare`) — pick 2–4 active seasons; a team-keyed pivot shows each
-  team's record per run with a **Δ Wins** spread column sorted to surface divergence. This is
-  the experiment payoff.
-
-Every step verified with `tsc` + `vite build`; new Python endpoint compiles. Pushed to PR #310.
-
-### What Was Built (Phase 4 — all remaining modes)
-
-With shapes extracted from the API (background agent), every mode placeholder became a real,
-wired page against existing JSON endpoints. A shared `useDataGrid` hook backs every grid.
-
-- **Pro Leagues** — `ProIndex` (start any of 5 leagues + active sessions) and `ProHub`
-  (division standings, schedule, category stat leaders, playoff bracket, sim week/rest).
-- **International (FIV)** — world rankings, World Cup group tables, knockout bracket, with
-  New-Cycle and Sim-Stage controls; defensive rendering over the large `cycle.to_dict()`.
-- **Dynasty** — `DynastyIndex` lists saved careers; opening one creates a session and loads it
-  (`?save_key=`), then `DynastyHub` shows the coach card, team histories, awards, and record
-  book. Added to the sidebar nav.
-- **My Team** — roster-builder dashboard (pick a season with a human team): NIL budget pools,
-  roster grid, retention risks, transfer-portal board.
-- **Export** — per-season standings-JSON download, archive action, and archive browser.
-
-Engineering: extracted the shared grid hook; **vendor chunk splitting** (vendor/table/mantine)
-dropped the app bundle to ~14 KB gzip so deploys re-download almost nothing.
-
-**Deploy fix along the way:** the root `.gitignore` is a Python template whose `lib/` rule
-silently excluded `web/src/lib/queryClient.ts`, so it was never committed and the Fly/Depot
-build failed (local builds passed because the file was on disk). Added a scoped negation
-(`!web/src/**`) so `lib/`/`build/`/`dist/` can never swallow frontend source again.
-
-### Dead Code & Cutover Plan (answering "will you remove the dead code after launch?")
-
-**Yes — but at Phase 5 cutover, not now.** Removing NiceGUI today breaks every mode the SPA
-hasn't ported (Dynasty, Pro, WVL, International, My Team, recruiting, DraftyQueenz, export
-formats, asset generation). Verified dependency picture:
-
-- **Live, must stay until NiceGUI retires:** all of `nicegui_app/`, and `ui/api_client.py`
-  (imported by `nicegui_app/app.py`).
-- **Already dead now** (nothing live imports them — verified by grep): the Streamlit app
-  `ui/app.py` + `ui/page_modules/**` + `ui/helpers.py` (used only by those dead page modules),
-  and the Tkinter desktop app `viperball_gui.py` + `launch_gui.sh`.
-
-Safe sequence: port each mode → retire its NiceGUI page as the SPA replacement ships → once
-`/app` covers everything, promote SPA to `/` and delete `nicegui_app/` + `ui/api_client.py`.
-The already-dead Streamlit/Tkinter files can be removed at any time (a verified low-risk sweep),
-independent of the cutover.
-
-### Migration Plan (recorded in `UI_REBUILD_PLAN.md`)
-
-- **Phase 0** — Unify saves into one model + DB-backed workspace + Fly volume + `/api/saves*`
-  + pagination + `openapi.json`→TS types. (Biggest backend lift; the gate.)
-- **Phase 1** — SPA shell + Saves Library. ✅ scaffolded.
-- **Phase 2** — Flagship League hub: dense grids + drill-down (standings→team→player, each a
-  real URL) + sim controls + export.
-- **Phase 3** — Compare experiments side-by-side (the payoff).
-- **Phase 4** — Remaining modes; add missing JSON for **WVL** (in-memory/HTML-only today),
-  recruiting hub, coach detail, play-by-play. Retire matching NiceGUI pages.
-- **Phase 5** — Cutover: SPA becomes `/`, NiceGUI removed, dead Streamlit `ui/` deleted.
-
-Strangler mechanic: FastAPI mounts the Vite `dist/` at `/app`; NiceGUI keeps `/` until parity.
+**Dead-code sweep (pre-cutover).** Removed 17 verified-dead files: the legacy Streamlit UI
+(`ui/app.py`, `ui/helpers.py`, `ui/page_modules/**`) and the Tkinter desktop app
+(`viperball_gui.py`, `launch_gui.sh`). Kept `ui/api_client.py` (still imported by NiceGUI).
 
 ---
 
-### Open Questions / Next Steps
+## 5. Deploy / ops notes
 
-1. **Phase 0 backend** is the gate: unify the three save systems behind `/api/saves`, make the
-   workspace DB-backed (not 4h TTL), attach the Fly volume. Then delete the mock in
-   `web/src/api/saves.ts`.
-2. **WVL** — currently in-memory + HTML-only and not persisted. Decide whether it earns JSON
-   endpoints in Phase 4 or stays on the old stack.
-3. **Compare** — confirm which metrics matter most to diff across runs (final standings,
-   champion, stat leaders, DTW/luck).
-4. Wire `npm run gen:api` once the backend is reachable to replace hand-typed shapes with
-   generated types.
+Two deploy issues surfaced and were handled:
+
+1. **`.gitignore` ate a source file (fixed).** Root `.gitignore` is a Python template; its
+   `lib/` rule silently excluded `web/src/lib/queryClient.ts`, so it was never committed and the
+   Fly/Depot build failed (`tsc: Cannot find module './lib/queryClient'`). Local builds passed
+   because the file was on disk. Fixed with a scoped negation (`!web/src/**`) so `lib/`/`build/`/
+   `dist/` can never swallow frontend source again.
+
+2. **Volume must exist before deploy (action required).** `[mounts]` auto-create only applies to
+   fresh `fly launch`; with machines already running, Fly requires the volume to be created
+   manually. The app currently has **2 machines in `ams`**, so deploy asks for 2 volumes.
+   - **Recommended (matches the architecture):** run a **single machine** — NiceGUI requires a
+     single in-process worker and the saves DB should be one consistent store, not split across
+     per-machine volumes. `fly scale count 1 --region ams`, then
+     `fly volume create viperball_data -r ams -n 1`, then redeploy.
+   - Alternative (2 volumes) would give each machine its own DB → divergent saves; not advised
+     for a single-user store.
 
 ---
 
-### Risks & Notes
-- The 816 kB bundle should be code-split (route-level `lazy()`) before Phase 5; harmless now.
-- Single-worker uvicorn stays mandatory only while NiceGUI lives; removing it at Phase 5
-  unlocks multiple workers (long sims should already be offloaded).
-- No engine or `/stats/` changes were made — scope held to analysis + the new `web/` tree and
-  two docs.
+## 6. What's left
+
+**Phase 5 — cutover (deliberately not done yet).** Promote `/app` → `/`, retire `nicegui_app/`,
+remove `ui/api_client.py`. This is a one-way door that removes the only verified-working UI, and
+the SPA hasn't been exercised against the live backend (deploy hadn't succeeded at time of
+writing). Sequence: deploy → click through `/app/` for parity → then cut over.
+
+**Unverified locally:** each mode's live JSON matching the hand-written TypeScript types. The
+saves API was validated end-to-end under a real FastAPI `TestClient`; the season/pro/fiv/dynasty/
+my-team responses were typed from a code audit, not a running server (FastAPI isn't installed in
+the build sandbox). First live pass may need small field-name corrections.
+
+**Deferred features:** WVL has no JSON API (in-memory/HTML only) — not ported; recruiting hub,
+coach detail, and play-by-play also lack JSON. Dynasty create/advance and My Team write-actions
+(bid/retain/finalize) are read-first for now.
 
 ---
 
-### Files Touched
-- `UI_REBUILD_PLAN.md` (new) — migration plan.
-- `web/**` (new) — SPA scaffold (shell + Saves Library), builds clean.
-- `AAR_2026-06-13_ui_rebuild_analysis.md` (new) — this record.
+## 7. Key decisions & rationale
+
+- **Unify saves by reading existing tables, not migrating** — the `saves` table already held
+  everything; a thin aggregation router beat a risky data migration.
+- **Single grid hook (`useDataGrid`)** — one dense, faceted, searchable config across every
+  screen keeps the OOTP feel consistent and the pages thin.
+- **Strangler over big-bang** — SPA at `/app`, NiceGUI at `/`, retire page-by-page. No moment
+  where the app is half-broken.
+- **Seed as a first-class field** — the wizard and Saves Library surface the RNG seed because
+  the owner's core workflow is comparing many runs.
+
+---
+
+## 8. Lessons
+
+- **A Python repo's default `.gitignore` is a landmine for an embedded JS app.** `lib/`, `build/`,
+  `dist/`, `var/` silently drop source; only a from-git build (Depot) reveals it. Guard the JS
+  subtree explicitly.
+- **"Builds locally" ≠ "builds in CI"** when files exist on disk but not in git. Parity check
+  (`git ls-files` vs `find`) catches it.
+- **Surface architecture truths early** — that college seasons are in-memory-only reframed the
+  whole saves model and the League Hub's session-picker design.
+
+---
+
+## 9. File inventory (this branch)
+
+- **New frontend:** `web/**` — Vite/React/Mantine SPA (shell, Saves Library, League hub +
+  drill-down, New Season wizard, Compare, Pro, International, Dynasty, My Team, Export).
+- **New backend:** `api/saves_api.py`; `GET /api/sessions/college` + `/app` mount in
+  `api/main.py`; `fork_save`/`update_save_label`/`VIPERBALL_DB_PATH` in `engine/db.py`.
+- **Ops:** multi-stage `Dockerfile`; `[mounts]` + `VIPERBALL_DB_PATH` in `fly.toml`; `.gitignore`
+  negation.
+- **Removed:** legacy Streamlit UI + Tkinter app (17 files).
+- **Docs:** `UI_REBUILD_PLAN.md`, this AAR.
