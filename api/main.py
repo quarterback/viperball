@@ -1750,6 +1750,164 @@ def update_team_roster(session_id: str, team_name: str, updates: List[UpdatePlay
     return result
 
 
+# ─── College editor: rename teams, edit/move/add players ─────────
+_EDITABLE_PLAYER_FIELDS = {
+    "name", "number", "position", "speed", "stamina", "kicking", "lateral_skill",
+    "tackling", "agility", "power", "awareness", "hands", "kick_power", "kick_accuracy",
+    "year", "height", "weight", "hometown_city", "hometown_state", "hometown_country",
+    "high_school", "nationality", "potential", "development", "redshirt", "archetype",
+    "variance_archetype",
+}
+
+
+class EditPlayerRequest(BaseModel):
+    fields: Dict[str, object]
+
+
+class MovePlayerRequest(BaseModel):
+    player_name: str
+    from_team: str
+    to_team: str
+
+
+class AddPlayerRequest(BaseModel):
+    team: str
+    name: str
+    position: str = "RB"
+    attributes: Dict[str, object] = {}
+
+
+class RenameTeamRequest(BaseModel):
+    new_name: str
+
+
+def _find_player(team, player_name):
+    return next((p for p in team.players if p.name == player_name), None)
+
+
+@app.patch("/sessions/{session_id}/season/player/{team_name}/{player_name}")
+def edit_player(session_id: str, team_name: str, player_name: str, req: EditPlayerRequest):
+    """Edit a player's name and attributes in place."""
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(team_name)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    player = _find_player(team, player_name)
+    if not player:
+        raise HTTPException(status_code=404, detail=f"Player '{player_name}' not found")
+    applied = []
+    for k, v in req.fields.items():
+        if k in _EDITABLE_PLAYER_FIELDS and hasattr(player, k):
+            try:
+                setattr(player, k, v)
+                applied.append(k)
+            except Exception:
+                pass
+    return {"updated": applied, "player": _serialize_player(player)}
+
+
+@app.post("/sessions/{session_id}/season/player/move")
+def move_player(session_id: str, req: MovePlayerRequest):
+    """Move a player from one team to another."""
+    season = _require_season(_get_session(session_id))
+    src = season.teams.get(req.from_team)
+    dst = season.teams.get(req.to_team)
+    if not src or not dst:
+        raise HTTPException(status_code=404, detail="Team not found")
+    player = _find_player(src, req.player_name)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    src.players.remove(player)
+    # avoid number clash on the destination roster
+    used = {p.number for p in dst.players}
+    if player.number in used:
+        player.number = next((n for n in range(1, 100) if n not in used), player.number)
+    dst.players.append(player)
+    return {"moved": True, "to_team": req.to_team}
+
+
+@app.post("/sessions/{session_id}/season/player/add")
+def add_player(session_id: str, req: AddPlayerRequest):
+    """Create a new player on a team (assign a recruit/player anywhere)."""
+    from engine.game_engine import Player, assign_archetype
+    season = _require_season(_get_session(session_id))
+    team = season.teams.get(req.team)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team '{req.team}' not found")
+    used = {p.number for p in team.players}
+    attrs = req.attributes or {}
+    number = int(attrs.get("number", next((n for n in range(1, 100) if n not in used), 99)))
+    base = dict(speed=70, stamina=70, kicking=70, lateral_skill=70, tackling=70)
+    for k in base:
+        if k in attrs:
+            base[k] = int(attrs[k])
+    player = Player(number=number, name=req.name, position=req.position, **base)
+    for k, v in attrs.items():
+        if k in _EDITABLE_PLAYER_FIELDS and hasattr(player, k) and k not in base and k != "number":
+            try:
+                setattr(player, k, v)
+            except Exception:
+                pass
+    try:
+        assign_archetype(player)
+    except Exception:
+        pass
+    team.players.append(player)
+    return {"added": True, "player": _serialize_player(player)}
+
+
+def _rename_team_everywhere(season, old: str, new: str):
+    """Rename a team across every reference: roster key, schedule, conferences."""
+    team = season.teams.pop(old)
+    if hasattr(team, "name"):
+        team.name = new
+    season.teams[new] = team
+    if getattr(season, "team_conferences", None) and old in season.team_conferences:
+        season.team_conferences[new] = season.team_conferences.pop(old)
+    if getattr(season, "conferences", None):
+        for conf, members in list(season.conferences.items()):
+            season.conferences[conf] = [new if m == old else m for m in members]
+    sc = getattr(season, "style_configs", None)
+    if sc and old in sc:
+        sc[new] = sc.pop(old)
+    game_lists = [getattr(season, "schedule", []) or [],
+                  getattr(season, "playoff_bracket", []) or []]
+    for glist in game_lists:
+        for g in glist:
+            if getattr(g, "home_team", None) == old:
+                g.home_team = new
+            if getattr(g, "away_team", None) == old:
+                g.away_team = new
+    for bg in getattr(season, "bowl_games", []) or []:
+        g = getattr(bg, "game", None)
+        if g:
+            if getattr(g, "home_team", None) == old:
+                g.home_team = new
+            if getattr(g, "away_team", None) == old:
+                g.away_team = new
+    rec = getattr(team, "record", None)
+    if rec is not None and hasattr(rec, "team_name"):
+        rec.team_name = new
+
+
+@app.patch("/sessions/{session_id}/season/team/{team_name}/rename")
+def rename_team(session_id: str, team_name: str, req: RenameTeamRequest):
+    """Rename a team across the whole season (best done before/early in the sim)."""
+    session = _get_session(session_id)
+    season = _require_season(session)
+    new = req.new_name.strip()
+    if team_name not in season.teams:
+        raise HTTPException(status_code=404, detail=f"Team '{team_name}' not found")
+    if not new:
+        raise HTTPException(status_code=400, detail="New name is empty")
+    if new in season.teams:
+        raise HTTPException(status_code=400, detail=f"'{new}' already exists")
+    _rename_team_everywhere(season, team_name, new)
+    ht = session.get("human_teams") or []
+    session["human_teams"] = [new if t == team_name else t for t in ht]
+    return {"renamed": True, "old_name": team_name, "new_name": new}
+
+
 @app.get("/sessions/{session_id}/season/player-stats")
 def season_player_stats(
     session_id: str,

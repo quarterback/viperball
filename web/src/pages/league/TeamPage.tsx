@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   MantineReactTable,
   useMantineReactTable,
@@ -16,15 +16,29 @@ import {
   Loader,
   Center,
   Card,
+  Tabs,
+  Button,
+  ActionIcon,
+  Tooltip,
+  Modal,
+  TextInput,
 } from "@mantine/core";
-import { Tabs } from "@mantine/core";
-import { IconChevronRight } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  IconChevronRight,
+  IconPencil,
+  IconArrowsExchange,
+  IconPlus,
+} from "@tabler/icons-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { seasonApi, type RosterPlayer } from "../../api/season";
 import { ChemistryTab, CoachingTab } from "./TeamDetailTabs";
+import { PlayerFormModal, MovePlayerModal } from "./PlayerEditor";
 
 export function TeamPage() {
   const { sessionId = "", teamName = "" } = useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const team = decodeURIComponent(teamName);
 
   const roster = useQuery({
@@ -35,8 +49,29 @@ export function TeamPage() {
     queryKey: ["standings", sessionId],
     queryFn: () => seasonApi.standings(sessionId),
   });
-
   const record = standings.data?.find((s) => s.team_name === team);
+  const teamNames = useMemo(
+    () => (standings.data ?? []).map((s) => s.team_name),
+    [standings.data],
+  );
+
+  // editor state
+  const [editPlayer, setEditPlayer] = useState<RosterPlayer | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [movePlayer, setMovePlayer] = useState<RosterPlayer | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameVal, setRenameVal] = useState(team);
+
+  const rename = useMutation({
+    mutationFn: () => seasonApi.renameTeam(sessionId, team, renameVal.trim()),
+    onSuccess: (res) => {
+      notifications.show({ message: "Team renamed", color: "indigo" });
+      qc.invalidateQueries({ queryKey: ["standings", sessionId] });
+      setRenameOpen(false);
+      navigate(`/league/${sessionId}/team/${encodeURIComponent(res.new_name)}`, { replace: true });
+    },
+    onError: () => notifications.show({ message: "Rename failed (name taken?)", color: "red" }),
+  });
 
   const cols = useMemo<MRT_ColumnDef<RosterPlayer>[]>(
     () => [
@@ -75,20 +110,6 @@ export function TeamPage() {
       { accessorKey: "awareness", header: "AWR", size: 65 },
       { accessorKey: "tackling", header: "TKL", size: 65 },
       { accessorKey: "kicking", header: "KICK", size: 70 },
-      {
-        accessorKey: "depth_status",
-        header: "Status",
-        size: 90,
-        Cell: ({ cell }) => {
-          const v = cell.getValue<string>();
-          if (v === "healthy") return <Text size="xs" c="dimmed">—</Text>;
-          return (
-            <Badge size="xs" color={v === "out" ? "red" : "orange"} variant="light">
-              {v}
-            </Badge>
-          );
-        },
-      },
     ],
     [sessionId, team],
   );
@@ -97,13 +118,29 @@ export function TeamPage() {
     columns: cols,
     data: roster.data?.roster ?? [],
     state: { isLoading: roster.isLoading },
+    enableRowActions: true,
+    positionActionsColumn: "last",
+    renderRowActions: ({ row }) => (
+      <Group gap={4} wrap="nowrap">
+        <Tooltip label="Edit">
+          <ActionIcon variant="subtle" onClick={() => setEditPlayer(row.original)}>
+            <IconPencil size={16} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label="Move to another team">
+          <ActionIcon variant="subtle" color="grape" onClick={() => setMovePlayer(row.original)}>
+            <IconArrowsExchange size={16} />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+    ),
     initialState: {
       density: "xs",
       sorting: [{ id: "overall", desc: true }],
       showGlobalFilter: true,
     },
     mantineTableProps: { striped: true, highlightOnHover: true },
-    mantineTableContainerProps: { style: { maxHeight: "68vh" } },
+    mantineTableContainerProps: { style: { maxHeight: "66vh" } },
   });
 
   if (roster.isError) {
@@ -133,7 +170,21 @@ export function TeamPage() {
 
       <Group justify="space-between" align="flex-end">
         <Stack gap={2}>
-          <Title order={2}>{team}</Title>
+          <Group gap={6}>
+            <Title order={2}>{team}</Title>
+            <Tooltip label="Rename team">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  setRenameVal(team);
+                  setRenameOpen(true);
+                }}
+              >
+                <IconPencil size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
           {record && (
             <Group gap="xs">
               <Badge variant="light">
@@ -165,6 +216,15 @@ export function TeamPage() {
             <Tabs.Tab value="coaching">Coaching</Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="roster" pt="md">
+            <Group justify="flex-end" mb="xs">
+              <Button
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => setAddOpen(true)}
+              >
+                Add player
+              </Button>
+            </Group>
             <MantineReactTable table={table} />
           </Tabs.Panel>
           <Tabs.Panel value="chemistry" pt="md">
@@ -175,6 +235,57 @@ export function TeamPage() {
           </Tabs.Panel>
         </Tabs>
       )}
+
+      {/* editor modals */}
+      <PlayerFormModal
+        opened={!!editPlayer}
+        onClose={() => setEditPlayer(null)}
+        sid={sessionId}
+        team={team}
+        player={editPlayer}
+        mode="edit"
+      />
+      <PlayerFormModal
+        opened={addOpen}
+        onClose={() => setAddOpen(false)}
+        sid={sessionId}
+        team={team}
+        player={null}
+        mode="add"
+      />
+      <MovePlayerModal
+        opened={!!movePlayer}
+        onClose={() => setMovePlayer(null)}
+        sid={sessionId}
+        fromTeam={team}
+        player={movePlayer}
+        teams={teamNames}
+      />
+      <Modal opened={renameOpen} onClose={() => setRenameOpen(false)} title="Rename team" size="sm">
+        <Stack gap="sm">
+          <TextInput
+            label="New team name"
+            value={renameVal}
+            onChange={(e) => setRenameVal(e.currentTarget.value)}
+            data-autofocus
+          />
+          <Text size="xs" c="dimmed">
+            Updates the schedule, conferences, and standings. Best done before simming far.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => rename.mutate()}
+              loading={rename.isPending}
+              disabled={!renameVal.trim() || renameVal.trim() === team}
+            >
+              Rename
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   );
 }
