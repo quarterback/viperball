@@ -93,7 +93,9 @@ export const dynastyApi = {
   status: (sid: string) => apiGet<DynastyStatus>(`/sessions/${sid}/dynasty/status`),
 
   programs: (sid: string) =>
-    apiGet<{ programs: Program[]; conferences: string[] }>(`/sessions/${sid}/dynasty/programs`),
+    apiGet<{ programs: Program[]; conferences: string[]; active_count: number; even: boolean }>(
+      `/sessions/${sid}/dynasty/programs`,
+    ),
   addProgram: (sid: string, body: AddProgramBody) =>
     apiSend("POST", `/sessions/${sid}/dynasty/program/add`, body),
   retireProgram: (sid: string, team: string) =>

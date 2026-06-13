@@ -141,16 +141,31 @@ export function ProgramsManager({ sid }: { sid: string }) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <Text size="sm" c="dimmed">
+      <Group justify="space-between" align="flex-start">
+        <Text size="sm" c="dimmed" maw={520}>
           Add or retire programs. Changes take effect at the next season start, when the
           schedule rebuilds. Retired programs keep their pages/history; their non-graduating
           players disperse to other teams.
         </Text>
-        <Button size="xs" leftSection={<IconPlus size={14} />} onClick={() => setAddOpen((o) => !o)}>
-          Add program
-        </Button>
+        <Group gap="xs">
+          <Badge
+            size="lg"
+            variant="light"
+            color={q.data?.even ? "teal" : "red"}
+          >
+            {q.data?.active_count ?? 0} active · {q.data?.even ? "even ✓" : "ODD — must be even"}
+          </Badge>
+          <Button size="xs" leftSection={<IconPlus size={14} />} onClick={() => setAddOpen((o) => !o)}>
+            Add program
+          </Button>
+        </Group>
       </Group>
+      {q.data && !q.data.even && (
+        <Text size="xs" c="red">
+          The next season can't start with an odd number of active programs — add or retire one
+          to make it even.
+        </Text>
+      )}
 
       <Collapse in={addOpen}>
         <AddProgramForm sid={sid} conferences={conferences} onDone={() => { setAddOpen(false); invalidate(); }} />

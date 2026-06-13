@@ -2681,6 +2681,16 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     conf_team_set = {t for members in conf_dict.values() for t in members}
     teams = {n: t for n, t in teams.items() if n in conf_team_set}
 
+    # Enforce an even number of active programs so the schedule pairs cleanly.
+    if len(teams) % 2 != 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Active program count is odd ({len(teams)}). Add or retire a program "
+                "so the total is even before starting the season (Dynasty → Programs)."
+            ),
+        )
+
     rivalries_dict = auto_assign_rivalries(
         conferences=conf_dict,
         team_states=team_states,
@@ -2796,7 +2806,13 @@ def list_programs(session_id: str):
             "championships": getattr(h, "total_championships", 0) if h else 0,
         })
     out.sort(key=lambda p: p["name"])
-    return {"programs": out, "conferences": list(dynasty.conferences.keys())}
+    active_count = sum(1 for p in out if not p["retired"])
+    return {
+        "programs": out,
+        "conferences": list(dynasty.conferences.keys()),
+        "active_count": active_count,
+        "even": active_count % 2 == 0,
+    }
 
 
 @app.post("/sessions/{session_id}/dynasty/program/add")
