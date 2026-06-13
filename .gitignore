@@ -58,3 +58,9 @@ config.json
 
 # Claude Code local settings (may contain API keys)
 .claude/settings.local.json
+
+# web/ is a JS/TS app — the Python-style ignores above (lib/, build/, dist/, var/…)
+# must not silently swallow its SOURCE. node_modules/dist live at web/ root and are
+# governed by web/.gitignore, so this only un-ignores real source under web/src/.
+!web/src/
+!web/src/**

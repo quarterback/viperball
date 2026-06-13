@@ -17,5 +17,18 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        // Split heavy, rarely-changing vendor code so the browser caches it
+        // across app deploys instead of re-downloading one giant bundle.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("mantine-react-table") || id.includes("@tanstack")) return "table";
+          if (id.includes("@mantine") || id.includes("@tabler")) return "mantine";
+          return "vendor";
+        },
+      },
+    },
   },
 });

@@ -148,6 +148,30 @@ The SPA at `/app` now does the full college loop without touching NiceGUI:
 
 Every step verified with `tsc` + `vite build`; new Python endpoint compiles. Pushed to PR #310.
 
+### What Was Built (Phase 4 — all remaining modes)
+
+With shapes extracted from the API (background agent), every mode placeholder became a real,
+wired page against existing JSON endpoints. A shared `useDataGrid` hook backs every grid.
+
+- **Pro Leagues** — `ProIndex` (start any of 5 leagues + active sessions) and `ProHub`
+  (division standings, schedule, category stat leaders, playoff bracket, sim week/rest).
+- **International (FIV)** — world rankings, World Cup group tables, knockout bracket, with
+  New-Cycle and Sim-Stage controls; defensive rendering over the large `cycle.to_dict()`.
+- **Dynasty** — `DynastyIndex` lists saved careers; opening one creates a session and loads it
+  (`?save_key=`), then `DynastyHub` shows the coach card, team histories, awards, and record
+  book. Added to the sidebar nav.
+- **My Team** — roster-builder dashboard (pick a season with a human team): NIL budget pools,
+  roster grid, retention risks, transfer-portal board.
+- **Export** — per-season standings-JSON download, archive action, and archive browser.
+
+Engineering: extracted the shared grid hook; **vendor chunk splitting** (vendor/table/mantine)
+dropped the app bundle to ~14 KB gzip so deploys re-download almost nothing.
+
+**Deploy fix along the way:** the root `.gitignore` is a Python template whose `lib/` rule
+silently excluded `web/src/lib/queryClient.ts`, so it was never committed and the Fly/Depot
+build failed (local builds passed because the file was on disk). Added a scoped negation
+(`!web/src/**`) so `lib/`/`build/`/`dist/` can never swallow frontend source again.
+
 ### Dead Code & Cutover Plan (answering "will you remove the dead code after launch?")
 
 **Yes — but at Phase 5 cutover, not now.** Removing NiceGUI today breaks every mode the SPA
