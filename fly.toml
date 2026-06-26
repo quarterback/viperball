@@ -29,9 +29,13 @@ primary_region = 'ams'
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'off'
+  # Scale to zero when idle: Fly stops the machine after a period with no
+  # traffic, then auto-starts it on the next incoming request. This avoids
+  # paying for the VM while the sim app is not in use. Expect a few seconds
+  # of cold-start latency on the first request after an idle period.
+  auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
   processes = ['app']
 
   [http_service.concurrency]
