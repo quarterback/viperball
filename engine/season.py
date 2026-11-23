@@ -1967,6 +1967,8 @@ class Season:
         )
         result = engine.simulate_game()
         result["is_rivalry_game"] = game.is_rivalry_game
+        _carry_workload(home_team, engine.home_team)
+        _carry_workload(away_team, engine.away_team)
 
         # Record game in referee pool for game log tracking
         if self.referee_pool is not None and ref_crew_names:
@@ -3442,6 +3444,29 @@ def load_coaching_staffs_from_directory(directory: str) -> Dict[str, dict]:
             if staff:
                 staffs[team_name] = staff
     return staffs
+
+
+# ── V3.5: fatigue carried between games ──
+# Part of how tired a player ends a game carries into the next one (lower
+# starting energy). High stamina recovers more of it during the week, and
+# carried fatigue from earlier games decays. Same idea as the O27 baseball
+# game's workload debt (o27/config.py FATIGUE_DEBT_*).
+WORKLOAD_CARRY_SHARE = 0.30   # share of end-of-game fatigue that carries
+WORKLOAD_KEEP = 0.35          # share of older carried fatigue kept each week
+WORKLOAD_MAX = 20.0
+
+
+def _carry_workload(season_team, game_team):
+    from engine.game_engine import scale_rating
+    played = {p.name: p for p in game_team.players}
+    for p in season_team.players:
+        g = played.get(p.name)
+        stam = scale_rating(getattr(p, "stamina", 35))
+        recover = max(0.4, min(1.2, 1.6 - stam / 100.0))  # 70 -> 0.9, 95 -> 0.65
+        spent = (100.0 - g.game_energy) if (g and g.game_field_snaps > 0) else 0.0
+        new = spent * WORKLOAD_CARRY_SHARE * recover
+        old = getattr(p, "fatigue_carry", 0.0) * WORKLOAD_KEEP * recover
+        p.fatigue_carry = round(min(WORKLOAD_MAX, old + new), 1)
 
 
 def create_season(

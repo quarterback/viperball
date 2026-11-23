@@ -94,6 +94,41 @@ V2_ENGINE_CONFIG = {
     # kick in range. Lower = coaches shoot sooner = more snap kicks.
     "kick_4th_down_min_ytg": 4,
     "kick_5th_down_min_ytg": 1,
+    # V3.5: Game day variance, after the O27 baseball game (o27/config.py
+    # LOCKED_FORM_*, o27v2 HOME_ADVANTAGE_SKILL = 0).
+    # Home field: the flat ratings boost for every home player is off. A home
+    # edge now has to come from things that happen: the away team's travel
+    # (starting energy), the referee crew's lean, and fatigue.
+    "home_field_boost": False,
+    # Team form: one roll per team per game (its day) times one roll per half
+    # (hot or cold spell). The mean of the game roll leans with the team's
+    # best player, so teams with a star run hot more often. The result
+    # multiplies every contest rating for that team, so a good day lifts the
+    # run game, the kick game and the defense together instead of averaging
+    # out over 90 plays. 0 sigma = off.
+    "form_game_sigma": 0.05,
+    "form_half_sigma": 0.03,
+    "form_star_weight": 0.003,   # per rating point of best player vs league typical
+    "form_star_pivot": 88.0,     # typical best player, on the engine's 60-100 scale
+    "form_min": 0.85,
+    "form_max": 1.18,
+    # Work rate: every player on the field spends energy every snap, as in
+    # Australian rules, Gaelic football and rugby, scaled by stamina
+    # (60-100 scale: 70 -> 0.9x, 95 -> 0.65x, 45 -> 1.15x). Players on the
+    # bench recover a little each snap. Change of possession refunds less.
+    "work_rate_enabled": True,
+    "work_rate_per_snap": 0.6,
+    "bench_recovery_per_snap": 0.1,
+    "drive_change_recovery_off": 0.5,   # was 5
+    "drive_change_recovery_def": 0.0,   # was 3
+    # Energy a team gets back from a timeout or other stoppage (was 10-15,
+    # eight timeouts a game refilled players completely). Halftime stays 30.
+    "stoppage_recovery": 4.0,
+    "fatigue_curve_linear": True,
+    "fatigue_curve_slope": 0.004,
+    # Travel: starting energy the away team loses, by distance.
+    "travel_fatigue": {"same_state": 0, "same_region": 2, "same_zone": 4,
+                       "next_zone": 6, "cross_country": 9},
     # V3.4: Seconds between plays for the slowest (tempo 0) and fastest
     # (tempo 1) offenses. Football cadence was 38 and 18. Lower = more plays,
     # more possessions, more scoring.
@@ -1464,6 +1499,10 @@ class Player:
     game_plays_involved: int = 0      # number of plays this player was involved in
     # Per-player in-game fatigue: starts at 100, drains with usage
     game_energy: float = 100.0
+    # Fatigue carried in from earlier games (energy points), set by Season.
+    fatigue_carry: float = 0.0
+    game_energy_start: float = 100.0
+    game_field_snaps: int = 0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
     plays_since_last_touch: int = 0
     # Hot streak: consecutive successful contests (positive yards or completions)
@@ -1511,7 +1550,9 @@ class Player:
         Standard (62-81): 1.0x drain, 1.0 stat loss/point
         Low (< 62): 1.5x drain, 1.5 stat loss/point
         """
-        ovr = self.overall
+        # Thresholds are on the engine's 60-100 scale; read the current
+        # rating scale through scale_rating() (V3.5).
+        ovr = scale_rating(self.overall)
         if ovr >= 82:
             return FatigueTier.ELITE.value
         elif ovr >= 62:
@@ -4001,8 +4042,11 @@ class ViperballEngine:
         self._home_momentum_plays = 0
         self._away_momentum_plays = 0
 
-        if not self.neutral_site:
+        if not self.neutral_site and V2_ENGINE_CONFIG.get("home_field_boost", False):
             self._apply_home_field_boost()
+
+        self._set_starting_energy()
+        self._roll_game_form()
 
         if self.is_rivalry:
             self._apply_rivalry_boost()
@@ -4255,6 +4299,84 @@ class ViperballEngine:
                     p.awareness = min(99, p.awareness + min(combined, 3))
                     p.stamina = min(99, p.stamina + min(combined, 2))
 
+    # ── V3.5: travel, carried fatigue, team form ──
+
+    _TRAVEL_ZONES = {
+        "Pacific West": "west", "Mountain West": "west",
+        "Great Plains": "central", "Texas & South Central": "central",
+        "Great Lakes": "central", "Upper Midwest": "central",
+        "Southeast": "east", "Deep South": "east", "Mid-Atlantic": "east",
+        "Capital Region": "east", "New England": "east",
+    }
+
+    def _travel_cost(self) -> float:
+        if self.neutral_site:
+            return 0.0
+        try:
+            from engine.geography import STATE_TO_BASE_REGION
+        except Exception:
+            return 0.0
+        costs = V2_ENGINE_CONFIG.get("travel_fatigue", {})
+        hs, as_ = getattr(self.home_team, "state", ""), getattr(self.away_team, "state", "")
+        if not hs or not as_:
+            return 0.0
+        if hs == as_:
+            return costs.get("same_state", 0)
+        hr, ar = STATE_TO_BASE_REGION.get(hs), STATE_TO_BASE_REGION.get(as_)
+        if hr and hr == ar:
+            return costs.get("same_region", 2)
+        hz, az = self._TRAVEL_ZONES.get(hr), self._TRAVEL_ZONES.get(ar)
+        if not hz or not az:
+            return costs.get("same_zone", 4)
+        if hz == az:
+            return costs.get("same_zone", 4)
+        if {hz, az} == {"west", "east"}:
+            return costs.get("cross_country", 9)
+        return costs.get("next_zone", 6)
+
+    def _set_starting_energy(self):
+        """Every player starts at 100 energy, less fatigue carried from earlier
+        games; the away team also loses energy to travel."""
+        self.travel_cost = self._travel_cost()
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            travel = self.travel_cost if side == "away" else 0.0
+            for p in team.players:
+                start = 100.0 - min(30.0, getattr(p, "fatigue_carry", 0.0)) - travel
+                p.game_energy = max(50.0, start)
+                p.game_energy_start = p.game_energy
+
+    def _roll_game_form(self):
+        """One roll per team for the day, leaning with the team's best player."""
+        sigma = V2_ENGINE_CONFIG.get("form_game_sigma", 0.0)
+        self.game_form = {"home": 1.0, "away": 1.0}
+        self.half_form = {"home": [1.0, 1.0], "away": [1.0, 1.0]}
+        self.team_form = {"home": 1.0, "away": 1.0}
+        if not sigma or sigma <= 0:
+            return
+        pivot = V2_ENGINE_CONFIG.get("form_star_pivot", 88.0)
+        w = V2_ENGINE_CONFIG.get("form_star_weight", 0.003)
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            best = max((scale_rating(p.overall) for p in team.players), default=pivot)
+            mean = 1.0 + (best - pivot) * w
+            self.game_form[side] = random.gauss(mean, sigma)
+
+    def _roll_half_form(self, half_index: int):
+        """Hot or cold spell for a half, on top of the day's form."""
+        sigma = V2_ENGINE_CONFIG.get("form_half_sigma", 0.0)
+        lo = V2_ENGINE_CONFIG.get("form_min", 0.85)
+        hi = V2_ENGINE_CONFIG.get("form_max", 1.18)
+        for side in ("home", "away"):
+            h = random.gauss(1.0, sigma) if sigma and sigma > 0 else 1.0
+            self.half_form[side][half_index] = h
+            self.team_form[side] = max(lo, min(hi, self.game_form[side] * h))
+
+    def _off_form(self) -> float:
+        return getattr(self, "team_form", {}).get(self.state.possession, 1.0)
+
+    def _def_form(self) -> float:
+        side = "away" if self.state.possession == "home" else "home"
+        return getattr(self, "team_form", {}).get(side, 1.0)
+
     def _apply_home_field_boost(self):
         """Temporary ratings boost for the home team.
 
@@ -4348,6 +4470,38 @@ class ViperballEngine:
                 # Keepers get coverage snap credit on every defensive snap
                 if p.position in ("Keeper",):
                     p.game_coverage_snaps += 1
+        if V2_ENGINE_CONFIG.get("work_rate_enabled", False):
+            self._apply_work_rate(off_team, off_unavail, def_team, def_unavail)
+
+    def _on_field(self, team, unavail, side: str):
+        """Players the engine treats as on the field: the skill starters and
+        the five best offensive linemen on offense, the defensive starters on
+        defense."""
+        if side == "offense":
+            on = [p for p in team.players
+                  if getattr(p, "game_role", "") == "STARTER" and p.name not in unavail]
+            ol = sorted((p for p in team.players
+                         if p.position == "Offensive Line" and p.name not in unavail),
+                        key=lambda p: p.power * 0.6 + p.awareness * 0.4, reverse=True)[:5]
+            return on + ol
+        return [p for p in team.players
+                if getattr(p, "game_def_role", "") == "STARTER" and p.name not in unavail]
+
+    def _apply_work_rate(self, off_team, off_unavail, def_team, def_unavail):
+        per_snap = V2_ENGINE_CONFIG.get("work_rate_per_snap", 0.45)
+        rest = V2_ENGINE_CONFIG.get("bench_recovery_per_snap", 0.5)
+        weather = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+        for team, unavail, side in ((off_team, off_unavail, "offense"),
+                                    (def_team, def_unavail, "defense")):
+            on = self._on_field(team, unavail, side)
+            on_names = {p.name for p in on}
+            for p in on:
+                stam_mult = max(0.5, 1.6 - scale_rating(getattr(p, "stamina", 35)) / 100.0)
+                p.game_energy = max(0.0, p.game_energy - per_snap * stam_mult * weather)
+                p.game_field_snaps += 1
+            for p in team.players:
+                if p.name not in on_names:
+                    p.game_energy = min(100.0, p.game_energy + rest)
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
@@ -4776,6 +4930,8 @@ class ViperballEngine:
         for quarter in range(1, 5):
             self.state.quarter = quarter
             self.state.time_remaining = 600  # 10-minute quarters
+            if quarter in (1, 3):
+                self._roll_half_form(0 if quarter == 1 else 1)
 
             if quarter == 3:
                 self._apply_halftime_coaching_adjustments()
@@ -6279,7 +6435,7 @@ class ViperballEngine:
         for d in defenders:
             r = (d.tackling * 0.40 + getattr(d, 'awareness', 75) * 0.35
                  + d.speed * 0.25)
-            r = scale_rating(r, "rescale_contest")
+            r = scale_rating(r, "rescale_contest") * self._def_form()
             r *= self.player_fatigue_modifier(d)
             def_ratings.append(r)
         avg_def = sum(def_ratings) / len(def_ratings)
@@ -6294,7 +6450,7 @@ class ViperballEngine:
         for a in attackers:
             r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
                  + a.power * 0.20 + getattr(a, 'awareness', 75) * 0.25)
-            r = scale_rating(r, "rescale_contest")
+            r = scale_rating(r, "rescale_contest") * self._off_form()
             r *= self.player_fatigue_modifier(a)
             off_ratings.append(r)
         avg_off = sum(off_ratings) / len(off_ratings)
@@ -8887,7 +9043,7 @@ class ViperballEngine:
 
         # Individual: canonical speed (weighted blend of speed + agility)
         off_skill = carrier.canon_speed * 0.4 + getattr(carrier, 'power', 75) * 0.3 + getattr(carrier, 'agility', 75) * 0.3
-        off_skill = scale_rating(off_skill, "rescale_contest")
+        off_skill = scale_rating(off_skill, "rescale_contest") * self._off_form()
         return off_skill * self.player_fatigue_modifier(carrier)
 
     def _get_defensive_rating(self, tackler, use_halo: bool = False) -> float:
@@ -8902,7 +9058,7 @@ class ViperballEngine:
 
         # Individual: canonical tackling (weighted blend of tackling + power + awareness)
         def_skill = tackler.canon_tackling * 0.5 + getattr(tackler, 'awareness', 70) * 0.25 + tackler.speed * 0.25
-        def_skill = scale_rating(def_skill, "rescale_contest")
+        def_skill = scale_rating(def_skill, "rescale_contest") * self._def_form()
         return def_skill * self.player_fatigue_modifier(tackler)
 
     def _apply_variance_archetype(self, raw_yards: float, player) -> float:
@@ -9322,7 +9478,7 @@ class ViperballEngine:
                          + getattr(receiver, 'hands', 70) * 0.30)
 
         if not use_halo:
-            off_skill = scale_rating(off_skill, "rescale_contest")
+            off_skill = scale_rating(off_skill, "rescale_contest") * self._off_form()
         off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
 
         # ── Defensive skill (sub-family-specific) ──
@@ -9346,7 +9502,7 @@ class ViperballEngine:
                          + defender.tackling * 0.20)
 
         if not use_halo:
-            def_skill = scale_rating(def_skill, "rescale_contest")
+            def_skill = scale_rating(def_skill, "rescale_contest") * self._def_form()
         def_skill *= self.player_fatigue_modifier(defender) * 0.5 + 0.5
 
         # ── Game rhythm ──
@@ -12606,6 +12762,14 @@ class ViperballEngine:
             elif tier == FatigueTier.LOW.value:
                 stat_loss_mult = 1.5   # Low-tier feels it 50% more
 
+        if V2_ENGINE_CONFIG.get("fatigue_curve_linear", False) and energy >= 40:
+            # V3.5: every point of tiredness costs a little (0.4% at the
+            # default slope), so travel, carried fatigue and work rate show
+            # up. At 60 energy this meets the old curve (15% for a standard
+            # player); below 40 the old cliff still applies.
+            slope = V2_ENGINE_CONFIG.get("fatigue_curve_slope", 0.004)
+            penalty = (100.0 - energy) * slope * stat_loss_mult
+            return max(0.70, 1.0 - penalty)
         if energy >= 80:
             return 1.0
         elif energy >= 60:
@@ -12980,11 +13144,13 @@ class ViperballEngine:
         """
         off_team = self.get_offensive_team()
         def_team = self.get_defensive_team()
+        off_rec = V2_ENGINE_CONFIG.get("drive_change_recovery_off", 5.0)
+        def_rec = V2_ENGINE_CONFIG.get("drive_change_recovery_def", 3.0)
         for p in off_team.players:
-            p.game_energy = min(100.0, p.game_energy + 5.0)
+            p.game_energy = min(100.0, p.game_energy + off_rec)
             p.plays_since_last_touch += 1
         for p in def_team.players:
-            p.game_energy = min(100.0, p.game_energy + 3.0)
+            p.game_energy = min(100.0, p.game_energy + def_rec)
 
     def recover_energy_halftime(self):
         """At halftime, all players recover 30 energy."""
@@ -13044,7 +13210,7 @@ class ViperballEngine:
                         else self.away_team)
             def_team_name = def_team.name
             for p in def_team.players:
-                p.game_energy = min(100.0, p.game_energy + 15.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 15.0))
 
             self.timeout_log.append({
                 "quarter": self.state.quarter,
@@ -13118,9 +13284,9 @@ class ViperballEngine:
             def_team_obj = (self.home_team if def_side == "home"
                             else self.away_team)
             for p in off_team.players:
-                p.game_energy = min(100.0, p.game_energy + 10.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 10.0))
             for p in def_team_obj.players:
-                p.game_energy = min(100.0, p.game_energy + 10.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 10.0))
             self.timeout_log.append({
                 "quarter": quarter,
                 "time_remaining": time_left,
@@ -13307,7 +13473,7 @@ class ViperballEngine:
             caller_team_name = (self.home_team.name if caller == "home"
                                 else self.away_team.name)
             for p in rest_team.players:
-                p.game_energy = min(100.0, p.game_energy + 15.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 15.0))
 
             self.timeout_log.append({
                 "quarter": quarter,
@@ -13934,7 +14100,22 @@ class ViperballEngine:
         home_player_stats = collect_player_stats(self.home_team)
         away_player_stats = collect_player_stats(self.away_team)
 
+        def _energy(team):
+            return [{"name": p.name, "position": p.position,
+                     "energy_start": round(p.game_energy_start, 1),
+                     "energy_end": round(p.game_energy, 1),
+                     "snaps": p.game_field_snaps}
+                    for p in team.players
+                    if p.game_field_snaps > 0]
+
         summary = {
+            "game_day": {
+                "travel_energy_cost": getattr(self, "travel_cost", 0.0),
+                "form": {side: {"game": round(getattr(self, "game_form", {}).get(side, 1.0), 3),
+                                "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
+                         for side in ("home", "away")},
+                "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+            },
             "final_score": {
                 "home": {
                     "team": self.home_team.name,

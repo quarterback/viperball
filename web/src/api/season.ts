@@ -62,10 +62,23 @@ export interface TeamGameStats {
   fumbles_lost?: number;
   [k: string]: number | undefined;
 }
+export interface PlayerEnergy {
+  name: string;
+  position: string;
+  energy_start: number;
+  energy_end: number;
+  snaps: number;
+}
+export interface GameDay {
+  travel_energy_cost: number;
+  form: Record<"home" | "away", { game: number; halves: number[] }>;
+  energy: { home: PlayerEnergy[]; away: PlayerEnergy[] };
+}
 export interface FullResult {
   final_score: { home: { team: string; score: number }; away: { team: string; score: number } };
   stats: { home: TeamGameStats; away: TeamGameStats };
   player_stats: { home: BoxPlayerStat[]; away: BoxPlayerStat[] };
+  game_day?: GameDay;
 }
 
 export interface Game {

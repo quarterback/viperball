@@ -36,8 +36,9 @@ The sport evolved from early American football's pre-forward-pass era, retaining
 16. [Officials](#officials)
 17. [Overtime](#overtime)
 18. [Weather](#weather)
-19. [Roster and Substitution Rules](#roster-and-substitution-rules)
-20. [Glossary](#glossary)
+19. [Game Day](#game-day)
+20. [Roster and Substitution Rules](#roster-and-substitution-rules)
+21. [Glossary](#glossary)
 
 ---
 
@@ -582,6 +583,28 @@ CVL games are played outdoors in all weather conditions. The six recognized weat
 - **Heavy Wind** — Significant impact on kick accuracy and punt distance; gusts create unpredictable ball flight
 
 Weather affects Viperball more dramatically than most gridiron sports because kicking is so central to the offense. A rain game neutralizes a team's kicking advantage and turns the contest into a ground-and-lateral battle. Snow and sleet games produce chaotic, fumble-heavy affairs where the bell becomes a significant scoring channel. Wind games penalize snap kick-dependent offenses and reward teams that can grind on the ground.
+
+---
+
+## Game Day
+
+Talent decides most games, but no team plays the same way every week.
+
+### Form
+
+Every team brings a form for the day, rolled once before kickoff, and a hot or cold spell in each half on top of it. Form lifts or drags everything a team does together: its runs, its kicks and its defense. Teams with a real star run hot more often than teams without one. A flat day can make a mismatch close, and a hot day can turn a close matchup into a rout.
+
+### Work Rate and Fatigue
+
+Every player on the field spends energy on every snap, the way players do in Australian rules, Gaelic football and rugby. Players with more stamina spend less. A player on the sideline gets a little back, and halftime gives back the most. A short timeout or a change of possession gives back very little.
+
+Tiredness costs a player a little on every play, and the cost grows sharply below 40 energy. Part of how tired a player finishes a game carries into the next week; high-stamina players recover more of it. A team that leans on the same starters every week starts later games tired, and a deep team holds up late.
+
+The box score shows each player's energy at the final whistle, and where she started when she began below full.
+
+### Home Field and Travel
+
+There is no automatic home field bonus. The home team's edge comes from the visitors' travel: an away team starts with less energy the farther it travelled, from nothing for a same-state trip to the most for a cross-country one. Officiating crews can also lean slightly toward the home side on close calls.
 
 ---
 

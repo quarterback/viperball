@@ -40,6 +40,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     baseball game's design), a faster clock between plays, field goals out to 71 yards.
     → `aar_2026-11-22_rosters_pace_field_goals.md`
 
+12. **Game day** (November 23). Flat home bonus removed, travel fatigue, per-game and per-half
+    team form, work rate fatigue carried between games, fatigue bar in the box score.
+    → `aar_2026-11-23_game_day_form_fatigue_home_field.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
