@@ -19,7 +19,7 @@ The key principle: explain results from **players, decisions, conditions, field 
 The parallel implementation specification is
 [Coach-owned tactical identities and expandable playbooks](PRD_COACH_OWNED_SCHEMES_AND_PLAYBOOKS_2026-11-23.md).
 
-- **COACH track (ChatGPT):** CCH-01 stable CoachCard tactical identity is [in review in PR #327](https://github.com/quarterback/viperball/pull/327) with passing CI. CCH-02 game-day integration, CCH-03 DC/HC decisions, CCH-04 team installation and career continuity are open.
+- **COACH track (ChatGPT):** CCH-01 persistent CoachCard identity is [in review in PR #327](https://github.com/quarterback/viperball/pull/327), and CCH-02 OC-specific formation/play-family/kick-pass decisions plus role-order/RNG fixes are [in review in PR #328](https://github.com/quarterback/viperball/pull/328) with 94 passing tests and a matched 320-game study. CCH-03 DC/HC decision variation and CCH-04 team installation/career continuity remain open.
 - **PLAYBOOK track (separate agent):** PBK-01 catalog/schema, PBK-02 family packages, PBK-03 wider playbook expansion, PBK-04 compatibility guidance.
 - COACH owns `engine/coaching.py`, `engine/coach_tactics.py`, `engine/game_engine.py`, season/dynasty integration and tests. PLAYBOOK owns `engine/playbook_catalog.py`, `data/playbooks/**` and catalog/package tests and documentation. Coordinate any changes to shared files.
 - Keep existing 16 offenses, eight defenses and canonical play-family names. Avoid multiplying coaching bonuses without bounds.
