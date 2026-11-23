@@ -28,13 +28,18 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
    bonus touchdowns removed, field compression added.
    → `aar_2026-11-22_kick_range_and_field_compression.md`
 
+9. **Rating rescale.** Inventory of old scale formulas, then the core contest, speed,
+   breakaways, turnovers, yards after catch and prestige moved to the current rating scale.
+   → `rating_scale_inventory_2026-11-22.md`, `aar_2026-11-22_rating_rescale.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
 |---|---|---|---|
-| Points | 40.5 | 39.9 | 45 to 50 |
-| Touchdowns | 4.2 | 3.0 | 1.9 to 3.5 |
-| Snap kicks made | 0.3 | 2.1 | 3 to 5 |
+| Points | 40.5 | 44.3 | 45 to 50 |
+| Touchdowns | 4.2 | 3.3 | 1.9 to 3.5 |
+| Snap kicks made | 0.3 | 2.2 | 3 to 5 |
+| Median final margin | 32 | 23.5 | |
 | Plays on 7th down or later | 131 per 60 games | 0 | 0 |
 
 ## What went wrong in the process
@@ -49,6 +54,8 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 - **Reported a 47 second season sim time** that was a fast sim run; the full engine takes
   about 2 minutes.
 - **Replies were not in plain language** until Ron said so.
+- **The rescale plan named the wrong first target.** It said prestige drives most plays; the
+  prestige team rating has been off since March. Caught while writing the inventory.
 
 ## Lessons
 
@@ -67,8 +74,8 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 ## Open work
 
 1. Merge PR #323 and redeploy; click through college season, dynasty and stats site.
-2. Rescale the other formulas built for 60 to 100 ratings (prestige halo first), aimed at
-   blowouts between unequal teams and the last 5 points of scoring.
+2. Seasons never pass prestige into games (every game runs 50 vs 50); measure blowouts on a
+   real conference schedule; snap kicks are at 2.2 against a 3 to 5 target.
 3. Pro leagues, WVL and the high school league still use the fast sim.
 4. The even program count rule still blocks a 205 team dynasty; the scheduler does not need it.
 5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.

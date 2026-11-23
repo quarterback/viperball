@@ -82,9 +82,13 @@ V2_ENGINE_CONFIG = {
     # one: scale_rating(raw) = 60 + (raw - 15) * 0.5. Each group of formulas
     # can be switched separately (see docs/rating_scale_inventory_2026-11-22.md).
     "rescale_contest": True,       # A: carrier vs tackler, kick pass, late-down clamp
-    "rescale_speed": False,        # C: breakaways, pursuit, reads, returns
-    "rescale_turnovers": False,    # D: lateral interceptions and fumbles
-    "rescale_yac": False,          # E: yards after catch, kick pass distance, returns
+    "rescale_speed": True,         # C: pursuit, reads, returns, carrier bonus
+    "rescale_breakaway": True,     # C: breakaway chance from team speed
+    # Team speed (60-100 scale) at which the breakaway chance gets no bonus
+    # or penalty. Higher = fewer breakaways. The main dial for long touchdowns.
+    "breakaway_speed_baseline": 98,
+    "rescale_turnovers": True,     # D: lateral interceptions and fumbles
+    "rescale_yac": True,           # E: yards after catch, kick pass distance, returns
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -4179,7 +4183,7 @@ class ViperballEngine:
         best = top_carriers[0]
         carrier_talent = (best.speed + getattr(best, 'agility', 70)) / 2.0
         # Normalize: 60 = baseline (no bonus), 90 = max bonus
-        carrier_bonus = max(0.0, (carrier_talent - 60) / 30.0) * 0.15  # 0.0 to 0.15
+        carrier_bonus = max(0.0, (scale_rating(carrier_talent, "rescale_speed") - 60) / 30.0) * 0.15  # 0.0 to 0.15
 
         # Step 3: Play diversity (Offensive Puzzle)
         # Count distinct DC categories used this half
@@ -5091,7 +5095,7 @@ class ViperballEngine:
         pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
         pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
-        return_chance = (return_speed / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
+        return_chance = (scale_rating(return_speed, "rescale_speed") / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
         return_chance = max(0.75, min(0.98, return_chance))
         can_return_out = random.random() < return_chance
         return not can_return_out
@@ -6973,6 +6977,14 @@ class ViperballEngine:
 
         self.state.down += 1
         self.state.yards_to_go += yards_lost
+        if self.state.down > 6:
+            # A kneel on 6th down hands the ball over like any failed 6th down.
+            play.result = PlayResult.TURNOVER_ON_DOWNS.value
+            play.description += " — TURNOVER ON DOWNS"
+            self.change_possession()
+            self.state.field_position = 100 - self.state.field_position
+            self.state.down = 1
+            self.state.yards_to_go = 20
         return play
 
     def simulate_play(self) -> Play:
@@ -8216,7 +8228,7 @@ class ViperballEngine:
 
         avg_score = total_score / max(1, len(defenders))
         # Normalize: 75 is average (0 boost), 90+ is elite (+0.05), 60- is bad (-0.05)
-        return (avg_score - 75) / 300  # 15 point swing = ±0.05
+        return (scale_rating(avg_score, "rescale_speed") - 75) / 300  # 15 point swing = ±0.05
 
     def _current_defense_name(self) -> str:
         """Returns the defense style name string for the team currently on defense."""
@@ -8307,7 +8319,7 @@ class ViperballEngine:
         if yards_gained >= 5:
             # Use play-family explosive base from EXPLOSIVE_CHANCE
             base = EXPLOSIVE_CHANCE.get(family.value, 0.14) if family else 0.14
-            speed_gap = (team.avg_speed - 85) / 100
+            speed_gap = (scale_rating(team.avg_speed, "rescale_breakaway") - V2_ENGINE_CONFIG.get("breakaway_speed_baseline", 85)) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
             breakaway_chance = base + speed_gap + def_fatigue_bonus
 
@@ -8761,7 +8773,7 @@ class ViperballEngine:
         avg_score = sum(scores) / len(scores)
 
         # Normalize: 75 = baseline (1.0), each 10 points = ±0.10
-        pursuit_mod = 1.0 + (avg_score - 75) / 100.0
+        pursuit_mod = 1.0 + (scale_rating(avg_score, "rescale_speed") - 75) / 100.0
 
         # Instincts boost for pursuit coordination
         dc_mods = self._def_coaching_mods()
@@ -10114,7 +10126,7 @@ class ViperballEngine:
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
-            int_chance = 0.05 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance = 0.05 * (1 + (scale_rating(avg_def_awareness, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
             int_chance *= _gm_int_red
             # V4: Pursuit quality scales INT/fumble chance
             int_chance *= _lat_pursuit_mod
@@ -10141,7 +10153,7 @@ class ViperballEngine:
                 # Reduced from 35+talent*25 to rein in pick-six frequency.
                 int_speed = interceptor.speed
                 int_agility = getattr(interceptor, 'agility', 75)
-                return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
+                return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
                 return_yards = max(0, int(random.gauss(20 + return_talent * 18, 15)))
                 new_fp = min(100, raw_fp + return_yards)
 
@@ -10461,19 +10473,19 @@ class ViperballEngine:
         if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
             # V2.9: Reduced base (was 5-8)
             base_dist = random.randint(3, 6)
-            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 2
-            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 1.5
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 60) / 80.0) * 2
+            acc_bonus = max(0.0, (scale_rating(kp_accuracy, "rescale_yac") - 70) / 60.0) * 1.5
             kick_distance = max(2, int(base_dist + power_bonus + acc_bonus))
         elif subfamily == KickPassSubFamily.TERRITORY:
             # V2.9: Reduced base (was 10-16) and bonuses
             base_dist = random.randint(7, 12)
-            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 3.5
-            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 2
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 65) / 70.0) * 3.5
+            acc_bonus = max(0.0, (scale_rating(kp_accuracy, "rescale_yac") - 65) / 70.0) * 2
             kick_distance = max(5, int(base_dist + power_bonus + acc_bonus))
         else:  # BOMB
             # V2.9: Reduced base (was 22-30) and power bonus
             base_dist = random.randint(18, 25)
-            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 8
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 70) / 60.0) * 8
             kick_distance = max(14, int(base_dist + power_bonus))
 
         # Late-down targeting: bias distance toward yards_to_go
@@ -10671,7 +10683,7 @@ class ViperballEngine:
                     lat_fum_rate = 0.03 + (chain_fumble_bonus if lat_i == 0 else 0.0)
                     thrower = receiver if lat_i == 0 else lat_player
                     thrower_skill = getattr(thrower, 'lateral_skill', 70)
-                    lat_fum_rate *= (1 - (thrower_skill - 70) / 200)
+                    lat_fum_rate *= (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
                     lat_fum_rate = max(0.015, min(0.08, lat_fum_rate))
 
                     if random.random() < lat_fum_rate:
@@ -10704,7 +10716,7 @@ class ViperballEngine:
                             break
 
                     # Lateral INT check
-                    int_rate = 0.05 * (1 + (avg_def_aware - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+                    int_rate = 0.05 * (1 + (scale_rating(avg_def_aware, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
                     # V4: Pursuit quality scales INT chance
                     int_rate *= _kl_pursuit_mod
                     int_rate = max(0.025, min(0.10, int_rate))
@@ -10753,7 +10765,7 @@ class ViperballEngine:
                             )
 
                     # Yards gained on this lateral
-                    lat_yards = random.randint(2, 8) + int(max(0, (lat_player.speed - 60) / 40.0) * random.randint(1, 6))
+                    lat_yards = random.randint(2, 8) + int(max(0, (scale_rating(lat_player.speed, "rescale_yac") - 60) / 40.0) * random.randint(1, 6))
                     # V4: Pursuit quality suppresses lateral yards
                     if _kl_pursuit_mod > 1.0 and lat_yards > 0:
                         lat_yards = max(1, int(lat_yards / _kl_pursuit_mod))
@@ -10819,19 +10831,19 @@ class ViperballEngine:
             if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
                 # Quick Kick: high YAC, elusive receivers shine
                 # V2.9: Reduced YAC floor (was 3-8 + skill*3-8)
-                recv_yac_skill = max(0.0, (receiver.speed * 0.50 + _recv_agility * 0.50 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.50 + _recv_agility * 0.50, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 yac = random.randint(1, 5) + int(recv_yac_skill * random.randint(2, 6))
             elif subfamily == KickPassSubFamily.TERRITORY:
                 # Territory: moderate YAC, balanced attributes
                 # V2.9: Reduced YAC floor (was 2-5 + skill*1-5)
-                recv_yac_skill = max(0.0, (receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 yac = random.randint(1, 3) + int(recv_yac_skill * random.randint(1, 4))
             else:  # BOMB
                 # Bomb: binary — either caught at the spot or house call
                 # V2.9: Reduced caught-in-stride rate (was 35%) and YAC ceiling
-                recv_yac_skill = max(0.0, (receiver.speed * 0.70 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.70 + _recv_agility * 0.30, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 if random.random() < 0.22:
                     # Caught in stride — open field
@@ -11112,7 +11124,7 @@ class ViperballEngine:
 
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
-            return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
+            return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
             return_yards = max(0, int(random.gauss(18 + return_talent * 15, 15)))
             new_fp = min(100, raw_fp + return_yards)
 
@@ -11731,7 +11743,7 @@ class ViperballEngine:
         dw_blocker = None
         for p in def_team.players:
             if p.archetype == "diving_wing":
-                tck_score = max(0, p.tackling - 70) / 30.0
+                tck_score = max(0, scale_rating(p.tackling, "rescale_yac") - 70) / 30.0
                 spd_score = max(0, p.speed - 78) / 22.0
                 kick_score = max(0, p.kicking - 40) / 50.0
                 attr_index = (tck_score * 0.45 + spd_score * 0.35 + kick_score * 0.20)
@@ -14263,12 +14275,12 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
     if not players or len(players) < 3:
         return 50
 
-    overalls = sorted(p.overall for p in players)
-    worst_3_avg = sum(overalls[:3]) / 3.0
-
-    # Map: overall 20 → prestige 10, overall 85 → prestige 95
-    # Linear: prestige = (worst_3_avg - 20) * 1.3 + 10
-    prestige = (worst_3_avg - 20) * 1.3 + 10
+    # V3.3: mapped to the current rating scale. Team average overall runs
+    # about 18 (weakest) / 35 (median) / 59 (strongest) on generated rosters:
+    # 18 -> 18, 35 -> 50, 59 -> 96. The old map used the three weakest
+    # players on the 60-100 scale and put the median team at 16.
+    avg_ovr = sum(p.overall for p in players) / len(players)
+    prestige = 50 + (avg_ovr - 35) * 1.9
 
     # Add some noise so identical rosters don't all land on the same prestige
     prestige += random.gauss(0, 3)

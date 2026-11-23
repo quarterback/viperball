@@ -1130,7 +1130,8 @@ def estimate_team_prestige_from_roster(team: "Team") -> int:
     if not team.players:
         return 50
     avg_ovr = sum(p.overall for p in team.players) / len(team.players)
-    prestige = int(avg_ovr * 0.9 + 5)
+    # V3.3: current rating scale (team average 18 / 35 / 59 -> 18 / 50 / 96).
+    prestige = int(50 + (avg_ovr - 35) * 1.9)
     return max(10, min(99, prestige))
 
 
