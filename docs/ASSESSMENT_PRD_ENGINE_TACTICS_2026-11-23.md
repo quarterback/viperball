@@ -3,6 +3,7 @@
 **Assessment date:** 2026-11-23  
 **Status:** Open for implementation; documentation-only baseline  
 **Repository:** quarterback/viperball  
+**Current implementation follow-up:** [PR #325](https://github.com/quarterback/viperball/pull/325) (draft, unbenchmarked; targets PR #323).  
 **Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323), branch claude/fix-league-hub-null-status, head 3aedd95d59f5c44291d473e4fd30c7b50e69151b at review. PR #323 was open and mergeable, **not merged**, at the time of writing. Main did not yet contain those changes.
 
 ## Purpose and decision
@@ -26,6 +27,7 @@ The key principle: explain results from **players, decisions, conditions, field 
 ### Work status key
 
 - **OPEN:** observed code gap or actionable missing work; not implemented.
+- **IN PROGRESS:** implementation exists on a branch/PR but is not verified and merged.
 - **PARTIAL (PR #323):** current PR implements part; finish integration/tests after PR #323 is merged.
 - **INVESTIGATE:** plausible problem or conflict requiring confirmation before editing.
 - **BLOCKED:** depends on an earlier work item or PR.
@@ -35,9 +37,9 @@ The key principle: explain results from **players, decisions, conditions, field 
 
 | ID | Priority | Status on 2026-11-23 | Work item / dependency |
 |---|---|---|---|
-| DEF-01 | P0 | OPEN | Restore or retire the disconnected defensive read pathway |
-| DEF-02 | P0 | OPEN | Reconcile scheme modifiers and the offense-defense matchup matrix |
-| DEF-03 | P0 | OPEN | Fix formation-read sign reversal |
+| DEF-01 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Canonical defensive read now called on live plays; tests and full benchmark pending |
+| DEF-02 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Matchup, coverage and explosive effects wired; final benchmark pending |
+| DEF-03 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Formation-read formula corrected; tests pending |
 | DEF-04 | P1 | PARTIAL (PR #323) | Eleven-player defense, position assignments, and accurate snap accounting |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
 | DEF-06 | P1 | BLOCKED on DEF-01/02/04 | Prove scheme identity by controlled matchup benchmark |
