@@ -30,3 +30,7 @@ jobs:
           python -m pip install -r requirements.txt
       - name: DEF-01/02/03 targeted tests
         run: python -m pytest tests/test_defensive_tactics.py -q
+      - name: Existing engine test suite
+        run: python -m pytest tests/ -q
+      - name: Paired defensive scheme benchmark
+        run: python scripts/compare_defense_wiring.py --games 80 --seed 2026
