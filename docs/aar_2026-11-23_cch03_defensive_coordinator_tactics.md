@@ -2,7 +2,7 @@
 
 **Date:** November 23, 2026  
 **Implementation:** [PR #332](https://github.com/quarterback/viperball/pull/332), `feature/coach-tactics-cch-03-defense`, based on current `main` after PRs #323–#328 and #331 merged.  
-**Status:** Code and tests complete in PR; not merged/deployed as of this report.  
+**Current status (November 23, 2026):** [CCH-03 #332](https://github.com/quarterback/viperball/pull/332) **merged** (commit [82e21fcb](https://github.com/quarterback/viperball/commit/82e21fcb539db2a42a3d59be19113ff5f102f158)). Its CCH-04 familiarity integration [#334](https://github.com/quarterback/viperball/pull/334) also **merged** with 174 passing tests and React build. No live deployment verified.  
 **Tests and benchmark:** [GitHub Actions run 45272756445](https://github.com/quarterback/viperball/actions/runs/45272756445), both jobs successful: 11 targeted tests, 150 total tests, 320 full games.  
 **Parallel ownership:** Another agent owns CCH-04 (team installation, coaching movement, borrowing packages). No CCH-04 implementation files or package catalog data are changed here.
 
@@ -91,7 +91,7 @@ The base scheme's **dominant alignment remains dominant**: Lockdown still uses S
 
 ## Remaining work and coordination with CCH-04
 
-**For the other agent (CCH-04):**
+**Original CCH-04 handoff (now completed in merged PR #334):**
 - Build the team-level package installation/borrowing mechanism against the **already merged** `engine.playbook_catalog` v1 API, not the unmerged PR #329 runtime branch.
 - New defensive package calls must integrate with `_begin_defensive_call` rather than adding a second, independent defensive decision/pressure roll after the offensive play is chosen. Package selection can alter the *input tactical weights* for the pre-snap call, but only once and under validated compatibility and staff/roster limits.
 - When the other agent creates CCH-04's branch, identify and reconcile any overlapping `engine/game_engine.py` edits. The agent should avoid rewriting `engine/coach_tactics.py::resolve_defensive_tactics`, `_begin_defensive_call`, and `get_defensive_read` on its branch. CCH-03 should merge into main before final CCH-04 runtime integration, or CCH-04 should be rebased on CCH-03 with both agents' tests.
@@ -103,7 +103,7 @@ The base scheme's **dominant alignment remains dominant**: Lockdown still uses S
 - DEF-04: defensive lineup roles/rotation impacts and accurate attribution across every defensive surface.
 - Full-year validation of coaching changes across additional rosters and defensive styles; this study is only Lockdown and Blitz Pack.
 - Player-facing defensive coaching tendencies in React and live deploy smoke test.
-- Reconcile outdated work queue statuses for merged PRs and mark CCH-03 done *only after* this PR merges.
+- Work queue statuses reconciled after #332 and the CCH-04 integration #334 merged. The original CCH-04 PR #333 was closed as superseded, and draft #329 was archived without merging.
 
 ## Reproduce
 
