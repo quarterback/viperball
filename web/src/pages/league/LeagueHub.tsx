@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { SegmentedControl } from "@mantine/core";
 import { SeasonPortalPanel } from "./SeasonPortalPanel";
 import { PostseasonPanel } from "./PostseasonPanel";
 import {
@@ -74,11 +73,9 @@ export function LeagueHub() {
       qc.invalidateQueries({ queryKey: [k, sessionId] }),
     );
 
-  // Per the old mode: choose the full play-by-play engine or the fast sim.
-  const [fastSim, setFastSim] = useState(true);
 
   const simWeek = useMutation({
-    mutationFn: () => seasonApi.simWeek(sessionId, fastSim),
+    mutationFn: () => seasonApi.simWeek(sessionId),
     onSuccess: () => {
       notifications.show({ message: "Simulated a week", color: "indigo" });
       invalidateAll();
@@ -87,7 +84,7 @@ export function LeagueHub() {
       notifications.show({ message: `Sim failed: ${String(e)}`, color: "red" }),
   });
   const simRest = useMutation({
-    mutationFn: () => seasonApi.simRest(sessionId, fastSim),
+    mutationFn: () => seasonApi.simRest(sessionId),
     onSuccess: () => {
       notifications.show({ message: "Simulated rest of season", color: "indigo" });
       invalidateAll();
@@ -328,7 +325,25 @@ export function LeagueHub() {
     );
   }
 
-  const s = status.data!;
+  if (!status.data) {
+    return (
+      <Card>
+        <Text>
+          This session has no season running yet. Start one from its{" "}
+          <Anchor component={Link} to={`/dynasty/${sessionId}`}>
+            Dynasty page
+          </Anchor>{" "}
+          or create a new season in the{" "}
+          <Anchor component={Link} to="/league">
+            League Hub
+          </Anchor>
+          .
+        </Text>
+      </Card>
+    );
+  }
+
+  const s = status.data;
   const isPortal = s.phase === "portal";
   const seasonOver = s.games_played >= s.total_games;
 
@@ -358,15 +373,6 @@ export function LeagueHub() {
         </Stack>
         {!isPortal && (
           <Group gap="xs" align="center">
-            <SegmentedControl
-              size="xs"
-              value={fastSim ? "fast" : "full"}
-              onChange={(v) => setFastSim(v === "fast")}
-              data={[
-                { label: "Full engine", value: "full" },
-                { label: "Fast sim", value: "fast" },
-              ]}
-            />
             <Button
               leftSection={<IconPlayerTrackNext size={16} />}
               onClick={() => simWeek.mutate()}

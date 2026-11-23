@@ -28,6 +28,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { useDataGrid } from "../components/DataGrid";
+import { LineCell, LINE_HEADER_TITLE } from "../components/LineCell";
 import { seasonApi } from "../api/season";
 import {
   myTeamApi,
@@ -119,6 +120,14 @@ export function MyTeam() {
     () => [
       { accessorKey: "name", header: "Player" },
       { accessorKey: "position", header: "Pos", size: 70 },
+      {
+        id: "line",
+        header: "Line",
+        size: 70,
+        accessorFn: (r) => r.line ?? 9,
+        mantineTableHeadCellProps: { title: LINE_HEADER_TITLE },
+        Cell: ({ row }) => <LineCell line={row.original.line} specialist={row.original.def_specialist} />,
+      },
       { accessorKey: "year", header: "Yr", size: 90 },
       {
         accessorKey: "overall",
@@ -127,6 +136,13 @@ export function MyTeam() {
         Cell: ({ cell }) => <Badge variant="light">{cell.getValue<number>()}</Badge>,
       },
       { accessorKey: "potential", header: "POT", size: 70 },
+      { accessorKey: "stamina", header: "STA", size: 70 },
+      {
+        accessorKey: "work_rate",
+        header: "WRK",
+        size: 70,
+        mantineTableHeadCellProps: { title: "Work rate: how much load she can carry before tiredness costs her" },
+      },
     ],
     [],
   );

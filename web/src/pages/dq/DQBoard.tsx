@@ -47,7 +47,7 @@ export function DQBoard() {
   const status = useQuery({ queryKey: ["dq-status", sessionId], queryFn: () => dqApi.status(sessionId) });
   const season = useQuery({
     queryKey: ["season-status", sessionId],
-    queryFn: () => seasonApi.status(sessionId).catch(() => null),
+    queryFn: () => seasonApi.status(sessionId),
   });
   // default to the next unplayed week once the season loads
   useEffect(() => {

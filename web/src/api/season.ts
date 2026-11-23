@@ -1,5 +1,5 @@
 // College season API — the live, in-memory season endpoints the League Hub renders.
-import { apiGet, apiSend } from "./client";
+import { apiGet, apiSend, ApiError } from "./client";
 
 const enc = encodeURIComponent;
 
@@ -62,10 +62,25 @@ export interface TeamGameStats {
   fumbles_lost?: number;
   [k: string]: number | undefined;
 }
+export interface PlayerEnergy {
+  name: string;
+  position: string;
+  energy_start: number;
+  energy_end: number;
+  snaps: number;
+}
+export interface GameDay {
+  travel_energy_cost: number;
+  form: Record<"home" | "away", { game: number; halves: number[] }>;
+  energy: { home: PlayerEnergy[]; away: PlayerEnergy[] };
+  line_changes?: Record<"home" | "away", number>;
+  caught_changing?: Record<"home" | "away", number>;
+}
 export interface FullResult {
   final_score: { home: { team: string; score: number }; away: { team: string; score: number } };
   stats: { home: TeamGameStats; away: TeamGameStats };
   player_stats: { home: BoxPlayerStat[]; away: BoxPlayerStat[] };
+  game_day?: GameDay;
 }
 
 export interface Game {
@@ -160,6 +175,9 @@ export interface RosterPlayer {
   hands: number;
   awareness: number;
   stamina: number;
+  work_rate?: number;
+  line?: number | null;
+  def_specialist?: boolean;
   kicking: number;
   tackling: number;
   kick_power?: number;
@@ -190,7 +208,14 @@ export const seasonApi = {
   listSessions: () =>
     apiGet<{ sessions: CollegeSession[] }>("/api/sessions/college").then((r) => r.sessions),
 
-  status: (sid: string) => apiGet<SeasonStatus>(`/sessions/${sid}/season/status`),
+  // One query function for every screen that shares the ["season-status", sid]
+  // cache key. A session with no season yet (400) resolves to null, so every
+  // consumer must handle null; an expired session (404) stays an error.
+  status: (sid: string): Promise<SeasonStatus | null> =>
+    apiGet<SeasonStatus>(`/sessions/${sid}/season/status`).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 400) return null;
+      throw e;
+    }),
 
   standings: (sid: string) =>
     apiGet<{ standings: Standing[] }>(`/sessions/${sid}/season/standings`).then((r) => r.standings),
@@ -214,11 +239,8 @@ export const seasonApi = {
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
-  // fastSim=false runs the full play-by-play engine; true uses the fast sim.
-  simWeek: (sid: string, fastSim: boolean) =>
-    apiSend("POST", `/sessions/${sid}/season/simulate-week`, { fast_sim: fastSim }),
-  simRest: (sid: string, fastSim: boolean) =>
-    apiSend("POST", `/sessions/${sid}/season/simulate-rest`, { fast_sim: fastSim }),
+  simWeek: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-week`),
+  simRest: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-rest`),
 
   // Pre-season transfer portal (phase "portal" before "regular").
   portal: (sid: string) =>

@@ -379,12 +379,10 @@ class CreateDynastyRequest(BaseModel):
 
 class SimulateWeekRequest(BaseModel):
     week: Optional[int] = None
-    fast_sim: bool = True
 
 
 class SimulateThroughRequest(BaseModel):
     target_week: int
-    fast_sim: bool = True
 
 
 class DynastyStartSeasonRequest(BaseModel):
@@ -778,6 +776,7 @@ def _serialize_player(player) -> dict:
         "hands": player.hands,
         "awareness": player.awareness,
         "stamina": player.stamina,
+        "work_rate": getattr(player, "work_rate_rating", 0),
         "kicking": player.kicking,
         "kick_power": player.kick_power,
         "kick_accuracy": player.kick_accuracy,
@@ -1441,7 +1440,7 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
     loop = asyncio.get_event_loop()
     games = await loop.run_in_executor(
         _sim_executor,
-        lambda: season.simulate_week(week=week, dq_team_boosts=dq_boosts, use_fast_sim=req.fast_sim),
+        lambda: season.simulate_week(week=week, dq_team_boosts=dq_boosts),
     )
 
     if not games:
@@ -1461,7 +1460,7 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
         "games_count": len(games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -1476,7 +1475,7 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
     loop = asyncio.get_event_loop()
     all_games = await loop.run_in_executor(
         _sim_executor,
-        lambda: season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim),
+        lambda: season.simulate_through_week(req.target_week),
     )
 
     _persist_box_scores(session_id, all_games)
@@ -1490,12 +1489,12 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
         "games_count": len(all_games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
 class SimulateRestRequest(BaseModel):
-    fast_sim: bool = True
+    pass
 
 
 @app.post("/sessions/{session_id}/season/simulate-rest")
@@ -1508,7 +1507,7 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
 
     def _do_sim():
         games_before = sum(1 for g in season.schedule if g.completed)
-        season.simulate_season(generate_polls=True, use_fast_sim=req.fast_sim)
+        season.simulate_season(generate_polls=True)
         return sum(1 for g in season.schedule if g.completed) - games_before
 
     loop = asyncio.get_event_loop()
@@ -1524,7 +1523,7 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
         "total_games": len(season.schedule),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -1806,9 +1805,12 @@ def get_team_roster(session_id: str, team_name: str):
             depth_rank_map[pname] = rank
             depth_status_map[pname] = status
 
+    from engine.game_engine import preview_midfield_lines
+    line_map = preview_midfield_lines(team, unavail)
     serialized = []
     for p in team.players:
         d = _serialize_player(p)
+        d.update(line_map.get(p.name, {"line": None, "def_specialist": False}))
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
         d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
@@ -2691,9 +2693,9 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty._hs_league = create_hs_league(_year, rng=_rng)
         dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
-        num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+        num_teams = len(teams) or 200
         _class_size = max(300, num_teams * 8)
-        _t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+        _t_names = list(teams.keys())
         _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
@@ -3566,9 +3568,12 @@ def team_roster(session_id: str, team_name: str):
             depth_rank_map[pname] = rank
             depth_status_map[pname] = status
 
+    from engine.game_engine import preview_midfield_lines
+    line_map = preview_midfield_lines(team, unavail)
     players = []
     for p in team.players:
         d = _serialize_player(p)
+        d.update(line_map.get(p.name, {"line": None, "def_specialist": False}))
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
         d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
@@ -5200,7 +5205,7 @@ def dq_create_season(session_id: str, req: DQCreateRequest):
 
 
 class DQAdvanceWeekRequest(BaseModel):
-    fast_sim: bool = True
+    pass
 
 
 @app.post("/sessions/{session_id}/dq/advance-week")
@@ -5218,8 +5223,7 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
         raise HTTPException(status_code=400, detail="Regular season is complete")
 
     # DQ decoupled from the sim — no team boosts.
-    games = season.simulate_week(week=next_week, dq_team_boosts=None,
-                                  use_fast_sim=req.fast_sim)
+    games = season.simulate_week(week=next_week, dq_team_boosts=None)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -5230,7 +5234,7 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -5260,6 +5264,7 @@ def _get_pro_session(league: str, session_id: str) -> "ProLeagueSeason":
 def _auto_save_pro(league: str, session_id: str):
     """Save pro league state to database after mutations."""
     from engine.db import save_pro_league as db_save_pro_league
+    from engine.draftyqueenz import DraftyQueenzManager
     key = f"{league.lower()}_{session_id}"
     season = pro_sessions.get(key)
     if season:
@@ -5272,6 +5277,7 @@ def _auto_save_pro(league: str, session_id: str):
 
 @app.post("/api/pro/{league}/new")
 def pro_league_new(league: str):
+    from engine.pro_league import ProLeagueSeason
     config = _get_league_config(league)
     session_id = str(uuid.uuid4())[:8]
     key = f"{league.lower()}_{session_id}"
@@ -6436,6 +6442,15 @@ def my_team_dashboard(session_id: str = ""):
 
     # Position breakdown
     from engine.player_card import player_to_card
+    from engine.game_engine import preview_midfield_lines
+    _tracker = sess.get("injury_tracker")
+    _unavail = set()
+    if _tracker:
+        try:
+            _unavail = _tracker.get_unavailable_names(team_name, season.get_last_completed_week())
+        except Exception:
+            _unavail = set()
+    line_map = preview_midfield_lines(team, _unavail)
     pos_counts = {}
     roster_data = []
     for p in team.players:
@@ -6451,6 +6466,9 @@ def my_team_dashboard(session_id: str = ""):
             "speed": card.speed,
             "power": card.power,
             "agility": card.agility,
+            "stamina": getattr(p, "stamina", 0),
+            "work_rate": getattr(p, "work_rate_rating", 0),
+            **line_map.get(p.name, {"line": None, "def_specialist": False}),
         })
 
     roster_data.sort(key=lambda x: -x["overall"])
@@ -6807,7 +6825,7 @@ async def my_team_simulate(session_id: str):
         raise HTTPException(400, f"Cannot simulate in phase '{sess['phase']}'. Finalize roster first.")
 
     def _do_sim():
-        season.simulate_season(generate_polls=True, use_fast_sim=True)
+        season.simulate_season(generate_polls=True)
 
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(_sim_executor, _do_sim)

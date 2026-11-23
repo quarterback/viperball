@@ -26,15 +26,16 @@ import {
 import { DynastyCommand } from "./DynastyCommand";
 import { ProgramsManager } from "./ProgramsManager";
 
-const RECORD_LABELS: Record<string, string> = {
-  most_wins_season: "Most wins (season)",
-  most_points_season: "Most points (season)",
-  best_defense_season: "Best defense (season)",
-  most_championships: "Most championships",
-  highest_win_percentage: "Highest win %",
-  most_coaching_wins: "Most coaching wins",
-  most_coaching_championships: "Most coaching titles",
-};
+// Which value key each record carries, and how to show it. Order is display order.
+const RECORDS: { key: string; label: string; value: string; format?: (v: number) => string }[] = [
+  { key: "most_wins_season", label: "Most wins (season)", value: "wins" },
+  { key: "most_points_season", label: "Most points (season)", value: "points", format: (v) => v.toFixed(1) },
+  { key: "best_defense_season", label: "Best defense (season)", value: "ppg_allowed", format: (v) => `${v.toFixed(1)} PPG` },
+  { key: "most_championships", label: "Most championships", value: "championships" },
+  { key: "highest_win_percentage", label: "Highest win %", value: "win_pct", format: (v) => `${(v * 100).toFixed(1)}%` },
+  { key: "most_coaching_wins", label: "Most coaching wins", value: "wins" },
+  { key: "most_coaching_championships", label: "Most coaching titles", value: "championships" },
+];
 
 export function DynastyHub() {
   const { sessionId = "" } = useParams();
@@ -205,26 +206,35 @@ export function DynastyHub() {
           <MantineReactTable table={awardTable} />
         </Tabs.Panel>
         <Tabs.Panel value="records" pt="md">
-          {recordBook.data ? (
-            <SimpleGrid cols={{ base: 2, sm: 3, lg: 4 }}>
-              {Object.entries(recordBook.data)
-                .filter(([k]) => RECORD_LABELS[k])
-                .map(([k, v]) => (
-                  <Card key={k} padding="md">
-                    <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                      {RECORD_LABELS[k]}
-                    </Text>
-                    <Text size="xl" fw={800} mt={4}>
-                      {typeof v === "number" && k === "highest_win_percentage"
-                        ? (v * 100).toFixed(1)
-                        : v}
-                    </Text>
-                  </Card>
-                ))}
-            </SimpleGrid>
-          ) : (
-            <Text c="dimmed">No records yet.</Text>
-          )}
+          {(() => {
+            const rb = recordBook.data;
+            const set = RECORDS.filter((r) => rb?.[r.key] && (rb[r.key].team || rb[r.key].coach));
+            if (!rb || set.length === 0) return <Text c="dimmed">No records yet.</Text>;
+            return (
+              <SimpleGrid cols={{ base: 2, sm: 3, lg: 4 }}>
+                {set.map((r) => {
+                  const e = rb[r.key];
+                  const raw = e[r.value];
+                  const shown = typeof raw === "number" && r.format ? r.format(raw) : String(raw ?? "");
+                  const holder = e.team ?? e.coach;
+                  return (
+                    <Card key={r.key} padding="md">
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                        {r.label}
+                      </Text>
+                      <Text size="xl" fw={800} mt={4}>
+                        {shown}
+                      </Text>
+                      <Text size="sm">
+                        {holder}
+                        {e.year != null ? `, ${e.year}` : ""}
+                      </Text>
+                    </Card>
+                  );
+                })}
+              </SimpleGrid>
+            );
+          })()}
         </Tabs.Panel>
       </Tabs>
     </Stack>

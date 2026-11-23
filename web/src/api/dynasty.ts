@@ -118,9 +118,19 @@ export const dynastyApi = {
     ),
 
   recordBook: (sid: string) =>
-    apiGet<{ record_book: Record<string, number> }>(
+    apiGet<{ record_book: Record<string, RecordBookEntry> }>(
       `/sessions/${sid}/dynasty/record-book`,
     ).then((r) => r.record_book),
+};
+
+// Each record-book entry is an object: the holder (team or coach), the value
+// under its own key (wins, points, ppg_allowed, championships, win_pct), and a
+// year for single-season records. Holder is null until the record is set.
+export type RecordBookEntry = {
+  team?: string | null;
+  coach?: string | null;
+  year?: number | null;
+  [value: string]: string | number | null | undefined;
 };
 
 // ─── Program archetypes (for dynasty creation) ───────────────────
