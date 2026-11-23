@@ -14,6 +14,16 @@ This is the shared work queue for agents making Viperball's simulation coherent,
 
 The key principle: explain results from **players, decisions, conditions, field position, and matchups** instead of tuning only the league's aggregate points, kicks, and final margins. Do not impose a predetermined close-game, blowout, or home-win percentage.
 
+## Coordinated coach/playbook workstream
+
+The parallel implementation specification is
+[Coach-owned tactical identities and expandable playbooks](PRD_COACH_OWNED_SCHEMES_AND_PLAYBOOKS_2026-11-23.md).
+
+- **COACH track (ChatGPT):** CCH-01 stable CoachCard tactical identity, CCH-02 game-day integration, CCH-03 DC/HC decisions, CCH-04 team installation and career continuity.
+- **PLAYBOOK track (separate agent):** PBK-01 catalog/schema, PBK-02 family packages, PBK-03 wider playbook expansion, PBK-04 compatibility guidance.
+- COACH owns `engine/coaching.py`, `engine/coach_tactics.py`, `engine/game_engine.py`, season/dynasty integration and tests. PLAYBOOK owns `engine/playbook_catalog.py`, `data/playbooks/**` and catalog/package tests and documentation. Coordinate any changes to shared files.
+- Keep existing 16 offenses, eight defenses and canonical play-family names. Avoid multiplying coaching bonuses without bounds.
+
 ## Source control and evidence rules for every agent
 
 1. **Read PR #323 before starting.** The Nov 22 engine fixes and Nov 23 game-day work are on its open branch, not main. The newer Nov 23 [work-rate and shift-rotation AAR](https://github.com/quarterback/viperball/blob/claude/fix-league-hub-null-status/docs/aar_2026-11-23_work_rate_and_shift_rotation.md) supersedes parts of the earlier fatigue assessment. Refresh status before changing code; merge or rebase decisions belong to the implementing agent.
