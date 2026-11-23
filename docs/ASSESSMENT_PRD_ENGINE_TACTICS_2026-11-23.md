@@ -1,10 +1,10 @@
 # Viperball engine and tactics assessment: implementation PRD and agent work queue
 
 **Assessment date:** 2026-11-23  
-**Status:** Open for implementation; documentation-only baseline  
+**Status:** Active work queue; revised after the November 23 merges and CCH-03 implementation. Historical investigation paragraphs remain dated to their original review.  
 **Repository:** quarterback/viperball  
-**Current implementation follow-up:** [PR #325](https://github.com/quarterback/viperball/pull/325) (draft, unbenchmarked; targets PR #323).  
-**Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323), branch claude/fix-league-hub-null-status, head 3aedd95d59f5c44291d473e4fd30c7b50e69151b at review. PR #323 was open and mergeable, **not merged**, at the time of writing. Main did not yet contain those changes.
+**Current implementation follow-up:** PRs #323–#328, #330 and #331 are merged; [CCH-03 PR #332](https://github.com/quarterback/viperball/pull/332) is in review with passing tests and a 320-game matched benchmark; CCH-04 is assigned to another agent.  
+**Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323) at head 3aedd95d59f5c44291d473e4fd30c7b50e69151b in the original assessment; it was unmerged **at the time**, and has since merged. See [stack reconciliation and VAL-02 AAR](aar_2026-11-23_merge_stack_and_val02.md) for the actual merge order.
 
 ## Purpose and decision
 
@@ -19,14 +19,14 @@ The key principle: explain results from **players, decisions, conditions, field 
 The parallel implementation specification is
 [Coach-owned tactical identities and expandable playbooks](PRD_COACH_OWNED_SCHEMES_AND_PLAYBOOKS_2026-11-23.md).
 
-- **COACH track (ChatGPT):** CCH-01 persistent CoachCard identity is [in review in PR #327](https://github.com/quarterback/viperball/pull/327), and CCH-02 OC-specific formation/play-family/kick-pass decisions plus role-order/RNG fixes are [in review in PR #328](https://github.com/quarterback/viperball/pull/328) with 94 passing tests and a matched 320-game study. CCH-03 DC/HC decision variation and CCH-04 team installation/career continuity remain open.
-- **PLAYBOOK track (separate agent):** PBK-01 catalog/schema, PBK-02 family packages, PBK-03 wider playbook expansion, PBK-04 compatibility guidance.
+- **COACH track:** CCH-01 [#327](https://github.com/quarterback/viperball/pull/327) and CCH-02 [#328](https://github.com/quarterback/viperball/pull/328) are **DONE/MERGED**. CCH-03 [#332](https://github.com/quarterback/viperball/pull/332) is **IN REVIEW**: saved DC tactical profiles choose pre-snap alignment/blitz and reallocate read focus; [150 tests and 320 games passed](https://github.com/quarterback/viperball/actions/runs/45272756445). CCH-04 installation/borrowing/career continuity is **assigned to another agent**.
+- **PLAYBOOK track:** PBK-01 catalog, PBK-02 packages and PBK-04 roster compatibility merged in [#330](https://github.com/quarterback/viperball/pull/330). PBK-03 new families is deferred. The old [#329](https://github.com/quarterback/viperball/pull/329) borrowed-playbook runtime is an unmerged draft reference, not a production dependency.
 - COACH owns `engine/coaching.py`, `engine/coach_tactics.py`, `engine/game_engine.py`, season/dynasty integration and tests. PLAYBOOK owns `engine/playbook_catalog.py`, `data/playbooks/**` and catalog/package tests and documentation. Coordinate any changes to shared files.
 - Keep existing 16 offenses, eight defenses and canonical play-family names. Avoid multiplying coaching bonuses without bounds.
 
 ## Source control and evidence rules for every agent
 
-1. **Read PR #323 before starting.** The Nov 22 engine fixes and Nov 23 game-day work are on its open branch, not main. The newer Nov 23 [work-rate and shift-rotation AAR](https://github.com/quarterback/viperball/blob/claude/fix-league-hub-null-status/docs/aar_2026-11-23_work_rate_and_shift_rotation.md) supersedes parts of the earlier fatigue assessment. Refresh status before changing code; merge or rebase decisions belong to the implementing agent.
+1. **Start from current main and inspect new PRs.** Engine PR #323 and defensive PRs #325/#326, coaching PRs #327/#328, playbook catalog #330 and reproducibility #331 are already merged. The [work-rate/shift-rotation AAR](aar_2026-11-23_work_rate_and_shift_rotation.md) supersedes parts of the original fatigue assessment. Refresh active CCH-04 branches before changing shared engine files.
 2. Read this PRD and the relevant files below, including existing AARs and RULES_EVOLUTION_AAR.md. A past AAR describes what was done at the time; recheck live code before treating a finding as current.
 3. Work on **one scoped work item per implementation PR** (or a justified tightly related group). Reference its identifier in PR title/body. Do not put unrelated engine, UI, and roster changes in one large PR. Keep this assessment document updated as work is merged.
 4. For every change provide **before/after seeded full-engine benchmarks**, tests for the mechanism, and a brief description of downstream consequences. Measure per scheme, per game state, and per roster; do not just cite an overall season average. No success claims from the fast simulator for the college game.
@@ -39,7 +39,7 @@ The parallel implementation specification is
 - **OPEN:** observed code gap or actionable missing work; not implemented.
 - **IN PROGRESS:** implementation exists on a branch/PR but is not verified and merged.
 - **IN REVIEW:** code or evidence passed the stated tests; PR not yet merged and other dependencies may remain.
-- **PARTIAL (PR #323):** current PR implements part; finish integration/tests after PR #323 is merged.
+- **PARTIAL:** an earlier merged PR completed some mechanics, but this item still has untested or missing work.
 - **INVESTIGATE:** plausible problem or conflict requiring confirmation before editing.
 - **BLOCKED:** depends on an earlier work item or PR.
 - **DONE:** merged, tests recorded, this document updated with the closing PR.
@@ -48,26 +48,28 @@ The parallel implementation specification is
 
 | ID | Priority | Status on 2026-11-23 | Work item / dependency |
 |---|---|---|---|
-| DEF-01 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Canonical defensive read now called on live plays; tests and full benchmark pending |
-| DEF-02 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Matchup, coverage and explosive effects wired; final benchmark pending |
-| DEF-03 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Formation-read formula corrected; tests pending |
-| DEF-04 | P1 | PARTIAL (PR #323) | Eleven-player defense, position assignments, and accurate snap accounting |
+| DEF-01 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Canonical defensive reads are active; targeted tests and full benchmark passed |
+| DEF-02 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Scheme/matchup, coverage and explosive effects active and benchmarked |
+| DEF-03 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Formation-read direction corrected and tested |
+| DEF-04 | P1 | PARTIAL (merged #323) | Eleven-player defensive roles/rotations implemented in part; snap and mechanism audit still open |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
-| DEF-06 | P1 | IN REVIEW ([PR #326](https://github.com/quarterback/viperball/pull/326)) | 2,048 full-matrix and 1,024 weather games; 94 tests passed; [final analysis](aar_2026-11-23_def06_full_defense_matrix.md) |
+| DEF-06 | P1 | DONE ([merged #326](https://github.com/quarterback/viperball/pull/326)) | 2,048 full-matrix and 1,024 weather games; [conditional results](aar_2026-11-23_def06_full_defense_matrix.md), no blanket balance target |
 | DEF-07 | P1 | OPEN | Measure defensive rush/pressure events, not just sacks, especially Blitz Pack |
 | WEA-01 | P2 | INVESTIGATE | Isolate rain-related turnovers, fatigue and explosive gains; no scoring increase established |
 | DEL-01 | P1 | OPEN | Counterfactual Delta Yards analysis, including comeback impact |
 | DEL-02 | P1 | OPEN | Consolidate conflicting delta, kill, and points-per-drive definitions |
 | DEL-03 | P2 | BLOCKED on DEL-02 and UI-01 | Make Delta Yards legible in game and season reporting |
-| ROST-01 | P1 | PARTIAL (PR #323) | Carry talent ladder and work rate into recruits, development, HS and careers |
-| ROST-02 | P1 | INVESTIGATE | Verify scheme assignment uses the same roster actually fielded |
-| FAT-01 | P1 | PARTIAL (PR #323) | Coach-dependent shifts, depth effects, and persistence |
+| ROST-01 | P1 | PARTIAL (merged #323) | Continue talent/work-rate ladder through recruiting, transfers and HS careers |
+| ROST-02 | P1 | PARTIAL (merged #328) | Game roles now assigned after final scheme overrides; remaining style-specific role scoring and scheme/roster consistency audit open |
+| FAT-01 | P1 | PARTIAL (merged #323) | Work rate and line rotations landed; coach-sensitive depth/season validation still open |
 | UI-01 | P1 | OPEN | Complete React game report and team tactical statistics |
 | SIM-01 | P1 | OPEN | Audit fast-sim dependencies beyond college mode |
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
-| VAL-02 | P1 | OPEN | Make production fresh-roster generation deterministic across checkouts and runs |
+| VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
 | RULE-01 | P2 | OPEN | Rulebook/version/terminology reconciliation |
 | OPS-01 | P2 | OPEN | Repair obsolete tests and close deploy/test gaps |
+| CCH-03 | P1 | IN REVIEW ([PR #332](https://github.com/quarterback/viperball/pull/332)) | DC pre-snap alignment/blitz and read-focus decisions; [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md) and 320-game control | 
+| CCH-04 | P1 | ASSIGNED TO OTHER AGENT | Team package installation, borrowing, coach turnover/career continuity against merged PBK catalog |
 
 P0 means correctness/integrity; P1 means core game consequence; P2 means presentation/maintenance. The order is a proposal, not a commitment to ship all tasks in one PR.
 
