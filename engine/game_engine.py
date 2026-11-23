@@ -52,6 +52,9 @@ V2_ENGINE_CONFIG = {
     "min_yardage_multiplier": 0.65,
     # V2.4: Play-family adaptation — DC "solves" repetitive play-calling mid-game
     "play_family_adaptation_enabled": True,
+    # Independently switch the two missing defensive layers off for paired benchmarks.
+    "defensive_reads_enabled": True,
+    "defense_scheme_effects_enabled": True,
     # V2.4: Time-of-possession model — play clock varies by offensive style
     "top_model_enabled": True,
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
@@ -4039,6 +4042,9 @@ class ViperballEngine:
         self._away_solved_families: Dict[str, float] = {}  # home DC solved these vs away offense
         # Narrative log for adaptation events
         self._adaptation_log: List[str] = []
+        # Counts by defending side; exposed in the game result for validation.
+        self._defense_read_counts = {"home": {"attempts": 0, "reads": 0},
+                                     "away": {"attempts": 0, "reads": 0}}
         # Consecutive non-solved plays (for decay tracking)
         self._home_consecutive_non_solved: int = 0
         self._away_consecutive_non_solved: int = 0
@@ -8300,6 +8306,33 @@ class ViperballEngine:
             return self.away_defense
         return self.home_defense
 
+    def _defense_style_multiplier(self, play_family: PlayFamily) -> float:
+        """One bounded scheme matchup effect, applied once per non-kicking play.
+
+        OFFENSE_VS_DEFENSE_MATCHUP expresses the broad scheme matchup;
+        play_family_modifiers expresses the specific play's vulnerability.
+        Blend their deviations rather than multiplying the full table entries
+        (which would compound existing formation, personnel and DC effects).
+        Below 1.0 favors the defense; above 1.0 favors the offense.
+        """
+        if not V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
+            return 1.0
+        offense = self._current_style_name()
+        defense_name = (self.away_team.defense_style if self.state.possession == "home"
+                        else self.home_team.defense_style)
+        defense = self._current_defense()
+        matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((offense, defense_name), 1.0)
+        family = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+        effect = 1.0 + 0.50 * (matchup - 1.0) + 0.35 * (family - 1.0)
+        return max(0.75, min(1.20, effect))
+
+    def _defense_read_yard_multiplier(self, family: PlayFamily) -> float:
+        """A tactical read reduces gains without changing possession or down."""
+        if (V2_ENGINE_CONFIG.get("defensive_reads_enabled", True)
+                and self.get_defensive_read(family)):
+            return 0.90
+        return 1.0
+
     def _resolve_weight_mode(self) -> str:
         """Determine the active situational weight mode.
 
@@ -8397,7 +8430,7 @@ class ViperballEngine:
 
         if random.random() < read_chance:
             # DC reads formation correctly — partially negate formation advantage
-            adjustment = 1.0 + (1.0 - base_mult) * 0.5  # 50% correction
+            adjustment = 1.0 + (base_mult - 1.0) * 0.5  # halfway to neutral; no sign reversal
             return adjustment
         else:
             # DC doesn't read it — full formation advantage
@@ -8748,7 +8781,13 @@ class ViperballEngine:
         total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost + coaching_read_boost
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
-        return random.random() < total_read_rate
+        read = random.random() < total_read_rate
+        counters = getattr(self, "_defense_read_counts", None)
+        if counters is not None:
+            side = "away" if self.state.possession == "home" else "home"
+            counters[side]["attempts"] += 1
+            counters[side]["reads"] += int(read)
+        return read
 
     def _get_defense_situational_boost(self, defense: Dict) -> float:
         """
@@ -8917,6 +8956,12 @@ class ViperballEngine:
             speed_gap = (scale_rating(team.avg_speed, "rescale_breakaway") - V2_ENGINE_CONFIG.get("breakaway_speed_baseline", 85)) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
             breakaway_chance = base + speed_gap + def_fatigue_bonus
+            # An elite anti-explosive scheme reduces the CHANCE of a breakaway,
+            # not every completed gain. Lower suppression factors mean fewer
+            # explosives; this is separate from family yardage matchups.
+            if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
+                breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
+            breakaway_chance = max(0.0, min(0.85, breakaway_chance))
 
             # Bigger initial gains = more likely to break free
             if yards_gained >= 10:
@@ -9718,6 +9763,10 @@ class ViperballEngine:
             center += formation_yard_adj
             # Formation × Defense matchup multiplier
             center *= self._formation_defense_multiplier()
+            # Style matchup and one tactical read. These are separate from
+            # the coach's learned film-study suppression below.
+            center *= self._defense_style_multiplier(play_family)
+            center *= self._defense_read_yard_multiplier(play_family)
 
         # ── V2.3: DC gameplan suppression (stacks multiplicatively with weather) ──
         # The opposing DC's film prep creates per-play-type suppression.
@@ -10477,15 +10526,14 @@ class ViperballEngine:
         dc_trick_supp = dc_gp_trick.get("trick", 1.0)
         base_yards *= dc_trick_supp
 
-        # Defensive read check — if defense reads the trick, it's a disaster
-        defense = self._current_defense()
-        read_rate = defense.get("read_success_rate", 0.35)
-        trick_read_bonus = defense.get("gameplan_bias", {}).get("trick_play", 0.05)
-        defense_read = random.random() < (read_rate + trick_read_bonus)
-
+        # One defensive read path for every live offensive family. A read
+        # blows up the disguise; otherwise the scheme matchup shapes the gain.
+        defense_read = (V2_ENGINE_CONFIG.get("defensive_reads_enabled", True)
+                        and self.get_defensive_read(family))
         if defense_read:
-            # Defense blew it up — big loss
             base_yards = random.uniform(-8.0, -2.0)
+        else:
+            base_yards *= self._defense_style_multiplier(family)
 
         yards_gained = int(base_yards)
         yards_gained = max(-10, yards_gained)
@@ -10953,6 +11001,12 @@ class ViperballEngine:
         if dc_lat_supp != 1.0 and yards_gained > 0:
             yards_gained = max(0, int(yards_gained * dc_lat_supp))
 
+        # The lateral chain is not a running contest; apply its scheme/read
+        # factors here instead of double-counting a run-family roll.
+        if yards_gained > 0:
+            yards_gained = max(0, round(yards_gained * self._defense_style_multiplier(family)
+                                         * self._defense_read_yard_multiplier(family)))
+
         if yards_gained <= 0:
             lat_tackler.game_tfl += 1
 
@@ -11137,6 +11191,15 @@ class ViperballEngine:
             deep_bonus = style.get("deep_shot_bonus", 0.0)
             if deep_bonus > 0 and subfamily == KickPassSubFamily.BOMB:
                 completion_prob = min(0.92, completion_prob + deep_bonus)
+
+        # Tactical matchup/coverage affects the chance of completing a kick,
+        # not its travel distance. Apply one scheme effect per kick pass.
+        if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
+            completion_prob *= self._defense_style_multiplier(family)
+            coverage = self._current_defense().get("kick_pass_coverage", 0.0)
+            completion_prob -= coverage * 0.25
+        completion_prob *= self._defense_read_yard_multiplier(family)
+        completion_prob = max(0.08, min(0.92, completion_prob))
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
@@ -14562,6 +14625,7 @@ class ViperballEngine:
                 "home": self.state.home_delta_yards,
                 "away": self.state.away_delta_yards,
             },
+            "defensive_reads": self._defense_read_counts,
             "weather": self.weather,
             "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
             "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
