@@ -59,13 +59,13 @@ one key turn the cache into a race between screens.
 
 ## Second crash: Dynasty Record Book
 
-## What happened
+### What happened
 
 Opening the Record Book tab on a dynasty threw "Minified React error #31", which React raises
 when it is handed a plain object to render. The object in the error had the keys
 `{coach, championships}`.
 
-## Cause
+### Cause
 
 `/sessions/{id}/dynasty/record-book` returns each record as an object from
 `engine/dynasty.py` `RecordBook`: the holder (`team` or `coach`), the value under its own key
@@ -75,7 +75,7 @@ straight into a `<Text>`. The first object React met crashed the whole page. The
 written from a code audit in June and never checked against a running server, which the June
 AARs flagged as a risk.
 
-## Fix
+### Fix
 
 - `api/dynasty.ts` types the payload as `Record<string, RecordBookEntry>`, matching the engine.
 - `DynastyHub.tsx` maps each of the seven records it already showed to its value key and
@@ -84,7 +84,7 @@ AARs flagged as a risk.
   tab shows "No records yet." when none are set. The two records the page never showed (OPI
   and chaos) are still left out.
 
-## Checked
+### Checked
 
 `tsc -b --noEmit` and `npm run build` pass. The value keys were read from the engine's
 `RecordBook` defaults and the code that updates each record. Not run against a live backend.
