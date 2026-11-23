@@ -58,6 +58,8 @@ V2_ENGINE_CONFIG = {
     "defensive_coach_tactics_enabled": True,
     # CCH-04: team familiarity and installed package decisions.
     "team_installation_enabled": True,
+    # CCH-05: installed defensive package calls, independently ablatable.
+    "defensive_packages_enabled": True,
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -4100,6 +4102,12 @@ class ViperballEngine:
             for side in ("home", "away")
         }
         self._active_defensive_call = None
+        self._defensive_package_usage = {side: {"eligible": {}, "selected": {}}
+                                         for side in ("home", "away")}
+        self._defensive_package_rng = {
+            side: random.Random(f"defensive-packages:{seed}:{side}")
+            for side in ("home", "away")
+        }
         self._home_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:home")
         self._away_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:away")
 
@@ -4316,17 +4324,95 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go)
         rng = (self._away_dc_tactics_rng if def_side == "away"
                else self._home_dc_tactics_rng)
+        package = self._choose_defensive_package(def_side, tactics)
+        if package:
+            # Blend toward an existing posture; never add a second contest.
+            strength = package["familiarity"]
+            target = package["alignment"]
+            total = sum(weights.values())
+            weights = {a: w * (1.0 - 0.50 * strength) for a, w in weights.items()}
+            weights[target] += total * 0.50 * strength
         alignment = rng.choices(list(weights), weights=list(weights.values()), k=1)[0]
         blitz_chance = defensive_blitz_probability(
             STYLE_BLITZ_CHANCE.get(self._current_defense_name(), 0.10),
             tactics, alignment)
+        if package:
+            blitz_chance = max(0.02, min(0.65, blitz_chance +
+                package["blitz_shift"] * package["familiarity"]))
         blitz = rng.random() < blitz_chance
         call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz}
+        if package:
+            call["package_id"] = package["package_id"]
+            call["package_familiarity"] = package["familiarity"]
+            call["package_focus"] = package["focus"]
         self._active_defensive_call = call
         counters = self._dc_tactics_usage[def_side]
         counters["calls"] += 1
         counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
         counters["blitz_calls"] += int(blitz)
+
+    def _choose_defensive_package(self, side: str, tactics: Dict):
+        """Choose at most one installed package before the play family is known."""
+        if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
+                and V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)):
+            return None
+        team = self.home_team if side == "home" else self.away_team
+        unit = (getattr(team, "installation", None) or {}).get("defense", {})
+        if unit.get("coach_id") != tactics.get("coach_id") or unit.get("family") != team.defense_style:
+            return None
+        from .team_installation import active_situations
+        from .playbook_catalog import get_package
+        # The installation record was roster-filtered by sync_installation using
+        # league-normalized personnel profiles. Do not compare raw fresh ratings
+        # with the catalog's file-scale thresholds here.
+        st = self.state
+        diff = st.home_score - st.away_score
+        situations = active_situations({
+            "down": st.down, "yards_to_go": st.yards_to_go,
+            "field_position": st.field_position, "quarter": st.quarter,
+            "time_remaining": st.time_remaining,
+            "score_diff": diff if side == "home" else -diff,
+        })
+        # Existing alignments have real run-direction costs. The focus is a
+        # finite read allocation, not a universal defense multiplier.
+        effects = {
+            "fortress_goal_line_stand": ("stacked", -0.04, ["dive_option", "power"]),
+            "fortress_short_yardage_wall": ("stacked", -0.04, ["dive_option", "power"]),
+            "lockdown_kick_range_shell": ("spread", -0.06, ["kick_pass"]),
+            "lockdown_long_yardage_bracket": ("spread", -0.06, ["kick_pass"]),
+            "drift_prevent": ("spread", -0.08, ["kick_pass", "lateral_spread"]),
+            "blitz_short_yardage_pressure": ("aggressive", 0.10, ["dive_option", "power", "sweep_option"]),
+            "rugby_rush_line": ("aggressive", 0.06, ["sweep_option", "speed_option", "lateral_spread"]),
+        }
+        # Kick-in press and ride need drive-event semantics (CCH-06).
+        choices = []
+        counts = self._defensive_package_usage[side]
+        for installed in sorted(unit.get("packages", []), key=lambda p: p.get("package_id", "")):
+            pid = installed.get("package_id")
+            if pid not in effects:
+                continue
+            pkg = get_package(pid)
+            if not situations.intersection(pkg["situation_tags"]) or team.defense_style not in pkg["compatible_families"]:
+                continue
+            familiarity = max(0.0, min(1.0, float(installed.get("familiarity", 0.0))))
+            familiarity *= tactics.get("installation_execution_factor", 1.0)
+            if familiarity <= 0:
+                continue
+            counts["eligible"][pid] = counts["eligible"].get(pid, 0) + 1
+            alignment, shift, focus = effects[pid]
+            choices.append({"package_id": pid, "familiarity": familiarity,
+                            "alignment": alignment, "blitz_shift": shift, "focus": focus})
+        if not choices:
+            return None
+        rng = self._defensive_package_rng[side]
+        # Keep the base call available even at full installation. Competition
+        # between packages does not inflate the overall activation probability.
+        if rng.random() >= 0.65 * max(p["familiarity"] for p in choices):
+            return None
+        selected = rng.choices(choices, weights=[p["familiarity"] for p in choices], k=1)[0]
+        pid = selected["package_id"]
+        counts["selected"][pid] = counts["selected"].get(pid, 0) + 1
+        return selected
 
     def _active_dc_call(self) -> Dict:
         """Do not apply a past snap's call after a change of possession."""
@@ -4350,6 +4436,7 @@ class ViperballEngine:
             "read_focus": list(tactics["read_focus"]), "calls": used["calls"],
             "alignments": dict(used["alignments"]),
             "blitz_calls": used["blitz_calls"],
+            "packages": self._defensive_package_usage[side],
             "read_attempts": dict(used["read_attempts"]),
             "read_successes": dict(used["read_successes"]),
         }
@@ -9036,6 +9123,11 @@ class ViperballEngine:
         if call and category:
             from .coach_tactics import defensive_read_allocation
             total_read_rate += defensive_read_allocation(self._current_dc_tactics(), category)
+            if call.get("package_id"):
+                # Replace part of the generic focus with package-specific attention.
+                # Favor the rehearsed families at the expense of other families.
+                total_read_rate += 0.035 * call["package_familiarity"] * (
+                    1 if play_family.value in call["package_focus"] else -1)
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         read = random.random() < total_read_rate
