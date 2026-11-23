@@ -308,6 +308,9 @@ class Dynasty:
 
     # Coaching staff per team: team_name -> { role -> CoachCard }
     _coaching_staffs: Dict[str, dict] = field(default_factory=dict, repr=False)
+    # CCH-04: team installations (what each program has learned), saved
+    # with the dynasty and attached to each season.
+    _team_installations: Dict[str, dict] = field(default_factory=dict, repr=False)
     coaching_history: Dict[int, dict] = field(default_factory=dict)
 
     # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
@@ -1149,123 +1152,30 @@ class Dynasty:
         except Exception:
             pass
 
-    def run_offseason(
-        self,
-        season: Season,
-        player_cards: Dict[str, list],
-        human_board: Optional[RecruitingBoard] = None,
-        human_nil_offers: Optional[Dict[str, float]] = None,
-        human_portal_picks: Optional[List[str]] = None,
-        pool_size: int = 1500,
-        rng: Optional[random.Random] = None,
-    ) -> dict:
-        """
-        Run the full offseason cycle: prestige → NIL → portal → recruiting.
+        # ── CCH-04: a season together. Familiarity grows and old habits fade.
+        # Hires in the coming offseason fold in at the next game
+        # (team_installation.sync_installation).
+        from engine.team_installation import advance_offseason
+        for _rec in (getattr(self, "_team_installations", None) or {}).values():
+            advance_offseason(_rec, self.current_year)
 
-        This method should be called AFTER advance_season() to handle the
-        between-seasons roster movement.  For the human team, the caller
-        can provide pre-selected board/offers/portal picks (from the UI).
-        If not provided, the human team is auto-managed like CPU teams.
+    def run_coaching_offseason(self, player_cards: Dict[str, list],
+                               rng: Optional[random.Random] = None) -> dict:
+        """The coaching carousel: CPU programs evaluate and fire coaches,
+        every coach ages, develops and advances toward head coaching, and the
+        coaching portal fills vacancies. The human team's own staff is left
+        to the human. Called by run_offseason and by the app's dynasty
+        advance (which runs its own NIL, portal and recruiting steps).
 
-        Args:
-            season:             The just-completed Season object.
-            player_cards:       Dict of team_name -> list[PlayerCard].
-            human_board:        Optional pre-built RecruitingBoard for the human team.
-            human_nil_offers:   Optional dict of recruit_id -> NIL amount for human team.
-            human_portal_picks: Optional list of PortalEntry player_names the human picked.
-            pool_size:          National recruit class size.
-            rng:                Seeded Random for reproducibility.
-
-        Returns:
-            Dict with keys: "recruiting", "portal", "nil", "retention_risks",
-            "graduating", "prestige".
+        Call after advance_season(). Returns this year's coaching history.
         """
         if rng is None:
             rng = random.Random(self.current_year + 7)
-
         year = self.current_year  # already advanced by advance_season
         prev_year = year - 1
-        result: dict = {}
         human_team = self.coach.team_name
+        result: dict = {}
 
-        # ── 1. Update team prestige ──
-        # Prestige now updates per-game during the season (via Season.team_prestige).
-        # At offseason we apply regression toward mean so extreme values drift back,
-        # then give a championship bump.  If no live prestige exists yet (first
-        # season or legacy save), fall back to the old compute_team_prestige.
-        from engine.nil_system import apply_season_end_regression
-        for team_name, history in self.team_histories.items():
-            if team_name in self.team_prestige and self.team_prestige[team_name] != 50:
-                # Live prestige already moved during the season — just regress
-                self.team_prestige[team_name] = apply_season_end_regression(
-                    self.team_prestige[team_name],
-                )
-                # Championship bump (on top of whatever they earned in-season)
-                if team_name == season.champion:
-                    self.team_prestige[team_name] = min(
-                        99, self.team_prestige[team_name] + 5
-                    )
-            else:
-                # Fallback: legacy path for first season or saves without live prestige
-                recent_wins = 5
-                if prev_year in history.season_records:
-                    recent_wins = history.season_records[prev_year].get("wins", 5)
-                self.team_prestige[team_name] = compute_team_prestige(
-                    all_time_wins=history.total_wins,
-                    all_time_losses=history.total_losses,
-                    championships=history.total_championships,
-                    recent_wins=recent_wins,
-                )
-        result["prestige"] = dict(self.team_prestige)
-
-        # ── 1a. Infrastructure decay + AI investment ──
-        # Lazy-init infrastructure from team JSON files if not loaded yet.
-        if not self._team_infrastructure:
-            import json
-            from pathlib import Path
-            teams_dir = Path(__file__).parent.parent / "data" / "teams"
-            for team_name in self.team_histories:
-                team_file = teams_dir / f"{team_name}.json"
-                if team_file.exists():
-                    try:
-                        with open(team_file) as f:
-                            td = json.load(f)
-                        infra = td.get("program_infrastructure")
-                        if infra:
-                            self._team_infrastructure[team_name] = dict(infra)
-                    except (json.JSONDecodeError, OSError):
-                        pass
-                if team_name not in self._team_infrastructure:
-                    # Prestige-correlated infrastructure with variance.
-                    # Prestige 90 → base ~8, prestige 30 → base ~3, with ±2 noise
-                    # so there's a gradient even within conferences.
-                    prestige = self.team_prestige.get(team_name, 50)
-                    base = max(1, min(9, int(prestige / 12) + 1))
-                    self._team_infrastructure[team_name] = {
-                        "facilities": max(1, min(10, base + rng.randint(-2, 2))),
-                        "campus_life": max(1, min(10, base + rng.randint(-2, 2))),
-                        "location": max(1, min(10, base + rng.randint(-1, 2))),
-                        "coaching_development": max(1, min(10, base + rng.randint(-2, 1))),
-                        "nil_program": max(1, min(10, base + rng.randint(-2, 2))),
-                    }
-
-        # Apply yearly decay (-0.1 rounded) and AI auto-investment
-        for team_name, infra in self._team_infrastructure.items():
-            prestige = self.team_prestige.get(team_name, 50)
-            for key in list(infra.keys()):
-                # Decay: everything slowly degrades without investment
-                infra[key] = max(1, infra[key] - 1 if rng.random() < 0.15 else infra[key])
-            # AI investment: higher-prestige programs invest more
-            if team_name != human_team:
-                invest_budget = max(1, prestige // 25)  # 0-3 upgrades
-                upgradeable = [k for k, v in infra.items() if v < 10]
-                if upgradeable:
-                    targets = rng.sample(upgradeable, min(invest_budget, len(upgradeable)))
-                    for key in targets:
-                        infra[key] = min(10, infra[key] + 1)
-        result["infrastructure"] = {tn: dict(i) for tn, i in self._team_infrastructure.items()}
-
-        # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
         from engine.coaching import (
             CoachCard, CoachMarketplace, CoachingSalaryPool,
             auto_coaching_pool, generate_coaching_staff,
@@ -1406,6 +1316,126 @@ class Dynasty:
             "portal_hires": coaching_portal.hires,
         }
         result["coaching"] = self.coaching_history[year]
+        return result["coaching"]
+
+    def run_offseason(
+        self,
+        season: Season,
+        player_cards: Dict[str, list],
+        human_board: Optional[RecruitingBoard] = None,
+        human_nil_offers: Optional[Dict[str, float]] = None,
+        human_portal_picks: Optional[List[str]] = None,
+        pool_size: int = 1500,
+        rng: Optional[random.Random] = None,
+    ) -> dict:
+        """
+        Run the full offseason cycle: prestige → NIL → portal → recruiting.
+
+        This method should be called AFTER advance_season() to handle the
+        between-seasons roster movement.  For the human team, the caller
+        can provide pre-selected board/offers/portal picks (from the UI).
+        If not provided, the human team is auto-managed like CPU teams.
+
+        Args:
+            season:             The just-completed Season object.
+            player_cards:       Dict of team_name -> list[PlayerCard].
+            human_board:        Optional pre-built RecruitingBoard for the human team.
+            human_nil_offers:   Optional dict of recruit_id -> NIL amount for human team.
+            human_portal_picks: Optional list of PortalEntry player_names the human picked.
+            pool_size:          National recruit class size.
+            rng:                Seeded Random for reproducibility.
+
+        Returns:
+            Dict with keys: "recruiting", "portal", "nil", "retention_risks",
+            "graduating", "prestige".
+        """
+        if rng is None:
+            rng = random.Random(self.current_year + 7)
+
+        year = self.current_year  # already advanced by advance_season
+        prev_year = year - 1
+        result: dict = {}
+        human_team = self.coach.team_name
+
+        # ── 1. Update team prestige ──
+        # Prestige now updates per-game during the season (via Season.team_prestige).
+        # At offseason we apply regression toward mean so extreme values drift back,
+        # then give a championship bump.  If no live prestige exists yet (first
+        # season or legacy save), fall back to the old compute_team_prestige.
+        from engine.nil_system import apply_season_end_regression
+        for team_name, history in self.team_histories.items():
+            if team_name in self.team_prestige and self.team_prestige[team_name] != 50:
+                # Live prestige already moved during the season — just regress
+                self.team_prestige[team_name] = apply_season_end_regression(
+                    self.team_prestige[team_name],
+                )
+                # Championship bump (on top of whatever they earned in-season)
+                if team_name == season.champion:
+                    self.team_prestige[team_name] = min(
+                        99, self.team_prestige[team_name] + 5
+                    )
+            else:
+                # Fallback: legacy path for first season or saves without live prestige
+                recent_wins = 5
+                if prev_year in history.season_records:
+                    recent_wins = history.season_records[prev_year].get("wins", 5)
+                self.team_prestige[team_name] = compute_team_prestige(
+                    all_time_wins=history.total_wins,
+                    all_time_losses=history.total_losses,
+                    championships=history.total_championships,
+                    recent_wins=recent_wins,
+                )
+        result["prestige"] = dict(self.team_prestige)
+
+        # ── 1a. Infrastructure decay + AI investment ──
+        # Lazy-init infrastructure from team JSON files if not loaded yet.
+        if not self._team_infrastructure:
+            import json
+            from pathlib import Path
+            teams_dir = Path(__file__).parent.parent / "data" / "teams"
+            for team_name in self.team_histories:
+                team_file = teams_dir / f"{team_name}.json"
+                if team_file.exists():
+                    try:
+                        with open(team_file) as f:
+                            td = json.load(f)
+                        infra = td.get("program_infrastructure")
+                        if infra:
+                            self._team_infrastructure[team_name] = dict(infra)
+                    except (json.JSONDecodeError, OSError):
+                        pass
+                if team_name not in self._team_infrastructure:
+                    # Prestige-correlated infrastructure with variance.
+                    # Prestige 90 → base ~8, prestige 30 → base ~3, with ±2 noise
+                    # so there's a gradient even within conferences.
+                    prestige = self.team_prestige.get(team_name, 50)
+                    base = max(1, min(9, int(prestige / 12) + 1))
+                    self._team_infrastructure[team_name] = {
+                        "facilities": max(1, min(10, base + rng.randint(-2, 2))),
+                        "campus_life": max(1, min(10, base + rng.randint(-2, 2))),
+                        "location": max(1, min(10, base + rng.randint(-1, 2))),
+                        "coaching_development": max(1, min(10, base + rng.randint(-2, 1))),
+                        "nil_program": max(1, min(10, base + rng.randint(-2, 2))),
+                    }
+
+        # Apply yearly decay (-0.1 rounded) and AI auto-investment
+        for team_name, infra in self._team_infrastructure.items():
+            prestige = self.team_prestige.get(team_name, 50)
+            for key in list(infra.keys()):
+                # Decay: everything slowly degrades without investment
+                infra[key] = max(1, infra[key] - 1 if rng.random() < 0.15 else infra[key])
+            # AI investment: higher-prestige programs invest more
+            if team_name != human_team:
+                invest_budget = max(1, prestige // 25)  # 0-3 upgrades
+                upgradeable = [k for k, v in infra.items() if v < 10]
+                if upgradeable:
+                    targets = rng.sample(upgradeable, min(invest_budget, len(upgradeable)))
+                    for key in targets:
+                        infra[key] = min(10, infra[key] + 1)
+        result["infrastructure"] = {tn: dict(i) for tn, i in self._team_infrastructure.items()}
+
+        # ── 1b. Coaching staff management (V2.4 Coaching Portal) ──
+        result["coaching"] = self.run_coaching_offseason(player_cards, rng=rng)
 
         # ── 2. Build NIL programs ──
         self._nil_programs = {}
@@ -1770,6 +1800,14 @@ class Dynasty:
         via adjust_prestige_postgame.
         """
         season.team_prestige = self.team_prestige
+
+    def attach_installations_to_season(self, season: Season) -> None:
+        """Hand the dynasty's team installations to a new Season, so games
+        update them in place and they carry into the next year (CCH-04)."""
+        if not hasattr(self, "_team_installations") or self._team_installations is None:
+            self._team_installations = {}
+        season.team_installations = self._team_installations
+        season.dynasty_year = self.current_year
 
     def _record_awards_to_cards(
         self,
@@ -2215,6 +2253,7 @@ class Dynasty:
                 for team_name, staff in self._coaching_staffs.items()
             } if self._coaching_staffs else {},
             "coaching_history": {str(k): v for k, v in self.coaching_history.items()},
+            "team_installations": dict(getattr(self, "_team_installations", {}) or {}),
         }
 
         with open(filepath, 'w') as f:
@@ -2260,6 +2299,14 @@ class Dynasty:
         # Reconstruct coaching history
         if "coaching_history" in data:
             dynasty.coaching_history = {int(k): v for k, v in data["coaching_history"].items()}
+
+        # CCH-04 team installations (older saves have none: tracking starts
+        # at the next game with the staff then in place).
+        from engine.team_installation import ensure_installation
+        dynasty._team_installations = {
+            name: ensure_installation(rec, name)
+            for name, rec in (data.get("team_installations") or {}).items() if rec
+        }
 
         return dynasty
 
