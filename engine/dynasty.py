@@ -54,6 +54,7 @@ from engine.nil_system import (
     assess_retention_risks,
     RetentionRisk,
 )
+from engine.stable_hash import stable_hash
 
 
 # ========================================
@@ -396,7 +397,7 @@ class Dynasty:
         teams_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
         team_state_cache = {}
         try:
-            for f in os.listdir(teams_dir):
+            for f in sorted(os.listdir(teams_dir)):
                 if f.endswith(".json"):
                     with open(os.path.join(teams_dir, f)) as fh:
                         td = json.load(fh)
@@ -2099,7 +2100,7 @@ class Dynasty:
         original_year = self.current_year
         history_start = original_year - num_years
 
-        rng = random.Random(hash(f"history_{self.dynasty_name}") % 999999)
+        rng = random.Random(stable_hash(f"history_{self.dynasty_name}") % 999999)
 
         for i, year in enumerate(range(history_start, original_year)):
             result = fast_sim_season(

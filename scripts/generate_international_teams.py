@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.generate_names import generate_player_name, load_name_pools
 from scripts.generate_rosters import assign_archetype
+from engine.stable_hash import stable_hash
 
 # ── Roster template (same as NVL) ───────────────────────────────────
 ROSTER_TEMPLATE = [
@@ -385,7 +386,7 @@ def gen_pro_player(number: int, position: str, franchise_rating: int,
 
 def generate_team(key: str, info: dict, attr_range: tuple) -> dict:
     """Generate a full team JSON for an international pro team."""
-    rng = random.Random(hash(key) + 42)
+    rng = random.Random(stable_hash(key) + 42)
     used_names = set()
 
     players = []

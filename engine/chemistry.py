@@ -76,7 +76,12 @@ def generate_chemistry_attributes(
     Called once at player creation. Mutates `player` in place. Idempotent
     re-calls would re-roll; only call on freshly generated players.
     """
-    rng = rng or _random_module.Random()
+    if rng is None:
+        # Seed from the player's identity, not the OS: the same player always
+        # gets the same chemistry, and seeded seasons and benchmarks repeat.
+        from engine.stable_hash import stable_hash
+        key = "|".join(str(getattr(player, f, "")) for f in ("player_id", "name", "position", "number"))
+        rng = _random_module.Random(stable_hash(f"chemistry|{key}"))
 
     # Roll which attributes get high ceilings (~10% chance per attribute).
     # This is per-attribute, so a player could rarely get two high-ceiling traits.
@@ -585,7 +590,9 @@ def apply_innate_range_pressure(
       - Current at ceiling for 2+ seasons → small chance ceiling lifts 1-3.
       - Current below floor 3+ seasons → floor revises down 1-3.
     """
-    rng = rng or _random_module.Random()
+    # Without an explicit stream, use the (seeded) global one so a seeded
+    # season's offseason repeats.
+    rng = rng or _random_module
     for attr in (*_STABLE_ATTRS, "drama_baseline", "fit"):
         rng_attr = f"{attr}_range"
         floor, ceiling = getattr(player, rng_attr, (25, 95))

@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.generate_names import generate_player_name, load_name_pools
 from scripts.generate_rosters import generate_player_attributes, assign_archetype
+from engine.stable_hash import stable_hash
 
 NVL_TEAMS = {
     "nj": {
@@ -227,7 +228,7 @@ def gen_pro_player(number: int, position: str, franchise_rating: int,
 
 
 def generate_nvl_team(key: str, info: dict) -> dict:
-    rng = random.Random(hash(key) + 42)
+    rng = random.Random(stable_hash(key) + 42)
     used_names = set()
 
     players = []

@@ -5,7 +5,7 @@ Pre-generates a reusable pool of pixel-art portraits via the PixelLab API.
 Faces are saved as face_000.png … face_N.png and persist across dynasty
 resets.  Any player in any save maps to a face deterministically:
 
-    face_index = hash(player_id) % pool_size
+    face_index = stable_hash(player_id) % pool_size
 
 Usage:
     # Generate the pool (one-time, or to grow it):
@@ -33,6 +33,7 @@ from typing import List, Optional
 import time
 
 import requests as _requests
+from engine.stable_hash import stable_hash
 
 log = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ Files are saved as:
 
 Assignment is deterministic:
     pool  = "m" if gender == "male" else "f"
-    index = hash(coach_id) % pool_size[pool]
+    index = stable_hash(coach_id) % pool_size[pool]
 
 Usage:
     python -m engine.coach_face_generator --count 150
@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests as _requests
+from engine.stable_hash import stable_hash
 
 log = logging.getLogger(__name__)
 

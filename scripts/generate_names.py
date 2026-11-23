@@ -266,7 +266,7 @@ def build_geo_pipeline(state: str) -> Dict[str, float]:
     """
     home = STATE_TO_REGION.get(state, 'midwest')
     neighbors = REGION_NEIGHBORS.get(home, [])
-    all_domestic = list(DOMESTIC_KEYS)
+    all_domestic = sorted(DOMESTIC_KEYS)
     others = [r for r in all_domestic if r != home and r not in neighbors]
 
     pipeline: Dict[str, float] = {home: 0.50}

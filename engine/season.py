@@ -21,6 +21,7 @@ from engine.game_engine import ViperballEngine, Team, load_team_from_json
 from engine.weather import generate_game_weather_full, describe_conditions, get_climate_zone, pick_overseas_classics
 from engine.viperball_metrics import calculate_viperball_metrics
 from engine.dtw import calculate_game_dtw
+from engine.stable_hash import stable_hash
 
 
 FCS_PREFIXES = [
@@ -1549,7 +1550,7 @@ class Season:
                 if dynasty_year is not None:
                     # Deterministic flip: same pair alternates home/away each year
                     pair_key = tuple(sorted([home, away]))
-                    if (hash(pair_key) + dynasty_year) % 2 == 1:
+                    if (stable_hash(pair_key) + dynasty_year) % 2 == 1:
                         home, away = away, home
                 elif random.random() < 0.5:
                     home, away = away, home
@@ -1631,7 +1632,7 @@ class Season:
                 if dynasty_year is not None:
                     # Deterministic flip: same pair alternates home/away each year
                     pair_key = tuple(sorted([home, away]))
-                    if (hash(pair_key) + dynasty_year) % 2 == 1:
+                    if (stable_hash(pair_key) + dynasty_year) % 2 == 1:
                         home, away = away, home
                 elif random.random() < 0.5:
                     home, away = away, home
@@ -1807,7 +1808,7 @@ class Season:
             ref_count = max(120, len(self.teams) * 2)
             # Round up to nearest multiple of 3 (crew size)
             ref_count = ((ref_count + 2) // 3) * 3
-            self.referee_pool = RefereePool(seed=hash(self.name) % (2**31))
+            self.referee_pool = RefereePool(seed=stable_hash(self.name) % (2**31))
             self.referee_pool.generate(ref_count)
 
         fcs_side = None
@@ -3359,7 +3360,7 @@ def load_teams_from_directory(
     team_dir = Path(directory)
     archetypes = team_archetypes or {}
 
-    for team_file in team_dir.glob("*.json"):
+    for team_file in sorted(team_dir.glob("*.json")):
         # We need the team name to look up archetype, but load_team_from_json
         # extracts it internally. Do a quick peek at the JSON for the name.
         import json as _json
@@ -3403,7 +3404,7 @@ def load_teams_with_states(
     team_dir = Path(directory)
     archetypes = team_archetypes or {}
 
-    for team_file in team_dir.glob("*.json"):
+    for team_file in sorted(team_dir.glob("*.json")):
         with open(team_file) as f:
             raw = _json.load(f)
         state = raw.get("team_info", {}).get("state", "")
@@ -3431,7 +3432,7 @@ def load_coaching_staffs_from_directory(directory: str) -> Dict[str, dict]:
     from engine.coaching import CoachCard
     staffs = {}
     team_dir = Path(directory)
-    for team_file in team_dir.glob("*.json"):
+    for team_file in sorted(team_dir.glob("*.json")):
         with open(team_file) as f:
             raw = _json.load(f)
         team_name = raw.get("team_info", {}).get("school") or raw.get("team_info", {}).get("school_name", "")
