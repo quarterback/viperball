@@ -144,7 +144,9 @@ P0 means correctness/integrity; P1 means core game consequence; P2 means present
 
 **Evidence:** ai_coach.py auto_assign_all_teams() reads team_stats and identity from team JSON files and applies thresholds such as kicking >= 77 and speed >= 86. PR #323's season benchmarks use freshly generated rosters on a revised rating scale, and previous AARs document old/new roster scale mismatches. It is **not yet demonstrated** whether those team_stats represent the same team the engine fields.
 
-**Work:** Compare configured offensive, defensive and special-teams schemes against actual fresh roster strengths. Confirm migration/default paths, seeded reproducibility and whether scheme candidates should use derived roster indicators on the same rating scale.
+**Additional direct code finding (DEF-06 review):** In `engine/game_engine.py`, `assign_game_roles(self.home_team, home_style)` and the away equivalent execute **before** `style_overrides` are applied. When a Season game passes a selected offense through overrides, roster touch/receiver role assignment may still reflect the team object's prior default offense. This could mask style differences even when the matchups and play-family weights are active. The DEF-06 study mimics this current behavior; it must not claim that roster role selection is correctly adapted.
+
+**Work:** Compare configured offensive, defensive and special-teams schemes against actual fresh roster strengths. Confirm migration/default paths, seeded reproducibility and whether scheme candidates should use derived roster indicators on the same rating scale. Move or repeat role assignment after final styles are resolved, then test differences in selected lead carriers and receivers under the same roster across schemes.
 
 **Accept when:** a generated roster with elite kicking can qualify for an appropriate kicking scheme, a weak kicking unit is not assigned that scheme by stale data, and assignments repeat under the same seed and inputs.
 
