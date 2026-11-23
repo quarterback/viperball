@@ -1,0 +1,35 @@
+name: Coach tactical identity CCH-01
+
+on:
+  push:
+    branches:
+      - feature/coach-tactical-identity-cch-01
+  pull_request:
+    branches:
+      - main
+    paths:
+      - engine/coaching.py
+      - engine/coach_tactics.py
+      - tests/test_coach_tactics.py
+      - .github/workflows/coach-tactics.yml
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install pytest
+          python -m pip install -r requirements.txt
+      - name: Coach signature and legacy save tests
+        run: python -m pytest tests/test_coach_tactics.py -q
+      - name: Existing regression suite
+        run: python -m pytest tests/ -q
