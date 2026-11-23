@@ -1,0 +1,13 @@
+# Engine follow-up: defensive packages, pressure, and situational events
+
+## CCH-05 — initial implementation (in progress)
+Commit d0862394 adds one optional installed package to the existing DC pre-snap call. The package must belong to the current coordinator and scheme, match a catalog situation, and be present in the roster-filtered installation. The catalog's league-normalized roster fit is established during installation, not recalculated on incompatible raw rating scales. Familiarity controls selection and effect; a separate seeded random stream leaves the original DC draw sequence intact. At most one package can influence a snap. The base defensive posture remains available.
+
+Seven packages use existing alignment, blitz and read-resolution mechanics. The inside wall emphasizes stacked alignment; the shell and bracket emphasize spread and reduced blitz; pressure and rush line emphasize aggression. A small family-specific read allocation favors the prepared family and concedes others. Prevent uses spread and lower blitz; its actual explosive-play effect is unproven. Kick-In Press and Ride are deferred until CCH-06 can identify drive events. No new yardage or sack multiplier. Values are initial hypotheses, not calibrated findings.
+
+Play logs expose package ID, effective familiarity and focus; the DC summary reports eligible and selected counts. These are additive fields for the UI agent. The runtime switch is defensive_packages_enabled. No React work.
+
+Benchmark script: `PYTHONHASHSEED=0 python scripts/benchmark_defensive_packages.py --games 40`. It holds installed record, opponent, staff and seeds fixed within each on/off comparison for three scheme/package combinations. It reports calls, eligibility, activation, blitz, alignment, conditional yards and explosives; selected-only comparisons are descriptive. Use a one-game-per-condition smoke first. The benchmark uses explicit installed fixtures to isolate effects; natural installation frequency needs later dynasty calibration. **No smoke or benchmark results yet.** Do not mark CCH-05 complete before running them.
+
+## Next
+DEF-07 pressure/hurry instrumentation, CCH-06 drive/score/turnover/fatigue context, combined calibration and nonblocking deployment smoke. No new test suite per task. See the shared assessment queue.
