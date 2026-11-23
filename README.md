@@ -12,7 +12,7 @@ Someone in r/CFB posted a hypothetical: *[What if the entire 1894 Yale team came
 
 That question is Viperball.
 
-**Viperball** is a gridiron football code designed for speed, tactical kicking, and lateral ball movement. It is the primary sport of the **Collegiate Viperball League (CVL)**, a 187-team women's collegiate athletic conference system across the United States.
+**Viperball** is a gridiron football code designed for speed, tactical kicking, and lateral ball movement. It is the primary sport of the **Collegiate Viperball League (CVL)**, a 205-team women's collegiate athletic conference system across the United States.
 
 The sport evolved from early American football's pre-forward-pass era, retaining the centrality of kicking, two-way play, and lateral ball handling while developing its own modern strategic identity. Viperball uses a Canadian football (CFL-spec) ball, employs no forward passing of any kind, and features a distinctive multi-channel scoring system.
 
@@ -82,7 +82,7 @@ The field is identical to a standard American college football field. No additio
 
 ### Quarters and Halftime
 
-A regulation game consists of **four 15-minute quarters** with a running game clock:
+A regulation game consists of **four 10-minute quarters** (a 40-minute game) with a running game clock:
 
 - **1st and 2nd quarters** make up the first half
 - **Halftime** interval between the 2nd and 3rd quarters
@@ -94,12 +94,17 @@ The game clock runs continuously with the following exceptions:
 
 - **Scoring plays** — clock stops until the subsequent restart
 - **Out of bounds** — clock stops (final 2 minutes of each half only)
-- **Timeouts** — each team receives 3 per half
+- **Timeouts** — each team receives 4 per half; unused timeouts do not carry over
+- **3-minute warning** — the clock stops once in each half when it crosses three minutes remaining
 - **Penalties** — clock stops during enforcement
 - **Injuries** — clock stops; team charged a timeout if injury occurs in final 2 minutes of a half
 - **Official reviews** — clock stops
 
 Play clock between snaps runs 25 seconds. Delay of game is a 5-yard penalty.
+
+### Coach's Challenge
+
+Each team has 3 challenges per game. A coach may challenge the spot of the ball, a turnover on downs, a fumble or interception ruling, a catch on a kick pass, or a short touchdown. Penalties cannot be challenged. The coach decides without seeing the replay, and replay decides whether the ruling stands.
 
 ### Coin Toss
 
@@ -126,7 +131,17 @@ The 6-down/20-yard structure gives offenses more plays to work with but demands 
 
 ### Turnover on Downs
 
-If a team fails to gain 20 yards in six downs, the opposing team takes possession at the spot of the ball. There is no automatic punt situation — teams may attempt to convert on 5th or 6th down, punt at any time, or attempt a kick for points.
+If a team fails to gain 20 yards in six downs, the opposing team takes possession at the spot of the ball and starts a fresh series: 1st and 20.
+
+### The Kicking Down
+
+Kicks belong on 6th down. Downs 1 through 5 are for advancing the ball and chasing the 9-point touchdown; gaining even a few yards on 5th down improves the 6th-down kick. On 6th down the offense kicks for points, punts, or goes for it. A team that is trailing never punts on 6th down.
+
+The exceptions, where a coach kicks before 6th down:
+
+1. **End of a half:** with under 45 seconds left, take the points that are available.
+2. **Bonus possessions:** the drive is a free one (see [Interceptions](#interceptions)), so a coach may cash in points on 5th down.
+3. **Garbage time:** a team trailing badly late takes a reachable kick on 4th or 5th down rather than risk a shutout.
 
 ---
 
@@ -170,7 +185,7 @@ Viperball uses a **six-channel scoring system**. Points are awarded for the foll
 | **Snap Kick (DK)** | **5** | Drop-kicking the ball through the uprights during live play |
 | **Field Goal (PK)** | **3** | Place-kicking the ball through the uprights from scrimmage |
 | **Safety** | **2** | Tackling the ball carrier in their own end zone, or the offense committing a foul in their own end zone |
-| **Pindown** | **1** | A single is awarded when the ball is kicked into the end zone by any legal means—other than a convert (successful or not) or a successful field goal—and the receiving team does not return (or kick) the ball out of its end zone (see [Pindown](#pindown)) |
+| **Pindown** | **1** | A punt, missed snap kick, or missed field goal goes into the end zone and the receiving team does not return it out (see [Pindown](#pindown)) |
 | **Bell** | **0.5** | Recovering a loose ball — fumble, muff, or bouncing kick (see [Bell](#bell)) |
 
 There are **no extra point attempts or conversion plays** after touchdowns. The 9-point touchdown is a terminal score — after a TD, play restarts with the opposing team receiving.
@@ -200,7 +215,7 @@ Teams typically attempt place kicks when:
 
 ### Pindown
 
-A pindown is worth **1 point** and is awarded to the kicking team when the receiving team begins a possession inside its own 10-yard line. This occurs most commonly after punts that pin the opponent deep.
+A pindown is worth **1 point** and is awarded to the kicking team when a punt, a missed snap kick, or a missed field goal goes into the end zone and the receiving team cannot return it out. The receiving team then takes possession at its own 25-yard line. A receiving team that does return the ball out of its end zone starts where the return ends, and no point is scored. Pindowns come most often from punts aimed at the corner of the end zone.
 
 The pindown is Viperball's equivalent of the **rouge** or **single** in Canadian football — a field-position score that rewards directional kicking. Teams that specialize in territorial offense (notably those running the **Rouge Hunt** scheme) actively hunt pindowns as a scoring strategy, treating punts as offensive weapons rather than concessions.
 
@@ -305,9 +320,7 @@ The place kick is a set-piece scoring kick worth 3 points. The ball is held on t
 
 ### Punt
 
-A punt is a territorial kick used to surrender possession while pushing the opponent deep into their own territory. The punter drops the ball and kicks it before it hits the ground. Punts are the primary weapon for teams seeking **pindowns** — a punt that pins the opponent inside the 10-yard line scores 1 point.
-
-A punt that enters the end zone without being fielded results in a **touchback** — the receiving team takes over at the 25-yard line.
+A punt is a territorial kick used to surrender possession while pushing the opponent deep into their own territory. The punter drops the ball and kicks it before it hits the ground. Punts are the primary weapon for teams seeking **pindowns**: a punt into the end zone that the receiving team cannot return out scores 1 point, and the receiving team takes over at its own 25-yard line.
 
 ### Kick Pass
 
@@ -366,7 +379,11 @@ If a fumble goes out of bounds, the team that last possessed the ball retains po
 
 ### Interceptions
 
-A kick pass intercepted by a defender results in an immediate change of possession. The intercepting player may return the ball. An interception returned for a touchdown scores 9 points.
+A kick pass or lateral intercepted by a defender results in an immediate change of possession. The intercepting player may return the ball. An interception returned for a touchdown scores 9 points.
+
+#### Bonus Possession
+
+An interception also earns the intercepting team a **bonus possession**, a borrowed idea from pesäpallo and the hockey power play. After the intercepting team finishes the drive that follows its interception, it gets the ball again for an extra drive starting from its own 20-yard line, before the opponent's next possession. Any fumble or interception while a bonus is pending cancels it, and an interception during a bonus drive does not earn another one. A pending bonus does not carry over past halftime or the end of the game.
 
 ### Turnover on Downs
 
@@ -432,7 +449,9 @@ A player who exhibits signs of a concussion is immediately removed from the game
 
 ### Restarts After Scoring
 
-Viperball does not use traditional kickoffs. After every score, the non-scoring team receives the ball and begins its possession from a designated starting field position, typically between their own 20 and 35-yard line. The elimination of the kickoff removes the most dangerous collision play in gridiron sports while maintaining the flow of the game.
+Viperball does not use traditional kickoffs. After every score, the non-scoring team receives the ball and begins its possession under **Delta Yards**: the starting spot is its own 20-yard line, moved back one yard for every point it leads by and forward one yard for every point it trails by. A team down 14 starts at its own 34; a team up 10 starts at its own 10. A drive never starts behind the 1-yard line or past the opponent's 20. The elimination of the kickoff removes the most dangerous collision play in gridiron sports while maintaining the flow of the game, and Delta Yards keeps trailing teams within reach.
+
+After a safety, the team that conceded it restarts from its own 20-yard line.
 
 ### Punt Returns
 
@@ -542,11 +561,9 @@ The sixth official (Side Judge) is unique to Viperball and exists because the Vi
 
 ## Overtime
 
-If the score is tied at the end of regulation, the game proceeds to overtime.
+Regular season games that are tied at the end of regulation end in a tie. Postseason games (bowls and playoffs) that are tied go to overtime.
 
-Each team receives one possession starting from the opponent's 35-yard line. The team that scores more points on its possession wins. If both teams score the same number of points, additional overtime periods are played until the tie is broken.
-
-There are no timeouts in overtime. The play clock runs normally. All scoring rules remain in effect.
+Overtime is played in **8-minute periods**. Possession alternates to start each period, with the visiting team receiving first, and each period starts from the receiving team's own 20-yard line. Each team gets 4 fresh timeouts per period, and the 3-minute warning applies. Periods continue until the tie is broken, up to five. All scoring rules remain in effect.
 
 ---
 
@@ -597,6 +614,10 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Chain Gang** — An offensive scheme that maximizes lateral chains on every play. High-variance, high-entertainment football.
 
+**Bonus Possession** — An extra drive, from the team's own 20-yard line, awarded to a team after it intercepts a kick pass or lateral. See [Interceptions](#interceptions).
+
+**Delta Yards** — The restart rule after a score: the receiving team starts at its own 20, minus its lead or plus its deficit in yards. Leading teams start deeper; trailing teams start closer.
+
 **Diving Wing** — A flanker specializing in kick-blocking. Times the kicker's release and dives at the ball.
 
 **DK** — Abbreviation for drop kick. See Snap Kick.
@@ -617,7 +638,7 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Lateral Spread** — An offensive scheme that stretches the defense horizontally using 2–4 lateral chains per play.
 
-**Pindown** — 1-point score awarded when the opponent begins a possession inside their own 10-yard line.
+**Pindown** — 1-point score awarded when a punt, missed snap kick, or missed field goal goes into the end zone and the receiving team does not return it out.
 
 **PK** — Abbreviation for place kick. See Field Goal.
 
