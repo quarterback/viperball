@@ -3839,18 +3839,30 @@ class ViperballEngine:
         # DC gameplan: per-game defensive suppression roll (empty = no effect)
         self.home_dc_gameplan: Dict[str, float] = {}
         self.away_dc_gameplan: Dict[str, float] = {}
+        # The existing modifier/gameplan functions create OS-seeded local
+        # Random objects unless provided an RNG. Give each side a persistent
+        # game-seeded stream for reproducible coordinator effects, including
+        # halftime re-rolls. Unseeded games keep the old behavior.
+        self._home_coaching_rng = (random.Random(f"coach:{seed}:home")
+                                   if seed is not None else None)
+        self._away_coaching_rng = (random.Random(f"coach:{seed}:away")
+                                   if seed is not None else None)
         if home_coaching or away_coaching:
             from engine.coaching import compute_gameday_modifiers, roll_dc_gameplan
             home_off_style = getattr(self.home_team, 'offense_style', 'balanced') if self.home_team else 'balanced'
             away_off_style = getattr(self.away_team, 'offense_style', 'balanced') if self.away_team else 'balanced'
             if home_coaching:
                 self.home_coaching_mods = compute_gameday_modifiers(
-                    home_coaching, offense_style=home_off_style)
-                self.home_dc_gameplan = roll_dc_gameplan(home_coaching)
+                    home_coaching, rng=self._home_coaching_rng,
+                    offense_style=home_off_style)
+                self.home_dc_gameplan = roll_dc_gameplan(
+                    home_coaching, rng=self._home_coaching_rng)
             if away_coaching:
                 self.away_coaching_mods = compute_gameday_modifiers(
-                    away_coaching, offense_style=away_off_style)
-                self.away_dc_gameplan = roll_dc_gameplan(away_coaching)
+                    away_coaching, rng=self._away_coaching_rng,
+                    offense_style=away_off_style)
+                self.away_dc_gameplan = roll_dc_gameplan(
+                    away_coaching, rng=self._away_coaching_rng)
 
         # V2.7: Lead management profiles — countermeasure tendencies + sensitivity
         from engine.coaching import _default_lead_profile
@@ -5060,8 +5072,10 @@ class ViperballEngine:
             if not coaching_staff:
                 continue
 
-            # Re-roll base gameplan
-            new_gp = roll_dc_gameplan(coaching_staff)
+            # Re-roll base gameplan on the same side-specific seeded stream.
+            rng = (self._home_coaching_rng if def_side == "home"
+                   else self._away_coaching_rng)
+            new_gp = roll_dc_gameplan(coaching_staff, rng=rng)
 
             # Calculate tendency bias from first-half play distribution
             total_plays = sum(off_freq.get(pt, 0) for pt in play_types)
