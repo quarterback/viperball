@@ -74,15 +74,17 @@ Its `explosive_suppression` scales the existing breakaway **chance**,
 without directly altering the yards of every successful run.
 
 The independent switch `defense_scheme_effects_enabled` allows an
-ablation that preserves baseline play mechanics. All existing
-player-based coverage/tackling, blitz/rush, fumble pressure and special
-teams code remains active.
+ablation that preserves baseline play mechanics. Unused `gap_breakdown_bonus`
+entries and obsolete `territory_kick` values were removed from the eight
+scheme definitions; neither had an active scheme resolution pathway.
+All existing player-based coverage/tackling, blitz/rush, fumble pressure
+and special teams code remains active.
 
 ## Field audit at this step
 
 | Defensive scheme field | Observed usage after this change |
 |---|---|
-| play_family_modifiers | **Now active** via one bounded play matchup effect, except the legacy territory_kick value (requires separate kick audit) |
+| play_family_modifiers | **Now active** via one bounded play matchup effect for current run, lateral, trick and kick-pass families; retired territory_kick entries removed |
 | read_success_rate, gameplan_bias, situational, personnel_weights | **Now active for ordinary run, lateral and kick-pass reads** as well as trick plays |
 | kick_pass_coverage | **Now active** via bounded completion probability adjustment |
 | explosive_suppression | **Now active** via breakaway chance |
@@ -91,12 +93,12 @@ teams code remains active.
 | kick_suppression | Already active in punt distance |
 | pindown_defense | Already active in return-out chance |
 | gameplan_bias / adaptation and coordinator film study | Previously active in other channels; the common read applies a different, recorded stage |
-| gap_breakdown_bonus | Still appears to be **declaration-only**; needs a decision to implement or remove |
+| gap_breakdown_bonus | **Removed** from all eight schemes; declaration-only configuration had no resolution pathway |
 | defensive read counters | Newly emitted in full game results |
 
 This is not a claim that every declared field should be connected by
-simply multiplying results again. `gap_breakdown_bonus` and old
-`territory_kick` values remain explicit follow-up checks within DEF-02.
+simply multiplying results again. Retired gap-breakdown and territory-kick
+configuration was removed instead of applying extra penalties.
 
 ## Validation
 
@@ -134,8 +136,8 @@ restore a predetermined points or margin distribution.
 - Multiple established defensive layers still stack (coverage/personnel,
   coordinator prep, late-down clamp, form, scheme, reads). The new terms
   are bounded but season-scale effect is **unknown** until benchmarked.
-- The `gap_breakdown_bonus` and legacy kick-play configuration are
-  not yet part of the tested path.
+- Removing unused config keys does not by itself verify every external consumer;
+  compatibility must be checked when the full suite runs.
 - Defense reads are recorded per team in the game payload but not yet
   exposed in React game reports. That display belongs to UI-01.
 - DEF-04 (real lineup effects), DEF-05 (old five-style
