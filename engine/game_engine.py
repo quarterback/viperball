@@ -59,6 +59,25 @@ V2_ENGINE_CONFIG = {
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
     # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
     "base_yards_multiplier": 2.3,
+    # V3.3: Field compression. As the offense nears the goal line the defense
+    # has less ground to cover, so gains shrink. Yards on a play are scaled
+    # from 1.0 at field_compression_start down to (1 - field_compression) at
+    # the goal line. 0.0 turns it off. This is what makes drives stall inside
+    # kicking range and brings snap kicks into the game.
+    "field_compression": 0.25,
+    "field_compression_start": 60,
+    # V3.3: Old goal line rule gave a touchdown on 20-55% of plays that
+    # ended at the 1 to 5 yard line without crossing. False = the ball has
+    # to cross the goal line.
+    "goal_line_bonus_td": False,
+    # V3.3: Kick skill rescale. The kick range formulas were written when
+    # kickers were rated 60-100. The March 2026 talent rebalance dropped
+    # ratings by about 30 points (a median team's best kicker is now ~51),
+    # which shrank the median snap kick range to 23 yards and left the
+    # weakest teams unable to make any kick. This maps the current rating
+    # scale back onto the scale the formulas expect:
+    #   effective = 60 + (rating - 15) * 0.5   (25 -> 65, 51 -> 78, 85 -> 95)
+    "kick_skill_rescale": True,
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -5669,7 +5688,7 @@ class ViperballEngine:
             team_final = self.get_offensive_team()
             kc_final = self._kicker_candidates(team_final)
             k_final = max(kc_final, key=lambda p: p.kicking) if kc_final else None
-            k_skill = k_final.kicking if k_final else 60
+            k_skill = self._kick_skill(k_final.kicking) if k_final else 60
             dk_range = 30 + (k_skill - 60) * 0.75 + 5
 
             # V3.1: Deficit awareness for final play — don't kick if the
@@ -5823,7 +5842,11 @@ class ViperballEngine:
             return 0.003  # 0.3% — extremely rare
 
         # Normal range: skill-dependent comfort zone
-        comfortable_range = 30 + (kicker_skill - 60) * 0.5  # 60-skill→30yd, 90-skill→45yd
+        # A placed ball carries farther than a drop kick (README, The Field
+        # Goal), so the place kick's comfortable range sits 8 yards beyond
+        # the snap kick's. It used to be shorter, which meant a field goal
+        # was never the better choice and none were kicked.
+        comfortable_range = 30 + (kicker_skill - 60) * 0.75 + 8
 
         if distance <= 20:
             return 0.97  # Chip shot
@@ -5867,6 +5890,14 @@ class ViperballEngine:
             return max(0.05, 0.20 - over * 0.02)
         else:
             return max(0.03, 0.06 - (distance - comfortable_range - 15) * 0.01)
+
+    @staticmethod
+    def _kick_skill(raw) -> float:
+        """Kicker rating as the kick range formulas expect it (see
+        V2_ENGINE_CONFIG["kick_skill_rescale"])."""
+        if not V2_ENGINE_CONFIG.get("kick_skill_rescale", True):
+            return raw
+        return max(40.0, min(100.0, 60.0 + (raw - 15.0) * 0.5))
 
     POSSESSION_VALUE = 3.0
 
@@ -5927,7 +5958,7 @@ class ViperballEngine:
 
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
-        kicker_skill = kicker.kicking
+        kicker_skill = self._kick_skill(kicker.kicking)
 
         # Place kicks beyond 54 yards are near-impossible; never attempt beyond 65
         pk_success = self._place_kick_success(fg_distance, kicker_skill) if fg_distance <= 54 else 0.0
@@ -5935,8 +5966,9 @@ class ViperballEngine:
 
         # ── Red zone (fp >= 90): always chase the TD ──
         if fp >= 90:
-            # Only bail to a kick on 6th down with long ytg
-            if down == 6 and ytg >= 8:
+            # On 6th down take the near-certain 5 points unless the goal
+            # line is within 3 yards. A failed 6th down try scores nothing.
+            if down == 6 and (100 - fp) > 3:
                 if dk_success >= 0.40:
                     return PlayType.DROP_KICK
                 if pk_success >= 0.50:
@@ -6060,7 +6092,8 @@ class ViperballEngine:
         best_kick = None
         best_kick_ev = 0.0
         # Drop kick: only within the coaching comfort zone
-        if not dk_futile and fg_distance <= dk_comfort and dk_success >= 0.30:
+        # (6th down choice: any snap kick with a real chance, 40% or better.)
+        if not dk_futile and dk_success >= 0.40:
             best_kick = PlayType.DROP_KICK
             best_kick_ev = dk_success * 5.0
         # Place kick (FG): available at any viable distance
@@ -6109,8 +6142,7 @@ class ViperballEngine:
             # 5th down is the natural snap kick down: a miss keeps the ball
             # and leaves 6th down for a second try, while a miss on 6th is a
             # turnover. Go for it instead on short yardage.
-            if (not dk_futile and ytg >= 4
-                    and fg_distance <= dk_comfort and dk_success >= 0.50):
+            if not dk_futile and ytg >= 4 and dk_success >= 0.55:
                 return PlayType.DROP_KICK
 
             # Otherwise advance and decide on 6th.
@@ -6162,6 +6194,15 @@ class ViperballEngine:
         to a stuff or short gain.  Stronger defenses get more frequent
         and more punishing clamp rolls.
         """
+        # Field compression applies on every down (see V2_ENGINE_CONFIG).
+        comp = V2_ENGINE_CONFIG.get("field_compression", 0.0)
+        if comp > 0 and yards > 0:
+            start = V2_ENGINE_CONFIG.get("field_compression_start", 60)
+            fp_now = self.state.field_position
+            if fp_now > start:
+                frac = min(1.0, (fp_now - start) / max(1, 100 - start))
+                yards = max(1, int(round(yards * (1.0 - comp * frac))))
+
         down = self.state.down
         if down < 4:
             return yards
@@ -7236,7 +7277,7 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker_candidates = self._kicker_candidates(team)
         kicker = max(kicker_candidates, key=lambda p: p.kicking) if kicker_candidates else None
-        kicker_skill = kicker.kicking if kicker else 60
+        kicker_skill = self._kick_skill(kicker.kicking) if kicker else 60
 
         dk_comfort = 30 + (kicker_skill - 60) * 0.75
         pk_comfort = 45 + (kicker_skill - 60) * 0.9
@@ -8226,6 +8267,8 @@ class ViperballEngine:
         # Ball crosses the goal line — automatic TD
         if new_position >= 100:
             return True
+        if not V2_ENGINE_CONFIG.get("goal_line_bonus_td", True):
+            return False
         # Goal-line situations — proximity increases TD probability
         if new_position >= 98:
             return random.random() < 0.55
@@ -11746,7 +11789,7 @@ class ViperballEngine:
         distance = 100 - self.state.field_position + 10
 
         # ── Kicker-range success model ──
-        success_prob = self._drop_kick_success(distance, kicker.kicking)
+        success_prob = self._drop_kick_success(distance, self._kick_skill(kicker.kicking))
 
         # Style, archetype, and weather modifiers (secondary adjustments)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
@@ -12116,7 +12159,7 @@ class ViperballEngine:
         # Uses the same model as _place_kick_success: the kicker determines
         # a comfortable range.  Within range, kicks are near-automatic.
         # Beyond range, success drops off.
-        success_prob = self._place_kick_success(distance, kicker.kicking)
+        success_prob = self._place_kick_success(distance, self._kick_skill(kicker.kicking))
 
         # Style, archetype, and weather modifiers (secondary adjustments)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
