@@ -176,6 +176,8 @@ export interface RosterPlayer {
   awareness: number;
   stamina: number;
   work_rate?: number;
+  line?: number | null;
+  def_specialist?: boolean;
   kicking: number;
   tackling: number;
   kick_power?: number;

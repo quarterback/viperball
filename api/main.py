@@ -1805,9 +1805,12 @@ def get_team_roster(session_id: str, team_name: str):
             depth_rank_map[pname] = rank
             depth_status_map[pname] = status
 
+    from engine.game_engine import preview_midfield_lines
+    line_map = preview_midfield_lines(team, unavail)
     serialized = []
     for p in team.players:
         d = _serialize_player(p)
+        d.update(line_map.get(p.name, {"line": None, "def_specialist": False}))
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
         d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
@@ -3565,9 +3568,12 @@ def team_roster(session_id: str, team_name: str):
             depth_rank_map[pname] = rank
             depth_status_map[pname] = status
 
+    from engine.game_engine import preview_midfield_lines
+    line_map = preview_midfield_lines(team, unavail)
     players = []
     for p in team.players:
         d = _serialize_player(p)
+        d.update(line_map.get(p.name, {"line": None, "def_specialist": False}))
         d["depth_rank"] = depth_rank_map.get(p.name, 99)
         d["depth_status"] = depth_status_map.get(p.name, "healthy")
         d["redshirt_used"] = getattr(p, "redshirt_used", False)
@@ -6436,6 +6442,15 @@ def my_team_dashboard(session_id: str = ""):
 
     # Position breakdown
     from engine.player_card import player_to_card
+    from engine.game_engine import preview_midfield_lines
+    _tracker = sess.get("injury_tracker")
+    _unavail = set()
+    if _tracker:
+        try:
+            _unavail = _tracker.get_unavailable_names(team_name, season.get_last_completed_week())
+        except Exception:
+            _unavail = set()
+    line_map = preview_midfield_lines(team, _unavail)
     pos_counts = {}
     roster_data = []
     for p in team.players:
@@ -6453,6 +6468,7 @@ def my_team_dashboard(session_id: str = ""):
             "agility": card.agility,
             "stamina": getattr(p, "stamina", 0),
             "work_rate": getattr(p, "work_rate_rating", 0),
+            **line_map.get(p.name, {"line": None, "def_specialist": False}),
         })
 
     roster_data.sort(key=lambda x: -x["overall"])

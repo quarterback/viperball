@@ -1034,6 +1034,86 @@ ZB_STYLE_MAP = {
 }
 
 
+def _rush_score(p, forced=None) -> float:
+    """How strongly a coach wants this player carrying the ball. The best
+    at each position starts (see assign_game_roles)."""
+    forced = forced or {}
+    spd = p.speed
+    pwr = getattr(p, 'power', 75)
+    agi = getattr(p, 'agility', 75)
+    stam = p.stamina
+    aware = getattr(p, 'awareness', 75)
+    base = spd * 1.2 + pwr * 1.0 + agi * 1.1 + stam * 0.7 + aware * 0.5
+    arch_mult = 1.0
+    if p.archetype in ("running_zb", "power_flanker"):
+        arch_mult = 1.10
+    elif p.archetype in ("speed_flanker", "elusive_flanker"):
+        arch_mult = 1.08
+    elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
+        arch_mult = 1.04
+    score = base * arch_mult
+    # Depth-chart override: massive boost so designated starter wins selection
+    if forced.get(p.position) == p.name:
+        score *= 10.0
+    return score
+
+
+def _tackle_score(p) -> float:
+    return p.tackling * 1.3 + p.speed * 0.9 + p.awareness * 0.8
+
+
+def build_midfield_lines(players, depth_key, n_lines: int = 3):
+    """Midfield lines of five: a Viper, a Halfback, a Wingback, a Slotback
+    and the best remaining flanker, best players on line one."""
+    pools = {}
+    for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+        pools[pos] = sorted((p for p in players if p.position == pos),
+                            key=lambda p: depth_key(p, pos), reverse=True)
+    lines = []
+    for _ in range(n_lines):
+        line = []
+        for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+            if pools[pos]:
+                line.append(pools[pos].pop(0))
+        while len(line) < 5:
+            left = [p for pos in ("Halfback", "Wingback", "Slotback", "Viper") for p in pools[pos]]
+            if not left:
+                break
+            b = max(left, key=lambda p: p.overall)
+            pools[b.position].remove(b)
+            line.append(b)
+        if line:
+            lines.append(line)
+    return lines
+
+
+def preview_midfield_lines(team, unavailable=()) -> dict:
+    """The lines a team would start its next game with, for roster pages.
+    Returns {player name: {"line": 1-3, "def_specialist": bool}}."""
+    unavailable = set(unavailable or ())
+    forced = getattr(team, "forced_starters", {}) or {}
+    avail = [p for p in team.players if p.name not in unavailable]
+    starters = set()
+    for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+        group = [p for p in avail if p.position == pos]
+        if group:
+            starters.add(max(group, key=lambda p: _rush_score(p, forced)).name)
+    n = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+    lines = build_midfield_lines(
+        avail, lambda p, pos: (1000 if p.name in starters else 0) + p.overall, n)
+    spec = None
+    if len(lines) > 1:
+        d = sorted(lines[0], key=_tackle_score, reverse=True)[:4]
+        bench = [p for l in lines[1:] for p in l]
+        if d and bench:
+            b = max(bench, key=_tackle_score)
+            edge = V2_ENGINE_CONFIG.get("defensive_specialist_edge", 0.08)
+            if _tackle_score(b) >= _tackle_score(d[-1]) * (1.0 + edge):
+                spec = b.name
+    return {p.name: {"line": i + 1, "def_specialist": p.name == spec}
+            for i, l in enumerate(lines) for p in l}
+
+
 def assign_game_roles(team, offense_style: str = "balanced") -> dict:
     """Assign starter/rotation roles for offense, defense, and special teams.
 
@@ -1084,24 +1164,7 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
         zb.game_zb_style = ZB_STYLE_MAP.get(zb.archetype, "dual_threat")
 
     def rush_score(p):
-        spd = p.speed
-        pwr = getattr(p, 'power', 75)
-        agi = getattr(p, 'agility', 75)
-        stam = p.stamina
-        aware = getattr(p, 'awareness', 75)
-        base = spd * 1.2 + pwr * 1.0 + agi * 1.1 + stam * 0.7 + aware * 0.5
-        arch_mult = 1.0
-        if p.archetype in ("running_zb", "power_flanker"):
-            arch_mult = 1.10
-        elif p.archetype in ("speed_flanker", "elusive_flanker"):
-            arch_mult = 1.08
-        elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
-            arch_mult = 1.04
-        score = base * arch_mult
-        # Depth-chart override: massive boost so designated starter wins selection
-        if forced.get(p.position) == p.name:
-            score *= 10.0
-        return score
+        return _rush_score(p, forced)
 
     def recv_score(p):
         hands = getattr(p, 'hands', 75)
@@ -4570,8 +4633,7 @@ class ViperballEngine:
         """Depth chart order inside a position group: starters first, then
         by overall."""
         if group == "two_way":
-            starter = 0
-            return p.tackling * 1.3 + p.speed * 0.9 + p.awareness * 0.8
+            return _tackle_score(p)
         if group in ("Defensive Line", "Keeper"):
             starter = 1 if getattr(p, "game_def_role", "") == "STARTER" else 0
         elif group == "Offensive Line":
@@ -4657,26 +4719,8 @@ class ViperballEngine:
         if key in cache:
             return cache[key]
         n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
-        pools = {}
-        for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
-            pools[pos] = sorted((p for p in team.players
-                                 if p.position == pos and p.name not in hard),
-                                key=lambda p: self._depth_score(p, pos), reverse=True)
-        lines = []
-        for _ in range(n_lines):
-            line = []
-            for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
-                if pools[pos]:
-                    line.append(pools[pos].pop(0))
-            while len(line) < 5:
-                left = [p for pos in ("Halfback", "Wingback", "Slotback", "Viper") for p in pools[pos]]
-                if not left:
-                    break
-                b = max(left, key=lambda p: p.overall)
-                pools[b.position].remove(b)
-                line.append(b)
-            if line:
-                lines.append(line)
+        lines = build_midfield_lines([p for p in team.players if p.name not in hard],
+                                     self._depth_score, n_lines)
         cache[key] = lines
         return lines
 
@@ -7594,6 +7638,9 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+        if self._fast_break and getattr(play, "description", None) is not None:
+            caught = self.away_team if self._fast_break == "home" else self.home_team
+            play.description = f"FAST BREAK, {caught.name} caught changing. {play.description}"
 
         # ── Referee: spot error on non-scoring, non-penalty plays ──
         if (play.result not in ("touchdown", "safety", "penalty", "kneel",

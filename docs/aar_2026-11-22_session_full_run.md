@@ -52,6 +52,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     specialist, live turnover changes that can get caught, players picked only from the
     eleven on the field, cover across groups. → `aar_2026-11-23_lacrosse_line_changes.md`
 
+15. **Lines in the app** (November 23). Line column with specialist badge on the team roster
+    and My Team, line changes and caught changing in the box score, fast break tag in the
+    play by play. → `aar_2026-11-23_lines_in_app.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

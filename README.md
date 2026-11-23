@@ -618,6 +618,8 @@ Substitution is unlimited and allowed at any time, including during live play, s
 
 A tired player or line comes off only if a fresh replacement would play about as well as the tired one can right now, so deep teams rotate more and thin teams ride their starters. Coaches ride starters longer in a close fourth quarter, and every mark depends on the players' work rate, so the whole team never changes at once.
 
+The team roster and My Team pages show each midfielder's line (1, 2 or 3) for the next game, with a DS badge on the defensive specialist. The box score shows each team's line changes and how often it was caught changing, and the play by play marks each fast break.
+
 **Changing on the fly.** Every down ends in a dead ball, so most changes happen between plays with no risk. The risk comes when the ball turns over during live play: a fumble, an intercepted lateral or kick pass, a muffed or blocked kick, or a returned missed snap kick. The team that lost the ball can rush its defensive specialist on, or change a tired line, while play is live. If it does, it can be caught short, and the other side gets a fast break on the next play. A coach can also wait one play and change safely at the next dead ball.
 
 ### Home Field and Travel
