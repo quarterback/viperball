@@ -32,14 +32,18 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
    breakaways, turnovers, yards after catch and prestige moved to the current rating scale.
    → `rating_scale_inventory_2026-11-22.md`, `aar_2026-11-22_rating_rescale.md`
 
+10. **Blowouts, snap kicks, prestige.** Rating gap dial, earlier kicks in range, prestige
+    kept in season games, real season mode in the benchmark.
+    → `aar_2026-11-22_blowouts_snap_kicks_prestige.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
 |---|---|---|---|
-| Points | 40.5 | 44.3 | 45 to 50 |
-| Touchdowns | 4.2 | 3.3 | 1.9 to 3.5 |
-| Snap kicks made | 0.3 | 2.2 | 3 to 5 |
-| Median final margin | 32 | 23.5 | |
+| Points | 40.5 | 47.6 | 45 to 50 |
+| Touchdowns | 4.2 | 3.1 | 1.9 to 3.5 |
+| Snap kicks made | 0.3 | 3.0 | 3 to 5 |
+| Median final margin | 32 | 19.5 | |
 | Plays on 7th down or later | 131 per 60 games | 0 | 0 |
 
 ## What went wrong in the process
@@ -54,6 +58,8 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 - **Reported a 47 second season sim time** that was a fast sim run; the full engine takes
   about 2 minutes.
 - **Replies were not in plain language** until Ron said so.
+- **Stopped after each round and handed back a list of leftovers** instead of working until
+  the targets were met. Ron called it out; the last run was done in one pass.
 - **The rescale plan named the wrong first target.** It said prestige drives most plays; the
   prestige team rating has been off since March. Caught while writing the inventory.
 
@@ -74,8 +80,8 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 ## Open work
 
 1. Merge PR #323 and redeploy; click through college season, dynasty and stats site.
-2. Seasons never pass prestige into games (every game runs 50 vs 50); measure blowouts on a
-   real conference schedule; snap kicks are at 2.2 against a 3 to 5 target.
+2. 27% of games are still decided by 30+; the rest comes from how uneven generated rosters
+   are (team averages 18 to 59). Field goals are rare (0.13 per team).
 3. Pro leagues, WVL and the high school league still use the fast sim.
 4. The even program count rule still blocks a 205 team dynasty; the scheduler does not need it.
 5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.

@@ -64,7 +64,7 @@ V2_ENGINE_CONFIG = {
     # from 1.0 at field_compression_start down to (1 - field_compression) at
     # the goal line. 0.0 turns it off. This is what makes drives stall inside
     # kicking range and brings snap kicks into the game.
-    "field_compression": 0.25,
+    "field_compression": 0.4,
     "field_compression_start": 60,
     # V3.3: Old goal line rule gave a touchdown on 20-55% of plays that
     # ended at the 1 to 5 yard line without crossing. False = the ball has
@@ -81,14 +81,19 @@ V2_ENGINE_CONFIG = {
     # V3.3: Rating rescale for the rest of the engine, same map as the kick
     # one: scale_rating(raw) = 60 + (raw - 15) * 0.5. Each group of formulas
     # can be switched separately (see docs/rating_scale_inventory_2026-11-22.md).
+    "rating_scale_slope": 0.3,
     "rescale_contest": True,       # A: carrier vs tackler, kick pass, late-down clamp
     "rescale_speed": True,         # C: pursuit, reads, returns, carrier bonus
     "rescale_breakaway": True,     # C: breakaway chance from team speed
     # Team speed (60-100 scale) at which the breakaway chance gets no bonus
     # or penalty. Higher = fewer breakaways. The main dial for long touchdowns.
-    "breakaway_speed_baseline": 98,
+    "breakaway_speed_baseline": 92,
     "rescale_turnovers": True,     # D: lateral interceptions and fumbles
     "rescale_yac": True,           # E: yards after catch, kick pass distance, returns
+    # V3.3: How far from a first down a team must be before it takes a snap
+    # kick in range. Lower = coaches shoot sooner = more snap kicks.
+    "kick_4th_down_min_ytg": 4,
+    "kick_5th_down_min_ytg": 1,
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -144,7 +149,11 @@ def scale_rating(raw, group: str = "") -> float:
     that group's V2_ENGINE_CONFIG switch."""
     if group and not V2_ENGINE_CONFIG.get(group, False):
         return raw
-    return max(40.0, min(100.0, 60.0 + (raw - 15.0) * 0.5))
+    # A median player (35) maps to 70. The slope sets how much a rating gap
+    # counts: 0.5 is the full conversion; lower values pull teams closer
+    # together and are the main dial for blowouts.
+    slope = V2_ENGINE_CONFIG.get("rating_scale_slope", 0.5)
+    return max(40.0, min(100.0, 70.0 + (raw - 35.0) * slope))
 
 
 def derive_halo(prestige: int) -> Tuple[float, float]:
@@ -3637,8 +3646,8 @@ class ViperballEngine:
                  home_coaching: Optional[Dict] = None,
                  away_coaching: Optional[Dict] = None,
                  # V2: Prestige and game context
-                 home_prestige: int = 50,
-                 away_prestige: int = 50,
+                 home_prestige: Optional[int] = None,
+                 away_prestige: Optional[int] = None,
                  is_playoff: bool = False,
                  is_trap_game: bool = False,
                  # V2.4: Defensive prestige — No-Fly Zone
@@ -3754,6 +3763,14 @@ class ViperballEngine:
                 p.variance_archetype = assign_variance_archetype(p)
 
         # ── V2: Wire prestige into engine ──
+        # No value passed = keep the team's own prestige. The old default of
+        # 50 overwrote every team's prestige on its first game, because
+        # Season never passes one, so the underdog and trap game logic
+        # never saw a favorite.
+        if home_prestige is None:
+            home_prestige = getattr(self.home_team, "prestige", 50)
+        if away_prestige is None:
+            away_prestige = getattr(self.away_team, "prestige", 50)
         self.home_team.prestige = home_prestige
         self.away_team.prestige = away_prestige
         self._is_playoff = is_playoff
@@ -6100,7 +6117,9 @@ class ViperballEngine:
             # miss on downs 1-5 keeps the ball, so a 4th down attempt still
             # leaves 5th and 6th. Only when the first down is far away;
             # green-light kickers/coaches pull the trigger a little sooner.
-            stall_ytg = 7 if has_green_light else 10
+            stall_ytg = V2_ENGINE_CONFIG.get("kick_4th_down_min_ytg", 10)
+            if has_green_light:
+                stall_ytg = max(1, stall_ytg - 3)
             if (not dk_futile and ytg >= stall_ytg
                     and fg_distance <= dk_comfort and dk_success >= 0.70):
                 return PlayType.DROP_KICK
@@ -6162,7 +6181,8 @@ class ViperballEngine:
             # 5th down is the natural snap kick down: a miss keeps the ball
             # and leaves 6th down for a second try, while a miss on 6th is a
             # turnover. Go for it instead on short yardage.
-            if not dk_futile and ytg >= 4 and dk_success >= 0.55:
+            if (not dk_futile and dk_success >= 0.55
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)):
                 return PlayType.DROP_KICK
 
             # Otherwise advance and decide on 6th.

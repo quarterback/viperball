@@ -38,6 +38,7 @@ TARGETS = {
 
 
 def build_matchups(n_games: int, seed: int):
+    random.seed(seed)  # fresh rosters are generated at random; fix them
     teams = load_teams_from_directory(os.path.join(ROOT, "data", "teams"), fresh=True)
     styles = auto_assign_all_teams(os.path.join(ROOT, "data", "teams"), human_teams=[], seed=seed)
     rng = random.Random(seed)
@@ -66,11 +67,66 @@ def bucket(start: int) -> str:
     return "opp half"
 
 
+def run_season(weeks: int):
+    """Sim a real CVL season (conference schedule, fresh rosters, season
+    schemes) through the same code the app uses, and report the same numbers.
+    This is the true measure of margins; the random matchup sample overstates
+    blowouts because it pairs top teams with bottom teams."""
+    import tempfile
+    os.environ["VIPERBALL_DB_PATH"] = os.path.join(tempfile.mkdtemp(), "bench.db")
+    from fastapi.testclient import TestClient
+    import api.main as api
+    client = TestClient(api.app)
+    sid = client.post("/sessions", json={}).json()["session_id"]
+    client.post(f"/sessions/{sid}/season", json={"name": "Benchmark"}).raise_for_status()
+    season = api.sessions[sid]["season"]
+    for _ in range(weeks):
+        if season.is_regular_season_complete():
+            break
+        season.simulate_week()
+    games = [g for g in season.schedule if g.completed and g.full_result]
+    stats = collections.defaultdict(list)
+    margins, conf_margins = [], []
+    for g in games:
+        r = g.full_result
+        m = abs(g.home_score - g.away_score)
+        margins.append(m)
+        if g.is_conference_game:
+            conf_margins.append(m)
+        for side in ("home", "away"):
+            s = r["stats"][side]
+            stats["points"].append(r["final_score"][side]["score"])
+            stats["touchdowns"].append(s["touchdowns"])
+            stats["snap_kicks_made"].append(s["drop_kicks_made"])
+            stats["field_goals_made"].append(s["place_kicks_made"])
+            stats["turnovers"].append(s["fumbles_lost"] + s["kick_pass_interceptions"] + s["lateral_interceptions"])
+    print(f"Real season: {len(games)} games, {len(conf_margins)} conference games\n")
+    print("Per team, per game")
+    for key, values in stats.items():
+        mean = statistics.mean(values)
+        line = f"  {key:20} {mean:6.2f}"
+        if key in TARGETS:
+            lo, hi = TARGETS[key]
+            line += f"   target {lo}-{hi}  {'ok' if lo <= mean <= hi else 'OFF'}"
+        print(line)
+    for label, ms in (("All games", margins), ("Conference games", conf_margins)):
+        if ms:
+            print(f"{label}: median margin {statistics.median(ms):.1f},"
+                  f" decided by 30+ {sum(x >= 30 for x in ms) / len(ms):.0%},"
+                  f" within 9 {sum(x <= 9 for x in ms) / len(ms):.0%}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--games", type=int, default=200)
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--season", type=int, default=0, metavar="WEEKS",
+                    help="sim this many weeks of a real season instead of random matchups")
     args = ap.parse_args()
+    if args.season:
+        random.seed(args.seed)
+        run_season(args.season)
+        return
 
     teams, styles, pairs = build_matchups(args.games, args.seed)
 
