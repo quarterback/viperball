@@ -19,6 +19,7 @@ import json
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
+from engine.stable_hash import stable_hash
 
 
 PHILOSOPHY_TO_OFFENSE = {
@@ -245,7 +246,7 @@ def auto_assign_all_teams(
 
         team_stats = data.get("team_stats", {})
         identity = data.get("identity", {})
-        team_seed = hash(team_name) + rng_base
+        team_seed = stable_hash(team_name) + rng_base
         staff = (coaching_staffs or {}).get(team_name)
         configs[team_name] = assign_ai_scheme(team_stats, identity, seed=team_seed,
                                               coaching_staff=staff)

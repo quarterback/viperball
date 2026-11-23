@@ -37,6 +37,7 @@ from engine.season import (
 from engine.dynasty import create_dynasty, Dynasty
 from engine.player_card import player_to_card
 from engine.ai_coach import auto_assign_all_teams, get_scheme_label, load_team_identity
+from engine.stable_hash import stable_hash
 from engine.game_engine import WEATHER_CONDITIONS, DEFENSE_STYLES, POSITION_TAGS, Player, assign_archetype, ST_SCHEMES
 
 # --- Deferred imports (loaded on first use to speed up startup) ---
@@ -1392,7 +1393,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         "games_per_team": req.games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
-    inj_seed = req.ai_seed if req.ai_seed else hash(req.name) % 999999
+    inj_seed = req.ai_seed if req.ai_seed else stable_hash(req.name) % 999999
     session["injury_tracker"].seed(inj_seed)
     season.injury_tracker = session["injury_tracker"]
     session["dq_manager"] = DraftyQueenzManager(
@@ -2947,7 +2948,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         "games_per_team": games_per_team,
     }
     session["injury_tracker"] = InjuryTracker()
-    session["injury_tracker"].seed(hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
+    session["injury_tracker"].seed(stable_hash(f"{dynasty.dynasty_name}_{dynasty.current_year}_inj") % 999999)
     season.injury_tracker = session["injury_tracker"]
 
     existing_dq = session.get("dq_manager")
@@ -6382,7 +6383,7 @@ def _ensure_roster_builder(sess, session_id: str, team_name: str, season):
     team = season.teams[team_name]
     roster_cards = [player_to_card(p, team_name) for p in team.players]
     prestige = estimate_prestige_from_roster(team.players)
-    rng = _rnd.Random(hash(session_id) % 999999)
+    rng = _rnd.Random(stable_hash(session_id) % 999999)
 
     # Generate NIL budget
     budget = generate_nil_budget(prestige=prestige, rng=rng)
@@ -6633,7 +6634,7 @@ def my_team_portal_advance(session_id: str):
     builder = _ensure_roster_builder(sess, session_id, team_name, season)
     portal = builder["portal"]
     nil = builder["nil_program"]
-    rng = _rnd.Random(hash(session_id) + builder["portal_round"])
+    rng = _rnd.Random(stable_hash(session_id) + builder["portal_round"])
 
     if builder["portal_round"] >= builder["portal_max_rounds"]:
         raise HTTPException(400, "All portal rounds completed")
@@ -6963,7 +6964,7 @@ def my_team_run_it_back(session_id: str):
     from engine.transfer_portal import estimate_prestige_from_roster
     from engine.nil_system import apply_season_end_regression
 
-    rng = _rnd.Random(hash(session_id) + 999)
+    rng = _rnd.Random(stable_hash(session_id) + 999)
     team = season.teams[team_name]
 
     # Get current season record

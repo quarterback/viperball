@@ -8,7 +8,7 @@ square stadium backgrounds.
 Banners are saved as banner_000.png … banner_N.png and mapped to teams
 deterministically:
 
-    banner_index = hash(team_id) % pool_size
+    banner_index = stable_hash(team_id) % pool_size
 
 Usage:
     python -m engine.banner_generator --count 100
@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests as _requests
+from engine.stable_hash import stable_hash
 
 log = logging.getLogger(__name__)
 

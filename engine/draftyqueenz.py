@@ -22,6 +22,7 @@ import math
 import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
+from engine.stable_hash import stable_hash
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -365,7 +366,7 @@ def build_player_pool(teams: Dict, week_schedule: list, week_seed: int = 0) -> L
                 p.overall, pos_tag,
                 games_played=games,
                 depth_rank=depth_rank,
-                seed=week_seed + hash(p.name) % 10000,
+                seed=week_seed + stable_hash(p.name) % 10000,
             )
             pool.append(FantasyPlayer(
                 tag=ptag,

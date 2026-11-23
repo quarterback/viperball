@@ -64,6 +64,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     (catalog). Ron chose the split. PR #330 from main: PBK-01, PBK-02, PBK-04, new files
     only. → `aar_2026-11-23_playbook_catalog_pbk.md` on that branch.
 
+18. **Merged the stack and made runs repeatable** (November 23). #323, #325, #326, #324, #330,
+    #327 merged in order; #328 reconciled with the merged engine and merged; unseeded
+    chemistry, 22 salted hash seeds and unsorted loads fixed so seeded runs repeat in every
+    process (VAL-02). → `aar_2026-11-23_merge_stack_and_val02.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

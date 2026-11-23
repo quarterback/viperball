@@ -6,7 +6,7 @@ black-and-white striped shirts and referee caps.
 
 Files are saved as ref_000.png … ref_N.png and mapped deterministically:
 
-    ref_index = hash(referee_id) % pool_size
+    ref_index = stable_hash(referee_id) % pool_size
 
 Usage:
     python -m engine.referee_generator --count 300
@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests as _requests
+from engine.stable_hash import stable_hash
 
 log = logging.getLogger(__name__)
 

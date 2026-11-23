@@ -20,6 +20,7 @@ from engine.game_engine import load_team_from_json, Team, ViperballEngine
 from engine.fast_sim import fast_sim_game
 from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
+from engine.stable_hash import stable_hash
 
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -233,7 +234,7 @@ def _run_season_end_chemistry(season: 'ProLeagueSeason') -> None:
     from engine.chemistry import season_end_chemistry_pass
     import random as _random
 
-    rng = _random.Random(hash(season.config.league_id) & 0xFFFFFFFF)
+    rng = _random.Random(stable_hash(season.config.league_id) & 0xFFFFFFFF)
 
     # Pinning-streak counters live on the season's config-keyed store so
     # they survive across calls (one per pro-league lifetime).

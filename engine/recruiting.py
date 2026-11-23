@@ -33,6 +33,7 @@ from typing import Dict, List, Optional, Tuple
 
 from engine.player_card import PlayerCard, _get_position_weights
 from scripts.generate_names import load_name_pools, REGION_TO_ORIGIN
+from engine.stable_hash import stable_hash
 
 
 # ──────────────────────────────────────────────
@@ -2445,7 +2446,7 @@ def generate_hs_class(
         List of HSProspect objects sorted by scouted_stars descending.
     """
     if rng is None:
-        rng = random.Random(seed if seed is not None else hash(grade))
+        rng = random.Random(seed if seed is not None else stable_hash(grade))
 
     prospects: List[HSProspect] = []
     for i in range(size):

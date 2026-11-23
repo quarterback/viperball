@@ -5,7 +5,7 @@ Pre-generates a pool of pixel-art stadium/field backgrounds via the PixelLab API
 Stadiums are saved as stadium_000.png … stadium_N.png and can be mapped to teams
 deterministically:
 
-    stadium_index = hash(team_id) % pool_size
+    stadium_index = stable_hash(team_id) % pool_size
 
 Usage:
     python -m engine.stadium_generator --count 50
@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import requests as _requests
+from engine.stable_hash import stable_hash
 
 log = logging.getLogger(__name__)
 
