@@ -222,3 +222,75 @@ def ensure_coach_tactical_profile(coach: Any) -> Dict[str, Any]:
     profile = generate_coach_tactical_profile(coach)
     coach.tactical_profile = deepcopy(profile)
     return coach.tactical_profile
+
+
+# ── CCH-02: bounded, decision-only game-day integration ──────────
+
+def resolve_offensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Resolve an OC profile with HC delegation, without creating package data.
+
+    No OC means neutral/no tactical overlay (existing single-HC coaching
+    personality and countermeasures still operate). A missing HC grants
+    the coordinator full authority; a present HC explicitly constrains it.
+    """
+    if not staff or not staff.get("oc"):
+        return {}
+    oc = staff["oc"]
+    profile = ensure_coach_tactical_profile(oc)
+    hc = staff.get("head_coach")
+    if hc is None:
+        authority = 1.0
+    else:
+        hc_profile = ensure_coach_tactical_profile(hc)
+        delegation = hc_profile.get("head_coach", {}).get("delegation", 0.5)
+        authority = max(0.40, min(0.95, 0.40 + 0.60 * float(delegation)))
+    return {
+        "coach_id": oc.coach_id,
+        "signature": profile.get("identity", {}).get("offense_interpretation", ""),
+        "featured_position": profile.get("offense", {}).get("featured_position", ""),
+        "authority": round(authority, 3),
+        "formation_bias": dict(profile.get("offense", {}).get("formation_bias", {})),
+        "family_bias": dict(profile.get("offense", {}).get("family_bias", {})),
+        "kick_pass_bias": dict(profile.get("offense", {}).get("kick_pass_bias", {})),
+    }
+
+
+def apply_weight_bias(
+    weights: Dict[str, float],
+    biases: Dict[str, float] | None,
+    authority: float = 1.0,
+) -> Dict[str, float]:
+    """Shift relative probabilities, never revive a zero or add a new play.
+
+    Bias values are small *proportional* adjustments, NOT percentages added
+    directly to normalized probability. This prevents coach multiplier
+    stacking from producing the previously observed runaway effects.
+    Down/range gates remain authoritative (zero stays zero).
+    """
+    out = dict(weights)
+    if not biases:
+        return out
+    strength = max(0.0, min(1.0, float(authority)))
+    for key, bias in biases.items():
+        if key not in out or out[key] <= 0.0:
+            continue
+        shift = max(-0.20, min(0.20, float(bias)))
+        out[key] *= 1.0 + shift * strength
+    return out
+
+
+def apply_featured_position_bias(
+    players: list,
+    weights: list[float],
+    featured_position: str,
+    authority: float = 1.0,
+) -> list[float]:
+    """Slightly favor an eligible position without over-riding talent/depth."""
+    strength = max(0.0, min(1.0, float(authority)))
+    result = list(weights)
+    if not featured_position:
+        return result
+    for i, player in enumerate(players):
+        if getattr(player, "position", "") == featured_position and result[i] > 0:
+            result[i] *= 1.0 + 0.18 * strength
+    return result
