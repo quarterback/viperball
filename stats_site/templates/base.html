@@ -956,7 +956,7 @@ tbody tr.kb-highlight { background: var(--row-hover); outline: 1px solid var(--a
 .footer .kb-hint:hover { color: var(--accent); }
 
 /* Form elements — ensure visibility across all themes */
-select, input[type="text"], input[type="search"], textarea {
+select, input[type="text"], input[type="search"], input[type="number"], textarea {
   background: var(--bg-alt);
   color: var(--fg);
   border: 1px solid var(--border);
@@ -974,6 +974,17 @@ select option {
   background: var(--bg);
   color: var(--fg);
 }
+/* Run controls (season advance bar, setup forms) */
+.run-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.run-phase { color: var(--fg-bright); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin-right: 6px; }
+.btn-run { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; font-weight: bold; }
+.btn-run:hover { filter: brightness(1.1); }
+.setup-form { display: grid; gap: 18px; max-width: 760px; }
+.setup-form label { display: block; font-size: 11px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.setup-form .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.setup-form input[type="number"] { width: 100%; }
+.setup-form .hint { font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
+.setup-form .choices { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
 button, input[type="submit"] {
   background: var(--bg-alt);
   color: var(--fg);

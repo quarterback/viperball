@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}New season — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span>New season
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>New season</h1>
+  <div class="subtitle">{{ teams|length }} teams</div>
+</div>
+
+<form class="setup-form" method="post" action="/stats/college/new">
+  <div>
+    <label for="name">Season name</label>
+    <input type="text" id="name" name="name" value="2026 CVL Season" style="width:100%">
+  </div>
+
+  <div>
+    <label>Your teams (up to 4, leave blank for all AI)</label>
+    <div class="row">
+      {% for i in range(4) %}
+      <select name="human_teams">
+        <option value="">None</option>
+        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <label>Playoff teams</label>
+    <div class="choices">
+      {% for n in playoff_sizes %}
+      <label style="display:inline;text-transform:none;font-size:13px;color:var(--fg)"><input type="radio" name="playoff_size" value="{{ n }}" {% if n == 8 %}checked{% endif %}> {{ n }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="bowl_count">Bowl games</label>
+      <input type="number" id="bowl_count" name="bowl_count" value="0" min="0" max="16">
+    </div>
+    <div>
+      <label for="history_years">Years of history</label>
+      <input type="number" id="history_years" name="history_years" value="0" min="0" max="100">
+      <div class="hint">Generates past seasons first</div>
+    </div>
+    <div>
+      <label for="ai_seed">AI coaching seed</label>
+      <input type="number" id="ai_seed" name="ai_seed" value="0" min="0">
+      <div class="hint">0 rolls a new one each run</div>
+    </div>
+  </div>
+
+  <div><button class="btn-run" type="submit">Create season</button></div>
+</form>
+{% endblock %}

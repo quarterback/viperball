@@ -17,6 +17,29 @@
   {% if last_updated %}
   <div style="font-size:11px;color:var(--fg-dim);margin-top:4px;">{{ last_updated }}</div>
   {% endif %}
+  {# Run controls: these replace the /app workbench's Sim Week / Sim Rest /
+     postseason buttons. One form, the action rides on the button pressed. #}
+  {% if phase and phase != 'complete' %}
+  <form class="run-bar" method="post" action="/stats/college/{{ session_id }}/advance">
+    <span class="run-phase">
+      {% if phase == 'regular' %}Week {{ current_week + 1 }} of {{ total_weeks }} next
+      {% elif phase == 'portal' %}Transfer portal is open
+      {% elif phase == 'bowls_pending' %}Regular season done. Bowls next
+      {% elif phase == 'playoffs_pending' %}Playoffs next
+      {% else %}{{ phase|replace('_', ' ') }}{% endif %}
+    </span>
+    {% if phase == 'regular' %}
+      <button class="btn-run" name="what" value="week">Sim week</button>
+      <button name="what" value="rest">Sim rest of season</button>
+    {% elif phase == 'portal' %}
+      <button class="btn-run" name="what" value="skip_portal">Skip portal and start season</button>
+    {% elif phase == 'bowls_pending' %}
+      <button class="btn-run" name="what" value="bowls">Play bowls</button>
+    {% elif phase == 'playoffs_pending' %}
+      <button class="btn-run" name="what" value="playoffs">Play playoffs</button>
+    {% endif %}
+  </form>
+  {% endif %}
   {% if champion %}
   <div style="margin-top: 8px;">
     <button onclick="archiveSeason()" id="archive-btn" style="background: var(--accent); color: var(--bg); border: 1px solid var(--accent); padding: 6px 16px; font-family: inherit; font-size: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Archive This Season</button>

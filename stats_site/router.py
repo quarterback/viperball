@@ -827,6 +827,78 @@ async def college_import_dynasty(request: Request):
     )
 
 
+# ── College season controls (replace the /app workbench's League hub) ──
+# These forms call the same API functions the React workbench called, then
+# send the browser back to the page it came from. No second implementation:
+# every rule about phases and request shapes stays in api/main.py.
+
+def _college_teams():
+    import json as _json, os as _os
+    from api.main import TEAMS_DIR
+    out = []
+    for f in sorted(_os.listdir(TEAMS_DIR)):
+        if f.endswith(".json"):
+            try:
+                d = _json.load(open(_os.path.join(TEAMS_DIR, f)))
+                out.append(d.get("team_info", {}).get("school_name") or d.get("name") or f[:-5])
+            except Exception:
+                continue
+    return sorted(set(out))
+
+
+@router.get("/college/new", response_class=HTMLResponse)
+def college_new_form(request: Request):
+    return templates.TemplateResponse("college/new.html", _ctx(
+        request, section="college", teams=_college_teams(),
+        playoff_sizes=[4, 8, 12, 16, 24, 32],
+    ))
+
+
+@router.post("/college/new")
+async def college_new_submit(request: Request):
+    from starlette.responses import RedirectResponse
+    from api.main import create_session, create_season_endpoint, CreateSeasonRequest
+    form = await request.form()
+    human = [t for t in form.getlist("human_teams") if t][:4]
+    def _int(k, d):
+        try:
+            return int(form.get(k) or d)
+        except ValueError:
+            return d
+    req = CreateSeasonRequest(
+        name=(form.get("name") or "2026 CVL Season").strip(),
+        playoff_size=_int("playoff_size", 8),
+        bowl_count=_int("bowl_count", 0),
+        ai_seed=_int("ai_seed", 0),
+        history_years=_int("history_years", 0),
+        human_teams=human,
+    )
+    sid = create_session()["session_id"]
+    create_season_endpoint(sid, req)
+    return RedirectResponse(f"/stats/college/{sid}/", status_code=303)
+
+
+@router.post("/college/{session_id}/advance")
+async def college_advance(request: Request, session_id: str):
+    """One button, the right action for the phase: sim a week, sim the rest,
+    run the playoffs, run the bowls."""
+    from starlette.responses import RedirectResponse
+    import api.main as A
+    form = await request.form()
+    what = form.get("what", "week")
+    if what == "week":
+        await A.simulate_week(session_id, A.SimulateWeekRequest())
+    elif what == "rest":
+        await A.simulate_rest(session_id, A.SimulateRestRequest())
+    elif what == "playoffs":
+        await A.run_playoffs(session_id)
+    elif what == "bowls":
+        await A.run_bowls(session_id)
+    elif what == "skip_portal":
+        A.season_portal_skip(session_id)
+    return RedirectResponse(form.get("back") or f"/stats/college/{session_id}/", status_code=303)
+
+
 @router.get("/college/{session_id}/", response_class=HTMLResponse)
 def college_season(request: Request, session_id: str):
     api = _get_api()
@@ -884,6 +956,7 @@ def college_season(request: Request, session_id: str):
         champion=season.champion,
         recent_games=recent_games,
         last_updated=last_updated,
+        phase=sess.get("phase"),
     ))
 
 
