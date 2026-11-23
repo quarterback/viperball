@@ -142,6 +142,8 @@ A snap kick is legal on any down. It is a shot at goal from open play, in the sp
 - **5th down:** the natural kicking down. A miss still leaves 6th down for a second try.
 - **6th down:** the last chance. A miss here is a turnover, so a team kicks, punts, or goes for it. A trailing team never punts on 6th down.
 
+A field goal is the answer when a drive stalls outside snap kick range. Off a tee the ball carries farther than a drop kick, so a team that cannot get close enough for its snap kicker still puts 3 points on the board on 4th, 5th or 6th down.
+
 Near the goal line, teams keep driving for the touchdown. Late in a game, a team does not take a kick that cannot tie or win.
 
 ---

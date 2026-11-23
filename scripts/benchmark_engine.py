@@ -11,9 +11,7 @@ numbers and a change shows up as a real difference. Each team plays its
 season assigned offense, defense and special teams scheme, the same way
 Season.simulate_game passes them to the engine.
 
-Targets come from RULES_EVOLUTION_AAR.md (per team, per game: 45 to 50
-points, 1.9 to 3.5 touchdowns, 3 to 5 snap kicks made) and the rule that
-starting field position should matter.
+Targets come from the README's Scoring Context section.
 """
 
 import argparse
@@ -31,9 +29,12 @@ from engine import ViperballEngine, load_teams_from_directory  # noqa: E402
 from engine.ai_coach import auto_assign_all_teams  # noqa: E402
 
 TARGETS = {
-    "points": (45.0, 50.0),
-    "touchdowns": (1.9, 3.5),
+    # From the README's Scoring Context (a typical 63-49 game: 3 touchdowns,
+    # 4 snap kicks and 2 field goals for the winner) and its 45-70 range.
+    "points": (45.0, 70.0),
+    "touchdowns": (2.5, 4.0),
     "snap_kicks_made": (3.0, 5.0),
+    "field_goals_made": (1.5, 2.5),
 }
 
 

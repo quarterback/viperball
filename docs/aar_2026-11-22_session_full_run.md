@@ -36,14 +36,19 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     kept in season games, real season mode in the benchmark.
     → `aar_2026-11-22_blowouts_snap_kicks_prestige.md`
 
+11. **Rosters, pace, field goals.** Players rolled against a league talent ladder (the
+    baseball game's design), a faster clock between plays, field goals out to 71 yards.
+    → `aar_2026-11-22_rosters_pace_field_goals.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
 |---|---|---|---|
-| Points | 40.5 | 47.6 | 45 to 50 |
-| Touchdowns | 4.2 | 3.1 | 1.9 to 3.5 |
-| Snap kicks made | 0.3 | 3.0 | 3 to 5 |
-| Median final margin | 32 | 19.5 | |
+| Points | 40.5 | 60.6 | 45 to 70 (README) |
+| Touchdowns | 4.2 | 3.7 | about 3 |
+| Snap kicks made | 0.3 | 3.2 | about 4 |
+| Field goals made | 0.06 | 2.0 | about 2 |
+| Games decided by 30+ | 54% | 21% | |
 | Plays on 7th down or later | 131 per 60 games | 0 | 0 |
 
 ## What went wrong in the process
@@ -80,8 +85,8 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 ## Open work
 
 1. Merge PR #323 and redeploy; click through college season, dynasty and stats site.
-2. 27% of games are still decided by 30+; the rest comes from how uneven generated rosters
-   are (team averages 18 to 59). Field goals are rare (0.13 per team).
+2. Recruiting, development and the high school league still generate players the old way
+   (around one number); move them to the talent ladder.
 3. Pro leagues, WVL and the high school league still use the fast sim.
 4. The even program count rule still blocks a 205 team dynasty; the scheduler does not need it.
 5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.

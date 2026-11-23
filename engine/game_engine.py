@@ -64,8 +64,8 @@ V2_ENGINE_CONFIG = {
     # from 1.0 at field_compression_start down to (1 - field_compression) at
     # the goal line. 0.0 turns it off. This is what makes drives stall inside
     # kicking range and brings snap kicks into the game.
-    "field_compression": 0.4,
-    "field_compression_start": 60,
+    "field_compression": 0.55,
+    "field_compression_start": 50,
     # V3.3: Old goal line rule gave a touchdown on 20-55% of plays that
     # ended at the 1 to 5 yard line without crossing. False = the ball has
     # to cross the goal line.
@@ -81,7 +81,7 @@ V2_ENGINE_CONFIG = {
     # V3.3: Rating rescale for the rest of the engine, same map as the kick
     # one: scale_rating(raw) = 60 + (raw - 15) * 0.5. Each group of formulas
     # can be switched separately (see docs/rating_scale_inventory_2026-11-22.md).
-    "rating_scale_slope": 0.3,
+    "rating_scale_slope": 0.45,
     "rescale_contest": True,       # A: carrier vs tackler, kick pass, late-down clamp
     "rescale_speed": True,         # C: pursuit, reads, returns, carrier bonus
     "rescale_breakaway": True,     # C: breakaway chance from team speed
@@ -94,6 +94,20 @@ V2_ENGINE_CONFIG = {
     # kick in range. Lower = coaches shoot sooner = more snap kicks.
     "kick_4th_down_min_ytg": 4,
     "kick_5th_down_min_ytg": 1,
+    # V3.4: Seconds between plays for the slowest (tempo 0) and fastest
+    # (tempo 1) offenses. Football cadence was 38 and 18. Lower = more plays,
+    # more possessions, more scoring.
+    "play_clock_slow": 28,
+    "play_clock_fast": 13,
+    # V3.4: Field goals. A placed ball off a tee carries farther than a drop
+    # kick: the place kick's comfortable range is this many yards beyond the
+    # snap kick's, and attempts are possible out to place_kick_max_distance
+    # (README: about 71 yards).
+    "kick_4th_down_fg_min_ytg": 10,
+    "kick_5th_down_fg_min_ytg": 4,
+    "kick_fg_min_success": 0.60,
+    "place_kick_range_bonus": 15,
+    "place_kick_max_distance": 71,
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -5342,10 +5356,15 @@ class ViperballEngine:
             # Formula: base_time maps tempo (0.0-1.0) to seconds.
             #   tempo 0.0 → 38s (pure grind), tempo 1.0 → 18s (pure tempo)
             if V2_ENGINE_CONFIG.get("top_model_enabled", False):
-                base_time = int(38 - tempo * 20)  # 38s at 0.0 tempo, 18s at 1.0
+                # V3.4: pace is configurable. Viperball plays closer to
+                # Australian rules, Gaelic football and rugby than to
+                # huddle football, so the clock between plays is short.
+                _slow = V2_ENGINE_CONFIG.get("play_clock_slow", 38)
+                _fast = V2_ENGINE_CONFIG.get("play_clock_fast", 18)
+                base_time = int(_slow - tempo * (_slow - _fast))
                 # Add natural variance: ±3 seconds per play
                 base_time += random.randint(-3, 3)
-                base_time = max(15, min(42, base_time))
+                base_time = max(_fast - 3, min(_slow + 4, base_time))
                 tempo_mult = 1.0  # variance built into base_time now
             else:
                 # Legacy: flat 18s with small tempo multiplier
@@ -5742,7 +5761,7 @@ class ViperballEngine:
             # 50 yards was a 3 point attempt even when a 5 point snap kick
             # was as likely to go in.
             dk_ok = dk_viable and dk_in_range and final_fg_dist <= 55
-            pk_ok = pk_viable and fp >= 60 and final_fg_dist <= 50
+            pk_ok = pk_viable and self._place_kick_success(final_fg_dist, k_skill) >= 0.45
             dk_ev = self._drop_kick_success(final_fg_dist, k_skill) * 5.0 if dk_ok else 0.0
             pk_ev = self._place_kick_success(final_fg_dist, k_skill) * 3.0 if pk_ok else 0.0
             if dk_ok and dk_ev >= pk_ev:
@@ -5862,42 +5881,26 @@ class ViperballEngine:
         return rate
 
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
-        """Field goal accuracy — kicker-range model.
+        """Field goal accuracy.
 
-        Realistic probability model:
-        - Under 40 yards: near-automatic for good kickers
-        - 40-54 yards: competitive range, skill-dependent
-        - 55-58 yards: 0.3% (extremely rare)
-        - 59-65 yards: 0.1% (once-in-a-lifetime)
-        - 65+ yards: impossible (handled by caller)
+        A placed ball carries farther than a drop kick (README, The Field
+        Goal), so the comfortable range sits beyond the snap kick's by
+        V2_ENGINE_CONFIG["place_kick_range_bonus"] yards. Past the
+        comfortable range accuracy falls about 4 points per yard, down to a
+        10% long shot, out to place_kick_max_distance.
         """
-        if distance > 65:
+        max_dist = V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)
+        if distance > max_dist:
             return 0.0
-        if distance >= 59:
-            return 0.001  # 0.1% — near-impossible
-        if distance >= 55:
-            return 0.003  # 0.3% — extremely rare
-
-        # Normal range: skill-dependent comfort zone
-        # A placed ball carries farther than a drop kick (README, The Field
-        # Goal), so the place kick's comfortable range sits 8 yards beyond
-        # the snap kick's. It used to be shorter, which meant a field goal
-        # was never the better choice and none were kicked.
-        comfortable_range = 30 + (kicker_skill - 60) * 0.75 + 8
-
+        comfortable_range = (30 + (kicker_skill - 60) * 0.75
+                             + V2_ENGINE_CONFIG.get("place_kick_range_bonus", 8))
         if distance <= 20:
             return 0.97  # Chip shot
-        elif distance <= comfortable_range:
+        if distance <= comfortable_range:
             frac = (distance - 20) / max(1, comfortable_range - 20)
             return 0.95 - frac * 0.10  # 0.95 close → 0.85 at edge
-        elif distance <= comfortable_range + 8:
-            over = distance - comfortable_range
-            return max(0.15, 0.80 - over * 0.08)  # 0.80 → 0.16
-        elif distance <= 54:
-            over = distance - comfortable_range - 8
-            return max(0.05, 0.15 - over * 0.01)
-        else:
-            return 0.003
+        over = distance - comfortable_range
+        return max(0.10, 0.82 - over * 0.04)
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
@@ -5998,7 +6001,7 @@ class ViperballEngine:
         kicker_skill = self._kick_skill(kicker.kicking)
 
         # Place kicks beyond 54 yards are near-impossible; never attempt beyond 65
-        pk_success = self._place_kick_success(fg_distance, kicker_skill) if fg_distance <= 54 else 0.0
+        pk_success = self._place_kick_success(fg_distance, kicker_skill)
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
@@ -6124,6 +6127,12 @@ class ViperballEngine:
                     and fg_distance <= dk_comfort and dk_success >= 0.70):
                 return PlayType.DROP_KICK
 
+            # Badly stalled and out of snap kick range: take the field goal.
+            if (not pk_futile and dk_success < 0.55
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_4th_down_fg_min_ytg", 14)
+                    and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)):
+                return PlayType.PLACE_KICK
+
             return None
 
         # ── Determine best available kick ──
@@ -6184,6 +6193,12 @@ class ViperballEngine:
             if (not dk_futile and dk_success >= 0.55
                     and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)):
                 return PlayType.DROP_KICK
+
+            # Stalled outside snap kick range but inside field goal range:
+            # put 3 on the board. A miss on 5th down keeps the ball.
+            if (not pk_futile and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_fg_min_ytg", 8)):
+                return PlayType.PLACE_KICK
 
             # Otherwise advance and decide on 6th.
             return None
@@ -7124,6 +7139,9 @@ class ViperballEngine:
             if kick_decision == PlayType.DROP_KICK:
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
+            if kick_decision == PlayType.PLACE_KICK:
+                play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
+                return self._apply_post_play_penalties(play)
             # else: go for advancement, fall through to normal play
 
         # ── Down 5-6 without kick mode: forced kick decision ──
@@ -7343,7 +7361,7 @@ class ViperballEngine:
         # Same for field goals: beyond 54 yards the success model is 0.3% or
         # less, and beyond 65 the kick is impossible (a 72 yard attempt showed
         # up in the last seconds of a half).
-        if fg_distance > 54:
+        if fg_distance > V2_ENGINE_CONFIG.get("place_kick_max_distance", 54):
             weights["field_goal"] = 0.0
         elif fg_distance <= dk_comfort:
             weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
@@ -12189,7 +12207,7 @@ class ViperballEngine:
         # ── Max field goal distance: 65 yards ──
         # Beyond 65 yards is physically impossible for a place kick.
         # If they're too far, punt instead (handled by kick decision logic).
-        if distance > 65:
+        if distance > max(65, V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)):
             # Too far for a place kick — treat as missed/punt-like
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
