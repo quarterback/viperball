@@ -17,6 +17,10 @@ jobs:
   targeted-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # ai_coach.py seeds team scheme assignment with Python's hash(team_name).
+      # Fix the process hash salt so the paired benchmark repeats across runs.
+      PYTHONHASHSEED: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
