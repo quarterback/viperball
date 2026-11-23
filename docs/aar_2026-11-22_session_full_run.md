@@ -69,6 +69,16 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     chemistry, 22 salted hash seeds and unsorted loads fixed so seeded runs repeat in every
     process (VAL-02). → `aar_2026-11-23_merge_stack_and_val02.md`
 
+19. **Team installation** (November 23). CCH-04 built while another agent built CCH-03, PR #333:
+    per program familiarity with each coordinator's system, coaching tree and promotion
+    carryover, fading habits from departed coordinators, and up to two catalog packages per
+    coordinator, shown on the team page. Found and fixed three problems: the app's dynasty
+    never ran the coaching carousel, long yardage used a football distance (now 5 or more
+    yards per remaining down), and the referee pool shifted the first game's random rolls.
+    Odd program counts now retire Coast Guard, or Merchant Marine when Coast Guard is the
+    human team. Trial merge with CCH-03 (#332) passes 168 tests.
+    → `aar_2026-11-23_cch04_team_installation.md` on that branch.
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -117,7 +127,8 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 2. Recruiting, development and the high school league still generate players the old way
    (around one number); move them to the talent ladder.
 3. Pro leagues, WVL and the high school league still use the fast sim.
-4. The even program count rule still blocks a 205 team dynasty; the scheduler does not need it.
+4. The even program count rule is now met automatically (step 19 retires Coast Guard or
+   Merchant Marine); the scheduler itself still does not need an even count.
 5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.
 6. `test_season.py` loads a team file that no longer exists.
 7. The design work from step 1.
