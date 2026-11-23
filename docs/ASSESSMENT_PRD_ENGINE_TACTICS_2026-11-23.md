@@ -1,9 +1,9 @@
 # Viperball engine and tactics assessment: implementation PRD and agent work queue
 
 **Assessment date:** 2026-11-23  
-**Status:** Active work queue; revised after the November 23 merges and CCH-03 implementation. Historical investigation paragraphs remain dated to their original review.  
+**Status:** Active work queue, revised after all November 23 CCH-03/CCH-04 integrations merged. Historical assessment sections remain dated to their original review.  
 **Repository:** quarterback/viperball  
-**Current implementation follow-up:** PRs #323–#328, #330 and #331 are merged; [CCH-03 PR #332](https://github.com/quarterback/viperball/pull/332) is in review with passing tests and a 320-game matched benchmark; CCH-04 is assigned to another agent.  
+**Current implementation follow-up:** [CCH-03 #332](https://github.com/quarterback/viperball/pull/332) and [CCH-04 integrated #334](https://github.com/quarterback/viperball/pull/334) are **DONE/MERGED**. Original CCH-04 PR #333 was closed as superseded; prototype #329 closed unmerged. [Combined AAR](aar_2026-11-23_cch03_cch04_reconciliation.md), [174 tests + React build + benchmarks](https://github.com/quarterback/viperball/actions/runs/45284723882).
 **Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323) at head 3aedd95d59f5c44291d473e4fd30c7b50e69151b in the original assessment; it was unmerged **at the time**, and has since merged. See [stack reconciliation and VAL-02 AAR](aar_2026-11-23_merge_stack_and_val02.md) for the actual merge order.
 
 ## Purpose and decision
@@ -19,10 +19,12 @@ The key principle: explain results from **players, decisions, conditions, field 
 The parallel implementation specification is
 [Coach-owned tactical identities and expandable playbooks](PRD_COACH_OWNED_SCHEMES_AND_PLAYBOOKS_2026-11-23.md).
 
-- **COACH track:** CCH-01 [#327](https://github.com/quarterback/viperball/pull/327) and CCH-02 [#328](https://github.com/quarterback/viperball/pull/328) are **DONE/MERGED**. CCH-03 [#332](https://github.com/quarterback/viperball/pull/332) is **IN REVIEW**: saved DC tactical profiles choose pre-snap alignment/blitz and reallocate read focus; [150 tests and 320 games passed](https://github.com/quarterback/viperball/actions/runs/45272756445). CCH-04 installation/borrowing/career continuity is **assigned to another agent**.
+- **COACH track:** CCH-01 [#327](https://github.com/quarterback/viperball/pull/327), CCH-02 [#328](https://github.com/quarterback/viperball/pull/328), CCH-03 [#332](https://github.com/quarterback/viperball/pull/332), and CCH-04 via [#334](https://github.com/quarterback/viperball/pull/334) are all **DONE/MERGED**. CCH-03 adds coach-specific DC pre-snap choices; CCH-04 adds installed package familiarity, coaching changes, OC situational packages and scales DC discretion by defensive familiarity. **Defensive package-specific calling remains deferred.**
 - **PLAYBOOK track:** PBK-01 catalog, PBK-02 packages and PBK-04 roster compatibility merged in [#330](https://github.com/quarterback/viperball/pull/330). PBK-03 new families is deferred. The old [#329](https://github.com/quarterback/viperball/pull/329) borrowed-playbook runtime is an unmerged draft reference, not a production dependency.
 - COACH owns `engine/coaching.py`, `engine/coach_tactics.py`, `engine/game_engine.py`, season/dynasty integration and tests. PLAYBOOK owns `engine/playbook_catalog.py`, `data/playbooks/**` and catalog/package tests and documentation. Coordinate any changes to shared files.
 - Keep existing 16 offenses, eight defenses and canonical play-family names. Avoid multiplying coaching bonuses without bounds.
+
+**Merge closure (November 23, 2026):** CCH-03 [#332](https://github.com/quarterback/viperball/pull/332) and the integrated CCH-04 [#334](https://github.com/quarterback/viperball/pull/334) are on `main`. The [original CCH-04 #333](https://github.com/quarterback/viperball/pull/333) was superseded and closed; [draft prototype #329](https://github.com/quarterback/viperball/pull/329) was closed without merge, with its prior-art lessons retained in the [integration AAR](aar_2026-11-23_cch03_cch04_reconciliation.md). Do not reopen old branches as competing runtime implementations.
 
 ## Source control and evidence rules for every agent
 
@@ -68,8 +70,8 @@ The parallel implementation specification is
 | VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
 | RULE-01 | P2 | OPEN | Rulebook/version/terminology reconciliation |
 | OPS-01 | P2 | OPEN | Repair obsolete tests and close deploy/test gaps |
-| CCH-03 | P1 | IN REVIEW ([PR #332](https://github.com/quarterback/viperball/pull/332)) | DC pre-snap alignment/blitz and read-focus decisions; [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md) and 320-game control | 
-| CCH-04 | P1 | ASSIGNED TO OTHER AGENT | Team package installation, borrowing, coach turnover/career continuity against merged PBK catalog |
+| CCH-03 | P1 | DONE ([merged #332](https://github.com/quarterback/viperball/pull/332)) | DC pre-snap alignment/blitz and read-focus decisions; [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md), paired 320-game control, integrated in #334 | 
+| CCH-04 | P1 | DONE ([merged #334](https://github.com/quarterback/viperball/pull/334)) | Team package familiarity, OC situational choices, coordinator turnover and dynasty continuity; DC familiarity scaling; [joint AAR](aar_2026-11-23_cch03_cch04_reconciliation.md) and 174 passing tests. Original #333 superseded; #329 archived |
 
 P0 means correctness/integrity; P1 means core game consequence; P2 means presentation/maintenance. The order is a proposal, not a commitment to ship all tasks in one PR.
 
