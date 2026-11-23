@@ -17,17 +17,18 @@ game-engine outcome probabilities.
 import random
 import json
 import os
+import zlib
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
 
 PHILOSOPHY_TO_OFFENSE = {
-    "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe"],
-    "lateral_heavy": ["lateral_spread", "chain_gang", "ghost"],
-    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide"],
-    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast"],
-    "air_raid": ["shock_and_awe", "boot_raid", "east_coast"],
-    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide"],
+    "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe", "six_shooter"],
+    "lateral_heavy": ["lateral_spread", "chain_gang", "ghost", "mismatch"],
+    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide", "ironclad"],
+    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast", "mousetrap", "mismatch", "six_shooter"],
+    "air_raid": ["shock_and_awe", "boot_raid", "east_coast", "quick_strike"],
+    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide", "ironclad", "mousetrap"],
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
@@ -125,6 +126,7 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
         weights[max_idx] *= (1.0 + _coach_scheme_bias)
 
     offense_style = rng.choices(offense_candidates, weights=weights)[0]
+    offense_fit = {c: w for c, w in zip(offense_candidates, weights)}
 
     defense_candidates = list(IDENTITY_STYLE_TO_DEFENSE.get(style, ["swarm"]))
 
@@ -157,6 +159,7 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
         def_weights.append(max(0.1, w))
 
     defense_style = rng.choices(defense_candidates, weights=def_weights)[0]
+    defense_fit = {c: w for c, w in zip(defense_candidates, def_weights)}
 
     st_candidates = list(IDENTITY_STYLE_TO_ST.get(style, ["aces"]))
     if speed >= 88 and "lightning_returns" not in st_candidates:
@@ -183,10 +186,23 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
     st_scheme = rng.choices(st_candidates, weights=st_weights)[0]
 
-    return {"offense_style": offense_style, "defense_style": defense_style, "st_scheme": st_scheme}
+    # Coach playbooks: the home books above plus packages borrowed from
+    # other books, mostly ones that suit this roster.
+    from engine.playbooks import build_playbook, borrow_appetite
+    from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES
+    offense_playbook = build_playbook(
+        offense_style, offense_fit, borrow_appetite(coaching_staff, "oc", rng), rng, OFFENSE_STYLES)
+    defense_playbook = build_playbook(
+        defense_style, defense_fit, borrow_appetite(coaching_staff, "dc", rng), rng, DEFENSE_STYLES)
+
+    return {"offense_style": offense_style, "defense_style": defense_style, "st_scheme": st_scheme,
+            "offense_playbook": offense_playbook, "defense_playbook": defense_playbook}
 
 
 def get_scheme_label(offense: str, defense: str) -> str:
+    from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES
+    if offense in OFFENSE_STYLES and defense in DEFENSE_STYLES:
+        return f"{OFFENSE_STYLES[offense]['label']} / {DEFENSE_STYLES[defense]['label']}"
     offense_labels = {
         "ground_pound": "Ground & Pound",
         "lateral_spread": "Lateral Spread",
@@ -245,7 +261,8 @@ def auto_assign_all_teams(
 
         team_stats = data.get("team_stats", {})
         identity = data.get("identity", {})
-        team_seed = hash(team_name) + rng_base
+        # zlib.crc32 is stable across processes; hash() is salted per run.
+        team_seed = zlib.crc32(team_name.encode()) + rng_base
         staff = (coaching_staffs or {}).get(team_name)
         configs[team_name] = assign_ai_scheme(team_stats, identity, seed=team_seed,
                                               coaching_staff=staff)

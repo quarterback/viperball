@@ -157,6 +157,7 @@ V2_ENGINE_CONFIG = {
     # Lacrosse style midfield lines: the Viper and four flankers play as
     # one two-way line. Lines change together, any time, including during
     # live play. A team changing as the ball turns over live can be caught.
+    "playbooks_enabled": True,
     "midfield_lines_enabled": True,
     # Each line has its own shift length: the top line stays on longer.
     "midfield_line": {"out": [74, 80, 86], "back": 90, "rest": 0.10, "load": 1.6, "lines": 3},
@@ -368,6 +369,11 @@ LIVE_TURNOVER_RESULTS = {
 
 COVER_FOR = {"Defensive Line", "Keeper"}
 COVER_RATING = 0.9   # a player covering another group plays at 90% of her rating
+def _defense_package_situations():
+    from engine.playbooks import defense_package_situations
+    return defense_package_situations(DEFENSE_STYLES)
+
+
 MIDFIELD_GROUPS = {"Viper", "Halfback", "Wingback", "Slotback", "two_way"}
 
 
@@ -1738,6 +1744,10 @@ class Team:
     offense_style: str = "balanced"
     defense_style: str = "swarm"
     st_scheme: str = "aces"
+    # Coach playbooks: borrowed books and the share of calls each gets
+    # (see engine/playbooks.py). Empty means the engine derives one.
+    offense_playbook: Dict[str, float] = field(default_factory=dict)
+    defense_playbook: Dict[str, float] = field(default_factory=dict)
     city: str = ""
     state: str = ""
     # --- V2: Prestige and Halo ---
@@ -2178,6 +2188,8 @@ class Play:
     formation: str = ""
     home_score_after: float = 0.0
     away_score_after: float = 0.0
+    call_book: str = ""      # offensive book this play was called from
+    def_call: str = ""       # defensive package called against it
 
 
 OFFENSE_STYLES = {
@@ -3718,6 +3730,9 @@ DEFENSE_MUFF_MODIFIERS = {
 # Each team selects an ST philosophy that governs coverage, returns,
 # kick blocking, and trick-play tendencies on punts and kicks.
 
+# Where each scheme's packages get called (see engine/playbooks.py).
+DEFENSE_PACKAGE_SITUATIONS = _defense_package_situations()
+
 ST_SCHEMES = {
     "iron_curtain": {
         "label": "Iron Curtain",
@@ -4032,6 +4047,7 @@ class ViperballEngine:
         self.away_team.st_scheme = away_st
         self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
         self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
+        self._setup_playbooks(home_coaching, away_coaching)
 
         # ── Coaching staff modifiers (must init before rhythm) ──
         self.home_coaching_mods: Dict = {}
@@ -7607,6 +7623,7 @@ class ViperballEngine:
         self._pending_transition = None
         self._fast_break = None
         self._lineup_cache = {}
+        self._call = None
 
         # Save pre-play state.  Every Play in the log should show the
         # starting situation (down, distance, field position) rather than
@@ -7749,6 +7766,9 @@ class ViperballEngine:
         # ── Downs 1-3: always run a normal play — no kicks ──
         # Kicks belong on 6th down.  No snap kick interrupts on early downs.
 
+        # ── Coach play call: which book this play comes from ──
+        self._make_play_calls()
+
         # ── Formation-First: select formation, then play family ──
         self._current_formation = self.select_formation()
         play_family = self.select_play_family(formation=self._current_formation)
@@ -7766,6 +7786,7 @@ class ViperballEngine:
         if formation != "split":
             formation_label = formation.upper()
             play.description = f"{formation_label} — {play.description}"
+        self._tag_play_call(play)
         return self._apply_post_play_penalties(play)
 
     def _dispatch_play(self, play_type: PlayType, play_family: PlayFamily) -> Play:
@@ -8315,9 +8336,121 @@ class ViperballEngine:
         return random.choices(families, weights=w)[0]
 
     def _current_style(self) -> Dict:
+        call = getattr(self, "_call", None)
+        if call and call.get("style") is not None and call["side"] == self.state.possession:
+            return call["style"]
         if self.state.possession == "home":
             return self.home_style
         return self.away_style
+
+    def _call_book_name(self) -> str:
+        """Book the current play was called from (the home book if none)."""
+        call = getattr(self, "_call", None)
+        if call and call.get("book") and call["side"] == self.state.possession:
+            return call["book"]
+        return self._current_style_name()
+
+    # ── Coach playbooks (engine/playbooks.py) ──
+
+    def _setup_playbooks(self, home_coaching=None, away_coaching=None):
+        from engine import playbooks as pb
+        import zlib as _z
+        self._pb_counts = {side: {"offense": {}, "defense": {}} for side in ("home", "away")}
+        self._playbook = {}
+        for side, team, staff in (("home", self.home_team, home_coaching),
+                                  ("away", self.away_team, away_coaching)):
+            off_pb = dict(getattr(team, "offense_playbook", {}) or {})
+            def_pb = dict(getattr(team, "defense_playbook", {}) or {})
+            if V2_ENGINE_CONFIG.get("playbooks_enabled", True) and not off_pb and not def_pb:
+                # No assigned playbook: derive a stable one from the team.
+                rng = random.Random(_z.crc32(f"{team.name}|playbook".encode()))
+                off_pb = pb.build_playbook(team.offense_style, {},
+                                           pb.borrow_appetite(staff, "oc", rng), rng, OFFENSE_STYLES)
+                def_pb = pb.build_playbook(team.defense_style, {},
+                                           pb.borrow_appetite(staff, "dc", rng), rng, DEFENSE_STYLES)
+            off_pb = {b: v for b, v in off_pb.items() if b in OFFENSE_STYLES and b != team.offense_style}
+            def_pb = {b: v for b, v in def_pb.items() if b in DEFENSE_STYLES and b != team.defense_style}
+            if not V2_ENGINE_CONFIG.get("playbooks_enabled", True):
+                off_pb, def_pb = {}, {}
+            self._playbook[side] = {"offense": off_pb, "defense": def_pb}
+        self._pb_style_cache = {}
+
+    def _make_play_calls(self):
+        """The offense picks the book this play comes from, and the defense
+        picks its package, by situation and matchup."""
+        self._call = None
+        if not getattr(self, "_playbook", None):
+            return
+        from engine import playbooks as pb
+        off_side = self.state.possession
+        def_side = "away" if off_side == "home" else "home"
+        off_team = self.home_team if off_side == "home" else self.away_team
+        def_team = self.away_team if off_side == "home" else self.home_team
+        off_home, def_home = off_team.offense_style, def_team.defense_style
+        off_tags = pb.situation_tags(self.state, off_side)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            d_on = self._on_field(def_team, self._unavailable_in_game(def_team), "defense")
+            if d_on and sum(p.game_energy for p in d_on) / len(d_on) < 75:
+                off_tags.add("tired_defense")
+        book = pb.choose_call(
+            off_home, self._playbook[off_side]["offense"],
+            off_tags, pb.OFFENSE_BOOK_SITUATIONS,
+            lambda b: OFFENSE_VS_DEFENSE_MATCHUP.get((b, def_home), 1.0))
+        package = pb.choose_call(
+            def_home, self._playbook[def_side]["defense"],
+            pb.situation_tags(self.state, def_side), DEFENSE_PACKAGE_SITUATIONS,
+            lambda d: 2.0 - OFFENSE_VS_DEFENSE_MATCHUP.get((off_home, d), 1.0))
+        call = {"side": off_side, "book": None, "style": None,
+                "def_side": def_side, "package": None, "def_style": None}
+        if book != off_home:
+            key = ("o", off_home, book)
+            if key not in self._pb_style_cache:
+                self._pb_style_cache[key] = pb.merged_offense(
+                    OFFENSE_STYLES.get(off_home, OFFENSE_STYLES["balanced"]), OFFENSE_STYLES[book])
+            call["book"], call["style"] = book, self._pb_style_cache[key]
+        if package != def_home:
+            key = ("d", def_home, package)
+            if key not in self._pb_style_cache:
+                self._pb_style_cache[key] = pb.merged_defense(
+                    DEFENSE_STYLES.get(def_home, DEFENSE_STYLES["swarm"]), DEFENSE_STYLES[package])
+            call["package"], call["def_style"] = package, self._pb_style_cache[key]
+        self._call = call
+        c = self._pb_counts[off_side]["offense"]
+        c[book] = c.get(book, 0) + 1
+        c = self._pb_counts[def_side]["defense"]
+        c[package] = c.get(package, 0) + 1
+
+    def _tag_play_call(self, play):
+        call = getattr(self, "_call", None)
+        if not call:
+            return
+        if call.get("book"):
+            play.call_book = call["book"]
+            label = OFFENSE_STYLES[call["book"]].get("label", call["book"])
+            play.description = f"{play.description} [{label} play]"
+        if call.get("package"):
+            play.def_call = call["package"]
+            label = DEFENSE_STYLES[call["package"]].get("label", call["package"])
+            play.description = f"{play.description} [vs {label} package]"
+
+    def playbook_summary(self) -> Dict:
+        labels_o = {k: v.get("label", k) for k, v in OFFENSE_STYLES.items()}
+        labels_d = {k: v.get("label", k) for k, v in DEFENSE_STYLES.items()}
+        out = {}
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            pbk = getattr(self, "_playbook", {}).get(side, {"offense": {}, "defense": {}})
+            cnt = getattr(self, "_pb_counts", {}).get(side, {"offense": {}, "defense": {}})
+            out[side] = {
+                "offense_home": team.offense_style,
+                "offense_home_label": labels_o.get(team.offense_style, team.offense_style),
+                "offense_playbook": pbk["offense"],
+                "offense_calls": dict(cnt["offense"]),
+                "defense_home": team.defense_style,
+                "defense_home_label": labels_d.get(team.defense_style, team.defense_style),
+                "defense_playbook": pbk["defense"],
+                "defense_calls": dict(cnt["defense"]),
+            }
+        return out
 
     def _current_style_name(self) -> str:
         if self.state.possession == "home":
@@ -8325,6 +8458,9 @@ class ViperballEngine:
         return self.away_team.offense_style
 
     def _current_defense(self) -> Dict:
+        call = getattr(self, "_call", None)
+        if call and call.get("def_style") is not None and call["side"] == self.state.possession:
+            return call["def_style"]
         if self.state.possession == "home":
             return self.away_defense
         return self.home_defense
@@ -8340,9 +8476,8 @@ class ViperballEngine:
         """
         if not V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
             return 1.0
-        offense = self._current_style_name()
-        defense_name = (self.away_team.defense_style if self.state.possession == "home"
-                        else self.home_team.defense_style)
+        offense = self._call_book_name()
+        defense_name = self._current_defense_name()
         defense = self._current_defense()
         matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((offense, defense_name), 1.0)
         family = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
@@ -8431,11 +8566,8 @@ class ViperballEngine:
         """
         formation = getattr(self, '_current_formation', 'split')
         defense_style = self._current_defense().get("label", "").lower().replace(" ", "_")
-        # Try the current 8-scheme names
-        if self.state.possession == "home":
-            def_style_name = self.away_team.defense_style
-        else:
-            def_style_name = self.home_team.defense_style
+        # Try the current 8-scheme names (the package called this play)
+        def_style_name = self._current_defense_name()
 
         base_mult = FORMATION_VS_DEFENSE.get((formation, def_style_name), 1.0)
 
@@ -8888,7 +9020,11 @@ class ViperballEngine:
         return (scale_rating(avg_score, "rescale_speed") - 75) / 300  # 15 point swing = ±0.05
 
     def _current_defense_name(self) -> str:
-        """Returns the defense style name string for the team currently on defense."""
+        """Returns the defense style name string for the team currently on
+        defense: the package called this play, or its home scheme."""
+        call = getattr(self, "_call", None)
+        if call and call.get("package") and call["side"] == self.state.possession:
+            return call["package"]
         if self.state.possession == "home":
             return self.away_team.defense_style
         return self.home_team.defense_style
@@ -14622,6 +14758,7 @@ class ViperballEngine:
                                 "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
                          for side in ("home", "away")},
                 "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+                "playbook": self.playbook_summary(),
                 "line_changes": dict(getattr(self, "_mid_line_state", {}).get("changes", {"home": 0, "away": 0})),
                 "caught_changing": dict(getattr(self, "_mid_line_state", {}).get("caught", {"home": 0, "away": 0})),
             },
@@ -14976,6 +15113,10 @@ class ViperballEngine:
             "home_score": play.home_score_after,
             "away_score": play.away_score_after,
         }
+        if play.call_book:
+            d["call_book"] = play.call_book
+        if play.def_call:
+            d["def_call"] = play.def_call
         if play.penalty:
             d["penalty"] = {
                 "name": play.penalty.name,

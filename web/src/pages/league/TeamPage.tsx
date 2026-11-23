@@ -34,6 +34,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { seasonApi, type RosterPlayer } from "../../api/season";
 import { LineCell, LINE_HEADER_TITLE } from "../../components/LineCell";
+import { PlaybookPanel } from "../../components/PlaybookPanel";
 import { ChemistryTab, CoachingTab } from "./TeamDetailTabs";
 import { PlayerFormModal, MovePlayerModal } from "./PlayerEditor";
 
@@ -248,6 +249,7 @@ export function TeamPage() {
         <Tabs defaultValue="roster" keepMounted={false}>
           <Tabs.List>
             <Tabs.Tab value="roster">Roster</Tabs.Tab>
+            <Tabs.Tab value="playbook">Playbook</Tabs.Tab>
             <Tabs.Tab value="chemistry">Chemistry</Tabs.Tab>
             <Tabs.Tab value="coaching">Coaching</Tabs.Tab>
           </Tabs.List>
@@ -262,6 +264,9 @@ export function TeamPage() {
               </Button>
             </Group>
             <MantineReactTable table={table} />
+          </Tabs.Panel>
+          <Tabs.Panel value="playbook" pt="md">
+            <PlaybookPanel playbook={roster.data?.playbook} />
           </Tabs.Panel>
           <Tabs.Panel value="chemistry" pt="md">
             <ChemistryTab sid={sessionId} team={team} />

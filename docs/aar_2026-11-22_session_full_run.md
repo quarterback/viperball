@@ -56,6 +56,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     and My Team, line changes and caught changing in the box score, fast break tag in the
     play by play. → `aar_2026-11-23_lines_in_app.md`
 
+16. **Coach playbooks** (November 23). Checked all branches, merged the defense branch (#325),
+    home books plus borrowed packages called by situation and matchup, defensive situations
+    read from scheme ratings, five missing books assigned, stable AI seeds, Playbook tab and
+    box score rows. → `aar_2026-11-23_coach_playbooks.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

@@ -628,6 +628,44 @@ There is no automatic home field bonus. The home team's edge comes from the visi
 
 ---
 
+## Coach Playbooks
+
+Every team has a home book on each side of the ball: one of the sixteen offensive styles and one of the eight defensive schemes. Coaches also borrow packages from other books, the way AFL teams keep a few set plays for kick-ins and center bounces, rugby teams keep a lineout and scrum playbook for strikes near the line, and lacrosse teams learn several offensive sets.
+
+**What a team borrows.** Each staff borrows from one to three other books, mostly ones its roster suits. How much it borrows depends on its coordinator's adaptability and stubbornness, with the head coach counting a third. A purist calls about 5% of plays from other books; a coach who borrows freely calls close to half.
+
+**When a borrowed package gets called.** Coaches call a borrowed package mostly in the situation it was built for, and lean on packages that beat this week's opponent.
+
+| Offensive book | Called |
+|---|---|
+| Ground & Pound | short yardage, at the goal line |
+| Ironclad | short yardage, protecting a lead |
+| Ball Control | protecting a lead |
+| Boot Raid | on the Launch Pad |
+| Six Shooter | on the Launch Pad, on downs 4 to 6 |
+| Shock & Awe, Lateral Spread | chasing the game, long yardage |
+| Chain Gang | chasing the game |
+| Quick Strike | chasing the game, the two minute drill |
+| East Coast | long yardage, the two minute drill |
+| Stampede | against a tired defense |
+| Ghost, Mismatch, Mousetrap, Slick 'n Slide | on matchups |
+
+Defensive packages are called where each scheme's own ratings say it is strong:
+
+| Defensive scheme | Called |
+|---|---|
+| Fortress | short yardage, at the goal line, protecting a lead |
+| Lockdown | long yardage, in kicking range, protecting a lead |
+| Drift | long yardage, protecting a lead, the two minute drill |
+| Predator | long yardage, chasing the game |
+| Blitz Pack, Chaos | short yardage, chasing the game |
+| Swarm | at the goal line |
+| Shadow | on matchups |
+
+**What a borrowed call carries.** A borrowed play comes whole from its book: its play types, kick pass mix, formation and situational modes. The home book keeps its system, so tempo, conditioning and signature mechanics like East Coast's rhythm stay with the home book. A staff drills its home book every day, so a borrowed offensive play gets half of its own book's execution bonuses, and a borrowed defensive package plays halfway between the home scheme and the borrowed one.
+
+The team page's Playbook tab shows each team's books, when each borrowed package gets called, and where the season's calls actually came from. The box score shows the share of each team's plays called from other books, and the play by play tags each borrowed call.
+
 ## Roster and Substitution Rules
 
 ### Active Roster

@@ -16,7 +16,16 @@ import {
 import { IconChevronRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useDataGrid } from "../../components/DataGrid";
-import { seasonApi, type BoxPlayerStat, type TeamGameStats } from "../../api/season";
+import { seasonApi, type BoxPlayerStat, type GamePlaybook, type TeamGameStats } from "../../api/season";
+
+function borrowedPct(pb: GamePlaybook | undefined, unit: "offense" | "defense"): string {
+  if (!pb) return "—";
+  const calls = unit === "offense" ? pb.offense_calls : pb.defense_calls;
+  const home = unit === "offense" ? pb.offense_home : pb.defense_home;
+  const total = Object.values(calls).reduce((a, b) => a + b, 0);
+  if (!total) return "—";
+  return `${Math.round((100 * (total - (calls[home] ?? 0))) / total)}%`;
+}
 
 const TEAM_STAT_ROWS: { key: keyof TeamGameStats; label: string }[] = [
   { key: "total_yards", label: "Total yards" },
@@ -131,6 +140,24 @@ export function GameBoxScore() {
                 <Table.Td ta="right">{fr.stats.home?.[r.key] ?? "—"}</Table.Td>
               </Table.Tr>
             ))}
+            {fr.game_day?.playbook && (
+              <Table.Tr>
+                <Table.Td>{borrowedPct(fr.game_day.playbook.away, "offense")}</Table.Td>
+                <Table.Td ta="center" c="dimmed" title="Share of offensive plays called from a book other than the team's home book">
+                  Plays from other books
+                </Table.Td>
+                <Table.Td ta="right">{borrowedPct(fr.game_day.playbook.home, "offense")}</Table.Td>
+              </Table.Tr>
+            )}
+            {fr.game_day?.playbook && (
+              <Table.Tr>
+                <Table.Td>{borrowedPct(fr.game_day.playbook.away, "defense")}</Table.Td>
+                <Table.Td ta="center" c="dimmed" title="Share of defensive snaps in a package other than the team's home scheme">
+                  Defensive packages
+                </Table.Td>
+                <Table.Td ta="right">{borrowedPct(fr.game_day.playbook.home, "defense")}</Table.Td>
+              </Table.Tr>
+            )}
             {fr.game_day?.line_changes && (
               <Table.Tr>
                 <Table.Td>{fr.game_day.line_changes.away}</Table.Td>

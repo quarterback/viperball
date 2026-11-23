@@ -42,6 +42,10 @@ def build_matchups(n_games: int, seed: int):
     random.seed(seed)  # fresh rosters are generated at random; fix them
     teams = load_teams_from_directory(os.path.join(ROOT, "data", "teams"), fresh=True)
     styles = auto_assign_all_teams(os.path.join(ROOT, "data", "teams"), human_teams=[], seed=seed)
+    for name, cfg in styles.items():
+        if name in teams:
+            teams[name].offense_playbook = dict(cfg.get("offense_playbook", {}) or {})
+            teams[name].defense_playbook = dict(cfg.get("defense_playbook", {}) or {})
     rng = random.Random(seed)
     names = sorted(teams)
     pairs = [tuple(rng.sample(names, 2)) for _ in range(n_games)]

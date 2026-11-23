@@ -73,6 +73,7 @@ export interface GameDay {
   travel_energy_cost: number;
   form: Record<"home" | "away", { game: number; halves: number[] }>;
   energy: { home: PlayerEnergy[]; away: PlayerEnergy[] };
+  playbook?: Record<"home" | "away", GamePlaybook>;
   line_changes?: Record<"home" | "away", number>;
   caught_changing?: Record<"home" | "away", number>;
 }
@@ -235,7 +236,7 @@ export const seasonApi = {
     ),
 
   roster: (sid: string, team: string) =>
-    apiGet<{ team_name: string; roster: RosterPlayer[]; prestige: number | null }>(
+    apiGet<{ team_name: string; roster: RosterPlayer[]; prestige: number | null; playbook?: TeamPlaybook }>(
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
@@ -437,4 +438,24 @@ export async function createSeason(config: NewSeasonConfig): Promise<string> {
   const { session_id } = await apiSend<{ session_id: string }>("POST", "/sessions");
   await apiSend("POST", `/sessions/${session_id}/season`, config);
   return session_id;
+}
+
+export interface PlaybookUnit {
+  home: { key: string; label: string; description: string };
+  borrowed: { key: string; label: string; share: number; when: string[] }[];
+  season_calls: { key: string; label: string; calls: number; pct: number }[];
+}
+export interface TeamPlaybook {
+  offense: PlaybookUnit;
+  defense: PlaybookUnit;
+}
+export interface GamePlaybook {
+  offense_home: string;
+  offense_home_label: string;
+  offense_playbook: Record<string, number>;
+  offense_calls: Record<string, number>;
+  defense_home: string;
+  defense_home_label: string;
+  defense_playbook: Record<string, number>;
+  defense_calls: Record<string, number>;
 }

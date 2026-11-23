@@ -1865,6 +1865,10 @@ class Season:
         # ── Full Engine Path ──
         home_style_config = self.style_configs.get(game.home_team, {})
         away_style_config = self.style_configs.get(game.away_team, {})
+        # Coach playbooks: borrowed books travel with the team's scheme config.
+        for _t, _cfg in ((home_team, home_style_config), (away_team, away_style_config)):
+            _t.offense_playbook = dict(_cfg.get("offense_playbook", {}) or {})
+            _t.defense_playbook = dict(_cfg.get("defense_playbook", {}) or {})
 
         style_overrides = {
             home_team.name: home_style_config.get('offense_style', 'balanced'),

@@ -1827,6 +1827,7 @@ def get_team_roster(session_id: str, team_name: str):
         "players": serialized,
         "roster_size": len(team.players),
         "prestige": prestige,
+        "playbook": _team_playbook(season, team_name),
     }
 
 
@@ -3540,6 +3541,59 @@ def dynasty_graduating_class(session_id: str):
     return {"graduates": graduates, "count": len(graduates), "year": year}
 
 
+
+_SITUATION_WORDS = {
+    "short_yardage": "short yardage", "goal_line": "at the goal line",
+    "long_yardage": "long yardage", "launch_pad": "on the Launch Pad",
+    "kick_range": "in kicking range", "late_downs": "on downs 4 to 6",
+    "early_down": "on early downs", "protect_lead": "protecting a lead",
+    "chasing": "chasing the game", "two_minute": "in the two minute drill",
+    "tired_defense": "against a tired defense",
+}
+
+
+def _team_playbook(season, team_name: str) -> dict:
+    """A team's home books, borrowed books and season call totals."""
+    from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES, DEFENSE_PACKAGE_SITUATIONS
+    from engine.playbooks import OFFENSE_BOOK_SITUATIONS
+    cfg = (getattr(season, "style_configs", {}) or {}).get(team_name, {})
+    calls = {"offense": {}, "defense": {}}
+    for g in getattr(season, "schedule", []) or []:
+        fr = getattr(g, "full_result", None)
+        if not (getattr(g, "completed", False) and fr):
+            continue
+        side = "home" if g.home_team == team_name else "away" if g.away_team == team_name else None
+        if side is None:
+            continue
+        pbk = (fr.get("game_day") or {}).get("playbook", {}).get(side)
+        if not pbk:
+            continue
+        for unit in ("offense", "defense"):
+            for k, n in (pbk.get(f"{unit}_calls") or {}).items():
+                calls[unit][k] = calls[unit].get(k, 0) + n
+
+    def unit(kind):
+        styles = OFFENSE_STYLES if kind == "offense" else DEFENSE_STYLES
+        sits = OFFENSE_BOOK_SITUATIONS if kind == "offense" else DEFENSE_PACKAGE_SITUATIONS
+        home = cfg.get(f"{kind}_style") or ("balanced" if kind == "offense" else "swarm")
+        borrowed = cfg.get(f"{kind}_playbook") or {}
+        lab = lambda k: styles.get(k, {}).get("label", k)
+        total = sum(calls[kind].values())
+        return {
+            "home": {"key": home, "label": lab(home), "description": styles.get(home, {}).get("description", "")},
+            "borrowed": [
+                {"key": k, "label": lab(k), "share": v,
+                 "when": [_SITUATION_WORDS.get(t, t) for t in sits.get(k, ())] or ["on matchups"]}
+                for k, v in sorted(borrowed.items(), key=lambda x: -x[1])
+            ],
+            "season_calls": [
+                {"key": k, "label": lab(k), "calls": n, "pct": round(100 * n / total, 1) if total else 0}
+                for k, n in sorted(calls[kind].items(), key=lambda x: -x[1])
+            ],
+        }
+
+    return {"offense": unit("offense"), "defense": unit("defense")}
+
 @app.get("/sessions/{session_id}/team/{team_name}")
 def team_roster(session_id: str, team_name: str):
     session = _get_session(session_id)
@@ -3599,6 +3653,7 @@ def team_roster(session_id: str, team_name: str):
         "players": players,
         "record": team_record,
         "prestige": prestige,
+        "playbook": _team_playbook(season, team.name),
     }
 
 
