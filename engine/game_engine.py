@@ -3961,8 +3961,8 @@ class ViperballEngine:
     def _current_oc_tactics(self) -> Dict:
         """Only the attacking coordinator's saved signature shapes this call."""
         if self.state.possession == "home":
-            return self.home_oc_tactics
-        return self.away_oc_tactics
+            return getattr(self, "home_oc_tactics", {})
+        return getattr(self, "away_oc_tactics", {})
 
     def _record_oc_choice(self, category: str, value: str):
         """Track choices by offensive side, independent of resulting turnovers."""
