@@ -28,6 +28,7 @@ The key principle: explain results from **players, decisions, conditions, field 
 
 - **OPEN:** observed code gap or actionable missing work; not implemented.
 - **IN PROGRESS:** implementation exists on a branch/PR but is not verified and merged.
+- **IN REVIEW:** code or evidence passed the stated tests; PR not yet merged and other dependencies may remain.
 - **PARTIAL (PR #323):** current PR implements part; finish integration/tests after PR #323 is merged.
 - **INVESTIGATE:** plausible problem or conflict requiring confirmation before editing.
 - **BLOCKED:** depends on an earlier work item or PR.
@@ -42,7 +43,9 @@ The key principle: explain results from **players, decisions, conditions, field 
 | DEF-03 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Formation-read formula corrected; tests pending |
 | DEF-04 | P1 | PARTIAL (PR #323) | Eleven-player defense, position assignments, and accurate snap accounting |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
-| DEF-06 | P1 | IN PROGRESS ([PR #326](https://github.com/quarterback/viperball/pull/326), draft) | 16×8×4 forced-formation experiment with two roster bands, mirrored venues, paired confidence intervals and weather sensitivity; CI findings pending |
+| DEF-06 | P1 | IN REVIEW ([PR #326](https://github.com/quarterback/viperball/pull/326)) | 2,048 full-matrix and 1,024 weather games; 94 tests passed; [final analysis](aar_2026-11-23_def06_full_defense_matrix.md) |
+| DEF-07 | P1 | OPEN | Measure defensive rush/pressure events, not just sacks, especially Blitz Pack |
+| WEA-01 | P2 | INVESTIGATE | Isolate rain-related turnovers, fatigue and explosive gains; no scoring increase established |
 | DEL-01 | P1 | OPEN | Counterfactual Delta Yards analysis, including comeback impact |
 | DEL-02 | P1 | OPEN | Consolidate conflicting delta, kill, and points-per-drive definitions |
 | DEL-03 | P2 | BLOCKED on DEL-02 and UI-01 | Make Delta Yards legible in game and season reporting |
@@ -109,6 +112,47 @@ P0 means correctness/integrity; P1 means core game consequence; P2 means present
 **Required output:** for each pairing, attempts and yards/play by play family, kick-pass completion, sacks/pressure, explosive gains allowed, lateral outcomes, forced turnovers/bells, punts/pindowns, defensive stops, points per opponent drive, and sample sizes/confidence intervals.
 
 **Accept when:** the scheme's claimed strengths and concessions show up in the relevant *conditional* data (for example, Lockdown should limit a suitable kick-pass attack while paying a run-defense cost). Avoid choosing victory rate alone as the success measure.
+
+### DEF-07 — Record actual defensive pressure and its tradeoffs (P1, OPEN)
+
+**Evidence:** The full [DEF-06 assessment](aar_2026-11-23_def06_full_defense_matrix.md)
+measured no reliably greater sack count for Blitz Pack compared with Swarm
+under matched personnel (matched difference −0.10 sacks/game, bootstrap 95%
+interval −0.34 to +0.15). Yet Blitz Pack yielded about one additional
+30+ yard play/game and roughly 0.49 more rushing yards/play. The current
+play-by-play does not consistently expose rushers sent, hurry, pressure or
+protection failure. A sack-count-only approach is inadequate to confirm this
+scheme's claimed identity.
+
+**Work:** At the defensive contest point, record rushers committed, blitz
+decision, pressure/hurry, actual sack, pass/kick completion effect, and
+offense's resulting yards. Capture defensive personnel and formation
+context without inventing 'pressure' from a sack result after the fact.
+Use matching offense/defense rosters and benchmark the Blitz Pack risk/reward
+profile against Swarm and Lockdown.
+
+**Accept when:** blitz frequency and pressure can be distinguished from sacks,
+the same play/drive can be traced to the defensive scheme, and scheme
+strengths/concessions appear in conditional stats with sample sizes and
+intervals. Do not force a target sack count.
+
+### WEA-01 — Investigate weather interactions (P2, INVESTIGATE)
+
+**Evidence:** The corrected [DEF-06 study](aar_2026-11-23_def06_full_defense_matrix.md)
+found that rain increased turnovers (+0.37/game), fatigue (−3.74 defensive
+energy points at game's end) and 30+ yard gains (+0.29/game), but did not
+reliably change points per attacking drive (+0.02; uncertainty crosses zero).
+The earlier unpinned-roster pilot produced a scoring increase that did
+not reproduce after the seed/order fix.
+
+**Work:** Isolate wet-ball fumble risk, stamina/work rate, kick accuracy,
+formation selection, breakaway chance and plays/possessions using paired
+full-engine experiments; include multiple offensive roster profiles and
+seeds. Document which rule or modifier is responsible for any effect.
+
+**Accept when:** observed weather differences can be attributed to a
+specific active rule pathway and replicated across independently generated
+rosters, without an imposed target scoring level.
 
 ### DEL-01 — Test the effect of Delta Yards instead of guessing its strength (P1, OPEN)
 
