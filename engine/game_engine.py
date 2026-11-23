@@ -52,6 +52,8 @@ V2_ENGINE_CONFIG = {
     "min_yardage_multiplier": 0.65,
     # V2.4: Play-family adaptation — DC "solves" repetitive play-calling mid-game
     "play_family_adaptation_enabled": True,
+    # CCH-02: independent coach-owned tactical decisions for paired tests.
+    "coach_tactics_enabled": True,
     # V2.4: Time-of-possession model — play clock varies by offensive style
     "top_model_enabled": True,
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
@@ -3734,12 +3736,8 @@ class ViperballEngine:
             self.state.home_stars = designate_stars(self.home_team.players, max_stars=3)
             self.state.away_stars = designate_stars(self.away_team.players, max_stars=3)
 
-        # ── V3: Pregame role assignment (FEATURE/PLAYMAKER/ROTATIONAL/DEPTH) ──
-        home_style = getattr(self.home_team, 'offense_style', 'balanced')
-        away_style = getattr(self.away_team, 'offense_style', 'balanced')
-        assign_game_roles(self.home_team, home_style)
-        assign_game_roles(self.away_team, away_style)
-
+        # Seed BEFORE assigning roles or game-day attributes, so seeded
+        # games repeat independently of pregame randomness.
         if seed is not None:
             random.seed(seed)
 
@@ -3810,6 +3808,27 @@ class ViperballEngine:
         self.away_team.st_scheme = away_st
         self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
         self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
+
+        # ROST-02: game roles must use the FINAL offense style after
+        # caller overrides and migration, not an earlier default.
+        assign_game_roles(self.home_team, home_off)
+        assign_game_roles(self.away_team, away_off)
+
+        # CCH-02: the coordinator's stable profile changes decision weights,
+        # not yards or player ratings. No OC means no new tactical overlay.
+        from .coach_tactics import resolve_offensive_tactics
+        self.home_oc_tactics = (resolve_offensive_tactics(home_coaching)
+                                if V2_ENGINE_CONFIG.get("coach_tactics_enabled", True)
+                                else {})
+        self.away_oc_tactics = (resolve_offensive_tactics(away_coaching)
+                                if V2_ENGINE_CONFIG.get("coach_tactics_enabled", True)
+                                else {})
+        self._coach_tactics_usage = {
+            "home": {"formation": {}, "family": {}, "kick_pass": {},
+                     "featured_rushes": 0, "featured_targets": 0},
+            "away": {"formation": {}, "family": {}, "kick_pass": {},
+                     "featured_rushes": 0, "featured_targets": 0},
+        }
 
         # ── Coaching staff modifiers (must init before rhythm) ──
         self.home_coaching_mods: Dict = {}
@@ -3938,6 +3957,31 @@ class ViperballEngine:
             self._apply_rivalry_boost()
 
         self._apply_dq_boosts()
+
+    def _current_oc_tactics(self) -> Dict:
+        """Only the attacking coordinator's saved signature shapes this call."""
+        if self.state.possession == "home":
+            return self.home_oc_tactics
+        return self.away_oc_tactics
+
+    def _record_oc_choice(self, category: str, value: str):
+        """Track choices by offensive side, independent of resulting turnovers."""
+        if not self._current_oc_tactics():
+            return
+        bucket = self._coach_tactics_usage[self.state.possession][category]
+        bucket[value] = bucket.get(value, 0) + 1
+
+    def _coach_tactics_summary(self, side: str) -> Dict:
+        tactics = self.home_oc_tactics if side == "home" else self.away_oc_tactics
+        if not tactics:
+            return {}
+        return {
+            "oc_id": tactics["coach_id"],
+            "signature": tactics["signature"],
+            "authority": tactics["authority"],
+            "featured_position": tactics["featured_position"],
+            "selected": dict(self._coach_tactics_usage[side]),
+        }
 
     def _coaching_mods(self) -> Dict:
         """Return coaching modifiers for the team currently on offense."""
@@ -7130,13 +7174,23 @@ class ViperballEngine:
                 base["spread"] += abs(h_shift) * 0.6
                 base["heavy"] -= abs(h_shift) * 0.5
 
+        # OC signature is applied after situational coaching but before
+        # normalization. CCH-02 never changes the legal formation set.
+        from .coach_tactics import apply_weight_bias
+        tactics = self._current_oc_tactics()
+        if tactics:
+            base = apply_weight_bias(
+                base, tactics["formation_bias"], tactics["authority"])
+
         # ── Normalize (floor at 0.01 to avoid zero weights) ──
         total = sum(max(0.01, v) for v in base.values())
         norm = {k: max(0.01, v) / total for k, v in base.items()}
 
         shells = list(norm.keys())
         weights = [norm[s] for s in shells]
-        return random.choices(shells, weights=weights, k=1)[0]
+        formation = random.choices(shells, weights=weights, k=1)[0]
+        self._record_oc_choice("formation", formation)
+        return formation
 
     def select_play_family(self, formation: str = "split") -> PlayFamily:
         style = self._current_style()
@@ -7547,6 +7601,14 @@ class ViperballEngine:
             weights["field_goal"] = 0.0
             weights["punt"] = 0.0
 
+        # OC preference is a bounded change in choices only. Apply AFTER
+        # all down, field position and range gates; a zero stays zero.
+        from .coach_tactics import apply_weight_bias
+        tactics = self._current_oc_tactics()
+        if tactics:
+            weights = apply_weight_bias(
+                weights, tactics["family_bias"], tactics["authority"])
+
         families = list(PlayFamily)
         hard_zero = set()
         if weights.get("snap_kick", 0.0) <= 0.0:
@@ -7559,7 +7621,9 @@ class ViperballEngine:
                 w.append(0.0)
             else:
                 w.append(max(0.001, weights.get(f.value, 0.0)))
-        return random.choices(families, weights=w)[0]
+        family = random.choices(families, weights=w)[0]
+        self._record_oc_choice("family", family.value)
+        return family
 
     def _current_style(self) -> Dict:
         if self.state.possession == "home":
@@ -7776,6 +7840,13 @@ class ViperballEngine:
             if dc_supp < 1.0:
                 base[sf_key] *= dc_supp
 
+        # OC's favored kick-pass *type* shifts choice, not completion rate.
+        from .coach_tactics import apply_weight_bias
+        tactics = self._current_oc_tactics()
+        if tactics:
+            base = apply_weight_bias(
+                base, tactics["kick_pass_bias"], tactics["authority"])
+
         # Normalize and select
         subfamilies = [
             KickPassSubFamily.QUICK_KICK,
@@ -7784,7 +7855,9 @@ class ViperballEngine:
             KickPassSubFamily.KICK_LATERAL,
         ]
         weights = [max(0.01, base[sf.value]) for sf in subfamilies]
-        return random.choices(subfamilies, weights=weights, k=1)[0]
+        chosen = random.choices(subfamilies, weights=weights, k=1)[0]
+        self._record_oc_choice("kick_pass", chosen.value)
+        return chosen
 
     def _apply_style_situational(self, weights: Dict, style_name: str, down: int, ytg: int, fp: int, score_diff: int, quarter: int, time_left: int):
         if style_name == "ground_pound":
@@ -9381,7 +9454,16 @@ class ViperballEngine:
         # ── Spread the Love: balance touches across the lineup ──
         weights = self._spread_the_love_offense(eligible, weights, play_family=family)
 
+        # Featured-position preference only affects already-eligible runners;
+        # fatigue, roster quality, and lead/complement usage remain primary.
+        from .coach_tactics import apply_featured_position_bias
+        tactics = self._current_oc_tactics()
+        if tactics:
+            weights = apply_featured_position_bias(
+                eligible, weights, tactics["featured_position"], tactics["authority"])
         player = random.choices(eligible, weights=weights, k=1)[0]
+        if tactics and player.position == tactics["featured_position"]:
+            self._coach_tactics_usage[self.state.possession]["featured_rushes"] += 1
         plabel = player_label(player)
         ptag = player_tag(player)
         player.game_touches += 1
@@ -10318,7 +10400,17 @@ class ViperballEngine:
             _decay = 0.5 ** (_prior / 3.0)
             _recv_weights.append(max(0.1, _base_w * _decay))
         _recv_weights = self._spread_the_love_offense(eligible_receivers, _recv_weights, for_receiving=True)
+        # The same preference applies to a receiver without inventing a
+        # player or bypassing the existing eligibility and usage limits.
+        from .coach_tactics import apply_featured_position_bias
+        tactics = self._current_oc_tactics()
+        if tactics:
+            _recv_weights = apply_featured_position_bias(
+                eligible_receivers, _recv_weights,
+                tactics["featured_position"], tactics["authority"])
         receiver = random.choices(eligible_receivers, weights=_recv_weights, k=1)[0]
+        if tactics and receiver.position == tactics["featured_position"]:
+            self._coach_tactics_usage[self.state.possession]["featured_targets"] += 1
 
         kicker_tag = player_tag(kicker)
         receiver_tag = player_tag(receiver)
@@ -13757,6 +13849,10 @@ class ViperballEngine:
             "away_st_scheme": self.away_team.st_scheme,
             "home_coaching_snapshot": self._coaching_snapshot("home"),
             "away_coaching_snapshot": self._coaching_snapshot("away"),
+            "coach_tactics": {
+                "home": self._coach_tactics_summary("home"),
+                "away": self._coach_tactics_summary("away"),
+            },
             "delta_yards": {
                 "home": self.state.home_delta_yards,
                 "away": self.state.away_delta_yards,
@@ -14078,6 +14174,8 @@ class ViperballEngine:
             "yards_to_go": int(round(play.yards_to_go)) if play.yards_to_go is not None else None,
             "play_type": play.play_type,
             "play_family": play.play_family,
+            "formation": getattr(play, "formation", "") or "",
+            "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,
             "yards": int(round(play.yards_gained)) if play.yards_gained is not None else None,
             "result": play.result,
