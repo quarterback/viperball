@@ -1,5 +1,5 @@
 // College season API — the live, in-memory season endpoints the League Hub renders.
-import { apiGet, apiSend } from "./client";
+import { apiGet, apiSend, ApiError } from "./client";
 
 const enc = encodeURIComponent;
 
@@ -190,7 +190,14 @@ export const seasonApi = {
   listSessions: () =>
     apiGet<{ sessions: CollegeSession[] }>("/api/sessions/college").then((r) => r.sessions),
 
-  status: (sid: string) => apiGet<SeasonStatus>(`/sessions/${sid}/season/status`),
+  // One query function for every screen that shares the ["season-status", sid]
+  // cache key. A session with no season yet (400) resolves to null, so every
+  // consumer must handle null; an expired session (404) stays an error.
+  status: (sid: string): Promise<SeasonStatus | null> =>
+    apiGet<SeasonStatus>(`/sessions/${sid}/season/status`).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 400) return null;
+      throw e;
+    }),
 
   standings: (sid: string) =>
     apiGet<{ standings: Standing[] }>(`/sessions/${sid}/season/standings`).then((r) => r.standings),

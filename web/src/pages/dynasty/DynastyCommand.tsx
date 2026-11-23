@@ -32,7 +32,7 @@ export function DynastyCommand({ sid, status }: { sid: string; status: DynastySt
 
   const season = useQuery({
     queryKey: ["season-status", sid],
-    queryFn: () => seasonApi.status(sid).catch(() => null),
+    queryFn: () => seasonApi.status(sid),
   });
   const offseason = useQuery({
     queryKey: ["offseason-status", sid],

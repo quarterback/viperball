@@ -328,7 +328,25 @@ export function LeagueHub() {
     );
   }
 
-  const s = status.data!;
+  if (!status.data) {
+    return (
+      <Card>
+        <Text>
+          This session has no season running yet. Start one from its{" "}
+          <Anchor component={Link} to={`/dynasty/${sessionId}`}>
+            Dynasty page
+          </Anchor>{" "}
+          or create a new season in the{" "}
+          <Anchor component={Link} to="/league">
+            League Hub
+          </Anchor>
+          .
+        </Text>
+      </Card>
+    );
+  }
+
+  const s = status.data;
   const isPortal = s.phase === "portal";
   const seasonOver = s.games_played >= s.total_games;
 
