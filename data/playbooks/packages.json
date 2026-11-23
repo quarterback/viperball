@@ -96,7 +96,7 @@
       "countered_by": ["lockdown", "predator", "drift"],
       "tradeoffs": ["long_release", "interception_exposure"],
       "inspiration": "AFL contested marks: a long kick into traffic for a strong lead.",
-      "scenario": "Twelve or more to go, or chasing the game.",
+      "scenario": "Long yardage (5 or more yards a down needed), or chasing the game.",
       "benefits": "Flips the field in one play.",
       "cost": "The long release invites sacks, and a pick gives up a bonus possession.",
       "counter": "Lockdown, Predator jumping routes, or Drift sitting deep."
@@ -116,7 +116,7 @@
       "countered_by": ["lockdown", "drift"],
       "tradeoffs": ["short_gains", "rhythm_stays_home"],
       "inspiration": "Gridiron West Coast offense; AFL short kicking to leading players.",
-      "scenario": "Twelve or more yards to go.",
+      "scenario": "Long yardage: 5 or more yards a down needed, such as 3rd and 20.",
       "benefits": "Chips back into a manageable distance without a deep shot. Borrowed long yardage calls gained 5.35 yards against 4.94 for home calls in the PR #329 prototype.",
       "cost": "East Coast's rhythm meter does not travel, so a borrowed chain is only the plays.",
       "counter": "Lockdown, or Drift giving up the short kick and tackling."
@@ -356,7 +356,7 @@
       "countered_by": ["stampede", "gp_heavy_push"],
       "tradeoffs": ["run_lanes"],
       "inspiration": "Gridiron long yardage coverage.",
-      "scenario": "Twelve or more to go.",
+      "scenario": "Long yardage: 5 or more yards a down needed.",
       "benefits": "Rated strong in long yardage (0.85).",
       "cost": "Opens running lanes.",
       "counter": "Runs at a light box."
@@ -456,7 +456,7 @@
       "countered_by": ["ec_quick_kick_chain"],
       "tradeoffs": ["kick_over_the_top"],
       "inspiration": "Rugby rush defense: line speed to shut down width.",
-      "scenario": "First or second down with 10 or more to go.",
+      "scenario": "First or second down with 15 or more to go.",
       "benefits": "Squeezes sweeps and lateral chains before they get wide.",
       "cost": "A short kick over the rushing line finds space.",
       "counter": "A quick kick chain."
