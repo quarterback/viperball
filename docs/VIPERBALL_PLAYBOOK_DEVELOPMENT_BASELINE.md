@@ -1,5 +1,14 @@
 # Viperball: Playbook Development Baseline
 
+> **Out of date (November 23, 2026).** This March baseline lists 11 offensive styles and 5
+> defensive styles. The engine now has 16 offensive families and 8 defensive schemes (Swarm,
+> Blitz Pack, Shadow, Fortress, Predator, Drift, Chaos, Lockdown), and its numbers have been
+> retuned since. Use the live engine and the playbook catalog
+> ([docs/playbook_packages/README.md](playbook_packages/README.md) and
+> [INVENTORY.md](playbook_packages/INVENTORY.md)) for current families, packages and counts.
+> The design guidance below still describes the intent.
+
+
 **Purpose:** This document gives you everything you need to design new offensive and defensive philosophies for Viperball. Read the whole thing before proposing anything. You are a sport designer, not an explainer — treat the sport as real, established, and fully operational. Your job is to expand its tactical vocabulary.
 
 ---

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "situations": {
+    "short_yardage": {"plain": "4 or fewer yards to go", "rule": {"yards_to_go_max": 4}},
+    "goal_line": {"plain": "inside the opponent's 12", "rule": {"field_position_min": 88}},
+    "long_yardage": {"plain": "12 or more yards to go", "rule": {"yards_to_go_min": 12}},
+    "launch_pad": {"plain": "between the opponent's 45 and 15", "rule": {"field_position_min": 55, "field_position_max": 85}},
+    "kick_range": {"plain": "past midfield on downs 4 to 6", "rule": {"field_position_min": 55, "down_min": 4}},
+    "late_downs": {"plain": "downs 4 to 6", "rule": {"down_min": 4}},
+    "early_down": {"plain": "first or second down with 10 or more to go", "rule": {"down_max": 2, "yards_to_go_min": 10}},
+    "backed_up": {"plain": "inside the offense's own 10", "rule": {"field_position_max": 10}},
+    "protect_lead": {"plain": "leading in the fourth quarter, or by 10 or more in the second half", "rule": {"lead_min_q4": 1, "lead_min_second_half": 10}},
+    "chasing": {"plain": "trailing by 10 or more in the second half, or trailing in the last 5 minutes", "rule": {"deficit_min_second_half": 10, "deficit_min_last_300s": 1}},
+    "two_minute": {"plain": "last 2 minutes of the second or fourth quarter", "rule": {"quarters": [2, 4], "time_remaining_max": 120}},
+    "tired_defense": {"plain": "defenders on the field average under 75 energy", "rule": {"defense_energy_max": 75}},
+    "first_play_of_drive": {"plain": "the first snap of a possession", "rule": {"drive_play_index": 1}},
+    "after_takeaway": {"plain": "a possession that started from a turnover or a bonus possession", "rule": {"drive_start": ["turnover", "bonus_possession"]}},
+    "after_score_restart": {"plain": "a possession that started from the restart after the other team scored", "rule": {"drive_start": ["score_restart"]}}
+  },
+  "personnel": {
+    "strong_kicker": {"plain": "team kicking strength 77 or better", "stat": "kicking_strength", "min": 77},
+    "elite_kicker": {"plain": "team kicking strength 82 or better", "stat": "kicking_strength", "min": 82},
+    "team_speed": {"plain": "team average speed 85 or better", "stat": "avg_speed", "min": 85},
+    "elite_speed": {"plain": "team average speed 87 or better", "stat": "avg_speed", "min": 87},
+    "lateral_hands": {"plain": "team lateral proficiency 85 or better", "stat": "lateral_proficiency", "min": 85},
+    "strong_defense": {"plain": "team defensive strength 80 or better", "stat": "defensive_strength", "min": 80},
+    "deep_conditioning": {"plain": "team average stamina 85 or better", "stat": "avg_stamina", "min": 85},
+    "physical_roster": {"plain": "team average weight 185 or more", "stat": "avg_weight", "min": 185}
+  },
+  "formations": ["tight", "split", "spread", "heavy"],
+  "notes": "Situation rules are written from the calling team's point of view; field position and distance are always the offense's. Personnel tags read the team_stats block that AI scheme assignment already uses (engine/ai_coach.py), at its thresholds where it has one."
+}
