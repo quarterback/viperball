@@ -294,3 +294,97 @@ def apply_featured_position_bias(
         if getattr(player, "position", "") == featured_position and result[i] > 0:
             result[i] *= 1.0 + 0.18 * strength
     return result
+
+
+# ── CCH-03: DC-owned defensive decisions ───────────────────────────
+
+DEFENSIVE_ALIGNMENTS = ("balanced", "spread", "stacked", "aggressive")
+DEFENSIVE_READ_CATEGORIES = ("run", "lateral", "kick_pass", "trick")
+
+
+def resolve_defensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Return the DC's durable tactical preferences under HC delegation.
+
+    A game lacking a DC keeps the previous scheme-only behavior. A missing
+    HC delegates fully. This does not overwrite or re-roll the saved card.
+    """
+    if not staff or staff.get("dc") is None:
+        return {}
+    dc = staff["dc"]
+    profile = ensure_coach_tactical_profile(dc)
+    defense = profile.get("defense", {})
+    hc = staff.get("head_coach")
+    if hc is None:
+        authority = 1.0
+    else:
+        leader = ensure_coach_tactical_profile(hc)
+        delegation = float(leader.get("head_coach", {}).get("delegation", 0.5))
+        authority = max(0.4, min(0.95, 0.4 + 0.6 * delegation))
+    focus = tuple(x for x in defense.get("read_focus", ())
+                  if x in DEFENSIVE_READ_CATEGORIES)
+    return {
+        "coach_id": dc.coach_id,
+        "signature": profile.get("identity", {}).get("defense_interpretation", ""),
+        "authority": round(authority, 3),
+        "pressure_bias": max(-0.15, min(0.15, float(defense.get("pressure_bias", 0.0)))),
+        "run_support_bias": max(-0.15, min(0.15, float(defense.get("run_support_bias", 0.0)))),
+        "coverage_focus": str(defense.get("coverage_focus", "")),
+        "read_focus": focus,
+    }
+
+
+def defensive_alignment_weights(
+    scheme_alignment: str, tactics: Dict[str, Any], *,
+    formation: str = "split", yards_to_go: int = 20,
+) -> Dict[str, float]:
+    """Allocate an alignment budget, keeping the scheme's original look dominant.
+
+    This is a *choice* between already modeled run-defense alignments.
+    Alternatives have actual costs in ALIGNMENT_VS_PLAY. No new outcome
+    modifier is introduced, and no actual offensive play family is known.
+    """
+    if scheme_alignment not in DEFENSIVE_ALIGNMENTS:
+        scheme_alignment = "balanced"
+    weights = {a: 0.08 for a in DEFENSIVE_ALIGNMENTS}
+    weights[scheme_alignment] += 0.72
+    auth = max(0.0, min(1.0, float(tactics.get("authority", 1.0))))
+    pressure = float(tactics.get("pressure_bias", 0.0))
+    support = float(tactics.get("run_support_bias", 0.0))
+    coverage = tactics.get("coverage_focus")
+    weights["aggressive"] += max(0.0, pressure * auth * 1.6)
+    weights["stacked"] += max(0.0, support * auth * 1.6)
+    weights["spread"] += (0.10 * auth if coverage in ("deep", "perimeter", "intermediate")
+                          else 0.0)
+    if yards_to_go <= 4:
+        weights["stacked"] += 0.09 * auth
+    elif yards_to_go >= 15 or formation == "spread":
+        weights["spread"] += 0.06 * auth
+    return weights
+
+
+def defensive_blitz_probability(
+    scheme_probability: float, tactics: Dict[str, Any], alignment: str,
+) -> float:
+    """Blend DC pressure preferences into the existing scheme blitz chance.
+
+    Aggressive alignment gains pressure potential; spread/stacked alignment
+    sacrifices it. This controls the existing sack-rush *decision*, not a
+    second independent sack or yardage multiplier.
+    """
+    auth = max(0.0, min(1.0, float(tactics.get("authority", 1.0))))
+    bias = max(-0.15, min(0.15, float(tactics.get("pressure_bias", 0.0))))
+    alignment_shift = {"aggressive": 0.06, "spread": -0.045,
+                       "stacked": -0.025, "balanced": 0.0}.get(alignment, 0.0)
+    return max(0.02, min(0.65,
+        float(scheme_probability) + auth * (bias + alignment_shift)))
+
+
+def defensive_read_allocation(tactics: Dict[str, Any], family_category: str) -> float:
+    """A focused DC trades reads away from families she did not prepare for."""
+    focus = tactics.get("read_focus") or ()
+    if not focus or family_category not in DEFENSIVE_READ_CATEGORIES:
+        return 0.0
+    auth = max(0.0, min(1.0, float(tactics.get("authority", 1.0))))
+    # Two-of-four categories are typically favored. A focused read has the
+    # same *size* as the missed-read concession, not a blanket read boost.
+    return (0.04 if family_category in focus else -0.04) * auth

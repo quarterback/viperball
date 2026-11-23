@@ -1,0 +1,60 @@
+name: Coach defense decisions CCH-03
+
+on:
+  push:
+    branches:
+      - feature/coach-tactics-cch-03-defense
+  pull_request:
+    branches:
+      - main
+    paths:
+      - engine/coach_tactics.py
+      - engine/game_engine.py
+      - tests/test_coach_tactics_defense.py
+      - scripts/benchmark_defensive_coaches.py
+      - .github/workflows/coach-tactics-defense.yml
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: |
+          python -m pip install pytest
+          python -m pip install -r requirements.txt
+      - name: CCH-03 targeted unit and full-game smoke tests
+        run: python -m pytest tests/test_coach_tactics_defense.py -q
+      - name: Full existing regression suite
+        run: python -m pytest tests/ -q
+
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Two schemes and two identical-attribute DCs, tactics on/off
+        run: |
+          python scripts/benchmark_defensive_coaches.py --games 40 \
+            --seed 20261123 --out reports/cch03
+      - name: Preserve per-coach call distributions and scoring controls
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cch03-defense-identity-benchmark
+          path: reports/cch03/
+          if-no-files-found: error
+          retention-days: 90

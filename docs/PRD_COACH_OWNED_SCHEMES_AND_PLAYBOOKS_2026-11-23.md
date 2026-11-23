@@ -1,10 +1,10 @@
 # PRD: Coach-owned tactical identities and expandable playbooks
 
 **Date:** 2026-11-23  
-**Status:** Proposal approved for parallel implementation planning; no rules or coefficient changes authorized by this document  
+**Status:** Active implementation contract. CCH-01/02 and PBK-01/02/04 have merged; CCH-03 is CI-validated in open PR #332; CCH-04 is assigned separately. No blanket rules/score tuning authorized.  
 **Workstreams:** COACH (coach identity + game integration, assigned to ChatGPT) and PLAYBOOK (scheme catalog and future packages, assigned to a separate agent)  
 **Dependency:** Viperball engine PR #323 → defensive tactics PR #325 → DEF-06 analysis PR #326. The assessment and this plan live on documentation PR #324.  
-**COACH implementation status:** [CCH-01 PR #327](https://github.com/quarterback/viperball/pull/327) is open and CI-validated (13 new tests; 85 total existing-plus-new); metadata-only persistent CoachCard identities. [CCH-02 PR #328](https://github.com/quarterback/viperball/pull/328) is in review, with 94 passing tests and 320 matched full-engine games. CCH-03–04 remain unimplemented.
+**COACH implementation status:** [CCH-01 #327](https://github.com/quarterback/viperball/pull/327) and [CCH-02 #328](https://github.com/quarterback/viperball/pull/328) are **MERGED**. [CCH-03 #332](https://github.com/quarterback/viperball/pull/332) has **11 targeted and 150 total passing tests and 320 matched games** ([CI](https://github.com/quarterback/viperball/actions/runs/45272756445)); still **IN REVIEW** until merged. **CCH-04 is assigned to the other agent and remains separate**. [Playbook catalog #330](https://github.com/quarterback/viperball/pull/330) and reproducibility [#331](https://github.com/quarterback/viperball/pull/331) are merged.
 
 ## Product decision
 
@@ -135,10 +135,10 @@ Package records describe **what can be installed and under what conditions**. Th
 
 **Deliver in small PRs, in order:**
 
-- **CCH-01: Stable individual coach signature — IN REVIEW, [PR #327](https://github.com/quarterback/viperball/pull/327).** Implemented a versioned tactical profile on CoachCard, deterministic generation, serialization, legacy backfill, correlated personal preferences and tests. Coach moves retain the signature. **No gameplay effects in this phase.** [CI: 13 new tests and 85 total passed](https://github.com/quarterback/viperball/actions/runs/45239144988).
-- **CCH-02: Actual game-day use — IN REVIEW, [PR #328](https://github.com/quarterback/viperball/pull/328).** Implemented bounded formation, play-family, kick-pass subtype and eligible-player-use biases driven by the saved OC identity. Role assignments now follow final style resolution (ROST-02 order correction), and game results expose the OC and actual selected choices. [CI: 94 tests and 320 matched games, including an identical no-OC-tactics control](https://github.com/quarterback/viperball/actions/runs/45242379413). See [CCH-02 AAR](https://github.com/quarterback/viperball/blob/feature/coach-tactics-gameplay-cch-02/docs/aar_2026-11-23_cch02_coach_tactics_gameplay.md).
-- **CCH-03: DC identity and HC autonomy.** Distinct defensive style behaviors through bounded tactical decisions and the existing read/coverage/pressure mechanism. Use DEF-06 conditional benchmarks; don't double-count suppression. Ensure HC control vs delegation is explicit.
-- **CCH-04: Team installation and career progression.** Team-level installed packages and familiarity; staff turnover and continuity, coach-tree inheritance, season-to-season changes and later STC effects. Verify persistence across hires/transfers/saves.
+- **CCH-01: Stable individual coach signature — DONE, merged [PR #327](https://github.com/quarterback/viperball/pull/327).** Implemented a versioned tactical profile on CoachCard, deterministic generation, serialization, legacy backfill, correlated personal preferences and tests. Coach moves retain the signature. **No gameplay effects in this phase.** [CI: 13 new tests and 85 total passed](https://github.com/quarterback/viperball/actions/runs/45239144988).
+- **CCH-02: Actual game-day use — DONE, merged [PR #328](https://github.com/quarterback/viperball/pull/328).** Implemented bounded formation, play-family, kick-pass subtype and eligible-player-use biases driven by the saved OC identity. Role assignments now follow final style resolution (ROST-02 order correction), and game results expose the OC and actual selected choices. [CI: 94 tests and 320 matched games, including an identical no-OC-tactics control](https://github.com/quarterback/viperball/actions/runs/45242379413). See [CCH-02 AAR](https://github.com/quarterback/viperball/blob/feature/coach-tactics-gameplay-cch-02/docs/aar_2026-11-23_cch02_coach_tactics_gameplay.md).
+- **CCH-03: DC identity and HC autonomy — IN REVIEW, [PR #332](https://github.com/quarterback/viperball/pull/332).** DC-specific pre-snap alignment and blitz choices use existing scheme/pressure contest mechanisms; favored read categories gain a small offset while nonfavored categories concede it. HC delegation limits divergence. [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md) documents the verified control, 320-game data, remaining DEF-07 actual pressure-event instrumentation, and integration rule for CCH-04. No package or team-installation code is included.
+- **CCH-04: Team installation and career progression — ASSIGNED TO OTHER AGENT.** Team-level installed packages and familiarity; staff turnover and continuity, coach-tree inheritance, season-to-season changes and later STC effects. Verify persistence across hires/transfers/saves.
 
 **Do not edit:** new playbook catalog definitions, `data/playbooks/**`, package prose/rosters or the future playbook editor unless the other agent specifically hands them off.
 
@@ -213,4 +213,4 @@ Conflicts or handoff to other track:
 - `docs/aar_2026-11-23_def06_full_defense_matrix.md`: conditional offensive/defensive matchup data and findings (on documentation PR #324).
 - `docs/ASSESSMENT_PRD_ENGINE_TACTICS_2026-11-23.md`: main work queue, ROST-02, DEF-07 and VAL-02.
 
-_This document defines a two-agent implementation contract. A first coach tactical-profile implementation exists in unmerged PR #327; the package catalog and DC/season installation work still require separate implementation._
+_This document defines a two-agent implementation contract. Persistent coach profiles, OC behavior and the playbook catalog have merged. Defensive DC decisions are ready for review in PR #332; team installation, borrowed packages and multi-season playbook changes belong to the other agent's CCH-04. Do not merge CCH-04's older PR #329 prototype directly._
