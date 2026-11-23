@@ -125,7 +125,7 @@ def test_explosive_defense_affects_breakaway_probability(monkeypatch):
     # Keep base chance deterministic: speed is rescaled in the real engine,
     # and the same player/matchup is evaluated against two schemes.
     team = SimpleNamespace(avg_speed=92)
-    monkeypatch.setattr(random, "random", lambda: 0.14)
+    monkeypatch.setattr(random, "random", lambda: 0.17)
     monkeypatch.setattr(random, "randint", lambda low, high: low)
     lock_yards = engine._breakaway_check(6, team, family=PlayFamily.POWER)
     engine.away_team.defense_style = "blitz_pack"
