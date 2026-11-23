@@ -88,3 +88,19 @@ AARs flagged as a risk.
 
 `tsc -b --noEmit` and `npm run build` pass. The value keys were read from the engine's
 `RecordBook` defaults and the code that updates each record. Not run against a live backend.
+
+## Third fix: Pro league creation and the dynasty recruiting pipeline
+
+Replaying the app's calls against the backend locally (FastAPI `TestClient`) and running
+`pyflakes` on `api/main.py` turned up three names the API used without importing or defining:
+
+- `POST /api/pro/{league}/new` raised `NameError: ProLeagueSeason`, so the React app could
+  never start a pro season. The old NiceGUI pro page calls the engine directly, which is why
+  it still worked there.
+- `_auto_save_pro` used `DraftyQueenzManager` without importing it, so every pro mutation
+  would have failed next.
+- Dynasty creation read `season.teams` where no `season` exists. The `try` around it
+  swallowed the `NameError`, so the early high school recruiting pipeline was never built at
+  creation. It now uses the loaded `teams`.
+
+After the fix, creating an NVL season and simming a week both return 200 locally.

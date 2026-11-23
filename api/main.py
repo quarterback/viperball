@@ -2691,9 +2691,9 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty._hs_league = create_hs_league(_year, rng=_rng)
         dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
-        num_teams = len(season.teams) if season and hasattr(season, "teams") else 200
+        num_teams = len(teams) or 200
         _class_size = max(300, num_teams * 8)
-        _t_names = list(season.teams.keys()) if season and hasattr(season, "teams") else []
+        _t_names = list(teams.keys())
         _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
@@ -5260,6 +5260,7 @@ def _get_pro_session(league: str, session_id: str) -> "ProLeagueSeason":
 def _auto_save_pro(league: str, session_id: str):
     """Save pro league state to database after mutations."""
     from engine.db import save_pro_league as db_save_pro_league
+    from engine.draftyqueenz import DraftyQueenzManager
     key = f"{league.lower()}_{session_id}"
     season = pro_sessions.get(key)
     if season:
@@ -5272,6 +5273,7 @@ def _auto_save_pro(league: str, session_id: str):
 
 @app.post("/api/pro/{league}/new")
 def pro_league_new(league: str):
+    from engine.pro_league import ProLeagueSeason
     config = _get_league_config(league)
     session_id = str(uuid.uuid4())[:8]
     key = f"{league.lower()}_{session_id}"
