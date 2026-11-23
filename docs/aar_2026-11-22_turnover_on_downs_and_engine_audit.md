@@ -65,7 +65,8 @@ The fast sim is the League Hub's default. Other gaps:
 - **Pindown value differs.** The fast sim scores a pindown as 0.5 points; the full engine and
   the README score it as 1.
 - **Speed no longer justifies it.** The full engine ran 200 games in about 10 seconds. A
-  whole 1,230 game regular season took about 47 seconds through Sim Rest.
+  whole regular season through Sim Rest takes about 2 minutes locally with the full engine
+  (an earlier draft of this AAR said 47 seconds; that run had the fast sim on).
 
 ### Snap kicks have nearly disappeared from the full engine
 

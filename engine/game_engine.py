@@ -4782,10 +4782,13 @@ class ViperballEngine:
                 # V2: Underdog surge check each drive
                 self._check_underdog_surge()
 
-            # Clear bonus possession at end of half — does not carry over
-            self.state.bonus_possession_team = ""
-            self._bonus_recipient = ""
-            self._bonus_drives_remaining = -1
+            # Clear bonus possession at end of half — does not carry over.
+            # (This ran after every quarter, wiping bonuses earned late in
+            # Q1 and Q3 before they could be used.)
+            if quarter in (2, 4):
+                self.state.bonus_possession_team = ""
+                self._bonus_recipient = ""
+                self._bonus_drives_remaining = -1
 
             if quarter == 2:
                 self._home_halftime_score = self.state.home_score
@@ -5653,7 +5656,10 @@ class ViperballEngine:
         #   - Snap kick range (fp >= 40): attempt a snap kick
         #   - Otherwise: punt for field position / pindown
         # This prevents the ~10% "end of quarter" dead drives.
-        if drive_result == "stall" and drive_plays > 0:
+        # Only at the end of a half (Q2, Q4). At the end of Q1 and Q3 the
+        # possession, down and distance carry into the next quarter; forcing
+        # a last second punt or kick there ended drives that should continue.
+        if drive_result == "stall" and drive_plays > 0 and self.state.quarter in (2, 4):
             fp = self.state.field_position
             # Give the team one last play with 1 second on the clock
             self.state.time_remaining = 1
@@ -5675,13 +5681,18 @@ class ViperballEngine:
             dk_viable = stall_deficit <= 5  # Drop kick (5 pts) can tie
             dk_in_range = final_fg_dist <= min(58, dk_range)
 
-            if fp >= 60 and final_fg_dist <= 50 and pk_viable:
+            # Pick whichever viable kick is worth more on average. The old
+            # order always tried the field goal first, so a last play inside
+            # 50 yards was a 3 point attempt even when a 5 point snap kick
+            # was as likely to go in.
+            dk_ok = dk_viable and dk_in_range and final_fg_dist <= 55
+            pk_ok = pk_viable and fp >= 60 and final_fg_dist <= 50
+            dk_ev = self._drop_kick_success(final_fg_dist, k_skill) * 5.0 if dk_ok else 0.0
+            pk_ev = self._place_kick_success(final_fg_dist, k_skill) * 3.0 if pk_ok else 0.0
+            if dk_ok and dk_ev >= pk_ev:
+                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            elif pk_ok:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif fp >= 55 and dk_viable and dk_in_range and final_fg_dist <= 55:
-                # Deficit too large for FG but drop kick can do it
-                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
-            elif dk_in_range and dk_viable and final_fg_dist <= 55:
-                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             elif stall_deficit == 0:
                 # Leading or tied — punt for field position
                 final_play = self.simulate_punt(PlayFamily.PUNT)
@@ -7212,6 +7223,11 @@ class ViperballEngine:
         # Hard cutoff at 58 yards — no team should ever attempt beyond this.
         if fg_distance > 58:
             weights["snap_kick"] = 0.0
+        # Same for field goals: beyond 54 yards the success model is 0.3% or
+        # less, and beyond 65 the kick is impossible (a 72 yard attempt showed
+        # up in the last seconds of a half).
+        if fg_distance > 54:
+            weights["field_goal"] = 0.0
         elif fg_distance <= dk_comfort:
             weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
         elif fg_distance <= dk_comfort + 5:
@@ -7555,11 +7571,18 @@ class ViperballEngine:
             weights["snap_kick"] = 0.0
             weights["field_goal"] = 0.0
             weights["punt"] = 0.0
+            weights["territory_kick"] = 0.0  # deprecated family, resolves to a punt
 
         families = list(PlayFamily)
         hard_zero = set()
-        if weights.get("snap_kick", 0.0) <= 0.0:
-            hard_zero.add(PlayFamily.SNAP_KICK)
+        # Kick families the gates above zeroed stay at zero. The 0.001 floor
+        # below exists for play variety and must not revive a field goal or
+        # punt on an early down (it produced 2nd down field goals, punts, and
+        # a 109 yard field goal attempt from a team's own 1).
+        for fam in (PlayFamily.SNAP_KICK, PlayFamily.FIELD_GOAL,
+                    PlayFamily.PUNT, PlayFamily.TERRITORY_KICK):
+            if weights.get(fam.value, 0.0) <= 0.0:
+                hard_zero.add(fam)
         hard_zero.add(PlayFamily.KNEEL)
 
         w = []
@@ -11242,24 +11265,33 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
                 else:
-                    # Offense recovers (disaster - terrible field position, no conversion)
+                    # Kicking team recovers: dead ball, the down is consumed
+                    # (README, Blocked Kicks). Turnover only after 6th down.
                     self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
-                    self.change_possession()  # Turnover on downs
-                    self.state.field_position = 100 - self.state.field_position  # Flip field
-                    self.state.down = 1
-                    self.state.yards_to_go = 20
+                    self.state.yards_to_go -= block_distance
+                    self.state.down += 1
+                    turnover = self.state.down > 6
+                    if turnover:
+                        self.change_possession()
+                        self.state.field_position = 100 - self.state.field_position  # Flip field
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
                     self.apply_stamina_drain(2)
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    desc = (f"{ptag} punt BLOCKED! Kicking team recovers — turnover on downs!"
+                            if turnover else
+                            f"{ptag} punt BLOCKED! Kicking team recovers — dead ball")
 
                     return Play(
                         play_number=self.state.play_number, quarter=self.state.quarter,
                         time=self.state.time_remaining, possession=self.state.possession,
-                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        field_position=self.state.field_position, down=self.state.down,
+                        yards_to_go=self.state.yards_to_go,
                         play_type="punt", play_family=family.value,
                         players_involved=[player_label(punter)],
                         yards_gained=block_distance,
                         result=PlayResult.BLOCKED_PUNT.value,
-                        description=f"{ptag} punt BLOCKED! Kicking team recovers but turnover on downs!",
+                        description=desc,
                         fatigue=round(stamina, 1),
                     )
 
@@ -11995,23 +12027,35 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
             else:
-                # Offense recovers - treated like failed 4th down
-                self.change_possession()
-                self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
-                self.state.down = 1
-                self.state.yards_to_go = 20
+                # Kicking team recovers: dead ball, the down is consumed
+                # (README, Blocked Kicks). Turnover only after 6th down,
+                # matching the blocked snap kick.
+                loss = random.randint(3, 10)
+                self.state.field_position = max(1, self.state.field_position - loss)
+                self.state.yards_to_go += loss
+                self.state.down += 1
+                turnover = self.state.down > 6
+                if turnover:
+                    self.change_possession()
+                    self.state.field_position = 100 - self.state.field_position
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
                 self.apply_stamina_drain(2)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                desc = (f"{ptag} place kick BLOCKED! Kicking team recovers — turnover on downs!"
+                        if turnover else
+                        f"{ptag} place kick BLOCKED! Kicking team recovers — dead ball")
 
                 return Play(
                     play_number=self.state.play_number, quarter=self.state.quarter,
                     time=self.state.time_remaining, possession=self.state.possession,
-                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    field_position=self.state.field_position, down=self.state.down,
+                    yards_to_go=self.state.yards_to_go,
                     play_type="place_kick", play_family=family.value,
                     players_involved=[player_label(kicker)],
-                    yards_gained=0,
+                    yards_gained=-loss,
                     result=PlayResult.BLOCKED_KICK.value,
-                    description=f"{ptag} place kick BLOCKED! Kicking team recovers but turnover on downs!",
+                    description=desc,
                     fatigue=round(stamina, 1),
                 )
 

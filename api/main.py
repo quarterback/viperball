@@ -379,12 +379,10 @@ class CreateDynastyRequest(BaseModel):
 
 class SimulateWeekRequest(BaseModel):
     week: Optional[int] = None
-    fast_sim: bool = True
 
 
 class SimulateThroughRequest(BaseModel):
     target_week: int
-    fast_sim: bool = True
 
 
 class DynastyStartSeasonRequest(BaseModel):
@@ -1441,7 +1439,7 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
     loop = asyncio.get_event_loop()
     games = await loop.run_in_executor(
         _sim_executor,
-        lambda: season.simulate_week(week=week, dq_team_boosts=dq_boosts, use_fast_sim=req.fast_sim),
+        lambda: season.simulate_week(week=week, dq_team_boosts=dq_boosts),
     )
 
     if not games:
@@ -1461,7 +1459,7 @@ async def simulate_week(session_id: str, req: SimulateWeekRequest):
         "games_count": len(games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -1476,7 +1474,7 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
     loop = asyncio.get_event_loop()
     all_games = await loop.run_in_executor(
         _sim_executor,
-        lambda: season.simulate_through_week(req.target_week, use_fast_sim=req.fast_sim),
+        lambda: season.simulate_through_week(req.target_week),
     )
 
     _persist_box_scores(session_id, all_games)
@@ -1490,12 +1488,12 @@ async def simulate_through(session_id: str, req: SimulateThroughRequest):
         "games_count": len(all_games),
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
 class SimulateRestRequest(BaseModel):
-    fast_sim: bool = True
+    pass
 
 
 @app.post("/sessions/{session_id}/season/simulate-rest")
@@ -1508,7 +1506,7 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
 
     def _do_sim():
         games_before = sum(1 for g in season.schedule if g.completed)
-        season.simulate_season(generate_polls=True, use_fast_sim=req.fast_sim)
+        season.simulate_season(generate_polls=True)
         return sum(1 for g in season.schedule if g.completed) - games_before
 
     loop = asyncio.get_event_loop()
@@ -1524,7 +1522,7 @@ async def simulate_rest(session_id: str, req: SimulateRestRequest = SimulateRest
         "total_games": len(season.schedule),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -5200,7 +5198,7 @@ def dq_create_season(session_id: str, req: DQCreateRequest):
 
 
 class DQAdvanceWeekRequest(BaseModel):
-    fast_sim: bool = True
+    pass
 
 
 @app.post("/sessions/{session_id}/dq/advance-week")
@@ -5218,8 +5216,7 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
         raise HTTPException(status_code=400, detail="Regular season is complete")
 
     # DQ decoupled from the sim — no team boosts.
-    games = season.simulate_week(week=next_week, dq_team_boosts=None,
-                                  use_fast_sim=req.fast_sim)
+    games = season.simulate_week(week=next_week, dq_team_boosts=None)
 
     if season.is_regular_season_complete():
         session["phase"] = "playoffs_pending"
@@ -5230,7 +5227,7 @@ def dq_advance_week(session_id: str, req: DQAdvanceWeekRequest = DQAdvanceWeekRe
         "season_complete": season.is_regular_season_complete(),
         "phase": session["phase"],
         "status": _serialize_season_status(session),
-        "engine": "fast_sim" if req.fast_sim else "full",
+        "engine": "full",
     }
 
 
@@ -6809,7 +6806,7 @@ async def my_team_simulate(session_id: str):
         raise HTTPException(400, f"Cannot simulate in phase '{sess['phase']}'. Finalize roster first.")
 
     def _do_sim():
-        season.simulate_season(generate_polls=True, use_fast_sim=True)
+        season.simulate_season(generate_polls=True)
 
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(_sim_executor, _do_sim)

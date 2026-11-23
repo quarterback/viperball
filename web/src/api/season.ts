@@ -221,11 +221,8 @@ export const seasonApi = {
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
-  // fastSim=false runs the full play-by-play engine; true uses the fast sim.
-  simWeek: (sid: string, fastSim: boolean) =>
-    apiSend("POST", `/sessions/${sid}/season/simulate-week`, { fast_sim: fastSim }),
-  simRest: (sid: string, fastSim: boolean) =>
-    apiSend("POST", `/sessions/${sid}/season/simulate-rest`, { fast_sim: fastSim }),
+  simWeek: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-week`),
+  simRest: (sid: string) => apiSend("POST", `/sessions/${sid}/season/simulate-rest`),
 
   // Pre-season transfer portal (phase "portal" before "regular").
   portal: (sid: string) =>
