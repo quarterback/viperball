@@ -52,6 +52,7 @@ The key principle: explain results from **players, decisions, conditions, field 
 | UI-01 | P1 | OPEN | Complete React game report and team tactical statistics |
 | SIM-01 | P1 | OPEN | Audit fast-sim dependencies beyond college mode |
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
+| VAL-02 | P1 | OPEN | Make production fresh-roster generation deterministic across checkouts and runs |
 | RULE-01 | P2 | OPEN | Rulebook/version/terminology reconciliation |
 | OPS-01 | P2 | OPEN | Repair obsolete tests and close deploy/test gaps |
 
@@ -178,6 +179,32 @@ P0 means correctness/integrity; P1 means core game consequence; P2 means present
 **Work:** Add invariant tests for downs, restarts, scoring, punts/pindowns, bonus possessions, fatigue/snaps/lineups, formation-defense interactions, scheme/roster selection and save/export parity. Include a controlled matchup matrix in the benchmark. Run actual fresh=True rosters and real season-assigned schemes; earlier AARs were misled twice by saved/old-scale team files. Add basic variance/ranges and comparisons over multiple seeds. After PR #323 merges, verify real app flows and deployed site; previous AAR explicitly says live site not tested.
 
 **Accept when:** repeatable benchmarks fail on meaningful rule/engine regressions without freezing natural margin distributions; test commands, sample sizes, seeds and results are recorded; live college season, dynasty, stats site and saves are actually exercised.
+
+### VAL-02 — Deterministic fresh-roster generation (P1, OPEN)
+
+**New direct code evidence from DEF-06:** `engine/season.py::load_teams_from_directory` and
+`load_teams_with_states` loop over `Path.glob("*.json")` without sorting.
+Fresh roster generation calls randomized archetype and player rolls in that order.
+Two GitHub Actions jobs using the same `random.seed(20261123)` and
+`PYTHONHASHSEED=0` selected different median/strong/weak rosters. Results
+were paired *inside each job*, but the cross-job starting populations differed.
+This is a production reproducibility issue, not simply a reporting bug.
+
+**Temporary solution in [DEF-06 PR #326](https://github.com/quarterback/viperball/pull/326):**
+The benchmark recreates the same fresh-roster steps with sorted file enumeration,
+records a roster fingerprint, and tests repeat selection under one seed. It does
+**not** modify the production season loader.
+
+**Work:** Sort input files in both production roster-loading functions; audit
+all other uses of process-salted `hash()` for seeds (including
+`ai_coach.py::auto_assign_all_teams` and season referee seeding). Preserve
+real session/dynasty save compatibility. Adopt one deterministic, explicitly
+versioned seed derivation for simulation experiments.
+
+**Accept when:** two independent clean-checkout processes produce identical
+fresh player IDs/ratings and scheme assignments for a given seed, and repeated
+full-engine matchups produce identical summary stats under the same settings.
+Record a fingerprint and verify it in CI.
 
 ### RULE-01 — Canonical rules and docs, with mechanical tests (P2, OPEN)
 
