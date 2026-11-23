@@ -5629,6 +5629,15 @@ class ViperballEngine:
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
+                elif play.result == "turnover_on_downs":
+                    # The play already flipped possession and field position.
+                    # The new offense starts a fresh series: 1st and 20.
+                    # Without this the counter carried over as 7th down with
+                    # the old offense's yards to go, so one failed play handed
+                    # the ball straight back.
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
                 elif play.result == "safety":
                     scored_team = "away" if drive_team == "home" else "home"
                     self.state.possession = drive_team
