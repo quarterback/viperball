@@ -15,6 +15,7 @@ from engine.game_engine import (
     DEFENSE_STYLES,
     FORMATION_VS_DEFENSE,
     OFFENSE_VS_DEFENSE_MATCHUP,
+    OFFENSE_STYLES,
     PlayFamily,
     V2_ENGINE_CONFIG,
     ViperballEngine,
@@ -133,3 +134,20 @@ def test_explosive_defense_affects_breakaway_probability(monkeypatch):
     blitz_yards = engine._breakaway_check(6, team, family=PlayFamily.POWER)
     assert lock_yards == 6
     assert blitz_yards > 6
+
+
+def test_all_offenses_and_defenses_have_explicit_matchups():
+    assert len(OFFENSE_STYLES) == 16
+    assert len(DEFENSE_STYLES) == 8
+    assert all(
+        (offense, defense) in OFFENSE_VS_DEFENSE_MATCHUP
+        for offense in OFFENSE_STYLES
+        for defense in DEFENSE_STYLES
+    )
+
+
+def test_no_retired_suppression_fields_remain_in_defense_definitions():
+    for scheme in DEFENSE_STYLES.values():
+        assert "gap_breakdown_bonus" not in scheme
+        assert "territory_kick" not in scheme["play_family_modifiers"]
+        assert "territory_kick" not in scheme["gameplan_bias"]
