@@ -3,15 +3,40 @@ from __future__ import annotations
 
 import csv
 import json
+import random
 from pathlib import Path
 
 import pytest
 
 from engine.game_engine import DEFENSE_STYLES, OFFENSE_STYLES
 from scripts.defense_matchup_matrix import (
-    FORMATIONS, aggregate, choose_rosters, main, observed_drive_points,
-    paired_scheme_contrasts, parse_choices, sample_ci, stable_seed,
+    FORMATIONS, ROOT, aggregate, choose_rosters, load_stable_fresh_rosters,
+    main, observed_drive_points, paired_scheme_contrasts, parse_choices,
+    sample_ci, selected_roster_fingerprint, stable_seed,
 )
+
+
+
+
+def test_fresh_roster_order_is_reproducible():
+    # Production team-directory iteration currently uses unsorted glob().
+    # DEF-06 must always choose the same actual rosters under one seed.
+    random.seed(20261123)
+    teams1 = load_stable_fresh_rosters(ROOT / "data" / "teams")
+    attacker1, defenders1 = choose_rosters(teams1)
+    random.seed(20261123)
+    teams2 = load_stable_fresh_rosters(ROOT / "data" / "teams")
+    attacker2, defenders2 = choose_rosters(teams2)
+    assert attacker1.name == attacker2.name
+    assert [defenders1[x].name for x in ("weak", "strong")] == [
+        defenders2[x].name for x in ("weak", "strong")]
+    assert [p.overall for p in attacker1.players] == [
+        p.overall for p in attacker2.players]
+    p1 = {"offense": attacker1.name, "weak": defenders1["weak"].name,
+          "strong": defenders1["strong"].name}
+    p2 = {"offense": attacker2.name, "weak": defenders2["weak"].name,
+          "strong": defenders2["strong"].name}
+    assert selected_roster_fingerprint(p1) == selected_roster_fingerprint(p2)
 
 
 def test_stable_seed_ignores_defense_in_paired_context():
@@ -89,7 +114,6 @@ def test_aggregates_keep_observations_distinct_and_weight_attempts():
                for r in contrasts)
 
 
-@pytest.mark.slow
 def test_small_full_engine_smoke_generates_expected_files(tmp_path):
     out = tmp_path / "def06-smoke"
     main([
