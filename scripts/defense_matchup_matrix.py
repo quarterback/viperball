@@ -30,7 +30,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from engine import load_teams_from_directory, ViperballEngine  # noqa: E402
+from engine import ViperballEngine  # noqa: E402
+from engine.game_engine import load_team_from_json  # noqa: E402
+from engine.season import _pick_ai_archetype  # noqa: E402
+from scripts.generate_rosters import CONFERENCE_FLOORS  # noqa: E402
 from engine.game_engine import (  # noqa: E402
     DEFENSE_STYLES, OFFENSE_STYLES, FORMATION_VS_DEFENSE,
     OFFENSE_VS_DEFENSE_MATCHUP, V2_ENGINE_CONFIG,
@@ -100,6 +103,37 @@ def roster_score(team, defense=False):
             for p in players
         )
     return statistics.mean(p.overall for p in players)
+
+
+def load_stable_fresh_rosters(directory: Path):
+    """Mirror Season fresh roster generation with sorted file iteration.
+
+    Season.load_teams_from_directory() currently loops over Path.glob with
+    filesystem order. Fresh roster generation draws from the process RNG,
+    so two clean checkouts can pick different 'median' and tier rosters
+    under the same seed. Sorting files makes this experiment repeatable
+    without changing production roster behavior.
+    """
+    teams = {}
+    for team_file in sorted(directory.glob("*.json")):
+        data = json.loads(team_file.read_text(encoding="utf8"))
+        info = data.get("team_info", {})
+        conf_floor = CONFERENCE_FLOORS.get(info.get("conference", ""), 0)
+        arch = _pick_ai_archetype()
+        team = load_team_from_json(
+            str(team_file), fresh=True, program_archetype=arch,
+            conference_floor=conf_floor,
+        )
+        teams[team.name] = team
+    if not teams:
+        raise ValueError("No roster files in " + str(directory))
+    return teams
+
+
+def selected_roster_fingerprint(profile):
+    """Detect accidental changes to baseline roster selection across runs."""
+    data = json.dumps(profile, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf8")).hexdigest()[:20]
 
 
 def choose_rosters(teams):
@@ -395,9 +429,10 @@ def markdown_report(rows, matrix, contrasts, profile, args):
         "  matched weak (~15th percentile) and strong (~85th percentile) set,",
         "  held fixed across all schemes. All games use neutral_site=True.",
         f"- Offensive roster: **{profile['offense']['name']}**, rating {profile['offense']['overall']:.1f}.",
+        f"- Roster selection fingerprint: `{profile['selection_fingerprint']}`.",
         f"- Weak defense: **{profile['weak']['name']}**, defensive rating {profile['weak']['defense']:.1f}.",
         f"- Strong defense: **{profile['strong']['name']}**, defensive rating {profile['strong']['defense']:.1f}.",
-        "- All four formations are forcibly selected on the focal offense on",
+        "- Requested formations are forcibly selected on the focal offense on",
         "  normal scrimmage plays; the opponent's offense retains its usual",
         "  formation choice. Formation results measure a stress test, not",
         "  ordinary coaching frequency or the probability of choosing a shell.",
@@ -490,8 +525,8 @@ def markdown_report(rows, matrix, contrasts, profile, args):
         "- In-game form, fatigue, field position, turnovers, special teams and",
         "  score-difference restarts still affect these outcomes. The study",
         "  averages some of them but does not individually disable them.",
-        "- Run a separate matched weather test (clear/rain), increase reps,",
-        "  test additional attacking roster profiles and rotate the neutral",
+        "- Compare matched clear/rain observations when both are sampled;",
+        "  increase repetitions, test other attacking rosters and rotate the neutral",
         "  opponent's offense before making balance decisions.",
         "- DEF-06 supplies evidence for design decisions; it does not authorize",
         "  any fixed target for close games, home wins, or scoring.",
@@ -499,9 +534,14 @@ def markdown_report(rows, matrix, contrasts, profile, args):
         "## Reproduce",
         "",
         "```sh",
-        "PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py --reps "
-        + str(args.reps) + " --seed " + str(args.seed) + " --weathers "
-        + args.weathers + " --out reports/def06",
+        "PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py"
+        + " --reps " + str(args.reps) + " --seed " + str(args.seed)
+        + " --offenses " + args.offenses
+        + " --defenses " + args.defenses
+        + " --formations " + args.formations
+        + " --tiers " + args.tiers
+        + " --venues " + args.venues
+        + " --weathers " + args.weathers + " --out reports/def06",
         "```",
         "",
         "CSV artifacts: games.csv (one row/game), family.csv",
@@ -546,13 +586,14 @@ def main(argv=None):
         args.weathers, ("clear", "rain", "snow", "sleet", "extreme_heat", "heavy_wind"),
         "weathers")
     random.seed(args.seed)
-    teams = load_teams_from_directory(str(ROOT / "data" / "teams"), fresh=True)
+    teams = load_stable_fresh_rosters(ROOT / "data" / "teams")
     attacker, defender_rosters = choose_rosters(teams)
     profile = {
         "offense": {"name": attacker.name, "overall": roster_score(attacker)},
         **{k: {"name": t.name, "defense": roster_score(t, True)}
            for k, t in defender_rosters.items()},
     }
+    profile["selection_fingerprint"] = selected_roster_fingerprint(profile)
     total = (len(offenses) * len(defenses) * len(forms) * len(tiers)
              * len(venues) * len(weather_options) * args.reps)
     print("DEF-06 full-engine factorial: " + str(total) + " games", flush=True)
