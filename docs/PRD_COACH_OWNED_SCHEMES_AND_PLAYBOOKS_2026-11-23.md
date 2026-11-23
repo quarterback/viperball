@@ -3,7 +3,8 @@
 **Date:** 2026-11-23  
 **Status:** Proposal approved for parallel implementation planning; no rules or coefficient changes authorized by this document  
 **Workstreams:** COACH (coach identity + game integration, assigned to ChatGPT) and PLAYBOOK (scheme catalog and future packages, assigned to a separate agent)  
-**Dependency:** Viperball engine PR #323 → defensive tactics PR #325 → DEF-06 analysis PR #326. The assessment and this plan live on documentation PR #324.
+**Dependency:** Viperball engine PR #323 → defensive tactics PR #325 → DEF-06 analysis PR #326. The assessment and this plan live on documentation PR #324.  
+**COACH implementation status:** [CCH-01 PR #327](https://github.com/quarterback/viperball/pull/327) is open and CI-validated (13 new tests; 85 total existing-plus-new); metadata-only persistent CoachCard identities. CCH-02–04 remain proposed and unimplemented.
 
 ## Product decision
 
@@ -134,7 +135,7 @@ Package records describe **what can be installed and under what conditions**. Th
 
 **Deliver in small PRs, in order:**
 
-- **CCH-01: Stable individual coach signature.** Add versioned optional tactical profile to CoachCard, deterministic generation, serialization, migration, correlated personal preferences, and unit tests. Coach moves retain the signature; older saves remain loadable. **No gameplay effects in this phase.**
+- **CCH-01: Stable individual coach signature — IN REVIEW, [PR #327](https://github.com/quarterback/viperball/pull/327).** Implemented a versioned tactical profile on CoachCard, deterministic generation, serialization, legacy backfill, correlated personal preferences and tests. Coach moves retain the signature. **No gameplay effects in this phase.** [CI: 13 new tests and 85 total passed](https://github.com/quarterback/viperball/actions/runs/45239144988).
 - **CCH-02: Actual game-day use.** Translate an OC's persistent signature into bounded formation, play-family and kick-pass subfamily preference changes, after legal play gating. Move/recalculate role assignment after final style resolution (ROST-02). Trace profile ID and applied preference in game results for comparison. Do not add all-purpose yardage boosts.
 - **CCH-03: DC identity and HC autonomy.** Distinct defensive style behaviors through bounded tactical decisions and the existing read/coverage/pressure mechanism. Use DEF-06 conditional benchmarks; don't double-count suppression. Ensure HC control vs delegation is explicit.
 - **CCH-04: Team installation and career progression.** Team-level installed packages and familiarity; staff turnover and continuity, coach-tree inheritance, season-to-season changes and later STC effects. Verify persistence across hires/transfers/saves.
@@ -212,4 +213,4 @@ Conflicts or handoff to other track:
 - `docs/aar_2026-11-23_def06_full_defense_matrix.md`: conditional offensive/defensive matchup data and findings (on documentation PR #324).
 - `docs/ASSESSMENT_PRD_ENGINE_TACTICS_2026-11-23.md`: main work queue, ROST-02, DEF-07 and VAL-02.
 
-_This document defines an implementation proposal and two-agent work boundary. The package loader, coach tactical profile, and associated engine connections described above do **not** yet exist unless separately verified in a later PR._
+_This document defines a two-agent implementation contract. A first coach tactical-profile implementation exists in unmerged PR #327; package catalog and game-day integration are still proposals until separately implemented and tested._
