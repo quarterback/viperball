@@ -1,4 +1,4 @@
-# AAR: League Hub crash on null season status
+# AAR: League Hub and Dynasty Record Book crashes
 ## viperball.xyz/app, November 22, 2026
 
 ## What happened
@@ -54,3 +54,37 @@ when status is `null` or errors, and the DraftyQueenz board already read `season
 
 A query key has to mean one thing. Two query functions with different error handling under
 one key turn the cache into a race between screens.
+
+---
+
+## Second crash: Dynasty Record Book
+
+## What happened
+
+Opening the Record Book tab on a dynasty threw "Minified React error #31", which React raises
+when it is handed a plain object to render. The object in the error had the keys
+`{coach, championships}`.
+
+## Cause
+
+`/sessions/{id}/dynasty/record-book` returns each record as an object from
+`engine/dynasty.py` `RecordBook`: the holder (`team` or `coach`), the value under its own key
+(`wins`, `points`, `ppg_allowed`, `championships`, `win_pct`), and `year` for single season
+records. The frontend typed the payload as `Record<string, number>` and rendered each entry
+straight into a `<Text>`. The first object React met crashed the whole page. The type was
+written from a code audit in June and never checked against a running server, which the June
+AARs flagged as a risk.
+
+## Fix
+
+- `api/dynasty.ts` types the payload as `Record<string, RecordBookEntry>`, matching the engine.
+- `DynastyHub.tsx` maps each of the seven records it already showed to its value key and
+  format, and renders the value, the holder, and the year when there is one. Win percentage
+  stays scaled from the engine's 0 to 1 value. Records with no holder yet are skipped, and the
+  tab shows "No records yet." when none are set. The two records the page never showed (OPI
+  and chaos) are still left out.
+
+## Checked
+
+`tsc -b --noEmit` and `npm run build` pass. The value keys were read from the engine's
+`RecordBook` defaults and the code that updates each record. Not run against a live backend.
