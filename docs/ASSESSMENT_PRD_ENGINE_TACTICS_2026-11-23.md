@@ -42,7 +42,7 @@ The key principle: explain results from **players, decisions, conditions, field 
 | DEF-03 | P0 | IN PROGRESS ([PR #325](https://github.com/quarterback/viperball/pull/325), draft) | Formation-read formula corrected; tests pending |
 | DEF-04 | P1 | PARTIAL (PR #323) | Eleven-player defense, position assignments, and accurate snap accounting |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
-| DEF-06 | P1 | BLOCKED on DEF-01/02/04 | Prove scheme identity by controlled matchup benchmark |
+| DEF-06 | P1 | IN PROGRESS ([PR #326](https://github.com/quarterback/viperball/pull/326), draft) | 16×8×4 forced-formation experiment with two roster bands, mirrored venues, paired confidence intervals and weather sensitivity; CI findings pending |
 | DEL-01 | P1 | OPEN | Counterfactual Delta Yards analysis, including comeback impact |
 | DEL-02 | P1 | OPEN | Consolidate conflicting delta, kill, and points-per-drive definitions |
 | DEL-03 | P2 | BLOCKED on DEL-02 and UI-01 | Make Delta Yards legible in game and season reporting |
