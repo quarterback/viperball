@@ -73,6 +73,8 @@ export interface GameDay {
   travel_energy_cost: number;
   form: Record<"home" | "away", { game: number; halves: number[] }>;
   energy: { home: PlayerEnergy[]; away: PlayerEnergy[] };
+  line_changes?: Record<"home" | "away", number>;
+  caught_changing?: Record<"home" | "away", number>;
 }
 export interface FullResult {
   final_score: { home: { team: string; score: number }; away: { team: string; score: number } };

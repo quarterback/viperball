@@ -151,6 +151,18 @@ V2_ENGINE_CONFIG = {
         # defensive back (README, Two-Way Play).
         "two_way":         {"side": "defense", "slots": 4, "out": 64, "back": 84, "rest": 0.07, "max_swaps": 2, "load": 1.0},
     },
+    # Lacrosse style midfield lines: the Viper and four flankers play as
+    # one two-way line. Lines change together, any time, including during
+    # live play. A team changing as the ball turns over live can be caught.
+    "midfield_lines_enabled": True,
+    # Each line has its own shift length: the top line stays on longer.
+    "midfield_line": {"out": [74, 80, 86], "back": 90, "rest": 0.10, "load": 1.6, "lines": 3},
+    "specialist_live_change_rate": 0.5,  # coach sends the specialist on during a live turnover
+    "defensive_specialist_edge": 0.08,   # tackle score edge needed to sub in
+    "defensive_specialist_on": 80, "defensive_specialist_off": 55,
+    "live_change_tired_margin": 3,       # in a live turnover, change only if this far past the mark
+    "live_change_caught_rate": 0.35,
+    "fast_break_boost": 1.06,
     "rotation_close_game_ride": 10,   # out mark drops this much: Q4, within 9
     "rotation_work_rate_weight": 0.5, # out mark drops per work rate point above 75
     # Work rate: how much tiredness costs a player. On the 60-100 scale,
@@ -343,6 +355,17 @@ class FormationShell(Enum):
     SPLIT = "split"
     SPREAD = "spread"
     HEAVY = "heavy"
+
+
+LIVE_TURNOVER_RESULTS = {
+    "fumble", "muffed_punt", "blocked_kick", "blocked_punt", "chaos_recovery",
+    "missed_dk_returned", "kick_pass_intercepted", "lateral_intercepted",
+}
+
+
+COVER_FOR = {"Defensive Line", "Keeper"}
+COVER_RATING = 0.9   # a player covering another group plays at 90% of her rating
+MIDFIELD_GROUPS = {"Viper", "Halfback", "Wingback", "Slotback", "two_way"}
 
 
 class PlayResult(Enum):
@@ -4417,7 +4440,10 @@ class ViperballEngine:
             self.team_form[side] = max(lo, min(hi, self.game_form[side] * h))
 
     def _off_form(self) -> float:
-        return getattr(self, "team_form", {}).get(self.state.possession, 1.0)
+        f = getattr(self, "team_form", {}).get(self.state.possession, 1.0)
+        if getattr(self, "_fast_break", None) == self.state.possession:
+            f *= V2_ENGINE_CONFIG.get("fast_break_boost", 1.0)
+        return f
 
     def _def_form(self) -> float:
         side = "away" if self.state.possession == "home" else "home"
@@ -4489,6 +4515,11 @@ class ViperballEngine:
         Excludes players injured or benched during this game so backups step in.
         """
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = [p for p in self._on_field(team, unavailable, "offense")
+                  if p.position != "Offensive Line"]
+            if on:
+                return on
         skill = [p for p in team.players if p.position in
                  ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
                  and p.name not in unavailable]
@@ -4501,6 +4532,10 @@ class ViperballEngine:
     def _offense_all(self, team):
         """Return all offensive players including OL."""
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(team, unavailable, "offense")
+            if on:
+                return on
         off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
                and p.name not in unavailable]
         if off:
@@ -4515,15 +4550,19 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         off_unavail = self._unavailable_in_game(off_team)
         def_unavail = self._unavailable_in_game(def_team)
-        for p in off_team.players:
-            if p.name not in off_unavail:
-                p.game_offensive_snaps += 1
-        for p in def_team.players:
-            if p.name not in def_unavail:
-                p.game_defensive_snaps += 1
-                # Keepers get coverage snap credit on every defensive snap
-                if p.position in ("Keeper",):
-                    p.game_coverage_snaps += 1
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            off_on = self._on_field(off_team, off_unavail, "offense")
+            def_on = self._on_field(def_team, def_unavail, "defense")
+        else:
+            off_on = [p for p in off_team.players if p.name not in off_unavail]
+            def_on = [p for p in def_team.players if p.name not in def_unavail]
+        for p in off_on:
+            p.game_offensive_snaps += 1
+        for p in def_on:
+            p.game_defensive_snaps += 1
+            # Keepers get coverage snap credit on every defensive snap
+            if p.position in ("Keeper",):
+                p.game_coverage_snaps += 1
         if V2_ENGINE_CONFIG.get("work_rate_enabled", False):
             self._apply_work_rate(off_team, off_unavail, def_team, def_unavail)
 
@@ -4552,11 +4591,20 @@ class ViperballEngine:
         """Players on the field for one side: for each position group, the
         top of its depth chart among players who are available (not injured,
         benched, or resting between shifts)."""
+        cache = getattr(self, "_lineup_cache", None)
+        if cache is None:
+            cache = self._lineup_cache = {}
+        key = (id(team), side, frozenset(unavail))
+        if key in cache:
+            return cache[key]
         profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        lines_on = V2_ENGINE_CONFIG.get("midfield_lines_enabled", False)
         on = []
         taken = set()
         for group, prof in profiles.items():
             if prof.get("side") != side:
+                continue
+            if lines_on and group in MIDFIELD_GROUPS:
                 continue
             pool = [p for p in self._group_members(team, group)
                     if p.name not in unavail and p.name not in taken]
@@ -4564,7 +4612,188 @@ class ViperballEngine:
             for p in pool[:prof.get("slots", 1)]:
                 on.append((p, group))
                 taken.add(p.name)
+            short = prof.get("slots", 1) - min(len(pool), prof.get("slots", 1))
+            if short > 0 and group in COVER_FOR:
+                for p in self._cover_pool(team, unavail, group, taken)[:short]:
+                    on.append((p, group))
+                    taken.add(p.name)
+        if lines_on:
+            for p in self._midfield_on(team, unavail, side):
+                on.append((p, "Midfield"))
+        cache[key] = on
         return on
+
+    def _cover_pool(self, team, unavail, group, taken=()):
+        """Bench players from another group who can fill in: spare
+        offensive linemen on the defensive line, bench midfielders at
+        Keeper. Best fit first."""
+        if group == "Defensive Line":
+            off_ol = {p.name for p, g in self._lineup(team, unavail, "offense")
+                      if g == "Offensive Line"}
+            pool = [p for p in team.players if p.position == "Offensive Line"
+                    and p.name not in unavail and p.name not in off_ol and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, "Offensive Line"), reverse=True)
+            return pool
+        if group == "Keeper" and V2_ENGINE_CONFIG.get("midfield_lines_enabled", False):
+            on = {p.name for p in self._midfield_on(team, unavail, "offense")}
+            on |= {p.name for p in self._midfield_on(team, unavail, "defense")}
+            pool = [p for l in self._midfield_lines(team, unavail) for p in l
+                    if p.name not in on and p.name not in unavail and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, "two_way"), reverse=True)
+            return pool
+        return []
+
+    def _side_key(self, team) -> str:
+        return "home" if team is self.home_team else "away"
+
+    def _midfield_lines(self, team, unavail):
+        """Three lines of five: a Viper, a Halfback, a Wingback, a Slotback
+        and the best remaining flanker, best players on line one."""
+        cache = getattr(self, "_mid_lines_cache", None)
+        if cache is None:
+            cache = self._mid_lines_cache = {}
+        hard = frozenset(n for n in unavail if n not in self._shift_resting(team))
+        key = (id(team), hard)
+        if key in cache:
+            return cache[key]
+        n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+        pools = {}
+        for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+            pools[pos] = sorted((p for p in team.players
+                                 if p.position == pos and p.name not in hard),
+                                key=lambda p: self._depth_score(p, pos), reverse=True)
+        lines = []
+        for _ in range(n_lines):
+            line = []
+            for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+                if pools[pos]:
+                    line.append(pools[pos].pop(0))
+            while len(line) < 5:
+                left = [p for pos in ("Halfback", "Wingback", "Slotback", "Viper") for p in pools[pos]]
+                if not left:
+                    break
+                b = max(left, key=lambda p: p.overall)
+                pools[b.position].remove(b)
+                line.append(b)
+            if line:
+                lines.append(line)
+        cache[key] = lines
+        return lines
+
+    def _midfield_on(self, team, unavail, side: str):
+        lines = self._midfield_lines(team, unavail)
+        if not lines:
+            return []
+        sk = self._side_key(team)
+        state = self._mid_state()
+        idx = min(state["line"][sk], len(lines) - 1)
+        line = lines[idx]
+        if side == "offense":
+            return list(line)
+        # Defense: the line's four best tacklers play defensive back, unless
+        # a defensive specialist has come on for one of them.
+        tack = lambda p: self._depth_score(p, "two_way")
+        d = sorted(line, key=tack, reverse=True)[:4]
+        spec = state["spec"][sk]
+        live = getattr(self, "_transition_side", None) == sk
+        if spec and d and (not live or state["live_spec"][sk]):
+            sp = next((p for l in lines for p in l if p.name == spec and p not in line), None)
+            if sp is not None:
+                d[-1] = sp
+        return d
+
+    def _mid_state(self):
+        st_ = getattr(self, "_mid_line_state", None)
+        if st_ is None:
+            st_ = self._mid_line_state = {"line": {"home": 0, "away": 0},
+                                          "spec": {"home": None, "away": None},
+                                          "changes": {"home": 0, "away": 0},
+                                          "live_spec": {"home": False, "away": False},
+                                          "spec_snaps": {"home": 0, "away": 0},
+                                          "caught": {"home": 0, "away": 0}}
+        return st_
+
+    def _caught_roll(self, sk, state):
+        """A change made while the ball is live can leave a team short."""
+        if getattr(self, "_fast_break", None):
+            return
+        if random.random() < V2_ENGINE_CONFIG.get("live_change_caught_rate", 0.0):
+            self._fast_break = "away" if sk == "home" else "home"
+            state["caught"][sk] += 1
+
+    def _line_strength(self, line):
+        return sum(scale_rating(p.overall) * self.player_fatigue_modifier(p)
+                   for p in line) / max(1, len(line))
+
+    def _rotate_midfield(self, team, hard_out, ride):
+        """Coach's line changes for one team. Lines change together and can
+        change at any time, including during a live turnover."""
+        cfg = V2_ENGINE_CONFIG.get("midfield_line", {})
+        wr_w = V2_ENGINE_CONFIG.get("rotation_work_rate_weight", 0.5)
+        sk = self._side_key(team)
+        state = self._mid_state()
+        lines = self._midfield_lines(team, hard_out)
+        if not lines:
+            return
+        cur = min(state["line"][sk], len(lines) - 1)
+        state["line"][sk] = cur
+        line = lines[cur]
+        outs = cfg.get("out", [74, 80, 86])
+        if not isinstance(outs, (list, tuple)):
+            outs = [outs]
+        back = cfg.get("back", 90)
+        energy = lambda l: sum(p.game_energy for p in l) / max(1, len(l))
+        wr = sum(scale_rating(p.work_rate_rating) for p in line) / max(1, len(line))
+        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w
+        in_transition = getattr(self, "_transition_side", None) == sk
+        if in_transition:
+            out_mark -= V2_ENGINE_CONFIG.get("live_change_tired_margin", 3)
+        state["live_spec"][sk] = False
+        new = cur
+        if cur != 0 and energy(lines[0]) >= back and not in_transition:
+            new = 0   # top line rested: send it back out
+        elif energy(line) < out_mark:
+            # Roll to the next line in order that is rested and good enough
+            # to play about as well as the tired line does right now.
+            accept = self._line_strength(line) * (1.0 - cfg.get("rest", 0.10))
+            order = [(cur + k) % len(lines) for k in range(1, len(lines))]
+            for i in order:
+                cand = lines[i]
+                if (energy(cand) >= max(back - 12, energy(line) + 8)
+                        and self._line_strength(cand) >= accept):
+                    new = i
+                    break
+        if new != cur:
+            for p in line:
+                p.game_shifts += 1
+            state["line"][sk] = new
+            state["changes"][sk] += 1
+            self._lineup_cache = {}
+            if in_transition:
+                self._caught_roll(sk, state)
+        # Defensive specialist: the best tackler not on the line comes on
+        # for defensive possessions while she is fresh.
+        cur_line = lines[state["line"][sk]]
+        tack = lambda p: self._depth_score(p, "two_way")
+        spec = state["spec"][sk]
+        sp = next((p for l in lines for p in l if p.name == spec), None) if spec else None
+        if sp is not None and (sp in cur_line or sp.game_energy < V2_ENGINE_CONFIG.get("defensive_specialist_off", 55)):
+            state["spec"][sk] = None
+            sp = None
+        if sp is not None and in_transition and random.random() < V2_ENGINE_CONFIG.get("specialist_live_change_rate", 0.0):
+            # The coach sends her on while the ball is live.
+            state["live_spec"][sk] = True
+            self._lineup_cache = {}
+            self._caught_roll(sk, state)
+        if sp is None:
+            d = sorted(cur_line, key=tack, reverse=True)[:4]
+            bench = [p for l in lines for p in l if p not in cur_line
+                     and p.game_energy >= V2_ENGINE_CONFIG.get("defensive_specialist_on", 80)]
+            if d and bench:
+                best = max(bench, key=tack)
+                if tack(best) >= tack(d[-1]) * (1.0 + V2_ENGINE_CONFIG.get("defensive_specialist_edge", 0.08)):
+                    state["spec"][sk] = best.name
+                    self._lineup_cache = {}
 
     def _on_field(self, team, unavail, side: str):
         return [p for p, _ in self._lineup(team, unavail, side)]
@@ -4582,9 +4811,12 @@ class ViperballEngine:
             ride = V2_ENGINE_CONFIG.get("rotation_close_game_ride", 10)
         wr_w = V2_ENGINE_CONFIG.get("rotation_work_rate_weight", 0.5)
 
+        self._lineup_cache = {}
         for side_key, team in (("home", self.home_team), ("away", self.away_team)):
             resting = self._shift_rest[side_key]
             hard_out = self._injured_in_game(team) | self._benched_names(team)
+            if V2_ENGINE_CONFIG.get("midfield_lines_enabled", False):
+                self._rotate_midfield(team, hard_out, ride)
 
             # 1. Rested players whose energy is back go back on.
             for p in team.players:
@@ -4600,6 +4832,8 @@ class ViperballEngine:
                 on_names = {p.name for p, _ in lineup}
                 swaps = {}
                 for p, group in sorted(lineup, key=lambda x: x[0].game_energy):
+                    if group not in profiles:
+                        continue
                     prof = profiles[group]
                     if swaps.get(group, 0) >= prof.get("max_swaps", 1):
                         continue
@@ -4614,15 +4848,20 @@ class ViperballEngine:
                     # coach accepts to save the starter for later.
                     tired_now = scale_rating(p.overall) * self.player_fatigue_modifier(p)
                     accept = tired_now * (1.0 - prof.get("rest", 0.05))
-                    backups = [b for b in self._group_members(team, group)
+                    need = max(60.0, min(prof["back"] - 10, p.game_energy + 25), p.game_energy + 12)
+                    cands = [(b, 1.0) for b in self._group_members(team, group)]
+                    if group in COVER_FOR:
+                        cands += [(b, COVER_RATING) for b in self._cover_pool(team, unavail, group)]
+                    backups = [b for b, f in cands
                                if b.name not in unavail and b.name not in on_names
-                               and b.game_energy >= max(prof["back"] - 10, p.game_energy + 12)
-                               and scale_rating(b.overall) * self.player_fatigue_modifier(b) >= accept]
+                               and b.game_energy >= need
+                               and scale_rating(b.overall) * f * self.player_fatigue_modifier(b) >= accept]
                     if not backups:
                         continue
                     resting.add(p.name)
                     p.game_shifts += 1
                     swaps[group] = swaps.get(group, 0) + 1
+                    self._lineup_cache = {}
 
     def _apply_work_rate(self, off_team, off_unavail, def_team, def_unavail):
         per_snap = V2_ENGINE_CONFIG.get("work_rate_per_snap", 0.45)
@@ -4636,7 +4875,10 @@ class ViperballEngine:
                 if p.name in on_by_team.setdefault(team.name, set()):
                     continue  # two-way player already counted this snap
                 stam_mult = max(0.5, 1.6 - scale_rating(getattr(p, "stamina", 35)) / 100.0)
-                load = profiles.get(group, {}).get("load", 1.0)
+                if group == "Midfield":
+                    load = V2_ENGINE_CONFIG.get("midfield_line", {}).get("load", 1.0)
+                else:
+                    load = profiles.get(group, {}).get("load", 1.0)
                 p.game_energy = max(0.0, p.game_energy - per_snap * stam_mult * load * weather)
                 p.game_field_snaps += 1
                 on_by_team[team.name].add(p.name)
@@ -4651,6 +4893,11 @@ class ViperballEngine:
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = [p for p in self._on_field(team, unavailable, "defense")
+                  if p.position in ("Keeper", "Defensive Line")]
+            if on:
+                return on
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
                 and p.name not in unavailable]
         if defs:
@@ -5554,6 +5801,9 @@ class ViperballEngine:
             play.away_score_after = self.state.away_score
             self.play_log.append(play)
             drive_plays += 1
+            if (play.result in LIVE_TURNOVER_RESULTS
+                    and self.state.possession != drive_team):
+                self._pending_transition = drive_team
 
             # ── V2.4: Track play-family frequency for adaptation ──
             _pf_dc_type = None
@@ -7325,6 +7575,12 @@ class ViperballEngine:
 
     def simulate_play(self) -> Play:
         self.state.play_number += 1
+        # A live turnover on the last play leaves the side that lost the
+        # ball changing on the fly during this one.
+        self._transition_side = getattr(self, "_pending_transition", None)
+        self._pending_transition = None
+        self._fast_break = None
+        self._lineup_cache = {}
 
         # Save pre-play state.  Every Play in the log should show the
         # starting situation (down, distance, field position) rather than
@@ -8793,6 +9049,10 @@ class ViperballEngine:
         return random.choices(eligible, weights=weights, k=1)[0]
 
     def _pick_tackler(self, team):
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(team, self._unavailable_in_game(team), "defense")
+            if on:
+                return random.choice(on)
         eligible = [p for p in team.players if p.position in
                     ("Keeper", "Defensive Line")]
         if not eligible:
@@ -8826,16 +9086,23 @@ class ViperballEngine:
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
         injured = self._unavailable_in_game(def_team)
-        dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
-        kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
+        db = []
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(def_team, injured, "defense")
+            dl = [p for p in on if p.position == "Defensive Line"]
+            kp = [p for p in on if p.position == "Keeper"]
+            db = [p for p in on if p.position not in ("Defensive Line", "Keeper")]
+        else:
+            dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
+            kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
         if yards_gained <= 0:
             pool = dl * 4 + kp
         elif yards_gained <= 4:
-            pool = dl * 3 + kp * 2
+            pool = dl * 3 + kp * 2 + db
         elif yards_gained <= 10:
-            pool = dl * 2 + kp * 3
+            pool = dl * 2 + kp * 3 + db * 2
         else:
-            pool = dl + kp * 4
+            pool = dl + kp * 4 + db * 2
         if not pool:
             pool = [p for p in def_team.players if p.name not in injured] or def_team.players
         weights = []
@@ -14270,6 +14537,8 @@ class ViperballEngine:
                                 "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
                          for side in ("home", "away")},
                 "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+                "line_changes": dict(getattr(self, "_mid_line_state", {}).get("changes", {"home": 0, "away": 0})),
+                "caught_changing": dict(getattr(self, "_mid_line_state", {}).get("caught", {"home": 0, "away": 0})),
             },
             "final_score": {
                 "home": {

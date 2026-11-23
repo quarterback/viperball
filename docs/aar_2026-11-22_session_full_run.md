@@ -48,6 +48,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     stamina versus work rate split, position group rotation at every dead ball, two-way
     defensive backs. → `aar_2026-11-23_work_rate_and_shift_rotation.md`
 
+14. **Lacrosse style line changes** (November 23). Three two way midfield lines, defensive
+    specialist, live turnover changes that can get caught, players picked only from the
+    eleven on the field, cover across groups. → `aar_2026-11-23_lacrosse_line_changes.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

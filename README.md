@@ -296,7 +296,7 @@ Keeper archetypes:
 
 ### Two-Way Play
 
-Many players contribute on both offense and defense. The Viper may play as a defensive back on the opposing team's possessions. Flankers frequently serve as kick coverage specialists. The 36-player roster ensures depth, but the best athletes on each team regularly play both ways.
+The Viper and the flankers play both ways as midfield lines: the line on the field plays offense, and its four best tacklers play defensive back when the other team has the ball (see [Rotations](#rotations)). Flankers also frequently serve as kick coverage specialists.
 
 ---
 
@@ -607,14 +607,18 @@ Tiredness costs a player a little on every play, and the cost grows sharply belo
 
 ### Rotations
 
-Substitution is unlimited at any dead ball, so coaches rotate by position group rather than changing the whole unit at once:
+Substitution is unlimited and allowed at any time, including during live play, so coaches change players the way lacrosse teams do:
 
-- **Zeroback and Keepers** are anchors. They stay on almost all game.
+- **Midfield lines.** The Viper and four flankers (a Halfback, a Wingback, a Slotback and the best remaining flanker) play together as one two way line, on offense and defense. Each team carries three lines and changes them as a unit. The top line takes the longest shifts, and the second and third lines take shorter ones. When the top line is rested it goes back out; otherwise the coach rolls to the next line in order.
+- **Defense from the line.** On defense, the line's four best tacklers play defensive back. A defensive specialist, the best tackler on the other lines, can come on for one of them while she is fresh.
+- **Anchors.** The Zeroback and the two Keepers stay on almost all game.
 - **The offensive line** is a set five that rarely changes.
-- **The defensive line** rotates heavily, with backups taking a real share of snaps.
-- **Vipers and flankers** sub in and out one at a time, and the best tacklers among them also play defensive back.
+- **The defensive line** rotates heavily, one player at a time.
+- **Cover.** When a team runs out of fresh defensive linemen, a spare offensive lineman fills in; a bench midfielder can fill in at Keeper. A player covering another group plays at 90% of her rating.
 
-A player comes off when she tires past her group's mark and goes back on once rested. A coach pulls a tired starter only if a fresh backup would play about as well as she can right now, so deep teams rotate more and thin teams ride their starters. Coaches also ride their starters in a close fourth quarter. Because every player's mark depends on her work rate, a group never leaves the field all at once.
+A tired player or line comes off only if a fresh replacement would play about as well as the tired one can right now, so deep teams rotate more and thin teams ride their starters. Coaches ride starters longer in a close fourth quarter, and every mark depends on the players' work rate, so the whole team never changes at once.
+
+**Changing on the fly.** Every down ends in a dead ball, so most changes happen between plays with no risk. The risk comes when the ball turns over during live play: a fumble, an intercepted lateral or kick pass, a muffed or blocked kick, or a returned missed snap kick. The team that lost the ball can rush its defensive specialist on, or change a tired line, while play is live. If it does, it can be caught short, and the other side gets a fast break on the next play. A coach can also wait one play and change safely at the next dead ball.
 
 ### Home Field and Travel
 
@@ -631,9 +635,9 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 ### Substitution
 
 - Unlimited substitutions are permitted
-- Substitutions may only occur during dead-ball stoppages (after the play is ruled dead and before the next snap)
-- On-the-fly substitutions during live play are prohibited
-- A player exiting the field must fully leave the playing surface before their replacement enters
+- Substitutions may happen at any time, during dead balls or on the fly during live play
+- Players change through their team's substitution zone at midfield on their own sideline
+- A player exiting the field must fully leave the playing surface before her replacement enters
 - Violation: **Illegal Substitution** (5 yards)
 
 ### Injury Protocol
