@@ -28,9 +28,9 @@ main, touches only PLAYBOOK files.
 
 - Family records for all 16 offenses and 8 defenses, joined with the engine's own numbers.
   Defensive strengths are read from each scheme's ratings.
-- Packages from seven offensive origins (Ground & Pound, Ironclad, Boot Raid, Shock & Awe,
+- Packages from eleven offensive origins (Ground & Pound, Ironclad, Boot Raid, Shock & Awe,
   East Coast, Chain Gang, Ghost, Slick 'n Slide, Six Shooter, Quick Strike, Stampede) and
-  five defensive origins (Fortress, Lockdown, Drift, Blitz Pack, Predator, Chaos). Most can
+  six defensive origins (Fortress, Lockdown, Drift, Blitz Pack, Predator, Chaos). Most can
   be installed by several other families, which is the borrowing Ron described.
 - AFL, rugby union, rugby league and lacrosse inspired packages: Kick-In Breakout, Restart
   Go-To, Kick-In Press, First Phase Strike, Last Tackle Kick, Rush Line, Fast Break, Ride,
