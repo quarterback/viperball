@@ -187,3 +187,25 @@ def test_full_game_exposes_real_oc_selection_counts():
     assert game["coach_tactics"]["away"] == {}
     assert "formation" in game["play_by_play"][0]
     assert "kick_pass_subfamily" in game["play_by_play"][0]
+
+
+def test_seeded_game_control_identical_for_coaches_with_same_attributes(monkeypatch):
+    # A coach's identifier must not change outcomes when her tactical
+    # signature is switched off. The game-seeded per-side coaching RNG
+    # makes the modifier and halftime preparation draws repeatable.
+    monkeypatch.setitem(V2_ENGINE_CONFIG, "coach_tactics_enabled", False)
+    paths = sorted((Path(__file__).resolve().parents[1] / "data" / "teams").glob("*.json"))
+    home = load_team_from_json(str(paths[0]), fresh=False)
+    away = load_team_from_json(str(paths[1]), fresh=False)
+    hc = make_coach("same-hc", role="head_coach")
+    scores = []
+    for cid in ("one", "two"):
+        oc = make_coach(cid)
+        result = ViperballEngine(
+            home, away, seed=20261123,
+            home_coaching={"head_coach": hc, "oc": oc},
+            style_overrides={home.name: "boot_raid", away.name: "balanced"},
+            neutral_site=True,
+        ).simulate_game()
+        scores.append((result["final_score"], result["stats"]["home"]["total_plays"]))
+    assert scores[0] == scores[1]
