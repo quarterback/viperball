@@ -1828,6 +1828,7 @@ def get_team_roster(session_id: str, team_name: str):
         "players": serialized,
         "roster_size": len(team.players),
         "prestige": prestige,
+        "installation": _team_installation_summary(season, team_name),
     }
 
 
@@ -2864,6 +2865,27 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             )
         except Exception:
             logger.warning("custom program %s failed to generate", tname, exc_info=True)
+    # Odd number of active programs: retire Coast Guard (Merchant Marine if
+    # Coast Guard is the human's program or already gone) so the schedule
+    # pairs cleanly. Retiring a different program beforehand still works.
+    _retired_now = set(getattr(dynasty, "retired_programs", []) or [])
+    _active_now = {t for members in conf_dict.values() for t in members
+                   if t in teams and t not in _retired_now}
+    auto_retired = None
+    if len(_active_now) % 2 != 0:
+        _human = getattr(dynasty.coach, "team_name", "")
+        for _cand in ("Coast Guard", "Merchant Marine"):
+            if _cand in _active_now and _cand != _human:
+                if not getattr(dynasty, "retired_programs", None):
+                    dynasty.retired_programs = []
+                dynasty.retired_programs.append(_cand)
+                for _conf in dynasty.conferences.values():
+                    if _cand in _conf.teams:
+                        _conf.teams.remove(_cand)
+                auto_retired = _cand
+                logger.info("odd program count: auto retired %s", _cand)
+                break
+
     retired = set(getattr(dynasty, "retired_programs", []) or [])
     if retired:
         # Don't delete a retired program's non-graduating players — randomly
@@ -2941,6 +2963,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     season.human_teams = list(session.get("human_teams", []))
     # Attach live prestige tracking so it updates after every game
     dynasty.attach_prestige_to_season(season)
+    dynasty.attach_installations_to_season(season)
     session["phase"] = "regular"
     session["config"] = {
         "playoff_size": playoff_size,
@@ -2962,7 +2985,10 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             season_year=dynasty.current_year,
         )
 
-    return _serialize_season_status(session)
+    _status = _serialize_season_status(session)
+    if auto_retired:
+        _status["auto_retired"] = auto_retired
+    return _status
 
 
 # ─── Program registry (dynasty): add / retire / restore programs ──
@@ -3148,6 +3174,9 @@ def dynasty_advance(session_id: str):
     dq_team_boosts_map = None
     dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng,
                            dq_team_boosts=dq_team_boosts_map)
+    # Coaching carousel: CPU programs fire and hire through the coaching
+    # portal, and every coach ages and develops (CCH-04 turnover needs it).
+    coaching_result = dynasty.run_coaching_offseason(player_cards, rng=rng)
 
     year = dynasty.current_year
     prev_year = year - 1
@@ -3291,6 +3320,10 @@ def dynasty_advance(session_id: str):
         "phase": "nil",
         "player_cards": offseason_player_cards,
         "dq_boosts": dq_boosts,
+        "coaching": {
+            "teams_with_changes": len((coaching_result or {}).get("changes", {})),
+            "hires": len((coaching_result or {}).get("portal_hires", []) or []),
+        },
     }
     session["phase"] = "offseason"
     session["season"] = None
@@ -3541,6 +3574,13 @@ def dynasty_graduating_class(session_id: str):
     return {"graduates": graduates, "count": len(graduates), "year": year}
 
 
+
+def _team_installation_summary(season, team_name: str) -> dict:
+    """CCH-04: what a team has installed, for team pages."""
+    from engine.team_installation import summarize
+    recs = getattr(season, "team_installations", None) or {}
+    return summarize(recs.get(team_name))
+
 @app.get("/sessions/{session_id}/team/{team_name}")
 def team_roster(session_id: str, team_name: str):
     session = _get_session(session_id)
@@ -3600,6 +3640,7 @@ def team_roster(session_id: str, team_name: str):
         "players": players,
         "record": team_record,
         "prestige": prestige,
+        "installation": _team_installation_summary(season, team.name),
     }
 
 
