@@ -133,15 +133,16 @@ The 6-down/20-yard structure gives offenses more plays to work with but demands 
 
 If a team fails to gain 20 yards in six downs, the opposing team takes possession at the spot of the ball and starts a fresh series: 1st and 20.
 
-### The Kicking Down
+### When Teams Kick
 
-Kicks belong on 6th down. Downs 1 through 5 are for advancing the ball and chasing the 9-point touchdown; gaining even a few yards on 5th down improves the 6th-down kick. On 6th down the offense kicks for points, punts, or goes for it. A team that is trailing never punts on 6th down.
+A snap kick is legal on any down. It is a shot at goal from open play, in the spirit of Australian rules and Gaelic football. Because a missed snap kick on downs 1 through 5 keeps the ball (see [Missed Snap Kicks](#missed-snap-kicks)), coaches follow a simple logic:
 
-The exceptions, where a coach kicks before 6th down:
+- **Downs 1 through 3:** advance the ball and chase the 9-point touchdown. The exception is late in a half: in the last two minutes, a team in range takes the shot on any down when the points matter.
+- **4th down:** kick only when the drive has stalled, the first down is far away, and the kicker is in range.
+- **5th down:** the natural kicking down. A miss still leaves 6th down for a second try.
+- **6th down:** the last chance. A miss here is a turnover, so a team kicks, punts, or goes for it. A trailing team never punts on 6th down.
 
-1. **End of a half:** with under 45 seconds left, take the points that are available.
-2. **Bonus possessions:** the drive is a free one (see [Interceptions](#interceptions)), so a coach may cash in points on 5th down.
-3. **Garbage time:** a team trailing badly late takes a reachable kick on 4th or 5th down rather than risk a shutout.
+Near the goal line, teams keep driving for the touchdown. Late in a game, a team does not take a kick that cannot tie or win.
 
 ---
 

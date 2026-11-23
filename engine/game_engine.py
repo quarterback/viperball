@@ -5943,10 +5943,6 @@ class ViperballEngine:
                     return PlayType.PLACE_KICK
             return None
 
-        # ── Downs 1-3: keep driving ──
-        if down <= 3:
-            return None
-
         # ── Determine kick comfort zone (used by all remaining down logic) ──
         snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
         dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
@@ -6004,6 +6000,20 @@ class ViperballEngine:
             if deficit > 3:
                 pk_futile = True  # Field goal can't tie — need snap kick or TD
 
+        # ── Downs 1-3: keep driving, except late in a half ──
+        # A snap kick is a shot at goal from open play (as in Australian
+        # rules or Gaelic football) and is legal on any down. Early in a
+        # series a coach only takes it when the clock makes points urgent:
+        # the last two minutes of the first half, or the last two minutes
+        # of the game when 5 points would tie it or take the lead.
+        if down <= 3:
+            late = quarter in (2, 4) and time_left <= 120
+            useful = quarter == 2 or (-5 <= score_diff <= 0)
+            if (late and useful and not dk_futile
+                    and fg_distance <= dk_comfort and dk_success >= 0.75):
+                return PlayType.DROP_KICK
+            return None
+
         # ── Down 4: ALWAYS KEEP DRIVING ──
         # 4th down is for advancing.  You still have 5th and 6th down.
         # There is virtually no reason to kick on 4th down — use this
@@ -6033,6 +6043,15 @@ class ViperballEngine:
                     return PlayType.DROP_KICK
                 if fg_distance <= 35 and pk_success >= 0.75:
                     return PlayType.PLACE_KICK
+
+            # Stalled drive in range: a snap kick is legal on any down and a
+            # miss on downs 1-5 keeps the ball, so a 4th down attempt still
+            # leaves 5th and 6th. Only when the first down is far away;
+            # green-light kickers/coaches pull the trigger a little sooner.
+            stall_ytg = 7 if has_green_light else 10
+            if (not dk_futile and ytg >= stall_ytg
+                    and fg_distance <= dk_comfort and dk_success >= 0.70):
+                return PlayType.DROP_KICK
 
             return None
 
@@ -6087,7 +6106,14 @@ class ViperballEngine:
                 if fg_distance <= 40 and pk_success >= 0.65:
                     return PlayType.PLACE_KICK
 
-            # Default: advance and kick on 6th.
+            # 5th down is the natural snap kick down: a miss keeps the ball
+            # and leaves 6th down for a second try, while a miss on 6th is a
+            # turnover. Go for it instead on short yardage.
+            if (not dk_futile and ytg >= 4
+                    and fg_distance <= dk_comfort and dk_success >= 0.50):
+                return PlayType.DROP_KICK
+
+            # Otherwise advance and decide on 6th.
             return None
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
@@ -7002,7 +7028,7 @@ class ViperballEngine:
         # justified — you still have 5th and 6th down.  Only the
         # most extreme desperation clock + bonus possession triggers
         # a kick here (see select_kick_decision).
-        if self.state.down == 4:
+        if self.state.down <= 4:
             kick_decision = self.select_kick_decision()
             if kick_decision == PlayType.DROP_KICK:
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
