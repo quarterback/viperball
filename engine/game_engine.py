@@ -8932,18 +8932,17 @@ class ViperballEngine:
             speed_gap = (scale_rating(team.avg_speed, "rescale_breakaway") - V2_ENGINE_CONFIG.get("breakaway_speed_baseline", 85)) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
             breakaway_chance = base + speed_gap + def_fatigue_bonus
-            # An elite anti-explosive scheme reduces the CHANCE of a breakaway,
-            # not every completed gain. Lower suppression factors mean fewer
-            # explosives; this is separate from family yardage matchups.
-            if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
-                breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
-            breakaway_chance = max(0.0, min(0.85, breakaway_chance))
-
-            # Bigger initial gains = more likely to break free
+            # Bigger initial gains = more likely to break free.
             if yards_gained >= 10:
                 breakaway_chance += 0.15
             elif yards_gained >= 7:
                 breakaway_chance += 0.08
+
+            # An elite anti-explosive scheme reduces the COMPLETE breakaway
+            # chance, including the bonus for a gain of 7+ or 10+ yards.
+            if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
+                breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
+            breakaway_chance = max(0.0, min(0.85, breakaway_chance))
 
             if random.random() < breakaway_chance:
                 # Explosive plays produce huge yardage — 70+ yard
