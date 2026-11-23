@@ -776,6 +776,7 @@ def _serialize_player(player) -> dict:
         "hands": player.hands,
         "awareness": player.awareness,
         "stamina": player.stamina,
+        "work_rate": getattr(player, "work_rate_rating", 0),
         "kicking": player.kicking,
         "kick_power": player.kick_power,
         "kick_accuracy": player.kick_accuracy,
@@ -6450,6 +6451,8 @@ def my_team_dashboard(session_id: str = ""):
             "speed": card.speed,
             "power": card.power,
             "agility": card.agility,
+            "stamina": getattr(p, "stamina", 0),
+            "work_rate": getattr(p, "work_rate_rating", 0),
         })
 
     roster_data.sort(key=lambda x: -x["overall"])

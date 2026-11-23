@@ -21,6 +21,8 @@ export interface MyTeamPlayer {
   speed?: number;
   power?: number;
   agility?: number;
+  stamina?: number;
+  work_rate?: number;
 }
 
 export interface MyTeamDashboard {

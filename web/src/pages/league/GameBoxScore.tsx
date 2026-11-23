@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { MantineReactTable, type MRT_ColumnDef } from "mantine-react-table";
 import {
@@ -13,36 +12,11 @@ import {
   Table,
   Title,
   Tabs,
-  Progress,
 } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useDataGrid } from "../../components/DataGrid";
-import {
-  seasonApi,
-  type BoxPlayerStat,
-  type PlayerEnergy,
-  type TeamGameStats,
-} from "../../api/season";
-
-type BoxRow = BoxPlayerStat & { energy_start?: number; energy_end?: number };
-
-// Energy at the final whistle, out of 100. The bar shows where the player
-// finished; the number beside it is where she started (lower than 100 when
-// she carried fatigue from last week or her team travelled).
-function energyColor(v: number): string {
-  if (v >= 80) return "teal";
-  if (v >= 60) return "yellow";
-  return "red";
-}
-
-function withEnergy(rows: BoxPlayerStat[], energy: PlayerEnergy[] | undefined): BoxRow[] {
-  const byName = new Map((energy ?? []).map((e) => [e.name, e]));
-  return rows.map((r) => {
-    const e = byName.get(String(r.name));
-    return e ? { ...r, energy_start: e.energy_start, energy_end: e.energy_end } : r;
-  });
-}
+import { seasonApi, type BoxPlayerStat, type TeamGameStats } from "../../api/season";
 
 const TEAM_STAT_ROWS: { key: keyof TeamGameStats; label: string }[] = [
   { key: "total_yards", label: "Total yards" },
@@ -51,7 +25,7 @@ const TEAM_STAT_ROWS: { key: keyof TeamGameStats; label: string }[] = [
   { key: "fumbles_lost", label: "Fumbles lost" },
 ];
 
-function playerCols(): MRT_ColumnDef<BoxRow>[] {
+function playerCols(): MRT_ColumnDef<BoxPlayerStat>[] {
   return [
     { accessorKey: "name", header: "Player" },
     { accessorKey: "tag", header: "Pos", size: 70 },
@@ -59,30 +33,6 @@ function playerCols(): MRT_ColumnDef<BoxRow>[] {
     { accessorKey: "tds", header: "TD", size: 60 },
     { accessorKey: "touches", header: "Tch", size: 70 },
     { accessorKey: "tackles", header: "Tkl", size: 70 },
-    {
-      accessorKey: "energy_end",
-      header: "Energy",
-      size: 150,
-      Cell: ({ row }) => {
-        const end = row.original.energy_end;
-        const start = row.original.energy_start;
-        if (end == null) return null;
-        return (
-          <Group gap={6} wrap="nowrap">
-            <Progress
-              value={end}
-              color={energyColor(end)}
-              w={70}
-              aria-label={`Finished at ${Math.round(end)} energy`}
-            />
-            <Text size="xs" c="dimmed">
-              {Math.round(end)}
-              {start != null && start < 100 ? ` (started ${Math.round(start)})` : ""}
-            </Text>
-          </Group>
-        );
-      },
-    },
   ];
 }
 
@@ -100,19 +50,11 @@ export function GameBoxScore() {
   );
   const fr = game?.full_result;
 
-  const awayRows = useMemo(
-    () => withEnergy(fr?.player_stats?.away ?? [], fr?.game_day?.energy.away),
-    [fr],
-  );
-  const homeRows = useMemo(
-    () => withEnergy(fr?.player_stats?.home ?? [], fr?.game_day?.energy.home),
-    [fr],
-  );
-  const awayTable = useDataGrid(playerCols(), awayRows, {
+  const awayTable = useDataGrid(playerCols(), fr?.player_stats?.away ?? [], {
     sorting: [{ id: "yards", desc: true }],
     maxHeight: "40vh",
   });
-  const homeTable = useDataGrid(playerCols(), homeRows, {
+  const homeTable = useDataGrid(playerCols(), fr?.player_stats?.home ?? [], {
     sorting: [{ id: "yards", desc: true }],
     maxHeight: "40vh",
   });

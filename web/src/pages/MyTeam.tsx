@@ -127,6 +127,13 @@ export function MyTeam() {
         Cell: ({ cell }) => <Badge variant="light">{cell.getValue<number>()}</Badge>,
       },
       { accessorKey: "potential", header: "POT", size: 70 },
+      { accessorKey: "stamina", header: "STA", size: 70 },
+      {
+        accessorKey: "work_rate",
+        header: "WRK",
+        size: 70,
+        mantineTableHeadCellProps: { title: "Work rate: how much load she can carry before tiredness costs her" },
+      },
     ],
     [],
   );

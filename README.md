@@ -596,11 +596,25 @@ Every team brings a form for the day, rolled once before kickoff, and a hot or c
 
 ### Work Rate and Fatigue
 
-Every player on the field spends energy on every snap, the way players do in Australian rules, Gaelic football and rugby. Players with more stamina spend less. A player on the sideline gets a little back, and halftime gives back the most. A short timeout or a change of possession gives back very little.
+Every player on the field spends energy on every snap, the way players do in Australian rules, Gaelic football and rugby. Linemen work hardest, Keepers and Zerobacks least. A player on the sideline gets energy back, and halftime gives back the most. A short timeout or a change of possession gives back very little.
 
-Tiredness costs a player a little on every play, and the cost grows sharply below 40 energy. Part of how tired a player finishes a game carries into the next week; high-stamina players recover more of it. A team that leans on the same starters every week starts later games tired, and a deep team holds up late.
+Two ratings decide how a player handles the load:
 
-The box score shows each player's energy at the final whistle, and where she started when she began below full.
+- **Stamina** sets how fast she tires and how fast she recovers on the sideline.
+- **Work rate** sets how much tiredness costs her and how long a coach can leave her on. A high work rate player keeps playing well when tired and stays in longer; a low work rate player fades early.
+
+Tiredness costs a player a little on every play, and the cost grows sharply below 40 energy. Part of how tired a player finishes a game carries into the next week, and players with more stamina recover more of it. A team that leans on the same starters every week starts later games tired.
+
+### Rotations
+
+Substitution is unlimited at any dead ball, so coaches rotate by position group rather than changing the whole unit at once:
+
+- **Zeroback and Keepers** are anchors. They stay on almost all game.
+- **The offensive line** is a set five that rarely changes.
+- **The defensive line** rotates heavily, with backups taking a real share of snaps.
+- **Vipers and flankers** sub in and out one at a time, and the best tacklers among them also play defensive back.
+
+A player comes off when she tires past her group's mark and goes back on once rested. A coach pulls a tired starter only if a fresh backup would play about as well as she can right now, so deep teams rotate more and thin teams ride their starters. Coaches also ride their starters in a close fourth quarter. Because every player's mark depends on her work rate, a group never leaves the field all at once.
 
 ### Home Field and Travel
 

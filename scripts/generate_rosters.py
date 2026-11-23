@@ -355,6 +355,12 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
                        + year_mod)
         results[stat] = _stat_roll(stat_center, PLAYER_STAT_SPREAD, ceiling=96)
 
+    # Work rate: how much load she can carry. Leans on stamina but is its own
+    # trait, so a modest athlete can be a high work rate player and a star
+    # can be a low one.
+    results['work_rate'] = max(10, min(95, int(round(random.gauss(
+        results['stamina'] * 0.5 + 18, 13)))))
+
     # Height and weight
     if position in ("Offensive Line", "Defensive Line"):
         height_inches = random.randint(69, 75)  # 5'9" to 6'3"

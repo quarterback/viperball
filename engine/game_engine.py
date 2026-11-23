@@ -117,8 +117,8 @@ V2_ENGINE_CONFIG = {
     # (60-100 scale: 70 -> 0.9x, 95 -> 0.65x, 45 -> 1.15x). Players on the
     # bench recover a little each snap. Change of possession refunds less.
     "work_rate_enabled": True,
-    "work_rate_per_snap": 0.6,
-    "bench_recovery_per_snap": 0.1,
+    "work_rate_per_snap": 1.0,
+    "bench_recovery_per_snap": 0.5,
     "drive_change_recovery_off": 0.5,   # was 5
     "drive_change_recovery_def": 0.0,   # was 3
     # Energy a team gets back from a timeout or other stoppage (was 10-15,
@@ -126,6 +126,37 @@ V2_ENGINE_CONFIG = {
     "stoppage_recovery": 4.0,
     "fatigue_curve_linear": True,
     "fatigue_curve_slope": 0.004,
+    # V3.6: Shift rotation. Viperball has unlimited substitution at any dead
+    # ball, so coaches rotate by position group, the way hockey changes
+    # lines and basketball subs individuals: a player comes off when her
+    # energy drops to her group's "out" mark and goes back on once rested to
+    # its "back" mark. Out marks move with each player's work rate (a high
+    # work rate player is left on longer) and with the game (coaches ride
+    # starters in a close fourth quarter). Thresholds differ player to player,
+    # so a group never leaves all at once. A tired player only comes off if a
+    # fresh backup would play nearly as well as she does right now; "rest" is
+    # how much worse the coach accepts to save her for later. "load" scales
+    # how hard the group works per snap.
+    "shift_rotation_enabled": True,
+    "rotation_profiles": {
+        "Zeroback":        {"side": "offense", "slots": 1, "out": 46, "back": 72, "rest": 0.02,  "max_swaps": 1, "load": 0.8},
+        "Viper":           {"side": "offense", "slots": 1, "out": 58, "back": 80, "rest": 0.05,  "max_swaps": 1, "load": 1.0},
+        "Halfback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Wingback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Slotback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Offensive Line":  {"side": "offense", "slots": 5, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 2, "load": 1.3},
+        "Defensive Line":  {"side": "defense", "slots": 5, "out": 76, "back": 90, "rest": 0.1, "max_swaps": 2, "load": 1.7},
+        "Keeper":          {"side": "defense", "slots": 2, "out": 52, "back": 76, "rest": 0.03,  "max_swaps": 1, "load": 0.85},
+        # Two-way: the best tacklers among Vipers and flankers also play
+        # defensive back (README, Two-Way Play).
+        "two_way":         {"side": "defense", "slots": 4, "out": 64, "back": 84, "rest": 0.07, "max_swaps": 2, "load": 1.0},
+    },
+    "rotation_close_game_ride": 10,   # out mark drops this much: Q4, within 9
+    "rotation_work_rate_weight": 0.5, # out mark drops per work rate point above 75
+    # Work rate: how much tiredness costs a player. On the 60-100 scale,
+    # 95 feels it at 0.5x, 75 at 1x, 60 at 1.4x. Stamina sets how fast
+    # energy drains and recovers; work rate sets how much it hurts.
+    "work_rate_effect_enabled": True,
     # Travel: starting energy the away team loses, by distance.
     "travel_fatigue": {"same_state": 0, "same_region": 2, "same_zone": 4,
                        "next_zone": 6, "cross_country": 9},
@@ -1503,6 +1534,9 @@ class Player:
     fatigue_carry: float = 0.0
     game_energy_start: float = 100.0
     game_field_snaps: int = 0
+    game_shifts: int = 0
+    # Work rate rating (current rating scale). 0 = not set; derived below.
+    work_rate: int = 0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
     plays_since_last_touch: int = 0
     # Hot streak: consecutive successful contests (positive yards or completions)
@@ -1542,6 +1576,18 @@ class Player:
     def canon_tackling(self) -> float:
         """Canonical Tackling: tackling (50%) + power (25%) + awareness (25%)."""
         return self.tackling * 0.50 + self.power * 0.25 + self.awareness * 0.25
+
+    @property
+    def work_rate_rating(self) -> int:
+        """How much load a player can carry: how long a coach can leave her
+        on and how much tiredness costs her. Related to stamina but not the
+        same thing. Players created before work rate existed get a stable
+        value from stamina plus a per-player offset."""
+        if getattr(self, "work_rate", 0):
+            return int(self.work_rate)
+        import zlib
+        offset = zlib.crc32(self.name.encode("utf-8")) % 25 - 12
+        return int(max(10, min(95, round(self.stamina * 0.6 + 16 + offset))))
 
     @property
     def fatigue_tier(self) -> str:
@@ -4426,8 +4472,16 @@ class ViperballEngine:
         return self._away_injured_in_game
 
     def _unavailable_in_game(self, team) -> set:
-        """Return set of player names unavailable (injured OR benched)."""
-        return self._injured_in_game(team) | self._benched_names(team)
+        """Return set of player names unavailable (injured, benched, or
+        resting between shifts)."""
+        return (self._injured_in_game(team) | self._benched_names(team)
+                | self._shift_resting(team))
+
+    def _shift_resting(self, team) -> set:
+        rest = getattr(self, "_shift_rest", None)
+        if not rest:
+            return set()
+        return rest.get("home" if team is self.home_team else "away", set())
 
     def _offense_skill(self, team):
         """Return offensive skill-position players (ball carriers, receivers).
@@ -4473,35 +4527,126 @@ class ViperballEngine:
         if V2_ENGINE_CONFIG.get("work_rate_enabled", False):
             self._apply_work_rate(off_team, off_unavail, def_team, def_unavail)
 
+    def _depth_score(self, p, group: str) -> float:
+        """Depth chart order inside a position group: starters first, then
+        by overall."""
+        if group == "two_way":
+            starter = 0
+            return p.tackling * 1.3 + p.speed * 0.9 + p.awareness * 0.8
+        if group in ("Defensive Line", "Keeper"):
+            starter = 1 if getattr(p, "game_def_role", "") == "STARTER" else 0
+        elif group == "Offensive Line":
+            starter = 0
+            return p.power * 0.6 + p.awareness * 0.4 + p.overall * 0.2
+        else:
+            starter = 1 if getattr(p, "game_role", "") == "STARTER" else 0
+        return starter * 1000 + p.overall
+
+    def _group_members(self, team, group: str):
+        if group == "two_way":
+            return [p for p in team.players
+                    if p.position in ("Viper", "Halfback", "Wingback", "Slotback")]
+        return [p for p in team.players if p.position == group]
+
+    def _lineup(self, team, unavail, side: str):
+        """Players on the field for one side: for each position group, the
+        top of its depth chart among players who are available (not injured,
+        benched, or resting between shifts)."""
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        on = []
+        taken = set()
+        for group, prof in profiles.items():
+            if prof.get("side") != side:
+                continue
+            pool = [p for p in self._group_members(team, group)
+                    if p.name not in unavail and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, group), reverse=True)
+            for p in pool[:prof.get("slots", 1)]:
+                on.append((p, group))
+                taken.add(p.name)
+        return on
+
     def _on_field(self, team, unavail, side: str):
-        """Players the engine treats as on the field: the skill starters and
-        the five best offensive linemen on offense, the defensive starters on
-        defense."""
-        if side == "offense":
-            on = [p for p in team.players
-                  if getattr(p, "game_role", "") == "STARTER" and p.name not in unavail]
-            ol = sorted((p for p in team.players
-                         if p.position == "Offensive Line" and p.name not in unavail),
-                        key=lambda p: p.power * 0.6 + p.awareness * 0.4, reverse=True)[:5]
-            return on + ol
-        return [p for p in team.players
-                if getattr(p, "game_def_role", "") == "STARTER" and p.name not in unavail]
+        return [p for p, _ in self._lineup(team, unavail, side)]
+
+    def _rotate_shifts(self):
+        """At each dead ball, coaches swap tired players for rested ones by
+        position group, and bring rested starters back."""
+        if not V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            return
+        if not hasattr(self, "_shift_rest"):
+            self._shift_rest = {"home": set(), "away": set()}
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        ride = 0.0
+        if self.state.quarter >= 4 and abs(self.state.home_score - self.state.away_score) <= 9:
+            ride = V2_ENGINE_CONFIG.get("rotation_close_game_ride", 10)
+        wr_w = V2_ENGINE_CONFIG.get("rotation_work_rate_weight", 0.5)
+
+        for side_key, team in (("home", self.home_team), ("away", self.away_team)):
+            resting = self._shift_rest[side_key]
+            hard_out = self._injured_in_game(team) | self._benched_names(team)
+
+            # 1. Rested players whose energy is back go back on.
+            for p in team.players:
+                if p.name in resting:
+                    prof = profiles.get(p.position) or profiles.get("two_way", {})
+                    if p.game_energy >= prof.get("back", 85):
+                        resting.discard(p.name)
+
+            # 2. Tired players on the field come off if a usable backup is fresh.
+            for side in ("offense", "defense"):
+                unavail = hard_out | resting
+                lineup = self._lineup(team, unavail, side)
+                on_names = {p.name for p, _ in lineup}
+                swaps = {}
+                for p, group in sorted(lineup, key=lambda x: x[0].game_energy):
+                    prof = profiles[group]
+                    if swaps.get(group, 0) >= prof.get("max_swaps", 1):
+                        continue
+                    wr = scale_rating(p.work_rate_rating)
+                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w
+                    if p.game_energy >= out_mark:
+                        continue
+                    if p.position == "Zeroback" and self._is_last_kicker(team, p, unavail | {p.name}):
+                        continue
+                    # Would a fresh backup play about as well as the tired
+                    # starter does right now? "rest" is how much worse the
+                    # coach accepts to save the starter for later.
+                    tired_now = scale_rating(p.overall) * self.player_fatigue_modifier(p)
+                    accept = tired_now * (1.0 - prof.get("rest", 0.05))
+                    backups = [b for b in self._group_members(team, group)
+                               if b.name not in unavail and b.name not in on_names
+                               and b.game_energy >= max(prof["back"] - 10, p.game_energy + 12)
+                               and scale_rating(b.overall) * self.player_fatigue_modifier(b) >= accept]
+                    if not backups:
+                        continue
+                    resting.add(p.name)
+                    p.game_shifts += 1
+                    swaps[group] = swaps.get(group, 0) + 1
 
     def _apply_work_rate(self, off_team, off_unavail, def_team, def_unavail):
         per_snap = V2_ENGINE_CONFIG.get("work_rate_per_snap", 0.45)
         rest = V2_ENGINE_CONFIG.get("bench_recovery_per_snap", 0.5)
         weather = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        on_by_team = {}
         for team, unavail, side in ((off_team, off_unavail, "offense"),
                                     (def_team, def_unavail, "defense")):
-            on = self._on_field(team, unavail, side)
-            on_names = {p.name for p in on}
-            for p in on:
+            for p, group in self._lineup(team, unavail, side):
+                if p.name in on_by_team.setdefault(team.name, set()):
+                    continue  # two-way player already counted this snap
                 stam_mult = max(0.5, 1.6 - scale_rating(getattr(p, "stamina", 35)) / 100.0)
-                p.game_energy = max(0.0, p.game_energy - per_snap * stam_mult * weather)
+                load = profiles.get(group, {}).get("load", 1.0)
+                p.game_energy = max(0.0, p.game_energy - per_snap * stam_mult * load * weather)
                 p.game_field_snaps += 1
+                on_by_team[team.name].add(p.name)
+        for team in (off_team, def_team):
+            on_names = on_by_team.get(team.name, set())
             for p in team.players:
                 if p.name not in on_names:
-                    p.game_energy = min(100.0, p.game_energy + rest)
+                    stam_rec = max(0.6, scale_rating(getattr(p, "stamina", 35)) / 75.0)
+                    p.game_energy = min(100.0, p.game_energy + rest * stam_rec)
+        self._rotate_shifts()
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
@@ -12727,7 +12872,10 @@ class ViperballEngine:
 
         # V2: Fatigue tier multiplier
         tier_mult = 1.0
-        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+        if V2_ENGINE_CONFIG.get("work_rate_effect_enabled", False):
+            # V3.6: stamina sets how fast a player drains.
+            tier_mult = max(0.5, 1.6 - scale_rating(getattr(player, "stamina", 35)) / 100.0)
+        elif V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
             tier = player.fatigue_tier
             if tier == FatigueTier.ELITE.value:
                 tier_mult = 0.8   # Elite players drain slower
@@ -12755,7 +12903,11 @@ class ViperballEngine:
 
         # V2: Tier-based stat loss multiplier
         stat_loss_mult = 1.0
-        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+        if V2_ENGINE_CONFIG.get("work_rate_effect_enabled", False):
+            # V3.6: work rate sets how much tiredness costs.
+            wr = scale_rating(player.work_rate_rating)
+            stat_loss_mult = max(0.5, min(1.5, 1.0 + (75.0 - wr) / 40.0))
+        elif V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
             tier = player.fatigue_tier
             if tier == FatigueTier.ELITE.value:
                 stat_loss_mult = 0.5   # Elite feels fatigue half as much
@@ -13061,6 +13213,9 @@ class ViperballEngine:
                     if backups:
                         self._bench_player(team, p, reason, "half")
                         already_out.add(p.name)
+
+            if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+                continue  # fatigue rotation handled by _rotate_shifts at every dead ball
 
             # ── 3. Fatigue / workload rotation ──
             # Coaches rest workhorse players who've been carrying the load.
@@ -14813,6 +14968,7 @@ def generate_team_on_the_fly(
             hands=attrs.get("hands", 75),
             kick_power=attrs.get("kick_power", 75),
             kick_accuracy=attrs.get("kick_accuracy", 75),
+            work_rate=attrs.get("work_rate", 0),
             archetype=archetype,
             player_id=name_data.get("player_id", ""),
             nationality=name_data.get("nationality", "American"),

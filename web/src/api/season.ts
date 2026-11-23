@@ -173,6 +173,7 @@ export interface RosterPlayer {
   hands: number;
   awareness: number;
   stamina: number;
+  work_rate?: number;
   kicking: number;
   tackling: number;
   kick_power?: number;

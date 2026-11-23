@@ -136,6 +136,13 @@ export function TeamPage() {
       { accessorKey: "hands", header: "HND", size: 65 },
       { accessorKey: "awareness", header: "AWR", size: 65 },
       { accessorKey: "tackling", header: "TKL", size: 65 },
+      { accessorKey: "stamina", header: "STA", size: 65 },
+      {
+        accessorKey: "work_rate",
+        header: "WRK",
+        size: 65,
+        mantineTableHeadCellProps: { title: "Work rate: how much load she can carry before tiredness costs her" },
+      },
       { accessorKey: "kicking", header: "KICK", size: 70 },
     ],
     [sessionId, team],

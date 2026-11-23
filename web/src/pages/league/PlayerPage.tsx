@@ -25,6 +25,7 @@ const ATTRS: { key: keyof RosterPlayer; label: string }[] = [
   { key: "hands", label: "Hands" },
   { key: "awareness", label: "Awareness" },
   { key: "stamina", label: "Stamina" },
+  { key: "work_rate", label: "Work rate" },
   { key: "tackling", label: "Tackling" },
   { key: "kicking", label: "Kicking" },
 ];

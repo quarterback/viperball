@@ -44,6 +44,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     team form, work rate fatigue carried between games, fatigue bar in the box score.
     → `aar_2026-11-23_game_day_form_fatigue_home_field.md`
 
+13. **Work rate and shift rotation** (November 23). Work rate rating on roster and My Team,
+    stamina versus work rate split, position group rotation at every dead ball, two-way
+    defensive backs. → `aar_2026-11-23_work_rate_and_shift_rotation.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
