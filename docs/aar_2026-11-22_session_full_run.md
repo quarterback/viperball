@@ -56,6 +56,14 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     and My Team, line changes and caught changing in the box score, fast break tag in the
     play by play. → `aar_2026-11-23_lines_in_app.md`
 
+16. **Coach playbooks prototype** (November 23). Branch `claude/coach-playbooks`, PR #329, now a
+    draft reference: home books plus borrowed packages wired into the engine, measured.
+    → `aar_2026-11-23_coach_playbooks.md` on that branch.
+17. **Playbook catalog** (November 23). A coach and playbook plan from another agent landed on
+    docs PR #324 during step 16 and split the work into COACH (runtime) and PLAYBOOK
+    (catalog). Ron chose the split. PR #330 from main: PBK-01, PBK-02, PBK-04, new files
+    only. → `aar_2026-11-23_playbook_catalog_pbk.md` on that branch.
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
