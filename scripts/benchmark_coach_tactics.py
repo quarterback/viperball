@@ -99,6 +99,7 @@ def simulate(games, seed, enabled):
                 "games": games,
                 "tactics_enabled": enabled,
                 "mean_points": round(statistics.mean(scores), 3),
+                "game_scores": scores,
                 "selected": {name: dict(counts) for name, counts in stat.items()},
             }
     finally:
@@ -122,6 +123,15 @@ def main():
         parser.error("--games must be positive")
     enabled = simulate(args.games, args.seed, True)
     disabled = simulate(args.games, args.seed, False)
+    # Ablation should make two OCs with identical preexisting attributes
+    # indistinguishable when personal tactical signatures are disabled.
+    # A mismatch signals an unrelated RNG or runtime coaching effect.
+    if (disabled["vertical_attack"]["game_scores"]
+            != disabled["run_to_kick"]["game_scores"]):
+        raise AssertionError(
+            "With CCH-02 disabled, the two identical-attribute coaches "
+            "produced different scores; the experiment is not controlled."
+        )
     report = {"seed": args.seed, "base_scheme": "boot_raid",
               "enabled": enabled, "disabled": disabled}
     out = Path(args.out)
