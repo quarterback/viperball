@@ -6,6 +6,20 @@
 **Current implementation follow-up:** [CCH-03 #332](https://github.com/quarterback/viperball/pull/332) and [CCH-04 integrated #334](https://github.com/quarterback/viperball/pull/334) are **DONE/MERGED**. Original CCH-04 PR #333 was closed as superseded; prototype #329 closed unmerged. [Combined AAR](aar_2026-11-23_cch03_cch04_reconciliation.md), [174 tests + React build + benchmarks](https://github.com/quarterback/viperball/actions/runs/45284723882).
 **Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323) at head 3aedd95d59f5c44291d473e4fd30c7b50e69151b in the original assessment; it was unmerged **at the time**, and has since merged. See [stack reconciliation and VAL-02 AAR](aar_2026-11-23_merge_stack_and_val02.md) for the actual merge order.
 
+## Active engine follow-up — November 23, 2026
+
+**Owner:** ChatGPT engine workstream, branch [engine/defensive-packages-pressure-events](https://github.com/quarterback/viperball/tree/engine/defensive-packages-pressure-events). Other agent owns the UI revamp (UI-01); coordinate through additive result fields and do not edit React layouts here. Tasks remain together unless the user delegates one.
+
+| Sequence | Task | Status | Acceptance evidence |
+|---|---|---|---|
+| 1 | CCH-05: defensive package execution | ACTIVE | Existing eligible installed packages influence the single pre-snap DC call; familiarity and roster fit limit effects; matched games show call frequency, benefits and costs by situation. |
+| 2 | DEF-07: pressure/hurry instrumentation | QUEUED | Record resolved pressure separately from blitz calls and sacks; measure rates by tactic, roster and scheme. |
+| 3 | CCH-06: situational events | QUEUED | Record first snap of drive, preceding turnover/score and relevant fatigue; verify eligible package activation in actual games. |
+| 4 | Combined calibration | QUEUED | Matched games and dynasty seasons quantify tactical differentiation, balance, turnover and persistence. |
+| 5 | Deployment/dynasty smoke | NONBLOCKING | Verify deployed game and staff turnover; can run alongside calibration. |
+
+**Validation policy for this workstream (user decision):** Use existing smoke paths and focused outcome benchmarks. Do not create a new unit-test suite or CI workflow for each PR. Add regression tests only for actual bugs or critical invariants. Run the full existing suite at integration milestones. Report seeds, sample sizes, denominators, effects and limitations in one evolving AAR. Prefer intermediate commits on one branch over separate PRs. No claims of implemented mechanics or validation until observed.
+
 ## Purpose and decision
 
 This is the shared work queue for agents making Viperball's simulation coherent, tactically differentiated, measurable, and visible to players. It preserves the findings of the November 23 repository/branch review and turns them into bounded, testable engineering tasks. It is **not** a change to the sport's rules, a blanket authorization to retune scoring, or a claim that all the listed defects are already proven by tests.
