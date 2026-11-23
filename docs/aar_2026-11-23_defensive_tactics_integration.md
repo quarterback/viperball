@@ -3,7 +3,7 @@
 **Date:** November 23, 2026  
 **Review base:** PR #323, head `ad6551fae1af6c1c9dcfd7ca28602ae935ec9630` at branch creation  
 **Implementation branch:** `fix/defensive-tactics-def-01-02-03`  
-**Status:** Implementation committed; full-engine and season benchmark **not run here**.
+**Status:** Implementation committed; targeted tests, existing tests, and paired full-engine benchmark passed in [GitHub Actions run 45225139453](https://github.com/quarterback/viperball/actions/runs/45225139453). Production/deployed game not checked.
 
 ## Purpose
 
@@ -110,26 +110,47 @@ and defending side, switchable read/scheme ablations, and
 explosive-play defense direction. The matrix was also statically checked
 and contains all 128 offense × defense combinations.
 
-**Not executed here:** Python test suite, full-engine games, season
-benchmarks, and deployed app. The environment used for the GitHub
-change cannot clone the repository or execute GitHub Actions.
-The tests must run in CI or a checkout. Do not report them as passing
-until run.
+**GitHub CI validation (Python 3.11, run 45225139453):**
+- `tests/test_defensive_tactics.py`: **14 passed**
+- `python -m pytest tests/ -q`: **86 passed**
+- `scripts/compare_defense_wiring.py --games 80 --seed 2026`: **success**
+  with 80 full-engine games for each of four switch combinations,
+  using fresh copies of generated season rosters and the same matchups.
+
+| Mode | Points/team | TD/team | DK/team | PK/team | 30+ yd plays/game | Defensive reads/game | Median margin |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Previous read/scheme paths off (formation fix stays) | 57.51 | 3.41 | 3.39 | 1.77 | 5.72 | 0 | 22.0 |
+| Reads only | 57.76 | 3.38 | 3.46 | 1.86 | 5.30 | 76.71 | 19.5 |
+| Scheme effects only | 54.84 | 2.91 | 3.49 | 2.03 | 4.81 | 0 | 21.0 |
+| Both | 54.67 | 2.81 | 3.27 | 2.34 | 4.70 | 75.81 | 21.0 |
+
+This confirms that code executes and produces a different scoring and
+explosive-play distribution. It does **not** prove any one scheme is
+well-calibrated or establish causal effect sizes with confidence intervals.
+The reads-only sample's points are slightly higher, despite defensive reads:
+random-number streams diverge after branching on play outcomes. Do not
+interpret this small difference as evidence that successful reads boost offense.
+This randomized 80-game sample represented seven of the eight defenses;
+Shadow did not occur. Run the full 16×8 scheme matrix as DEF-06.
+
+**Not executed:** full 205-team season, larger multi-seed sensitivity,
+production site smoke test, matchup confidence intervals, and PR #323
+post-merge regression.
 
 Suggested next commands after base #323 is available locally:
 
 ```sh
 python -m pytest tests/test_defensive_tactics.py -q
 python -m pytest tests/ -q
+python scripts/compare_defense_wiring.py --games 80 --seed 2026
 python scripts/benchmark_engine.py --help
 ```
 
-Then run the benchmark against the same fresh rosters, opponent schemes,
-and paired seeds with switches on/off. Record for each scheme: yards by
-play family, kick-pass completion, explosive plays, stops, bells,
-points by type, total scoring, and confidence intervals. Expect some
-scoring mix change; do not silently retune other coefficients to
-restore a predetermined points or margin distribution.
+Extend the passing benchmark across seeds and the complete style matrix.
+Record for each scheme: yards by play family, kick-pass completion,
+explosive plays, stops, bells, points by type, total scoring, and confidence
+intervals. Do not retune other coefficients just to restore a fixed
+margin or scoring distribution.
 
 ## Risks and follow-up
 
