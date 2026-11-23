@@ -3104,7 +3104,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.55,
             "kick_pass": 1.15,
             "trick_play": 0.75,
-            "territory_kick": 0.95,
         },
         "read_success_rate": 0.40,
         "pressure_factor": 0.35,
@@ -3114,7 +3113,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.06,
         "pindown_defense": 0.95,
         "fatigue_resistance": 0.06,
-        "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
             "dive_option": 0.03,
             "speed_option": 0.05,
@@ -3126,7 +3124,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.12,
             "kick_pass": 0.02,
             "trick_play": 0.08,
-            "territory_kick": 0.03,
         },
         "personnel_weights": {
             "tackling": 0.30, "speed": 0.30, "awareness": 0.25, "agility": 0.15,
@@ -3160,7 +3157,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 1.15,
             "kick_pass": 0.82,
             "trick_play": 1.20,
-            "territory_kick": 0.90,
         },
         "read_success_rate": 0.45,
         "pressure_factor": 1.10,
@@ -3170,7 +3166,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.04,
         "pindown_defense": 0.90,
         "fatigue_resistance": -0.06,
-        "gap_breakdown_bonus": 0.08,
         "gameplan_bias": {
             "dive_option": 0.06,
             "speed_option": 0.10,
@@ -3182,7 +3177,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.08,
             "kick_pass": 0.05,
             "trick_play": 0.02,
-            "territory_kick": 0.00,
         },
         "personnel_weights": {
             "speed": 0.35, "tackling": 0.30, "power": 0.25, "agility": 0.10,
@@ -3216,7 +3210,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.85,
             "kick_pass": 0.90,
             "trick_play": 0.65,
-            "territory_kick": 1.00,
         },
         "read_success_rate": 0.42,
         "pressure_factor": 0.40,
@@ -3226,7 +3219,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.12,
         "pindown_defense": 1.00,
         "fatigue_resistance": 0.02,
-        "gap_breakdown_bonus": 0.03,
         "gameplan_bias": {
             "dive_option": 0.02,
             "speed_option": 0.05,
@@ -3238,7 +3230,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.06,
             "kick_pass": 0.05,
             "trick_play": 0.10,
-            "territory_kick": 0.02,
         },
         "personnel_weights": {
             "awareness": 0.35, "speed": 0.30, "agility": 0.20, "tackling": 0.15,
@@ -3271,7 +3262,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 1.18,
             "kick_pass": 1.20,
             "trick_play": 1.25,
-            "territory_kick": 1.00,
         },
         "read_success_rate": 0.45,
         "pressure_factor": 0.35,
@@ -3281,7 +3271,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.03,
         "pindown_defense": 1.00,
         "fatigue_resistance": 0.03,
-        "gap_breakdown_bonus": 0.10,
         "gameplan_bias": {
             "dive_option": 0.12,
             "speed_option": 0.10,
@@ -3293,7 +3282,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.00,
             "kick_pass": 0.00,
             "trick_play": 0.00,
-            "territory_kick": 0.00,
         },
         "personnel_weights": {
             "tackling": 0.35, "power": 0.30, "awareness": 0.20, "speed": 0.15,
@@ -3326,7 +3314,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.92,
             "kick_pass": 0.78,
             "trick_play": 0.80,
-            "territory_kick": 0.92,
         },
         "read_success_rate": 0.48,
         "pressure_factor": 0.60,
@@ -3336,7 +3323,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.18,
         "pindown_defense": 0.90,
         "fatigue_resistance": 0.00,
-        "gap_breakdown_bonus": 0.04,
         "gameplan_bias": {
             "dive_option": 0.04,
             "speed_option": 0.06,
@@ -3348,7 +3334,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.06,
             "kick_pass": 0.10,
             "trick_play": 0.08,
-            "territory_kick": 0.05,
         },
         "personnel_weights": {
             "awareness": 0.35, "speed": 0.25, "hands": 0.25, "agility": 0.15,
@@ -3381,7 +3366,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.88,
             "kick_pass": 0.82,
             "trick_play": 0.90,
-            "territory_kick": 0.90,
         },
         "read_success_rate": 0.38,
         "pressure_factor": 0.20,
@@ -3391,7 +3375,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.14,
         "pindown_defense": 0.85,
         "fatigue_resistance": 0.08,
-        "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
             "dive_option": 0.02,
             "speed_option": 0.02,
@@ -3403,7 +3386,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.05,
             "kick_pass": 0.06,
             "trick_play": 0.04,
-            "territory_kick": 0.05,
         },
         "personnel_weights": {
             "awareness": 0.30, "tackling": 0.25, "speed": 0.25, "agility": 0.20,
@@ -3437,7 +3419,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.90,
             "kick_pass": 0.90,
             "trick_play": 0.85,
-            "territory_kick": 1.00,
         },
         "read_success_rate": 0.42,
         "pressure_factor": 0.70,
@@ -3447,7 +3428,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.08,
         "pindown_defense": 0.95,
         "fatigue_resistance": -0.03,
-        "gap_breakdown_bonus": 0.06,
         "gameplan_bias": {
             "dive_option": 0.05,
             "speed_option": 0.06,
@@ -3459,7 +3439,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.06,
             "kick_pass": 0.05,
             "trick_play": 0.06,
-            "territory_kick": 0.03,
         },
         "personnel_weights": {
             "agility": 0.30, "speed": 0.30, "awareness": 0.25, "tackling": 0.15,
@@ -3493,7 +3472,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.85,
             "kick_pass": 0.60,
             "trick_play": 0.85,
-            "territory_kick": 0.82,
         },
         "read_success_rate": 0.38,
         "pressure_factor": 0.30,
@@ -3503,7 +3481,6 @@ DEFENSE_STYLES = {
         "kick_pass_coverage": 0.22,
         "pindown_defense": 0.80,
         "fatigue_resistance": 0.04,
-        "gap_breakdown_bonus": 0.02,
         "gameplan_bias": {
             "dive_option": 0.00,
             "speed_option": 0.00,
@@ -3515,7 +3492,6 @@ DEFENSE_STYLES = {
             "lateral_spread": 0.04,
             "kick_pass": 0.12,
             "trick_play": 0.04,
-            "territory_kick": 0.08,
         },
         "personnel_weights": {
             "awareness": 0.30, "speed": 0.30, "hands": 0.20, "tackling": 0.20,
