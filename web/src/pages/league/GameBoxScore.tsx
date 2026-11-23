@@ -70,7 +70,7 @@ export function GameBoxScore() {
     return (
       <Card>
         <Text c="red">
-          No box score for this game (it may not be played, or used the fast sim).{" "}
+          No box score for this game yet.{" "}
           <Anchor component={Link} to={`/league/${sessionId}`}>
             Back to season
           </Anchor>
@@ -131,6 +131,24 @@ export function GameBoxScore() {
                 <Table.Td ta="right">{fr.stats.home?.[r.key] ?? "—"}</Table.Td>
               </Table.Tr>
             ))}
+            {fr.game_day?.line_changes && (
+              <Table.Tr>
+                <Table.Td>{fr.game_day.line_changes.away}</Table.Td>
+                <Table.Td ta="center" c="dimmed">
+                  Line changes
+                </Table.Td>
+                <Table.Td ta="right">{fr.game_day.line_changes.home}</Table.Td>
+              </Table.Tr>
+            )}
+            {fr.game_day?.caught_changing && (
+              <Table.Tr>
+                <Table.Td>{fr.game_day.caught_changing.away}</Table.Td>
+                <Table.Td ta="center" c="dimmed" title="Changed during a live turnover and gave up a fast break">
+                  Caught changing
+                </Table.Td>
+                <Table.Td ta="right">{fr.game_day.caught_changing.home}</Table.Td>
+              </Table.Tr>
+            )}
           </Table.Tbody>
         </Table>
       </Card>

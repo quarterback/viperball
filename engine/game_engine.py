@@ -59,6 +59,133 @@ V2_ENGINE_CONFIG = {
     # 4.2 → tighter but sustainable drives. Escalation system adds late-game ramp.
     # 2.3 (V2.9) → forces more 4th-6th down situations; teams must grind.
     "base_yards_multiplier": 2.3,
+    # V3.3: Field compression. As the offense nears the goal line the defense
+    # has less ground to cover, so gains shrink. Yards on a play are scaled
+    # from 1.0 at field_compression_start down to (1 - field_compression) at
+    # the goal line. 0.0 turns it off. This is what makes drives stall inside
+    # kicking range and brings snap kicks into the game.
+    "field_compression": 0.55,
+    "field_compression_start": 50,
+    # V3.3: Old goal line rule gave a touchdown on 20-55% of plays that
+    # ended at the 1 to 5 yard line without crossing. False = the ball has
+    # to cross the goal line.
+    "goal_line_bonus_td": False,
+    # V3.3: Kick skill rescale. The kick range formulas were written when
+    # kickers were rated 60-100. The March 2026 talent rebalance dropped
+    # ratings by about 30 points (a median team's best kicker is now ~51),
+    # which shrank the median snap kick range to 23 yards and left the
+    # weakest teams unable to make any kick. This maps the current rating
+    # scale back onto the scale the formulas expect:
+    #   effective = 60 + (rating - 15) * 0.5   (25 -> 65, 51 -> 78, 85 -> 95)
+    "kick_skill_rescale": True,
+    # V3.3: Rating rescale for the rest of the engine, same map as the kick
+    # one: scale_rating(raw) = 60 + (raw - 15) * 0.5. Each group of formulas
+    # can be switched separately (see docs/rating_scale_inventory_2026-11-22.md).
+    "rating_scale_slope": 0.45,
+    "rescale_contest": True,       # A: carrier vs tackler, kick pass, late-down clamp
+    "rescale_speed": True,         # C: pursuit, reads, returns, carrier bonus
+    "rescale_breakaway": True,     # C: breakaway chance from team speed
+    # Team speed (60-100 scale) at which the breakaway chance gets no bonus
+    # or penalty. Higher = fewer breakaways. The main dial for long touchdowns.
+    "breakaway_speed_baseline": 92,
+    "rescale_turnovers": True,     # D: lateral interceptions and fumbles
+    "rescale_yac": True,           # E: yards after catch, kick pass distance, returns
+    # V3.3: How far from a first down a team must be before it takes a snap
+    # kick in range. Lower = coaches shoot sooner = more snap kicks.
+    "kick_4th_down_min_ytg": 4,
+    "kick_5th_down_min_ytg": 1,
+    # V3.5: Game day variance, after the O27 baseball game (o27/config.py
+    # LOCKED_FORM_*, o27v2 HOME_ADVANTAGE_SKILL = 0).
+    # Home field: the flat ratings boost for every home player is off. A home
+    # edge now has to come from things that happen: the away team's travel
+    # (starting energy), the referee crew's lean, and fatigue.
+    "home_field_boost": False,
+    # Team form: one roll per team per game (its day) times one roll per half
+    # (hot or cold spell). The mean of the game roll leans with the team's
+    # best player, so teams with a star run hot more often. The result
+    # multiplies every contest rating for that team, so a good day lifts the
+    # run game, the kick game and the defense together instead of averaging
+    # out over 90 plays. 0 sigma = off.
+    "form_game_sigma": 0.05,
+    "form_half_sigma": 0.03,
+    "form_star_weight": 0.003,   # per rating point of best player vs league typical
+    "form_star_pivot": 88.0,     # typical best player, on the engine's 60-100 scale
+    "form_min": 0.85,
+    "form_max": 1.18,
+    # Work rate: every player on the field spends energy every snap, as in
+    # Australian rules, Gaelic football and rugby, scaled by stamina
+    # (60-100 scale: 70 -> 0.9x, 95 -> 0.65x, 45 -> 1.15x). Players on the
+    # bench recover a little each snap. Change of possession refunds less.
+    "work_rate_enabled": True,
+    "work_rate_per_snap": 1.0,
+    "bench_recovery_per_snap": 0.5,
+    "drive_change_recovery_off": 0.5,   # was 5
+    "drive_change_recovery_def": 0.0,   # was 3
+    # Energy a team gets back from a timeout or other stoppage (was 10-15,
+    # eight timeouts a game refilled players completely). Halftime stays 30.
+    "stoppage_recovery": 4.0,
+    "fatigue_curve_linear": True,
+    "fatigue_curve_slope": 0.004,
+    # V3.6: Shift rotation. Viperball has unlimited substitution at any dead
+    # ball, so coaches rotate by position group, the way hockey changes
+    # lines and basketball subs individuals: a player comes off when her
+    # energy drops to her group's "out" mark and goes back on once rested to
+    # its "back" mark. Out marks move with each player's work rate (a high
+    # work rate player is left on longer) and with the game (coaches ride
+    # starters in a close fourth quarter). Thresholds differ player to player,
+    # so a group never leaves all at once. A tired player only comes off if a
+    # fresh backup would play nearly as well as she does right now; "rest" is
+    # how much worse the coach accepts to save her for later. "load" scales
+    # how hard the group works per snap.
+    "shift_rotation_enabled": True,
+    "rotation_profiles": {
+        "Zeroback":        {"side": "offense", "slots": 1, "out": 46, "back": 72, "rest": 0.02,  "max_swaps": 1, "load": 0.8},
+        "Viper":           {"side": "offense", "slots": 1, "out": 58, "back": 80, "rest": 0.05,  "max_swaps": 1, "load": 1.0},
+        "Halfback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Wingback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Slotback":        {"side": "offense", "slots": 1, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 1, "load": 1.1},
+        "Offensive Line":  {"side": "offense", "slots": 5, "out": 66, "back": 86, "rest": 0.07, "max_swaps": 2, "load": 1.3},
+        "Defensive Line":  {"side": "defense", "slots": 5, "out": 76, "back": 90, "rest": 0.1, "max_swaps": 2, "load": 1.7},
+        "Keeper":          {"side": "defense", "slots": 2, "out": 52, "back": 76, "rest": 0.03,  "max_swaps": 1, "load": 0.85},
+        # Two-way: the best tacklers among Vipers and flankers also play
+        # defensive back (README, Two-Way Play).
+        "two_way":         {"side": "defense", "slots": 4, "out": 64, "back": 84, "rest": 0.07, "max_swaps": 2, "load": 1.0},
+    },
+    # Lacrosse style midfield lines: the Viper and four flankers play as
+    # one two-way line. Lines change together, any time, including during
+    # live play. A team changing as the ball turns over live can be caught.
+    "midfield_lines_enabled": True,
+    # Each line has its own shift length: the top line stays on longer.
+    "midfield_line": {"out": [74, 80, 86], "back": 90, "rest": 0.10, "load": 1.6, "lines": 3},
+    "specialist_live_change_rate": 0.5,  # coach sends the specialist on during a live turnover
+    "defensive_specialist_edge": 0.08,   # tackle score edge needed to sub in
+    "defensive_specialist_on": 80, "defensive_specialist_off": 55,
+    "live_change_tired_margin": 3,       # in a live turnover, change only if this far past the mark
+    "live_change_caught_rate": 0.35,
+    "fast_break_boost": 1.06,
+    "rotation_close_game_ride": 10,   # out mark drops this much: Q4, within 9
+    "rotation_work_rate_weight": 0.5, # out mark drops per work rate point above 75
+    # Work rate: how much tiredness costs a player. On the 60-100 scale,
+    # 95 feels it at 0.5x, 75 at 1x, 60 at 1.4x. Stamina sets how fast
+    # energy drains and recovers; work rate sets how much it hurts.
+    "work_rate_effect_enabled": True,
+    # Travel: starting energy the away team loses, by distance.
+    "travel_fatigue": {"same_state": 0, "same_region": 2, "same_zone": 4,
+                       "next_zone": 6, "cross_country": 9},
+    # V3.4: Seconds between plays for the slowest (tempo 0) and fastest
+    # (tempo 1) offenses. Football cadence was 38 and 18. Lower = more plays,
+    # more possessions, more scoring.
+    "play_clock_slow": 28,
+    "play_clock_fast": 13,
+    # V3.4: Field goals. A placed ball off a tee carries farther than a drop
+    # kick: the place kick's comfortable range is this many yards beyond the
+    # snap kick's, and attempts are possible out to place_kick_max_distance
+    # (README: about 71 yards).
+    "kick_4th_down_fg_min_ytg": 10,
+    "kick_5th_down_fg_min_ytg": 4,
+    "kick_fg_min_success": 0.60,
+    "place_kick_range_bonus": 15,
+    "place_kick_max_distance": 71,
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -106,6 +233,19 @@ PRESTIGE_TO_HALO = {
     10: (48, 47),   # Doormat
     0:  (43, 42),   # Absolute bottom
 }
+
+
+def scale_rating(raw, group: str = "") -> float:
+    """Convert a current-scale rating (about 15-96) to the 60-100 scale the
+    engine formulas were written for. Pass a group name to make it depend on
+    that group's V2_ENGINE_CONFIG switch."""
+    if group and not V2_ENGINE_CONFIG.get(group, False):
+        return raw
+    # A median player (35) maps to 70. The slope sets how much a rating gap
+    # counts: 0.5 is the full conversion; lower values pull teams closer
+    # together and are the main dial for blowouts.
+    slope = V2_ENGINE_CONFIG.get("rating_scale_slope", 0.5)
+    return max(40.0, min(100.0, 70.0 + (raw - 35.0) * slope))
 
 
 def derive_halo(prestige: int) -> Tuple[float, float]:
@@ -215,6 +355,17 @@ class FormationShell(Enum):
     SPLIT = "split"
     SPREAD = "spread"
     HEAVY = "heavy"
+
+
+LIVE_TURNOVER_RESULTS = {
+    "fumble", "muffed_punt", "blocked_kick", "blocked_punt", "chaos_recovery",
+    "missed_dk_returned", "kick_pass_intercepted", "lateral_intercepted",
+}
+
+
+COVER_FOR = {"Defensive Line", "Keeper"}
+COVER_RATING = 0.9   # a player covering another group plays at 90% of her rating
+MIDFIELD_GROUPS = {"Viper", "Halfback", "Wingback", "Slotback", "two_way"}
 
 
 class PlayResult(Enum):
@@ -883,6 +1034,86 @@ ZB_STYLE_MAP = {
 }
 
 
+def _rush_score(p, forced=None) -> float:
+    """How strongly a coach wants this player carrying the ball. The best
+    at each position starts (see assign_game_roles)."""
+    forced = forced or {}
+    spd = p.speed
+    pwr = getattr(p, 'power', 75)
+    agi = getattr(p, 'agility', 75)
+    stam = p.stamina
+    aware = getattr(p, 'awareness', 75)
+    base = spd * 1.2 + pwr * 1.0 + agi * 1.1 + stam * 0.7 + aware * 0.5
+    arch_mult = 1.0
+    if p.archetype in ("running_zb", "power_flanker"):
+        arch_mult = 1.10
+    elif p.archetype in ("speed_flanker", "elusive_flanker"):
+        arch_mult = 1.08
+    elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
+        arch_mult = 1.04
+    score = base * arch_mult
+    # Depth-chart override: massive boost so designated starter wins selection
+    if forced.get(p.position) == p.name:
+        score *= 10.0
+    return score
+
+
+def _tackle_score(p) -> float:
+    return p.tackling * 1.3 + p.speed * 0.9 + p.awareness * 0.8
+
+
+def build_midfield_lines(players, depth_key, n_lines: int = 3):
+    """Midfield lines of five: a Viper, a Halfback, a Wingback, a Slotback
+    and the best remaining flanker, best players on line one."""
+    pools = {}
+    for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+        pools[pos] = sorted((p for p in players if p.position == pos),
+                            key=lambda p: depth_key(p, pos), reverse=True)
+    lines = []
+    for _ in range(n_lines):
+        line = []
+        for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+            if pools[pos]:
+                line.append(pools[pos].pop(0))
+        while len(line) < 5:
+            left = [p for pos in ("Halfback", "Wingback", "Slotback", "Viper") for p in pools[pos]]
+            if not left:
+                break
+            b = max(left, key=lambda p: p.overall)
+            pools[b.position].remove(b)
+            line.append(b)
+        if line:
+            lines.append(line)
+    return lines
+
+
+def preview_midfield_lines(team, unavailable=()) -> dict:
+    """The lines a team would start its next game with, for roster pages.
+    Returns {player name: {"line": 1-3, "def_specialist": bool}}."""
+    unavailable = set(unavailable or ())
+    forced = getattr(team, "forced_starters", {}) or {}
+    avail = [p for p in team.players if p.name not in unavailable]
+    starters = set()
+    for pos in ("Viper", "Halfback", "Wingback", "Slotback"):
+        group = [p for p in avail if p.position == pos]
+        if group:
+            starters.add(max(group, key=lambda p: _rush_score(p, forced)).name)
+    n = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+    lines = build_midfield_lines(
+        avail, lambda p, pos: (1000 if p.name in starters else 0) + p.overall, n)
+    spec = None
+    if len(lines) > 1:
+        d = sorted(lines[0], key=_tackle_score, reverse=True)[:4]
+        bench = [p for l in lines[1:] for p in l]
+        if d and bench:
+            b = max(bench, key=_tackle_score)
+            edge = V2_ENGINE_CONFIG.get("defensive_specialist_edge", 0.08)
+            if _tackle_score(b) >= _tackle_score(d[-1]) * (1.0 + edge):
+                spec = b.name
+    return {p.name: {"line": i + 1, "def_specialist": p.name == spec}
+            for i, l in enumerate(lines) for p in l}
+
+
 def assign_game_roles(team, offense_style: str = "balanced") -> dict:
     """Assign starter/rotation roles for offense, defense, and special teams.
 
@@ -933,24 +1164,7 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
         zb.game_zb_style = ZB_STYLE_MAP.get(zb.archetype, "dual_threat")
 
     def rush_score(p):
-        spd = p.speed
-        pwr = getattr(p, 'power', 75)
-        agi = getattr(p, 'agility', 75)
-        stam = p.stamina
-        aware = getattr(p, 'awareness', 75)
-        base = spd * 1.2 + pwr * 1.0 + agi * 1.1 + stam * 0.7 + aware * 0.5
-        arch_mult = 1.0
-        if p.archetype in ("running_zb", "power_flanker"):
-            arch_mult = 1.10
-        elif p.archetype in ("speed_flanker", "elusive_flanker"):
-            arch_mult = 1.08
-        elif p.archetype in ("dual_threat_zb", "reliable_flanker", "hybrid_viper"):
-            arch_mult = 1.04
-        score = base * arch_mult
-        # Depth-chart override: massive boost so designated starter wins selection
-        if forced.get(p.position) == p.name:
-            score *= 10.0
-        return score
+        return _rush_score(p, forced)
 
     def recv_score(p):
         hands = getattr(p, 'hands', 75)
@@ -1402,6 +1616,13 @@ class Player:
     game_plays_involved: int = 0      # number of plays this player was involved in
     # Per-player in-game fatigue: starts at 100, drains with usage
     game_energy: float = 100.0
+    # Fatigue carried in from earlier games (energy points), set by Season.
+    fatigue_carry: float = 0.0
+    game_energy_start: float = 100.0
+    game_field_snaps: int = 0
+    game_shifts: int = 0
+    # Work rate rating (current rating scale). 0 = not set; derived below.
+    work_rate: int = 0
     # Rhythm tracking: plays since last touch (for ball hunger/cold penalty)
     plays_since_last_touch: int = 0
     # Hot streak: consecutive successful contests (positive yards or completions)
@@ -1443,13 +1664,27 @@ class Player:
         return self.tackling * 0.50 + self.power * 0.25 + self.awareness * 0.25
 
     @property
+    def work_rate_rating(self) -> int:
+        """How much load a player can carry: how long a coach can leave her
+        on and how much tiredness costs her. Related to stamina but not the
+        same thing. Players created before work rate existed get a stable
+        value from stamina plus a per-player offset."""
+        if getattr(self, "work_rate", 0):
+            return int(self.work_rate)
+        import zlib
+        offset = zlib.crc32(self.name.encode("utf-8")) % 25 - 12
+        return int(max(10, min(95, round(self.stamina * 0.6 + 16 + offset))))
+
+    @property
     def fatigue_tier(self) -> str:
         """Derive fatigue tier from overall talent.
         Elite (overall >= 82): 0.8x drain, 0.5 stat loss/point
         Standard (62-81): 1.0x drain, 1.0 stat loss/point
         Low (< 62): 1.5x drain, 1.5 stat loss/point
         """
-        ovr = self.overall
+        # Thresholds are on the engine's 60-100 scale; read the current
+        # rating scale through scale_rating() (V3.5).
+        ovr = scale_rating(self.overall)
         if ovr >= 82:
             return FatigueTier.ELITE.value
         elif ovr >= 62:
@@ -3598,8 +3833,8 @@ class ViperballEngine:
                  home_coaching: Optional[Dict] = None,
                  away_coaching: Optional[Dict] = None,
                  # V2: Prestige and game context
-                 home_prestige: int = 50,
-                 away_prestige: int = 50,
+                 home_prestige: Optional[int] = None,
+                 away_prestige: Optional[int] = None,
                  is_playoff: bool = False,
                  is_trap_game: bool = False,
                  # V2.4: Defensive prestige — No-Fly Zone
@@ -3715,6 +3950,14 @@ class ViperballEngine:
                 p.variance_archetype = assign_variance_archetype(p)
 
         # ── V2: Wire prestige into engine ──
+        # No value passed = keep the team's own prestige. The old default of
+        # 50 overwrote every team's prestige on its first game, because
+        # Season never passes one, so the underdog and trap game logic
+        # never saw a favorite.
+        if home_prestige is None:
+            home_prestige = getattr(self.home_team, "prestige", 50)
+        if away_prestige is None:
+            away_prestige = getattr(self.away_team, "prestige", 50)
         self.home_team.prestige = home_prestige
         self.away_team.prestige = away_prestige
         self._is_playoff = is_playoff
@@ -3931,8 +4174,11 @@ class ViperballEngine:
         self._home_momentum_plays = 0
         self._away_momentum_plays = 0
 
-        if not self.neutral_site:
+        if not self.neutral_site and V2_ENGINE_CONFIG.get("home_field_boost", False):
             self._apply_home_field_boost()
+
+        self._set_starting_energy()
+        self._roll_game_form()
 
         if self.is_rivalry:
             self._apply_rivalry_boost()
@@ -4144,7 +4390,7 @@ class ViperballEngine:
         best = top_carriers[0]
         carrier_talent = (best.speed + getattr(best, 'agility', 70)) / 2.0
         # Normalize: 60 = baseline (no bonus), 90 = max bonus
-        carrier_bonus = max(0.0, (carrier_talent - 60) / 30.0) * 0.15  # 0.0 to 0.15
+        carrier_bonus = max(0.0, (scale_rating(carrier_talent, "rescale_speed") - 60) / 30.0) * 0.15  # 0.0 to 0.15
 
         # Step 3: Play diversity (Offensive Puzzle)
         # Count distinct DC categories used this half
@@ -4184,6 +4430,87 @@ class ViperballEngine:
                 for p in team.players:
                     p.awareness = min(99, p.awareness + min(combined, 3))
                     p.stamina = min(99, p.stamina + min(combined, 2))
+
+    # ── V3.5: travel, carried fatigue, team form ──
+
+    _TRAVEL_ZONES = {
+        "Pacific West": "west", "Mountain West": "west",
+        "Great Plains": "central", "Texas & South Central": "central",
+        "Great Lakes": "central", "Upper Midwest": "central",
+        "Southeast": "east", "Deep South": "east", "Mid-Atlantic": "east",
+        "Capital Region": "east", "New England": "east",
+    }
+
+    def _travel_cost(self) -> float:
+        if self.neutral_site:
+            return 0.0
+        try:
+            from engine.geography import STATE_TO_BASE_REGION
+        except Exception:
+            return 0.0
+        costs = V2_ENGINE_CONFIG.get("travel_fatigue", {})
+        hs, as_ = getattr(self.home_team, "state", ""), getattr(self.away_team, "state", "")
+        if not hs or not as_:
+            return 0.0
+        if hs == as_:
+            return costs.get("same_state", 0)
+        hr, ar = STATE_TO_BASE_REGION.get(hs), STATE_TO_BASE_REGION.get(as_)
+        if hr and hr == ar:
+            return costs.get("same_region", 2)
+        hz, az = self._TRAVEL_ZONES.get(hr), self._TRAVEL_ZONES.get(ar)
+        if not hz or not az:
+            return costs.get("same_zone", 4)
+        if hz == az:
+            return costs.get("same_zone", 4)
+        if {hz, az} == {"west", "east"}:
+            return costs.get("cross_country", 9)
+        return costs.get("next_zone", 6)
+
+    def _set_starting_energy(self):
+        """Every player starts at 100 energy, less fatigue carried from earlier
+        games; the away team also loses energy to travel."""
+        self.travel_cost = self._travel_cost()
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            travel = self.travel_cost if side == "away" else 0.0
+            for p in team.players:
+                start = 100.0 - min(30.0, getattr(p, "fatigue_carry", 0.0)) - travel
+                p.game_energy = max(50.0, start)
+                p.game_energy_start = p.game_energy
+
+    def _roll_game_form(self):
+        """One roll per team for the day, leaning with the team's best player."""
+        sigma = V2_ENGINE_CONFIG.get("form_game_sigma", 0.0)
+        self.game_form = {"home": 1.0, "away": 1.0}
+        self.half_form = {"home": [1.0, 1.0], "away": [1.0, 1.0]}
+        self.team_form = {"home": 1.0, "away": 1.0}
+        if not sigma or sigma <= 0:
+            return
+        pivot = V2_ENGINE_CONFIG.get("form_star_pivot", 88.0)
+        w = V2_ENGINE_CONFIG.get("form_star_weight", 0.003)
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            best = max((scale_rating(p.overall) for p in team.players), default=pivot)
+            mean = 1.0 + (best - pivot) * w
+            self.game_form[side] = random.gauss(mean, sigma)
+
+    def _roll_half_form(self, half_index: int):
+        """Hot or cold spell for a half, on top of the day's form."""
+        sigma = V2_ENGINE_CONFIG.get("form_half_sigma", 0.0)
+        lo = V2_ENGINE_CONFIG.get("form_min", 0.85)
+        hi = V2_ENGINE_CONFIG.get("form_max", 1.18)
+        for side in ("home", "away"):
+            h = random.gauss(1.0, sigma) if sigma and sigma > 0 else 1.0
+            self.half_form[side][half_index] = h
+            self.team_form[side] = max(lo, min(hi, self.game_form[side] * h))
+
+    def _off_form(self) -> float:
+        f = getattr(self, "team_form", {}).get(self.state.possession, 1.0)
+        if getattr(self, "_fast_break", None) == self.state.possession:
+            f *= V2_ENGINE_CONFIG.get("fast_break_boost", 1.0)
+        return f
+
+    def _def_form(self) -> float:
+        side = "away" if self.state.possession == "home" else "home"
+        return getattr(self, "team_form", {}).get(side, 1.0)
 
     def _apply_home_field_boost(self):
         """Temporary ratings boost for the home team.
@@ -4234,8 +4561,16 @@ class ViperballEngine:
         return self._away_injured_in_game
 
     def _unavailable_in_game(self, team) -> set:
-        """Return set of player names unavailable (injured OR benched)."""
-        return self._injured_in_game(team) | self._benched_names(team)
+        """Return set of player names unavailable (injured, benched, or
+        resting between shifts)."""
+        return (self._injured_in_game(team) | self._benched_names(team)
+                | self._shift_resting(team))
+
+    def _shift_resting(self, team) -> set:
+        rest = getattr(self, "_shift_rest", None)
+        if not rest:
+            return set()
+        return rest.get("home" if team is self.home_team else "away", set())
 
     def _offense_skill(self, team):
         """Return offensive skill-position players (ball carriers, receivers).
@@ -4243,6 +4578,11 @@ class ViperballEngine:
         Excludes players injured or benched during this game so backups step in.
         """
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = [p for p in self._on_field(team, unavailable, "offense")
+                  if p.position != "Offensive Line"]
+            if on:
+                return on
         skill = [p for p in team.players if p.position in
                  ("Zeroback", "Halfback", "Wingback", "Slotback", "Viper")
                  and p.name not in unavailable]
@@ -4255,6 +4595,10 @@ class ViperballEngine:
     def _offense_all(self, team):
         """Return all offensive players including OL."""
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(team, unavailable, "offense")
+            if on:
+                return on
         off = [p for p in team.players if p.position not in ("Defensive Line", "Keeper")
                and p.name not in unavailable]
         if off:
@@ -4269,19 +4613,335 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         off_unavail = self._unavailable_in_game(off_team)
         def_unavail = self._unavailable_in_game(def_team)
-        for p in off_team.players:
-            if p.name not in off_unavail:
-                p.game_offensive_snaps += 1
-        for p in def_team.players:
-            if p.name not in def_unavail:
-                p.game_defensive_snaps += 1
-                # Keepers get coverage snap credit on every defensive snap
-                if p.position in ("Keeper",):
-                    p.game_coverage_snaps += 1
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            off_on = self._on_field(off_team, off_unavail, "offense")
+            def_on = self._on_field(def_team, def_unavail, "defense")
+        else:
+            off_on = [p for p in off_team.players if p.name not in off_unavail]
+            def_on = [p for p in def_team.players if p.name not in def_unavail]
+        for p in off_on:
+            p.game_offensive_snaps += 1
+        for p in def_on:
+            p.game_defensive_snaps += 1
+            # Keepers get coverage snap credit on every defensive snap
+            if p.position in ("Keeper",):
+                p.game_coverage_snaps += 1
+        if V2_ENGINE_CONFIG.get("work_rate_enabled", False):
+            self._apply_work_rate(off_team, off_unavail, def_team, def_unavail)
+
+    def _depth_score(self, p, group: str) -> float:
+        """Depth chart order inside a position group: starters first, then
+        by overall."""
+        if group == "two_way":
+            return _tackle_score(p)
+        if group in ("Defensive Line", "Keeper"):
+            starter = 1 if getattr(p, "game_def_role", "") == "STARTER" else 0
+        elif group == "Offensive Line":
+            starter = 0
+            return p.power * 0.6 + p.awareness * 0.4 + p.overall * 0.2
+        else:
+            starter = 1 if getattr(p, "game_role", "") == "STARTER" else 0
+        return starter * 1000 + p.overall
+
+    def _group_members(self, team, group: str):
+        if group == "two_way":
+            return [p for p in team.players
+                    if p.position in ("Viper", "Halfback", "Wingback", "Slotback")]
+        return [p for p in team.players if p.position == group]
+
+    def _lineup(self, team, unavail, side: str):
+        """Players on the field for one side: for each position group, the
+        top of its depth chart among players who are available (not injured,
+        benched, or resting between shifts)."""
+        cache = getattr(self, "_lineup_cache", None)
+        if cache is None:
+            cache = self._lineup_cache = {}
+        key = (id(team), side, frozenset(unavail))
+        if key in cache:
+            return cache[key]
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        lines_on = V2_ENGINE_CONFIG.get("midfield_lines_enabled", False)
+        on = []
+        taken = set()
+        for group, prof in profiles.items():
+            if prof.get("side") != side:
+                continue
+            if lines_on and group in MIDFIELD_GROUPS:
+                continue
+            pool = [p for p in self._group_members(team, group)
+                    if p.name not in unavail and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, group), reverse=True)
+            for p in pool[:prof.get("slots", 1)]:
+                on.append((p, group))
+                taken.add(p.name)
+            short = prof.get("slots", 1) - min(len(pool), prof.get("slots", 1))
+            if short > 0 and group in COVER_FOR:
+                for p in self._cover_pool(team, unavail, group, taken)[:short]:
+                    on.append((p, group))
+                    taken.add(p.name)
+        if lines_on:
+            for p in self._midfield_on(team, unavail, side):
+                on.append((p, "Midfield"))
+        cache[key] = on
+        return on
+
+    def _cover_pool(self, team, unavail, group, taken=()):
+        """Bench players from another group who can fill in: spare
+        offensive linemen on the defensive line, bench midfielders at
+        Keeper. Best fit first."""
+        if group == "Defensive Line":
+            off_ol = {p.name for p, g in self._lineup(team, unavail, "offense")
+                      if g == "Offensive Line"}
+            pool = [p for p in team.players if p.position == "Offensive Line"
+                    and p.name not in unavail and p.name not in off_ol and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, "Offensive Line"), reverse=True)
+            return pool
+        if group == "Keeper" and V2_ENGINE_CONFIG.get("midfield_lines_enabled", False):
+            on = {p.name for p in self._midfield_on(team, unavail, "offense")}
+            on |= {p.name for p in self._midfield_on(team, unavail, "defense")}
+            pool = [p for l in self._midfield_lines(team, unavail) for p in l
+                    if p.name not in on and p.name not in unavail and p.name not in taken]
+            pool.sort(key=lambda p: self._depth_score(p, "two_way"), reverse=True)
+            return pool
+        return []
+
+    def _side_key(self, team) -> str:
+        return "home" if team is self.home_team else "away"
+
+    def _midfield_lines(self, team, unavail):
+        """Three lines of five: a Viper, a Halfback, a Wingback, a Slotback
+        and the best remaining flanker, best players on line one."""
+        cache = getattr(self, "_mid_lines_cache", None)
+        if cache is None:
+            cache = self._mid_lines_cache = {}
+        hard = frozenset(n for n in unavail if n not in self._shift_resting(team))
+        key = (id(team), hard)
+        if key in cache:
+            return cache[key]
+        n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+        lines = build_midfield_lines([p for p in team.players if p.name not in hard],
+                                     self._depth_score, n_lines)
+        cache[key] = lines
+        return lines
+
+    def _midfield_on(self, team, unavail, side: str):
+        lines = self._midfield_lines(team, unavail)
+        if not lines:
+            return []
+        sk = self._side_key(team)
+        state = self._mid_state()
+        idx = min(state["line"][sk], len(lines) - 1)
+        line = lines[idx]
+        if side == "offense":
+            return list(line)
+        # Defense: the line's four best tacklers play defensive back, unless
+        # a defensive specialist has come on for one of them.
+        tack = lambda p: self._depth_score(p, "two_way")
+        d = sorted(line, key=tack, reverse=True)[:4]
+        spec = state["spec"][sk]
+        live = getattr(self, "_transition_side", None) == sk
+        if spec and d and (not live or state["live_spec"][sk]):
+            sp = next((p for l in lines for p in l if p.name == spec and p not in line), None)
+            if sp is not None:
+                d[-1] = sp
+        return d
+
+    def _mid_state(self):
+        st_ = getattr(self, "_mid_line_state", None)
+        if st_ is None:
+            st_ = self._mid_line_state = {"line": {"home": 0, "away": 0},
+                                          "spec": {"home": None, "away": None},
+                                          "changes": {"home": 0, "away": 0},
+                                          "live_spec": {"home": False, "away": False},
+                                          "spec_snaps": {"home": 0, "away": 0},
+                                          "caught": {"home": 0, "away": 0}}
+        return st_
+
+    def _caught_roll(self, sk, state):
+        """A change made while the ball is live can leave a team short."""
+        if getattr(self, "_fast_break", None):
+            return
+        if random.random() < V2_ENGINE_CONFIG.get("live_change_caught_rate", 0.0):
+            self._fast_break = "away" if sk == "home" else "home"
+            state["caught"][sk] += 1
+
+    def _line_strength(self, line):
+        return sum(scale_rating(p.overall) * self.player_fatigue_modifier(p)
+                   for p in line) / max(1, len(line))
+
+    def _rotate_midfield(self, team, hard_out, ride):
+        """Coach's line changes for one team. Lines change together and can
+        change at any time, including during a live turnover."""
+        cfg = V2_ENGINE_CONFIG.get("midfield_line", {})
+        wr_w = V2_ENGINE_CONFIG.get("rotation_work_rate_weight", 0.5)
+        sk = self._side_key(team)
+        state = self._mid_state()
+        lines = self._midfield_lines(team, hard_out)
+        if not lines:
+            return
+        cur = min(state["line"][sk], len(lines) - 1)
+        state["line"][sk] = cur
+        line = lines[cur]
+        outs = cfg.get("out", [74, 80, 86])
+        if not isinstance(outs, (list, tuple)):
+            outs = [outs]
+        back = cfg.get("back", 90)
+        energy = lambda l: sum(p.game_energy for p in l) / max(1, len(l))
+        wr = sum(scale_rating(p.work_rate_rating) for p in line) / max(1, len(line))
+        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w
+        in_transition = getattr(self, "_transition_side", None) == sk
+        if in_transition:
+            out_mark -= V2_ENGINE_CONFIG.get("live_change_tired_margin", 3)
+        state["live_spec"][sk] = False
+        new = cur
+        if cur != 0 and energy(lines[0]) >= back and not in_transition:
+            new = 0   # top line rested: send it back out
+        elif energy(line) < out_mark:
+            # Roll to the next line in order that is rested and good enough
+            # to play about as well as the tired line does right now.
+            accept = self._line_strength(line) * (1.0 - cfg.get("rest", 0.10))
+            order = [(cur + k) % len(lines) for k in range(1, len(lines))]
+            for i in order:
+                cand = lines[i]
+                if (energy(cand) >= max(back - 12, energy(line) + 8)
+                        and self._line_strength(cand) >= accept):
+                    new = i
+                    break
+        if new != cur:
+            for p in line:
+                p.game_shifts += 1
+            state["line"][sk] = new
+            state["changes"][sk] += 1
+            self._lineup_cache = {}
+            if in_transition:
+                self._caught_roll(sk, state)
+        # Defensive specialist: the best tackler not on the line comes on
+        # for defensive possessions while she is fresh.
+        cur_line = lines[state["line"][sk]]
+        tack = lambda p: self._depth_score(p, "two_way")
+        spec = state["spec"][sk]
+        sp = next((p for l in lines for p in l if p.name == spec), None) if spec else None
+        if sp is not None and (sp in cur_line or sp.game_energy < V2_ENGINE_CONFIG.get("defensive_specialist_off", 55)):
+            state["spec"][sk] = None
+            sp = None
+        if sp is not None and in_transition and random.random() < V2_ENGINE_CONFIG.get("specialist_live_change_rate", 0.0):
+            # The coach sends her on while the ball is live.
+            state["live_spec"][sk] = True
+            self._lineup_cache = {}
+            self._caught_roll(sk, state)
+        if sp is None:
+            d = sorted(cur_line, key=tack, reverse=True)[:4]
+            bench = [p for l in lines for p in l if p not in cur_line
+                     and p.game_energy >= V2_ENGINE_CONFIG.get("defensive_specialist_on", 80)]
+            if d and bench:
+                best = max(bench, key=tack)
+                if tack(best) >= tack(d[-1]) * (1.0 + V2_ENGINE_CONFIG.get("defensive_specialist_edge", 0.08)):
+                    state["spec"][sk] = best.name
+                    self._lineup_cache = {}
+
+    def _on_field(self, team, unavail, side: str):
+        return [p for p, _ in self._lineup(team, unavail, side)]
+
+    def _rotate_shifts(self):
+        """At each dead ball, coaches swap tired players for rested ones by
+        position group, and bring rested starters back."""
+        if not V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            return
+        if not hasattr(self, "_shift_rest"):
+            self._shift_rest = {"home": set(), "away": set()}
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        ride = 0.0
+        if self.state.quarter >= 4 and abs(self.state.home_score - self.state.away_score) <= 9:
+            ride = V2_ENGINE_CONFIG.get("rotation_close_game_ride", 10)
+        wr_w = V2_ENGINE_CONFIG.get("rotation_work_rate_weight", 0.5)
+
+        self._lineup_cache = {}
+        for side_key, team in (("home", self.home_team), ("away", self.away_team)):
+            resting = self._shift_rest[side_key]
+            hard_out = self._injured_in_game(team) | self._benched_names(team)
+            if V2_ENGINE_CONFIG.get("midfield_lines_enabled", False):
+                self._rotate_midfield(team, hard_out, ride)
+
+            # 1. Rested players whose energy is back go back on.
+            for p in team.players:
+                if p.name in resting:
+                    prof = profiles.get(p.position) or profiles.get("two_way", {})
+                    if p.game_energy >= prof.get("back", 85):
+                        resting.discard(p.name)
+
+            # 2. Tired players on the field come off if a usable backup is fresh.
+            for side in ("offense", "defense"):
+                unavail = hard_out | resting
+                lineup = self._lineup(team, unavail, side)
+                on_names = {p.name for p, _ in lineup}
+                swaps = {}
+                for p, group in sorted(lineup, key=lambda x: x[0].game_energy):
+                    if group not in profiles:
+                        continue
+                    prof = profiles[group]
+                    if swaps.get(group, 0) >= prof.get("max_swaps", 1):
+                        continue
+                    wr = scale_rating(p.work_rate_rating)
+                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w
+                    if p.game_energy >= out_mark:
+                        continue
+                    if p.position == "Zeroback" and self._is_last_kicker(team, p, unavail | {p.name}):
+                        continue
+                    # Would a fresh backup play about as well as the tired
+                    # starter does right now? "rest" is how much worse the
+                    # coach accepts to save the starter for later.
+                    tired_now = scale_rating(p.overall) * self.player_fatigue_modifier(p)
+                    accept = tired_now * (1.0 - prof.get("rest", 0.05))
+                    need = max(60.0, min(prof["back"] - 10, p.game_energy + 25), p.game_energy + 12)
+                    cands = [(b, 1.0) for b in self._group_members(team, group)]
+                    if group in COVER_FOR:
+                        cands += [(b, COVER_RATING) for b in self._cover_pool(team, unavail, group)]
+                    backups = [b for b, f in cands
+                               if b.name not in unavail and b.name not in on_names
+                               and b.game_energy >= need
+                               and scale_rating(b.overall) * f * self.player_fatigue_modifier(b) >= accept]
+                    if not backups:
+                        continue
+                    resting.add(p.name)
+                    p.game_shifts += 1
+                    swaps[group] = swaps.get(group, 0) + 1
+                    self._lineup_cache = {}
+
+    def _apply_work_rate(self, off_team, off_unavail, def_team, def_unavail):
+        per_snap = V2_ENGINE_CONFIG.get("work_rate_per_snap", 0.45)
+        rest = V2_ENGINE_CONFIG.get("bench_recovery_per_snap", 0.5)
+        weather = 1.0 + self.weather_info.get("stamina_drain_modifier", 0.0)
+        profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
+        on_by_team = {}
+        for team, unavail, side in ((off_team, off_unavail, "offense"),
+                                    (def_team, def_unavail, "defense")):
+            for p, group in self._lineup(team, unavail, side):
+                if p.name in on_by_team.setdefault(team.name, set()):
+                    continue  # two-way player already counted this snap
+                stam_mult = max(0.5, 1.6 - scale_rating(getattr(p, "stamina", 35)) / 100.0)
+                if group == "Midfield":
+                    load = V2_ENGINE_CONFIG.get("midfield_line", {}).get("load", 1.0)
+                else:
+                    load = profiles.get(group, {}).get("load", 1.0)
+                p.game_energy = max(0.0, p.game_energy - per_snap * stam_mult * load * weather)
+                p.game_field_snaps += 1
+                on_by_team[team.name].add(p.name)
+        for team in (off_team, def_team):
+            on_names = on_by_team.get(team.name, set())
+            for p in team.players:
+                if p.name not in on_names:
+                    stam_rec = max(0.6, scale_rating(getattr(p, "stamina", 35)) / 75.0)
+                    p.game_energy = min(100.0, p.game_energy + rest * stam_rec)
+        self._rotate_shifts()
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
         unavailable = self._unavailable_in_game(team)
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = [p for p in self._on_field(team, unavailable, "defense")
+                  if p.position in ("Keeper", "Defensive Line")]
+            if on:
+                return on
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
                 and p.name not in unavailable]
         if defs:
@@ -4706,6 +5366,8 @@ class ViperballEngine:
         for quarter in range(1, 5):
             self.state.quarter = quarter
             self.state.time_remaining = 600  # 10-minute quarters
+            if quarter in (1, 3):
+                self._roll_half_form(0 if quarter == 1 else 1)
 
             if quarter == 3:
                 self._apply_halftime_coaching_adjustments()
@@ -4782,10 +5444,13 @@ class ViperballEngine:
                 # V2: Underdog surge check each drive
                 self._check_underdog_surge()
 
-            # Clear bonus possession at end of half — does not carry over
-            self.state.bonus_possession_team = ""
-            self._bonus_recipient = ""
-            self._bonus_drives_remaining = -1
+            # Clear bonus possession at end of half — does not carry over.
+            # (This ran after every quarter, wiping bonuses earned late in
+            # Q1 and Q3 before they could be used.)
+            if quarter in (2, 4):
+                self.state.bonus_possession_team = ""
+                self._bonus_recipient = ""
+                self._bonus_drives_remaining = -1
 
             if quarter == 2:
                 self._home_halftime_score = self.state.home_score
@@ -5053,7 +5718,7 @@ class ViperballEngine:
         pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
         pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
-        return_chance = (return_speed / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
+        return_chance = (scale_rating(return_speed, "rescale_speed") / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
         return_chance = max(0.75, min(0.98, return_chance))
         can_return_out = random.random() < return_chance
         return not can_return_out
@@ -5180,6 +5845,9 @@ class ViperballEngine:
             play.away_score_after = self.state.away_score
             self.play_log.append(play)
             drive_plays += 1
+            if (play.result in LIVE_TURNOVER_RESULTS
+                    and self.state.possession != drive_team):
+                self._pending_transition = drive_team
 
             # ── V2.4: Track play-family frequency for adaptation ──
             _pf_dc_type = None
@@ -5283,10 +5951,15 @@ class ViperballEngine:
             # Formula: base_time maps tempo (0.0-1.0) to seconds.
             #   tempo 0.0 → 38s (pure grind), tempo 1.0 → 18s (pure tempo)
             if V2_ENGINE_CONFIG.get("top_model_enabled", False):
-                base_time = int(38 - tempo * 20)  # 38s at 0.0 tempo, 18s at 1.0
+                # V3.4: pace is configurable. Viperball plays closer to
+                # Australian rules, Gaelic football and rugby than to
+                # huddle football, so the clock between plays is short.
+                _slow = V2_ENGINE_CONFIG.get("play_clock_slow", 38)
+                _fast = V2_ENGINE_CONFIG.get("play_clock_fast", 18)
+                base_time = int(_slow - tempo * (_slow - _fast))
                 # Add natural variance: ±3 seconds per play
                 base_time += random.randint(-3, 3)
-                base_time = max(15, min(42, base_time))
+                base_time = max(_fast - 3, min(_slow + 4, base_time))
                 tempo_mult = 1.0  # variance built into base_time now
             else:
                 # Legacy: flat 18s with small tempo multiplier
@@ -5629,6 +6302,15 @@ class ViperballEngine:
                     self.kickoff(receiving)
                 elif play.result == "missed_dk_returned":
                     pass
+                elif play.result == "turnover_on_downs":
+                    # The play already flipped possession and field position.
+                    # The new offense starts a fresh series: 1st and 20.
+                    # Without this the counter carried over as 7th down with
+                    # the old offense's yards to go, so one failed play handed
+                    # the ball straight back.
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                    self.state.kick_mode = False
                 elif play.result == "safety":
                     scored_team = "away" if drive_team == "home" else "home"
                     self.state.possession = drive_team
@@ -5644,7 +6326,10 @@ class ViperballEngine:
         #   - Snap kick range (fp >= 40): attempt a snap kick
         #   - Otherwise: punt for field position / pindown
         # This prevents the ~10% "end of quarter" dead drives.
-        if drive_result == "stall" and drive_plays > 0:
+        # Only at the end of a half (Q2, Q4). At the end of Q1 and Q3 the
+        # possession, down and distance carry into the next quarter; forcing
+        # a last second punt or kick there ended drives that should continue.
+        if drive_result == "stall" and drive_plays > 0 and self.state.quarter in (2, 4):
             fp = self.state.field_position
             # Give the team one last play with 1 second on the clock
             self.state.time_remaining = 1
@@ -5654,7 +6339,7 @@ class ViperballEngine:
             team_final = self.get_offensive_team()
             kc_final = self._kicker_candidates(team_final)
             k_final = max(kc_final, key=lambda p: p.kicking) if kc_final else None
-            k_skill = k_final.kicking if k_final else 60
+            k_skill = self._kick_skill(k_final.kicking) if k_final else 60
             dk_range = 30 + (k_skill - 60) * 0.75 + 5
 
             # V3.1: Deficit awareness for final play — don't kick if the
@@ -5666,13 +6351,18 @@ class ViperballEngine:
             dk_viable = stall_deficit <= 5  # Drop kick (5 pts) can tie
             dk_in_range = final_fg_dist <= min(58, dk_range)
 
-            if fp >= 60 and final_fg_dist <= 50 and pk_viable:
+            # Pick whichever viable kick is worth more on average. The old
+            # order always tried the field goal first, so a last play inside
+            # 50 yards was a 3 point attempt even when a 5 point snap kick
+            # was as likely to go in.
+            dk_ok = dk_viable and dk_in_range and final_fg_dist <= 55
+            pk_ok = pk_viable and self._place_kick_success(final_fg_dist, k_skill) >= 0.45
+            dk_ev = self._drop_kick_success(final_fg_dist, k_skill) * 5.0 if dk_ok else 0.0
+            pk_ev = self._place_kick_success(final_fg_dist, k_skill) * 3.0 if pk_ok else 0.0
+            if dk_ok and dk_ev >= pk_ev:
+                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+            elif pk_ok:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif fp >= 55 and dk_viable and dk_in_range and final_fg_dist <= 55:
-                # Deficit too large for FG but drop kick can do it
-                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
-            elif dk_in_range and dk_viable and final_fg_dist <= 55:
-                final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             elif stall_deficit == 0:
                 # Leading or tied — punt for field position
                 final_play = self.simulate_punt(PlayFamily.PUNT)
@@ -5786,38 +6476,26 @@ class ViperballEngine:
         return rate
 
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
-        """Field goal accuracy — kicker-range model.
+        """Field goal accuracy.
 
-        Realistic probability model:
-        - Under 40 yards: near-automatic for good kickers
-        - 40-54 yards: competitive range, skill-dependent
-        - 55-58 yards: 0.3% (extremely rare)
-        - 59-65 yards: 0.1% (once-in-a-lifetime)
-        - 65+ yards: impossible (handled by caller)
+        A placed ball carries farther than a drop kick (README, The Field
+        Goal), so the comfortable range sits beyond the snap kick's by
+        V2_ENGINE_CONFIG["place_kick_range_bonus"] yards. Past the
+        comfortable range accuracy falls about 4 points per yard, down to a
+        10% long shot, out to place_kick_max_distance.
         """
-        if distance > 65:
+        max_dist = V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)
+        if distance > max_dist:
             return 0.0
-        if distance >= 59:
-            return 0.001  # 0.1% — near-impossible
-        if distance >= 55:
-            return 0.003  # 0.3% — extremely rare
-
-        # Normal range: skill-dependent comfort zone
-        comfortable_range = 30 + (kicker_skill - 60) * 0.5  # 60-skill→30yd, 90-skill→45yd
-
+        comfortable_range = (30 + (kicker_skill - 60) * 0.75
+                             + V2_ENGINE_CONFIG.get("place_kick_range_bonus", 8))
         if distance <= 20:
             return 0.97  # Chip shot
-        elif distance <= comfortable_range:
+        if distance <= comfortable_range:
             frac = (distance - 20) / max(1, comfortable_range - 20)
             return 0.95 - frac * 0.10  # 0.95 close → 0.85 at edge
-        elif distance <= comfortable_range + 8:
-            over = distance - comfortable_range
-            return max(0.15, 0.80 - over * 0.08)  # 0.80 → 0.16
-        elif distance <= 54:
-            over = distance - comfortable_range - 8
-            return max(0.05, 0.15 - over * 0.01)
-        else:
-            return 0.003
+        over = distance - comfortable_range
+        return max(0.10, 0.82 - over * 0.04)
 
     def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
@@ -5847,6 +6525,14 @@ class ViperballEngine:
             return max(0.05, 0.20 - over * 0.02)
         else:
             return max(0.03, 0.06 - (distance - comfortable_range - 15) * 0.01)
+
+    @staticmethod
+    def _kick_skill(raw) -> float:
+        """Kicker rating as the kick range formulas expect it (see
+        V2_ENGINE_CONFIG["kick_skill_rescale"])."""
+        if not V2_ENGINE_CONFIG.get("kick_skill_rescale", True):
+            return raw
+        return max(40.0, min(100.0, 60.0 + (raw - 15.0) * 0.5))
 
     POSSESSION_VALUE = 3.0
 
@@ -5907,24 +6593,21 @@ class ViperballEngine:
 
         team = self.get_offensive_team()
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
-        kicker_skill = kicker.kicking
+        kicker_skill = self._kick_skill(kicker.kicking)
 
         # Place kicks beyond 54 yards are near-impossible; never attempt beyond 65
-        pk_success = self._place_kick_success(fg_distance, kicker_skill) if fg_distance <= 54 else 0.0
+        pk_success = self._place_kick_success(fg_distance, kicker_skill)
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
         if fp >= 90:
-            # Only bail to a kick on 6th down with long ytg
-            if down == 6 and ytg >= 8:
+            # On 6th down take the near-certain 5 points unless the goal
+            # line is within 3 yards. A failed 6th down try scores nothing.
+            if down == 6 and (100 - fp) > 3:
                 if dk_success >= 0.40:
                     return PlayType.DROP_KICK
                 if pk_success >= 0.50:
                     return PlayType.PLACE_KICK
-            return None
-
-        # ── Downs 1-3: keep driving ──
-        if down <= 3:
             return None
 
         # ── Determine kick comfort zone (used by all remaining down logic) ──
@@ -5984,6 +6667,20 @@ class ViperballEngine:
             if deficit > 3:
                 pk_futile = True  # Field goal can't tie — need snap kick or TD
 
+        # ── Downs 1-3: keep driving, except late in a half ──
+        # A snap kick is a shot at goal from open play (as in Australian
+        # rules or Gaelic football) and is legal on any down. Early in a
+        # series a coach only takes it when the clock makes points urgent:
+        # the last two minutes of the first half, or the last two minutes
+        # of the game when 5 points would tie it or take the lead.
+        if down <= 3:
+            late = quarter in (2, 4) and time_left <= 120
+            useful = quarter == 2 or (-5 <= score_diff <= 0)
+            if (late and useful and not dk_futile
+                    and fg_distance <= dk_comfort and dk_success >= 0.75):
+                return PlayType.DROP_KICK
+            return None
+
         # ── Down 4: ALWAYS KEEP DRIVING ──
         # 4th down is for advancing.  You still have 5th and 6th down.
         # There is virtually no reason to kick on 4th down — use this
@@ -6014,6 +6711,23 @@ class ViperballEngine:
                 if fg_distance <= 35 and pk_success >= 0.75:
                     return PlayType.PLACE_KICK
 
+            # Stalled drive in range: a snap kick is legal on any down and a
+            # miss on downs 1-5 keeps the ball, so a 4th down attempt still
+            # leaves 5th and 6th. Only when the first down is far away;
+            # green-light kickers/coaches pull the trigger a little sooner.
+            stall_ytg = V2_ENGINE_CONFIG.get("kick_4th_down_min_ytg", 10)
+            if has_green_light:
+                stall_ytg = max(1, stall_ytg - 3)
+            if (not dk_futile and ytg >= stall_ytg
+                    and fg_distance <= dk_comfort and dk_success >= 0.70):
+                return PlayType.DROP_KICK
+
+            # Badly stalled and out of snap kick range: take the field goal.
+            if (not pk_futile and dk_success < 0.55
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_4th_down_fg_min_ytg", 14)
+                    and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)):
+                return PlayType.PLACE_KICK
+
             return None
 
         # ── Determine best available kick ──
@@ -6021,7 +6735,8 @@ class ViperballEngine:
         best_kick = None
         best_kick_ev = 0.0
         # Drop kick: only within the coaching comfort zone
-        if not dk_futile and fg_distance <= dk_comfort and dk_success >= 0.30:
+        # (6th down choice: any snap kick with a real chance, 40% or better.)
+        if not dk_futile and dk_success >= 0.40:
             best_kick = PlayType.DROP_KICK
             best_kick_ev = dk_success * 5.0
         # Place kick (FG): available at any viable distance
@@ -6067,7 +6782,20 @@ class ViperballEngine:
                 if fg_distance <= 40 and pk_success >= 0.65:
                     return PlayType.PLACE_KICK
 
-            # Default: advance and kick on 6th.
+            # 5th down is the natural snap kick down: a miss keeps the ball
+            # and leaves 6th down for a second try, while a miss on 6th is a
+            # turnover. Go for it instead on short yardage.
+            if (not dk_futile and dk_success >= 0.55
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)):
+                return PlayType.DROP_KICK
+
+            # Stalled outside snap kick range but inside field goal range:
+            # put 3 on the board. A miss on 5th down keeps the ball.
+            if (not pk_futile and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_fg_min_ytg", 8)):
+                return PlayType.PLACE_KICK
+
+            # Otherwise advance and decide on 6th.
             return None
 
         # ── Down 6: LAST CHANCE — kick > punt > go for it ──
@@ -6116,6 +6844,15 @@ class ViperballEngine:
         to a stuff or short gain.  Stronger defenses get more frequent
         and more punishing clamp rolls.
         """
+        # Field compression applies on every down (see V2_ENGINE_CONFIG).
+        comp = V2_ENGINE_CONFIG.get("field_compression", 0.0)
+        if comp > 0 and yards > 0:
+            start = V2_ENGINE_CONFIG.get("field_compression_start", 60)
+            fp_now = self.state.field_position
+            if fp_now > start:
+                frac = min(1.0, (fp_now - start) / max(1, 100 - start))
+                yards = max(1, int(round(yards * (1.0 - comp * frac))))
+
         down = self.state.down
         if down < 4:
             return yards
@@ -6137,6 +6874,7 @@ class ViperballEngine:
         for d in defenders:
             r = (d.tackling * 0.40 + getattr(d, 'awareness', 75) * 0.35
                  + d.speed * 0.25)
+            r = scale_rating(r, "rescale_contest") * self._def_form()
             r *= self.player_fatigue_modifier(d)
             def_ratings.append(r)
         avg_def = sum(def_ratings) / len(def_ratings)
@@ -6151,6 +6889,7 @@ class ViperballEngine:
         for a in attackers:
             r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
                  + a.power * 0.20 + getattr(a, 'awareness', 75) * 0.25)
+            r = scale_rating(r, "rescale_contest") * self._off_form()
             r *= self.player_fatigue_modifier(a)
             off_ratings.append(r)
         avg_off = sum(off_ratings) / len(off_ratings)
@@ -6868,10 +7607,24 @@ class ViperballEngine:
 
         self.state.down += 1
         self.state.yards_to_go += yards_lost
+        if self.state.down > 6:
+            # A kneel on 6th down hands the ball over like any failed 6th down.
+            play.result = PlayResult.TURNOVER_ON_DOWNS.value
+            play.description += " — TURNOVER ON DOWNS"
+            self.change_possession()
+            self.state.field_position = 100 - self.state.field_position
+            self.state.down = 1
+            self.state.yards_to_go = 20
         return play
 
     def simulate_play(self) -> Play:
         self.state.play_number += 1
+        # A live turnover on the last play leaves the side that lost the
+        # ball changing on the fly during this one.
+        self._transition_side = getattr(self, "_pending_transition", None)
+        self._pending_transition = None
+        self._fast_break = None
+        self._lineup_cache = {}
 
         # Save pre-play state.  Every Play in the log should show the
         # starting situation (down, distance, field position) rather than
@@ -6885,6 +7638,9 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+        if self._fast_break and getattr(play, "description", None) is not None:
+            caught = self.away_team if self._fast_break == "home" else self.home_team
+            play.description = f"FAST BREAK, {caught.name} caught changing. {play.description}"
 
         # ── Referee: spot error on non-scoring, non-penalty plays ──
         if (play.result not in ("touchdown", "safety", "penalty", "kneel",
@@ -6982,10 +7738,13 @@ class ViperballEngine:
         # justified — you still have 5th and 6th down.  Only the
         # most extreme desperation clock + bonus possession triggers
         # a kick here (see select_kick_decision).
-        if self.state.down == 4:
+        if self.state.down <= 4:
             kick_decision = self.select_kick_decision()
             if kick_decision == PlayType.DROP_KICK:
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
+                return self._apply_post_play_penalties(play)
+            if kick_decision == PlayType.PLACE_KICK:
+                play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
                 return self._apply_post_play_penalties(play)
             # else: go for advancement, fall through to normal play
 
@@ -7190,7 +7949,7 @@ class ViperballEngine:
         team = self.get_offensive_team()
         kicker_candidates = self._kicker_candidates(team)
         kicker = max(kicker_candidates, key=lambda p: p.kicking) if kicker_candidates else None
-        kicker_skill = kicker.kicking if kicker else 60
+        kicker_skill = self._kick_skill(kicker.kicking) if kicker else 60
 
         dk_comfort = 30 + (kicker_skill - 60) * 0.75
         pk_comfort = 45 + (kicker_skill - 60) * 0.9
@@ -7203,6 +7962,11 @@ class ViperballEngine:
         # Hard cutoff at 58 yards — no team should ever attempt beyond this.
         if fg_distance > 58:
             weights["snap_kick"] = 0.0
+        # Same for field goals: beyond 54 yards the success model is 0.3% or
+        # less, and beyond 65 the kick is impossible (a 72 yard attempt showed
+        # up in the last seconds of a half).
+        if fg_distance > V2_ENGINE_CONFIG.get("place_kick_max_distance", 54):
+            weights["field_goal"] = 0.0
         elif fg_distance <= dk_comfort:
             weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
         elif fg_distance <= dk_comfort + 5:
@@ -7546,11 +8310,18 @@ class ViperballEngine:
             weights["snap_kick"] = 0.0
             weights["field_goal"] = 0.0
             weights["punt"] = 0.0
+            weights["territory_kick"] = 0.0  # deprecated family, resolves to a punt
 
         families = list(PlayFamily)
         hard_zero = set()
-        if weights.get("snap_kick", 0.0) <= 0.0:
-            hard_zero.add(PlayFamily.SNAP_KICK)
+        # Kick families the gates above zeroed stay at zero. The 0.001 floor
+        # below exists for play variety and must not revive a field goal or
+        # punt on an early down (it produced 2nd down field goals, punts, and
+        # a 109 yard field goal attempt from a team's own 1).
+        for fam in (PlayFamily.SNAP_KICK, PlayFamily.FIELD_GOAL,
+                    PlayFamily.PUNT, PlayFamily.TERRITORY_KICK):
+            if weights.get(fam.value, 0.0) <= 0.0:
+                hard_zero.add(fam)
         hard_zero.add(PlayFamily.KNEEL)
 
         w = []
@@ -8099,7 +8870,7 @@ class ViperballEngine:
 
         avg_score = total_score / max(1, len(defenders))
         # Normalize: 75 is average (0 boost), 90+ is elite (+0.05), 60- is bad (-0.05)
-        return (avg_score - 75) / 300  # 15 point swing = ±0.05
+        return (scale_rating(avg_score, "rescale_speed") - 75) / 300  # 15 point swing = ±0.05
 
     def _current_defense_name(self) -> str:
         """Returns the defense style name string for the team currently on defense."""
@@ -8168,6 +8939,8 @@ class ViperballEngine:
         # Ball crosses the goal line — automatic TD
         if new_position >= 100:
             return True
+        if not V2_ENGINE_CONFIG.get("goal_line_bonus_td", True):
+            return False
         # Goal-line situations — proximity increases TD probability
         if new_position >= 98:
             return random.random() < 0.55
@@ -8188,7 +8961,7 @@ class ViperballEngine:
         if yards_gained >= 5:
             # Use play-family explosive base from EXPLOSIVE_CHANCE
             base = EXPLOSIVE_CHANCE.get(family.value, 0.14) if family else 0.14
-            speed_gap = (team.avg_speed - 85) / 100
+            speed_gap = (scale_rating(team.avg_speed, "rescale_breakaway") - V2_ENGINE_CONFIG.get("breakaway_speed_baseline", 85)) / 100
             def_fatigue_bonus = (self._defensive_fatigue_factor() - 1.0)
             breakaway_chance = base + speed_gap + def_fatigue_bonus
 
@@ -8323,6 +9096,10 @@ class ViperballEngine:
         return random.choices(eligible, weights=weights, k=1)[0]
 
     def _pick_tackler(self, team):
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(team, self._unavailable_in_game(team), "defense")
+            if on:
+                return random.choice(on)
         eligible = [p for p in team.players if p.position in
                     ("Keeper", "Defensive Line")]
         if not eligible:
@@ -8356,16 +9133,23 @@ class ViperballEngine:
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
         injured = self._unavailable_in_game(def_team)
-        dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
-        kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
+        db = []
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            on = self._on_field(def_team, injured, "defense")
+            dl = [p for p in on if p.position == "Defensive Line"]
+            kp = [p for p in on if p.position == "Keeper"]
+            db = [p for p in on if p.position not in ("Defensive Line", "Keeper")]
+        else:
+            dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
+            kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
         if yards_gained <= 0:
             pool = dl * 4 + kp
         elif yards_gained <= 4:
-            pool = dl * 3 + kp * 2
+            pool = dl * 3 + kp * 2 + db
         elif yards_gained <= 10:
-            pool = dl * 2 + kp * 3
+            pool = dl * 2 + kp * 3 + db * 2
         else:
-            pool = dl + kp * 4
+            pool = dl + kp * 4 + db * 2
         if not pool:
             pool = [p for p in def_team.players if p.name not in injured] or def_team.players
         weights = []
@@ -8642,7 +9426,7 @@ class ViperballEngine:
         avg_score = sum(scores) / len(scores)
 
         # Normalize: 75 = baseline (1.0), each 10 points = ±0.10
-        pursuit_mod = 1.0 + (avg_score - 75) / 100.0
+        pursuit_mod = 1.0 + (scale_rating(avg_score, "rescale_speed") - 75) / 100.0
 
         # Instincts boost for pursuit coordination
         dc_mods = self._def_coaching_mods()
@@ -8718,6 +9502,7 @@ class ViperballEngine:
 
         # Individual: canonical speed (weighted blend of speed + agility)
         off_skill = carrier.canon_speed * 0.4 + getattr(carrier, 'power', 75) * 0.3 + getattr(carrier, 'agility', 75) * 0.3
+        off_skill = scale_rating(off_skill, "rescale_contest") * self._off_form()
         return off_skill * self.player_fatigue_modifier(carrier)
 
     def _get_defensive_rating(self, tackler, use_halo: bool = False) -> float:
@@ -8732,6 +9517,7 @@ class ViperballEngine:
 
         # Individual: canonical tackling (weighted blend of tackling + power + awareness)
         def_skill = tackler.canon_tackling * 0.5 + getattr(tackler, 'awareness', 70) * 0.25 + tackler.speed * 0.25
+        def_skill = scale_rating(def_skill, "rescale_contest") * self._def_form()
         return def_skill * self.player_fatigue_modifier(tackler)
 
     def _apply_variance_archetype(self, raw_yards: float, player) -> float:
@@ -9150,6 +9936,8 @@ class ViperballEngine:
             off_skill = (kicker.kick_accuracy * 0.70
                          + getattr(receiver, 'hands', 70) * 0.30)
 
+        if not use_halo:
+            off_skill = scale_rating(off_skill, "rescale_contest") * self._off_form()
         off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
 
         # ── Defensive skill (sub-family-specific) ──
@@ -9172,6 +9960,8 @@ class ViperballEngine:
                          + getattr(defender, 'awareness', 70) * 0.30
                          + defender.tackling * 0.20)
 
+        if not use_halo:
+            def_skill = scale_rating(def_skill, "rescale_contest") * self._def_form()
         def_skill *= self.player_fatigue_modifier(defender) * 0.5 + 0.5
 
         # ── Game rhythm ──
@@ -9989,7 +10779,7 @@ class ViperballEngine:
         for lat_idx in range(chain_length):
             thrower = players_involved[lat_idx] if lat_idx < len(players_involved) else players_involved[-1]
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
-            int_chance = 0.05 * (1 + (avg_def_awareness - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+            int_chance = 0.05 * (1 + (scale_rating(avg_def_awareness, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
             int_chance *= _gm_int_red
             # V4: Pursuit quality scales INT/fumble chance
             int_chance *= _lat_pursuit_mod
@@ -10016,7 +10806,7 @@ class ViperballEngine:
                 # Reduced from 35+talent*25 to rein in pick-six frequency.
                 int_speed = interceptor.speed
                 int_agility = getattr(interceptor, 'agility', 75)
-                return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
+                return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
                 return_yards = max(0, int(random.gauss(20 + return_talent * 18, 15)))
                 new_fp = min(100, raw_fp + return_yards)
 
@@ -10336,19 +11126,19 @@ class ViperballEngine:
         if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
             # V2.9: Reduced base (was 5-8)
             base_dist = random.randint(3, 6)
-            power_bonus = max(0.0, (kp_power - 60) / 80.0) * 2
-            acc_bonus = max(0.0, (kp_accuracy - 70) / 60.0) * 1.5
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 60) / 80.0) * 2
+            acc_bonus = max(0.0, (scale_rating(kp_accuracy, "rescale_yac") - 70) / 60.0) * 1.5
             kick_distance = max(2, int(base_dist + power_bonus + acc_bonus))
         elif subfamily == KickPassSubFamily.TERRITORY:
             # V2.9: Reduced base (was 10-16) and bonuses
             base_dist = random.randint(7, 12)
-            power_bonus = max(0.0, (kp_power - 65) / 70.0) * 3.5
-            acc_bonus = max(0.0, (kp_accuracy - 65) / 70.0) * 2
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 65) / 70.0) * 3.5
+            acc_bonus = max(0.0, (scale_rating(kp_accuracy, "rescale_yac") - 65) / 70.0) * 2
             kick_distance = max(5, int(base_dist + power_bonus + acc_bonus))
         else:  # BOMB
             # V2.9: Reduced base (was 22-30) and power bonus
             base_dist = random.randint(18, 25)
-            power_bonus = max(0.0, (kp_power - 70) / 60.0) * 8
+            power_bonus = max(0.0, (scale_rating(kp_power, "rescale_yac") - 70) / 60.0) * 8
             kick_distance = max(14, int(base_dist + power_bonus))
 
         # Late-down targeting: bias distance toward yards_to_go
@@ -10546,7 +11336,7 @@ class ViperballEngine:
                     lat_fum_rate = 0.03 + (chain_fumble_bonus if lat_i == 0 else 0.0)
                     thrower = receiver if lat_i == 0 else lat_player
                     thrower_skill = getattr(thrower, 'lateral_skill', 70)
-                    lat_fum_rate *= (1 - (thrower_skill - 70) / 200)
+                    lat_fum_rate *= (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
                     lat_fum_rate = max(0.015, min(0.08, lat_fum_rate))
 
                     if random.random() < lat_fum_rate:
@@ -10579,7 +11369,7 @@ class ViperballEngine:
                             break
 
                     # Lateral INT check
-                    int_rate = 0.05 * (1 + (avg_def_aware - 70) / 100) * (1 - (thrower_skill - 70) / 200)
+                    int_rate = 0.05 * (1 + (scale_rating(avg_def_aware, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
                     # V4: Pursuit quality scales INT chance
                     int_rate *= _kl_pursuit_mod
                     int_rate = max(0.025, min(0.10, int_rate))
@@ -10628,7 +11418,7 @@ class ViperballEngine:
                             )
 
                     # Yards gained on this lateral
-                    lat_yards = random.randint(2, 8) + int(max(0, (lat_player.speed - 60) / 40.0) * random.randint(1, 6))
+                    lat_yards = random.randint(2, 8) + int(max(0, (scale_rating(lat_player.speed, "rescale_yac") - 60) / 40.0) * random.randint(1, 6))
                     # V4: Pursuit quality suppresses lateral yards
                     if _kl_pursuit_mod > 1.0 and lat_yards > 0:
                         lat_yards = max(1, int(lat_yards / _kl_pursuit_mod))
@@ -10694,19 +11484,19 @@ class ViperballEngine:
             if subfamily == KickPassSubFamily.QUICK_KICK or subfamily == KickPassSubFamily.KICK_LATERAL:
                 # Quick Kick: high YAC, elusive receivers shine
                 # V2.9: Reduced YAC floor (was 3-8 + skill*3-8)
-                recv_yac_skill = max(0.0, (receiver.speed * 0.50 + _recv_agility * 0.50 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.50 + _recv_agility * 0.50, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 yac = random.randint(1, 5) + int(recv_yac_skill * random.randint(2, 6))
             elif subfamily == KickPassSubFamily.TERRITORY:
                 # Territory: moderate YAC, balanced attributes
                 # V2.9: Reduced YAC floor (was 2-5 + skill*1-5)
-                recv_yac_skill = max(0.0, (receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.40 + receiver.hands * 0.30 + _recv_agility * 0.30, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 yac = random.randint(1, 3) + int(recv_yac_skill * random.randint(1, 4))
             else:  # BOMB
                 # Bomb: binary — either caught at the spot or house call
                 # V2.9: Reduced caught-in-stride rate (was 35%) and YAC ceiling
-                recv_yac_skill = max(0.0, (receiver.speed * 0.70 + _recv_agility * 0.30 - 60)) / 40.0
+                recv_yac_skill = max(0.0, (scale_rating(receiver.speed * 0.70 + _recv_agility * 0.30, "rescale_yac") - 60)) / 40.0
                 recv_yac_skill *= _kp_esc
                 if random.random() < 0.22:
                     # Caught in stride — open field
@@ -10987,7 +11777,7 @@ class ViperballEngine:
 
             int_speed = interceptor.speed
             int_agility = getattr(interceptor, 'agility', 75)
-            return_talent = (int_speed * 0.6 + int_agility * 0.4 - 60) / 40
+            return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
             return_yards = max(0, int(random.gauss(18 + return_talent * 15, 15)))
             new_fp = min(100, raw_fp + return_yards)
 
@@ -11233,24 +12023,33 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
                 else:
-                    # Offense recovers (disaster - terrible field position, no conversion)
+                    # Kicking team recovers: dead ball, the down is consumed
+                    # (README, Blocked Kicks). Turnover only after 6th down.
                     self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
-                    self.change_possession()  # Turnover on downs
-                    self.state.field_position = 100 - self.state.field_position  # Flip field
-                    self.state.down = 1
-                    self.state.yards_to_go = 20
+                    self.state.yards_to_go -= block_distance
+                    self.state.down += 1
+                    turnover = self.state.down > 6
+                    if turnover:
+                        self.change_possession()
+                        self.state.field_position = 100 - self.state.field_position  # Flip field
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
                     self.apply_stamina_drain(2)
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                    desc = (f"{ptag} punt BLOCKED! Kicking team recovers — turnover on downs!"
+                            if turnover else
+                            f"{ptag} punt BLOCKED! Kicking team recovers — dead ball")
 
                     return Play(
                         play_number=self.state.play_number, quarter=self.state.quarter,
                         time=self.state.time_remaining, possession=self.state.possession,
-                        field_position=self.state.field_position, down=1, yards_to_go=20,
+                        field_position=self.state.field_position, down=self.state.down,
+                        yards_to_go=self.state.yards_to_go,
                         play_type="punt", play_family=family.value,
                         players_involved=[player_label(punter)],
                         yards_gained=block_distance,
                         result=PlayResult.BLOCKED_PUNT.value,
-                        description=f"{ptag} punt BLOCKED! Kicking team recovers but turnover on downs!",
+                        description=desc,
                         fatigue=round(stamina, 1),
                     )
 
@@ -11597,7 +12396,7 @@ class ViperballEngine:
         dw_blocker = None
         for p in def_team.players:
             if p.archetype == "diving_wing":
-                tck_score = max(0, p.tackling - 70) / 30.0
+                tck_score = max(0, scale_rating(p.tackling, "rescale_yac") - 70) / 30.0
                 spd_score = max(0, p.speed - 78) / 22.0
                 kick_score = max(0, p.kicking - 40) / 50.0
                 attr_index = (tck_score * 0.45 + spd_score * 0.35 + kick_score * 0.20)
@@ -11679,7 +12478,7 @@ class ViperballEngine:
         distance = 100 - self.state.field_position + 10
 
         # ── Kicker-range success model ──
-        success_prob = self._drop_kick_success(distance, kicker.kicking)
+        success_prob = self._drop_kick_success(distance, self._kick_skill(kicker.kicking))
 
         # Style, archetype, and weather modifiers (secondary adjustments)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
@@ -11986,23 +12785,35 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
             else:
-                # Offense recovers - treated like failed 4th down
-                self.change_possession()
-                self.state.field_position = 100 - max(1, self.state.field_position - random.randint(3, 10))
-                self.state.down = 1
-                self.state.yards_to_go = 20
+                # Kicking team recovers: dead ball, the down is consumed
+                # (README, Blocked Kicks). Turnover only after 6th down,
+                # matching the blocked snap kick.
+                loss = random.randint(3, 10)
+                self.state.field_position = max(1, self.state.field_position - loss)
+                self.state.yards_to_go += loss
+                self.state.down += 1
+                turnover = self.state.down > 6
+                if turnover:
+                    self.change_possession()
+                    self.state.field_position = 100 - self.state.field_position
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
                 self.apply_stamina_drain(2)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                desc = (f"{ptag} place kick BLOCKED! Kicking team recovers — turnover on downs!"
+                        if turnover else
+                        f"{ptag} place kick BLOCKED! Kicking team recovers — dead ball")
 
                 return Play(
                     play_number=self.state.play_number, quarter=self.state.quarter,
                     time=self.state.time_remaining, possession=self.state.possession,
-                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    field_position=self.state.field_position, down=self.state.down,
+                    yards_to_go=self.state.yards_to_go,
                     play_type="place_kick", play_family=family.value,
                     players_involved=[player_label(kicker)],
-                    yards_gained=0,
+                    yards_gained=-loss,
                     result=PlayResult.BLOCKED_KICK.value,
-                    description=f"{ptag} place kick BLOCKED! Kicking team recovers but turnover on downs!",
+                    description=desc,
                     fatigue=round(stamina, 1),
                 )
 
@@ -12011,7 +12822,7 @@ class ViperballEngine:
         # ── Max field goal distance: 65 yards ──
         # Beyond 65 yards is physically impossible for a place kick.
         # If they're too far, punt instead (handled by kick decision logic).
-        if distance > 65:
+        if distance > max(65, V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)):
             # Too far for a place kick — treat as missed/punt-like
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
@@ -12037,7 +12848,7 @@ class ViperballEngine:
         # Uses the same model as _place_kick_success: the kicker determines
         # a comfortable range.  Within range, kicks are near-automatic.
         # Beyond range, success drops off.
-        success_prob = self._place_kick_success(distance, kicker.kicking)
+        success_prob = self._place_kick_success(distance, self._kick_skill(kicker.kicking))
 
         # Style, archetype, and weather modifiers (secondary adjustments)
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
@@ -12375,7 +13186,10 @@ class ViperballEngine:
 
         # V2: Fatigue tier multiplier
         tier_mult = 1.0
-        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+        if V2_ENGINE_CONFIG.get("work_rate_effect_enabled", False):
+            # V3.6: stamina sets how fast a player drains.
+            tier_mult = max(0.5, 1.6 - scale_rating(getattr(player, "stamina", 35)) / 100.0)
+        elif V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
             tier = player.fatigue_tier
             if tier == FatigueTier.ELITE.value:
                 tier_mult = 0.8   # Elite players drain slower
@@ -12403,13 +13217,25 @@ class ViperballEngine:
 
         # V2: Tier-based stat loss multiplier
         stat_loss_mult = 1.0
-        if V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
+        if V2_ENGINE_CONFIG.get("work_rate_effect_enabled", False):
+            # V3.6: work rate sets how much tiredness costs.
+            wr = scale_rating(player.work_rate_rating)
+            stat_loss_mult = max(0.5, min(1.5, 1.0 + (75.0 - wr) / 40.0))
+        elif V2_ENGINE_CONFIG.get("fatigue_tiers_enabled", False):
             tier = player.fatigue_tier
             if tier == FatigueTier.ELITE.value:
                 stat_loss_mult = 0.5   # Elite feels fatigue half as much
             elif tier == FatigueTier.LOW.value:
                 stat_loss_mult = 1.5   # Low-tier feels it 50% more
 
+        if V2_ENGINE_CONFIG.get("fatigue_curve_linear", False) and energy >= 40:
+            # V3.5: every point of tiredness costs a little (0.4% at the
+            # default slope), so travel, carried fatigue and work rate show
+            # up. At 60 energy this meets the old curve (15% for a standard
+            # player); below 40 the old cliff still applies.
+            slope = V2_ENGINE_CONFIG.get("fatigue_curve_slope", 0.004)
+            penalty = (100.0 - energy) * slope * stat_loss_mult
+            return max(0.70, 1.0 - penalty)
         if energy >= 80:
             return 1.0
         elif energy >= 60:
@@ -12702,6 +13528,9 @@ class ViperballEngine:
                         self._bench_player(team, p, reason, "half")
                         already_out.add(p.name)
 
+            if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+                continue  # fatigue rotation handled by _rotate_shifts at every dead ball
+
             # ── 3. Fatigue / workload rotation ──
             # Coaches rest workhorse players who've been carrying the load.
             # Two triggers:
@@ -12784,11 +13613,13 @@ class ViperballEngine:
         """
         off_team = self.get_offensive_team()
         def_team = self.get_defensive_team()
+        off_rec = V2_ENGINE_CONFIG.get("drive_change_recovery_off", 5.0)
+        def_rec = V2_ENGINE_CONFIG.get("drive_change_recovery_def", 3.0)
         for p in off_team.players:
-            p.game_energy = min(100.0, p.game_energy + 5.0)
+            p.game_energy = min(100.0, p.game_energy + off_rec)
             p.plays_since_last_touch += 1
         for p in def_team.players:
-            p.game_energy = min(100.0, p.game_energy + 3.0)
+            p.game_energy = min(100.0, p.game_energy + def_rec)
 
     def recover_energy_halftime(self):
         """At halftime, all players recover 30 energy."""
@@ -12848,7 +13679,7 @@ class ViperballEngine:
                         else self.away_team)
             def_team_name = def_team.name
             for p in def_team.players:
-                p.game_energy = min(100.0, p.game_energy + 15.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 15.0))
 
             self.timeout_log.append({
                 "quarter": self.state.quarter,
@@ -12922,9 +13753,9 @@ class ViperballEngine:
             def_team_obj = (self.home_team if def_side == "home"
                             else self.away_team)
             for p in off_team.players:
-                p.game_energy = min(100.0, p.game_energy + 10.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 10.0))
             for p in def_team_obj.players:
-                p.game_energy = min(100.0, p.game_energy + 10.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 10.0))
             self.timeout_log.append({
                 "quarter": quarter,
                 "time_remaining": time_left,
@@ -13111,7 +13942,7 @@ class ViperballEngine:
             caller_team_name = (self.home_team.name if caller == "home"
                                 else self.away_team.name)
             for p in rest_team.players:
-                p.game_energy = min(100.0, p.game_energy + 15.0)
+                p.game_energy = min(100.0, p.game_energy + V2_ENGINE_CONFIG.get("stoppage_recovery", 15.0))
 
             self.timeout_log.append({
                 "quarter": quarter,
@@ -13738,7 +14569,24 @@ class ViperballEngine:
         home_player_stats = collect_player_stats(self.home_team)
         away_player_stats = collect_player_stats(self.away_team)
 
+        def _energy(team):
+            return [{"name": p.name, "position": p.position,
+                     "energy_start": round(p.game_energy_start, 1),
+                     "energy_end": round(p.game_energy, 1),
+                     "snaps": p.game_field_snaps}
+                    for p in team.players
+                    if p.game_field_snaps > 0]
+
         summary = {
+            "game_day": {
+                "travel_energy_cost": getattr(self, "travel_cost", 0.0),
+                "form": {side: {"game": round(getattr(self, "game_form", {}).get(side, 1.0), 3),
+                                "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
+                         for side in ("home", "away")},
+                "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+                "line_changes": dict(getattr(self, "_mid_line_state", {}).get("changes", {"home": 0, "away": 0})),
+                "caught_changing": dict(getattr(self, "_mid_line_state", {}).get("caught", {"home": 0, "away": 0})),
+            },
             "final_score": {
                 "home": {
                     "team": self.home_team.name,
@@ -14117,12 +14965,12 @@ def _derive_prestige_from_roster(players: List[Player]) -> int:
     if not players or len(players) < 3:
         return 50
 
-    overalls = sorted(p.overall for p in players)
-    worst_3_avg = sum(overalls[:3]) / 3.0
-
-    # Map: overall 20 → prestige 10, overall 85 → prestige 95
-    # Linear: prestige = (worst_3_avg - 20) * 1.3 + 10
-    prestige = (worst_3_avg - 20) * 1.3 + 10
+    # V3.3: mapped to the current rating scale. Team average overall runs
+    # about 18 (weakest) / 35 (median) / 59 (strongest) on generated rosters:
+    # 18 -> 18, 35 -> 50, 59 -> 96. The old map used the three weakest
+    # players on the 60-100 scale and put the median team at 16.
+    avg_ovr = sum(p.overall for p in players) / len(players)
+    prestige = 50 + (avg_ovr - 35) * 1.9
 
     # Add some noise so identical rosters don't all land on the same prestige
     prestige += random.gauss(0, 3)
@@ -14436,6 +15284,7 @@ def generate_team_on_the_fly(
             hands=attrs.get("hands", 75),
             kick_power=attrs.get("kick_power", 75),
             kick_accuracy=attrs.get("kick_accuracy", 75),
+            work_rate=attrs.get("work_rate", 0),
             archetype=archetype,
             player_id=name_data.get("player_id", ""),
             nationality=name_data.get("nationality", "American"),

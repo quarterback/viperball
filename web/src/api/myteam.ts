@@ -21,6 +21,10 @@ export interface MyTeamPlayer {
   speed?: number;
   power?: number;
   agility?: number;
+  stamina?: number;
+  work_rate?: number;
+  line?: number | null;
+  def_specialist?: boolean;
 }
 
 export interface MyTeamDashboard {

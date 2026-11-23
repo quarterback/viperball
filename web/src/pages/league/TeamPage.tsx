@@ -33,6 +33,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { seasonApi, type RosterPlayer } from "../../api/season";
+import { LineCell, LINE_HEADER_TITLE } from "../../components/LineCell";
 import { ChemistryTab, CoachingTab } from "./TeamDetailTabs";
 import { PlayerFormModal, MovePlayerModal } from "./PlayerEditor";
 
@@ -119,6 +120,14 @@ export function TeamPage() {
         ),
       },
       { accessorKey: "position", header: "Pos", size: 70 },
+      {
+        id: "line",
+        header: "Line",
+        size: 70,
+        accessorFn: (r) => r.line ?? 9,
+        mantineTableHeadCellProps: { title: LINE_HEADER_TITLE },
+        Cell: ({ row }) => <LineCell line={row.original.line} specialist={row.original.def_specialist} />,
+      },
       { accessorKey: "year_abbr", header: "Yr", size: 60 },
       {
         accessorKey: "overall",
@@ -136,6 +145,13 @@ export function TeamPage() {
       { accessorKey: "hands", header: "HND", size: 65 },
       { accessorKey: "awareness", header: "AWR", size: 65 },
       { accessorKey: "tackling", header: "TKL", size: 65 },
+      { accessorKey: "stamina", header: "STA", size: 65 },
+      {
+        accessorKey: "work_rate",
+        header: "WRK",
+        size: 65,
+        mantineTableHeadCellProps: { title: "Work rate: how much load she can carry before tiredness costs her" },
+      },
       { accessorKey: "kicking", header: "KICK", size: 70 },
     ],
     [sessionId, team],

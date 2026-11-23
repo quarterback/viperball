@@ -6332,7 +6332,7 @@ async def my_team_portal_advance_post(request: Request):
         # Get coaching quality for each team (if available)
         def _team_coaching_score(t):
             try:
-                staffs = session.get("coaching_staffs") or (season.coaching_staffs if hasattr(season, "coaching_staffs") else {})
+                staffs = sess.get("coaching_staffs") or (season.coaching_staffs if hasattr(season, "coaching_staffs") else {})
                 staff = staffs.get(t, {})
                 hc = staff.get("head_coach")
                 if hc and hasattr(hc, "development"):
@@ -6447,11 +6447,11 @@ async def my_team_simulate_post(request: Request):
             for _ in range(50):  # safety cap
                 if season.is_regular_season_complete():
                     break
-                season.simulate_week(use_fast_sim=True)
+                season.simulate_week()
         else:
             # Simulate one week
             if not season.is_regular_season_complete():
-                season.simulate_week(use_fast_sim=True)
+                season.simulate_week()
     except Exception:
         pass
 

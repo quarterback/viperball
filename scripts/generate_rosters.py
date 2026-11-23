@@ -223,7 +223,54 @@ POSITIONS = [
     "Defensive Line",
 ]
 
-def _stat_roll(center, std):
+# League talent ladder: (share of players, lowest level, highest level).
+# Mirrors the baseball game's ladder: 7% stars, 12% excellent, 21% middle,
+# 60% below average to project players. Levels are on Viperball's current
+# rating scale, where the engine treats 35 as a median player.
+TALENT_LADDER = [
+    (0.02, 71, 85),   # transcendent
+    (0.05, 65, 70),   # elite
+    (0.12, 55, 64),   # excellent
+    (0.09, 50, 54),   # very good
+    (0.06, 45, 49),   # good
+    (0.04, 40, 44),   # above average
+    (0.02, 35, 39),   # average
+    (0.15, 30, 34),   # below average
+    (0.22, 20, 29),   # replacement
+    (0.23, 10, 19),   # project
+]
+# How far a player's individual stats swing around her level.
+PLAYER_STAT_SPREAD = 10
+# How much of a program's archetype gap carries into its players' rolls.
+# The archetype centers run 15 (doormat) to 64 (blue blood); at 0.35 that
+# is a shift of about -8 to +9 levels.
+ARCHETYPE_SHIFT_SCALE = 0.35
+ARCHETYPE_SHIFT_PIVOT = 38
+
+
+def _archetype_talent_shift(center):
+    return int(round((center - ARCHETYPE_SHIFT_PIVOT) * ARCHETYPE_SHIFT_SCALE))
+
+
+def _roll_player_level(shift=0):
+    r = random.random()
+    cumulative = 0.0
+    lo, hi = TALENT_LADDER[-1][1], TALENT_LADDER[-1][2]
+    for prob, t_lo, t_hi in TALENT_LADDER:
+        cumulative += prob
+        if r < cumulative:
+            lo, hi = t_lo, t_hi
+            break
+    return max(10, min(90, random.randint(lo, hi) + shift))
+
+
+def _stat_roll(center, std, ceiling=85):
+    if ceiling != 85:
+        return max(10, min(ceiling, int(round(random.gauss(center, std)))))
+    return _stat_roll_legacy(center, std)
+
+
+def _stat_roll_legacy(center, std):
     """Generate a single stat using gaussian distribution, clamped 10-85.
 
     Ceiling is 85 — in single-season mode this IS the final product, so no
@@ -279,7 +326,6 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
     archetype_data = PROGRAM_ARCHETYPES.get(program_archetype or DEFAULT_ARCHETYPE,
                                              PROGRAM_ARCHETYPES[DEFAULT_ARCHETYPE])
     center = archetype_data["stat_center"] + team_center_offset
-    std = archetype_data["stat_spread"]
 
     # Gather all offsets
     pos_off = _POSITION_OFFSETS.get(position, {})
@@ -288,39 +334,32 @@ def generate_player_attributes(position, team_philosophy, year, is_viper=False,
                  'agility': 2, 'awareness': 3} if is_viper else {}
     year_mod = {'freshman': -4, 'sophomore': -2, 'junior': 0, 'senior': 2}.get(year, 0)
 
-    # Roll each stat
+    # ── Player level: rolled per PLAYER against the league talent ladder ──
+    # (same design as the O27 baseball game's _TALENT_TIERS). Each player gets
+    # her own level: a few stars, a thin middle, a long tail. The program
+    # archetype only shifts the roll, so a blue blood has more stars and a
+    # doormat has fewer, but every roster has real gaps between its best and
+    # worst players. Before this, every stat of every player was rolled around
+    # one team number, so each player averaged out to that number and teams
+    # were uniformly good or uniformly bad.
+    level = _roll_player_level(_archetype_talent_shift(center))
+
+    # Each stat is then rolled around the player's own level, so players are
+    # still spiky (strong in one tool, weaker in another).
     results = {}
     for stat in _STAT_KEYS:
-        stat_center = (center
+        stat_center = (level
                        + pos_off.get(stat, 0)
                        + phil_off.get(stat, 0)
                        + viper_off.get(stat, 0)
                        + year_mod)
-        results[stat] = _stat_roll(stat_center, std)
+        results[stat] = _stat_roll(stat_center, PLAYER_STAT_SPREAD, ceiling=96)
 
-    # ── Stat budget enforcement ──
-    # Prevent "all 99s" players by capping the total stat points a player can
-    # have.  The budget scales with archetype center so elite programs still
-    # produce better players — but no one is elite at *everything*.
-    # Budget = center * 11 + 44 (gives ~4 points of headroom per stat).
-    # Example: blue_blood center 87 → budget 87*11+44 = 1001 → avg stat ~91.
-    # A player who rolls 96 speed needs to sacrifice elsewhere.
-    stat_budget = center * len(_STAT_KEYS) + 44
-    stat_total = sum(results[s] for s in _STAT_KEYS)
-    if stat_total > stat_budget:
-        excess = stat_total - stat_budget
-        # Shave excess from the highest stats first (preserves player profile —
-        # their best stat stays best, it just gets trimmed)
-        ranked = sorted(_STAT_KEYS, key=lambda s: results[s], reverse=True)
-        for stat_key in ranked:
-            if excess <= 0:
-                break
-            # Don't reduce any stat below the archetype center
-            headroom = results[stat_key] - max(center, 15)
-            trim = min(excess, headroom)
-            if trim > 0:
-                results[stat_key] -= trim
-                excess -= trim
+    # Work rate: how much load she can carry. Leans on stamina but is its own
+    # trait, so a modest athlete can be a high work rate player and a star
+    # can be a low one.
+    results['work_rate'] = max(10, min(95, int(round(random.gauss(
+        results['stamina'] * 0.5 + 18, 13)))))
 
     # Height and weight
     if position in ("Offensive Line", "Defensive Line"):
