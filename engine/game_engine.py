@@ -3613,6 +3613,11 @@ class ViperballEngine:
                  home_turnover_machine: bool = False,
                  away_turnover_machine: bool = False,
                  referee_crew: Optional["RefereeCrew"] = None):
+        # Seed before ALL pregame player/archetype/variance rolls, not only
+        # after they have already consumed global RNG. Matched coach-only
+        # benchmarks rely on the no-coach-tactics control being identical.
+        if seed is not None:
+            random.seed(seed)
         self.home_team = deepcopy(home_team)
         self.away_team = deepcopy(away_team)
         self.is_rivalry = is_rivalry
@@ -3735,11 +3740,6 @@ class ViperballEngine:
         if V2_ENGINE_CONFIG.get("star_override_enabled", False):
             self.state.home_stars = designate_stars(self.home_team.players, max_stars=3)
             self.state.away_stars = designate_stars(self.away_team.players, max_stars=3)
-
-        # Seed BEFORE assigning roles or game-day attributes, so seeded
-        # games repeat independently of pregame randomness.
-        if seed is not None:
-            random.seed(seed)
 
         if style_overrides:
             for team_key, style in style_overrides.items():
