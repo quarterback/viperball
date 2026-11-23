@@ -603,6 +603,11 @@ class CoachCard:
     standard: int = 50
     growth: int = 50
 
+    # CCH-01: individual tactical identity persists on the coach card.
+    # Existing saves omit this field; __post_init__ generates a stable
+    # versioned profile without consuming the game/season random stream.
+    tactical_profile: Dict = field(default_factory=dict)
+
     # ── computed properties ───────────────────
 
     def __post_init__(self) -> None:
@@ -615,6 +620,11 @@ class CoachCard:
         if self.growth == 50 and self.development != 50:
             self.growth = self.development
         # `message` has no obvious legacy mirror — leave at 50 unless explicitly set.
+
+        # A coach owns a stable tactical identity across schools and roles.
+        # All runtime effects remain disabled until CCH-02.
+        from .coach_tactics import ensure_coach_tactical_profile
+        ensure_coach_tactical_profile(self)
 
     @property
     def full_name(self) -> str:
@@ -771,6 +781,7 @@ class CoachCard:
             "message": self.message,
             "standard": self.standard,
             "growth": self.growth,
+            "tactical_profile": self.tactical_profile,
         }
 
     @classmethod
@@ -824,6 +835,7 @@ class CoachCard:
             message=d.get("message", 50),
             standard=d.get("standard", 50),
             growth=d.get("growth", 50),
+            tactical_profile=d.get("tactical_profile", {}),
         )
 
 
