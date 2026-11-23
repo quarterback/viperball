@@ -3,7 +3,7 @@
 **Date:** November 23, 2026  
 **Review base:** PR #323, head `ad6551fae1af6c1c9dcfd7ca28602ae935ec9630` at branch creation  
 **Implementation branch:** `fix/defensive-tactics-def-01-02-03`  
-**Status:** Implementation committed; targeted tests, existing tests, and paired full-engine benchmark passed in [GitHub Actions run 45225139453](https://github.com/quarterback/viperball/actions/runs/45225139453). Production/deployed game not checked.
+**Status:** Implementation committed; targeted tests, existing tests, and paired full-engine benchmark passed in [GitHub Actions run 45225716988](https://github.com/quarterback/viperball/actions/runs/45225716988) with `PYTHONHASHSEED=0`. Production/deployed game not checked.
 
 ## Purpose
 
@@ -110,28 +110,34 @@ and defending side, switchable read/scheme ablations, and
 explosive-play defense direction. The matrix was also statically checked
 and contains all 128 offense × defense combinations.
 
-**GitHub CI validation (Python 3.11, run 45225139453):**
+**GitHub CI validation (Python 3.11, run 45225716988, PYTHONHASHSEED=0):**
 - `tests/test_defensive_tactics.py`: **14 passed**
 - `python -m pytest tests/ -q`: **86 passed**
-- `scripts/compare_defense_wiring.py --games 80 --seed 2026`: **success**
-  with 80 full-engine games for each of four switch combinations,
-  using fresh copies of generated season rosters and the same matchups.
+- `scripts/compare_defense_wiring.py --games 80 --seed 2026`: **success**,
+  80 full-engine games per switch combination (320 games). Each paired game
+  begins with a fresh copy of the same generated roster and game seed.
 
 | Mode | Points/team | TD/team | DK/team | PK/team | 30+ yd plays/game | Defensive reads/game | Median margin |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Previous read/scheme paths off (formation fix stays) | 57.51 | 3.41 | 3.39 | 1.77 | 5.72 | 0 | 22.0 |
-| Reads only | 57.76 | 3.38 | 3.46 | 1.86 | 5.30 | 76.71 | 19.5 |
-| Scheme effects only | 54.84 | 2.91 | 3.49 | 2.03 | 4.81 | 0 | 21.0 |
-| Both | 54.67 | 2.81 | 3.27 | 2.34 | 4.70 | 75.81 | 21.0 |
+| Previous read/scheme paths off (formation fix stays) | 58.38 | 3.52 | 3.38 | 1.96 | 5.72 | 0 | 17.25 |
+| Reads only | 57.35 | 3.31 | 3.36 | 1.96 | 5.46 | 73.60 | 19.50 |
+| Scheme effects only | 55.30 | 2.94 | 3.58 | 2.01 | 4.92 | 0 | 19.75 |
+| Both | 53.15 | 2.72 | 3.34 | 2.06 | 4.58 | 75.59 | 20.75 |
 
-This confirms that code executes and produces a different scoring and
-explosive-play distribution. It does **not** prove any one scheme is
-well-calibrated or establish causal effect sizes with confidence intervals.
-The reads-only sample's points are slightly higher, despite defensive reads:
-random-number streams diverge after branching on play outcomes. Do not
-interpret this small difference as evidence that successful reads boost offense.
-This randomized 80-game sample represented seven of the eight defenses;
-Shadow did not occur. Run the full 16×8 scheme matrix as DEF-06.
+**Interpretation:** the new combined layers reduce scoring about 5.23
+points/team (roughly 9%) and 30+-yard gains about 20% in this sampled
+schedule. This is enough to warrant follow-up calibration, not an
+automatic instruction to restore the prior scoring distribution. The
+first successful CI run (45225139453) used an unpinned Python hash salt
+and had a different roster/scheme assignment distribution; it measured
+57.51 vs 54.67 points/team. The pinned run above supersedes those
+figures as the repeatable baseline.
+
+The sample doesn't cover every defensive scheme (Shadow did not appear),
+and it does not estimate confidence intervals or isolate the causal effect
+of each defensive trait. Reads can shift random-number consumption on a
+play; paired seeds alone do not freeze subsequent event streams.
+DEF-06 remains necessary for the complete 16×8 matchup matrix.
 
 **Not executed:** full 205-team season, larger multi-seed sensitivity,
 production site smoke test, matchup confidence intervals, and PR #323
