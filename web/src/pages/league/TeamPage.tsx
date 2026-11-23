@@ -34,6 +34,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { seasonApi, type RosterPlayer } from "../../api/season";
 import { LineCell, LINE_HEADER_TITLE } from "../../components/LineCell";
+import { InstallationPanel } from "../../components/InstallationPanel";
 import { ChemistryTab, CoachingTab } from "./TeamDetailTabs";
 import { PlayerFormModal, MovePlayerModal } from "./PlayerEditor";
 
@@ -268,6 +269,10 @@ export function TeamPage() {
           </Tabs.Panel>
           <Tabs.Panel value="coaching" pt="md">
             <CoachingTab sid={sessionId} team={team} />
+            <Title order={4} mt="lg" mb="sm">
+              Installation
+            </Title>
+            <InstallationPanel installation={roster.data?.installation} />
           </Tabs.Panel>
         </Tabs>
       )}
