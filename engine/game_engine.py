@@ -54,6 +54,8 @@ V2_ENGINE_CONFIG = {
     "play_family_adaptation_enabled": True,
     # CCH-02: independent coach-owned tactical decisions for paired tests.
     "coach_tactics_enabled": True,
+    # CCH-03: independent defensive-coordinator decisions and ablation.
+    "defensive_coach_tactics_enabled": True,
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -4052,6 +4054,21 @@ class ViperballEngine:
                      "featured_rushes": 0, "featured_targets": 0},
         }
 
+        # CCH-03 uses the same saved CoachCard but does not alter packages
+        # or the offense resolver. Separate toggle for controlled tests.
+        from .coach_tactics import resolve_defensive_tactics
+        dc_enabled = V2_ENGINE_CONFIG.get("defensive_coach_tactics_enabled", True)
+        self.home_dc_tactics = resolve_defensive_tactics(home_coaching) if dc_enabled else {}
+        self.away_dc_tactics = resolve_defensive_tactics(away_coaching) if dc_enabled else {}
+        self._dc_tactics_usage = {
+            side: {"calls": 0, "alignments": {}, "blitz_calls": 0,
+                   "read_attempts": {}, "read_successes": {}}
+            for side in ("home", "away")
+        }
+        self._active_defensive_call = None
+        self._home_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:home")
+        self._away_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:away")
+
         # ── Coaching staff modifiers (must init before rhythm) ──
         self.home_coaching_mods: Dict = {}
         self.away_coaching_mods: Dict = {}
@@ -4221,6 +4238,69 @@ class ViperballEngine:
             "authority": tactics["authority"],
             "featured_position": tactics["featured_position"],
             "selected": dict(self._coach_tactics_usage[side]),
+        }
+
+    def _current_dc_tactics(self) -> Dict:
+        """The current defending side's persistent coordinator profile."""
+        if self.state.possession == "home":
+            return getattr(self, "away_dc_tactics", {})
+        return getattr(self, "home_dc_tactics", {})
+
+    def _begin_defensive_call(self, formation: str):
+        """Choose ONE defensive posture from known pre-snap information.
+
+        The DC sees the offense's formation, down and distance. She does
+        NOT see which play family the offense will select. Pressure and
+        alignment have existing contest/risk consequences in this engine.
+        """
+        tactics = self._current_dc_tactics()
+        self._active_defensive_call = None
+        if not tactics:
+            return
+        from .coach_tactics import defensive_alignment_weights, defensive_blitz_probability
+        def_side = "away" if self.state.possession == "home" else "home"
+        scheme = self._current_defense()
+        original_alignment = DEFENSE_ALIGNMENT_MAP.get(
+            scheme.get("label", "Base Defense"), "balanced")
+        weights = defensive_alignment_weights(
+            original_alignment, tactics, formation=formation,
+            yards_to_go=self.state.yards_to_go)
+        rng = (self._away_dc_tactics_rng if def_side == "away"
+               else self._home_dc_tactics_rng)
+        alignment = rng.choices(list(weights), weights=list(weights.values()), k=1)[0]
+        blitz_chance = defensive_blitz_probability(
+            STYLE_BLITZ_CHANCE.get(self._current_defense_name(), 0.10),
+            tactics, alignment)
+        blitz = rng.random() < blitz_chance
+        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz}
+        self._active_defensive_call = call
+        counters = self._dc_tactics_usage[def_side]
+        counters["calls"] += 1
+        counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
+        counters["blitz_calls"] += int(blitz)
+
+    def _active_dc_call(self) -> Dict:
+        """Do not apply a past snap's call after a change of possession."""
+        call = getattr(self, "_active_defensive_call", None)
+        expected = "away" if self.state.possession == "home" else "home"
+        if call and call.get("defending_side") == expected:
+            return call
+        return {}
+
+    def _dc_tactics_summary(self, side: str) -> Dict:
+        tactics = (getattr(self, "home_dc_tactics", {}) if side == "home"
+                   else getattr(self, "away_dc_tactics", {}))
+        if not tactics:
+            return {}
+        used = self._dc_tactics_usage[side]
+        return {
+            "dc_id": tactics["coach_id"], "signature": tactics["signature"],
+            "authority": tactics["authority"], "coverage_focus": tactics["coverage_focus"],
+            "read_focus": list(tactics["read_focus"]), "calls": used["calls"],
+            "alignments": dict(used["alignments"]),
+            "blitz_calls": used["blitz_calls"],
+            "read_attempts": dict(used["read_attempts"]),
+            "read_successes": dict(used["read_successes"]),
         }
 
     def _coaching_mods(self) -> Dict:
@@ -7665,6 +7745,8 @@ class ViperballEngine:
         self._pending_transition = None
         self._fast_break = None
         self._lineup_cache = {}
+        # Do not leak a prior defensive call onto a kick or penalty snap.
+        self._active_defensive_call = None
 
         # Save pre-play state.  Every Play in the log should show the
         # starting situation (down, distance, field position) rather than
@@ -7678,6 +7760,11 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+        # Copy the actual pre-snap call, even when the resulting play changes
+        # possession. No additional RNG or defensive ratings are involved.
+        dc_call = getattr(self, "_active_defensive_call", None)
+        if dc_call:
+            play.defensive_call = dict(dc_call)
         if self._fast_break and getattr(play, "description", None) is not None:
             caught = self.away_team if self._fast_break == "home" else self.home_team
             play.description = f"FAST BREAK, {caught.name} caught changing. {play.description}"
@@ -7809,6 +7896,7 @@ class ViperballEngine:
 
         # ── Formation-First: select formation, then play family ──
         self._current_formation = self.select_formation()
+        self._begin_defensive_call(self._current_formation)
         play_family = self.select_play_family(formation=self._current_formation)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
@@ -8889,6 +8977,14 @@ class ViperballEngine:
         coaching_read_boost = instincts_factor * 0.06 + tactician_bonus
 
         total_read_rate = base_read_rate + gameplan_bias + situational_boost + personnel_boost + coaching_read_boost
+        # Reallocate a small, finite scouting focus toward the families the
+        # DC practiced and away from the ones she deprioritized. No new
+        # general-purpose read multiplier is stacked onto existing effects.
+        call = self._active_dc_call()
+        category = PLAY_FAMILY_TO_DC_TYPE.get(play_family)
+        if call and category:
+            from .coach_tactics import defensive_read_allocation
+            total_read_rate += defensive_read_allocation(self._current_dc_tactics(), category)
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         read = random.random() < total_read_rate
@@ -8897,6 +8993,12 @@ class ViperballEngine:
             side = "away" if self.state.possession == "home" else "home"
             counters[side]["attempts"] += 1
             counters[side]["reads"] += int(read)
+        if call and category:
+            counts = self._dc_tactics_usage[call["defending_side"]]
+            attempts = counts["read_attempts"]
+            successes = counts["read_successes"]
+            attempts[category] = attempts.get(category, 0) + 1
+            successes[category] = successes.get(category, 0) + int(read)
         return read
 
     def _get_defense_situational_boost(self, defense: Dict) -> float:
@@ -9477,7 +9579,12 @@ class ViperballEngine:
         # ── Rush count: style-driven blitz chance adds extra pressure ──
         def_name = self._current_defense_name()
         blitz_chance = STYLE_BLITZ_CHANCE.get(def_name, 0.10)
-        if random.random() < blitz_chance:
+        call = self._active_dc_call()
+        # On a coordinator-led snap the blitz was chosen BEFORE the
+        # offense's play family or kick-pass subtype became known.
+        # Otherwise preserve the original scheme-blitz draw unchanged.
+        blitz = call["blitz"] if call else random.random() < blitz_chance
+        if blitz:
             # Extra rusher — boost sack probability
             sack_base *= 1.25
             # But Keepers also rush, adding to pool
@@ -9581,6 +9688,9 @@ class ViperballEngine:
         return random.choice(['left', 'right', 'center'])
 
     def _determine_defense_alignment(self):
+        call = self._active_dc_call()
+        if call:
+            return call["alignment"]
         defense = self._current_defense()
         style_label = defense.get("label", "Base Defense")
         return DEFENSE_ALIGNMENT_MAP.get(style_label, "balanced")
@@ -14753,6 +14863,10 @@ class ViperballEngine:
                 "home": self._coach_tactics_summary("home"),
                 "away": self._coach_tactics_summary("away"),
             },
+            "defensive_coach_tactics": {
+                "home": self._dc_tactics_summary("home"),
+                "away": self._dc_tactics_summary("away"),
+            },
             "delta_yards": {
                 "home": self.state.home_delta_yards,
                 "away": self.state.away_delta_yards,
@@ -15075,6 +15189,7 @@ class ViperballEngine:
             "yards_to_go": int(round(play.yards_to_go)) if play.yards_to_go is not None else None,
             "play_type": play.play_type,
             "play_family": play.play_family,
+            "defensive_call": getattr(play, "defensive_call", None),
             "formation": getattr(play, "formation", "") or "",
             "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,
