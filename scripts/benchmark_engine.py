@@ -78,12 +78,14 @@ def main():
     drives = collections.defaultdict(lambda: [0, 0])
     td_lengths = []
     sixth_down_in_range = 0
+    margins = []
     total_drives = 0
 
     for i, (home, away) in enumerate(pairs):
         engine = ViperballEngine(teams[home], teams[away], seed=args.seed + i,
                                  style_overrides=overrides(styles, home, away))
         result = engine.simulate_game()
+        margins.append(abs(result["final_score"]["home"]["score"] - result["final_score"]["away"]["score"]))
         for side in ("home", "away"):
             s = result["stats"][side]
             per_team["points"].append(result["final_score"][side]["score"])
@@ -92,6 +94,7 @@ def main():
             per_team["snap_kick_attempts"].append(s["drop_kicks_attempted"])
             per_team["field_goals_made"].append(s["place_kicks_made"])
             per_team["plays"].append(s["total_plays"])
+            per_team["turnovers"].append(s["fumbles_lost"] + s["kick_pass_interceptions"] + s["lateral_interceptions"])
         for d in result.get("drive_summary", []):
             start = d.get("start_yard_line")
             if start is None:
@@ -128,6 +131,8 @@ def main():
     print(f"  median {td_lengths[len(td_lengths) // 2] if td_lengths else 0} yd,"
           f" 30+ yd {sum(y >= 30 for y in td_lengths) / n:.0%} of TDs")
     print(f"\n6th downs inside 45 yards of a kick: {sixth_down_in_range / max(1, args.games * 2):.2f} per team per game")
+    print(f"Final margin: median {statistics.median(margins):.1f},"
+          f" decided by 30+ {sum(m >= 30 for m in margins) / len(margins):.0%}")
     print(f"Drives per team per game: {total_drives / max(1, args.games * 2):.1f}")
 
 

@@ -78,6 +78,13 @@ V2_ENGINE_CONFIG = {
     # scale back onto the scale the formulas expect:
     #   effective = 60 + (rating - 15) * 0.5   (25 -> 65, 51 -> 78, 85 -> 95)
     "kick_skill_rescale": True,
+    # V3.3: Rating rescale for the rest of the engine, same map as the kick
+    # one: scale_rating(raw) = 60 + (raw - 15) * 0.5. Each group of formulas
+    # can be switched separately (see docs/rating_scale_inventory_2026-11-22.md).
+    "rescale_contest": True,       # A: carrier vs tackler, kick pass, late-down clamp
+    "rescale_speed": False,        # C: breakaways, pursuit, reads, returns
+    "rescale_turnovers": False,    # D: lateral interceptions and fumbles
+    "rescale_yac": False,          # E: yards after catch, kick pass distance, returns
     # V2.8: Play clock limit (seconds).  If a team's computed play clock
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
@@ -125,6 +132,15 @@ PRESTIGE_TO_HALO = {
     10: (48, 47),   # Doormat
     0:  (43, 42),   # Absolute bottom
 }
+
+
+def scale_rating(raw, group: str = "") -> float:
+    """Convert a current-scale rating (about 15-96) to the 60-100 scale the
+    engine formulas were written for. Pass a group name to make it depend on
+    that group's V2_ENGINE_CONFIG switch."""
+    if group and not V2_ENGINE_CONFIG.get(group, False):
+        return raw
+    return max(40.0, min(100.0, 60.0 + (raw - 15.0) * 0.5))
 
 
 def derive_halo(prestige: int) -> Tuple[float, float]:
@@ -6224,6 +6240,7 @@ class ViperballEngine:
         for d in defenders:
             r = (d.tackling * 0.40 + getattr(d, 'awareness', 75) * 0.35
                  + d.speed * 0.25)
+            r = scale_rating(r, "rescale_contest")
             r *= self.player_fatigue_modifier(d)
             def_ratings.append(r)
         avg_def = sum(def_ratings) / len(def_ratings)
@@ -6238,6 +6255,7 @@ class ViperballEngine:
         for a in attackers:
             r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
                  + a.power * 0.20 + getattr(a, 'awareness', 75) * 0.25)
+            r = scale_rating(r, "rescale_contest")
             r *= self.player_fatigue_modifier(a)
             off_ratings.append(r)
         avg_off = sum(off_ratings) / len(off_ratings)
@@ -8819,6 +8837,7 @@ class ViperballEngine:
 
         # Individual: canonical speed (weighted blend of speed + agility)
         off_skill = carrier.canon_speed * 0.4 + getattr(carrier, 'power', 75) * 0.3 + getattr(carrier, 'agility', 75) * 0.3
+        off_skill = scale_rating(off_skill, "rescale_contest")
         return off_skill * self.player_fatigue_modifier(carrier)
 
     def _get_defensive_rating(self, tackler, use_halo: bool = False) -> float:
@@ -8833,6 +8852,7 @@ class ViperballEngine:
 
         # Individual: canonical tackling (weighted blend of tackling + power + awareness)
         def_skill = tackler.canon_tackling * 0.5 + getattr(tackler, 'awareness', 70) * 0.25 + tackler.speed * 0.25
+        def_skill = scale_rating(def_skill, "rescale_contest")
         return def_skill * self.player_fatigue_modifier(tackler)
 
     def _apply_variance_archetype(self, raw_yards: float, player) -> float:
@@ -9251,6 +9271,8 @@ class ViperballEngine:
             off_skill = (kicker.kick_accuracy * 0.70
                          + getattr(receiver, 'hands', 70) * 0.30)
 
+        if not use_halo:
+            off_skill = scale_rating(off_skill, "rescale_contest")
         off_skill *= self.player_fatigue_modifier(kicker) * 0.5 + 0.5
 
         # ── Defensive skill (sub-family-specific) ──
@@ -9273,6 +9295,8 @@ class ViperballEngine:
                          + getattr(defender, 'awareness', 70) * 0.30
                          + defender.tackling * 0.20)
 
+        if not use_halo:
+            def_skill = scale_rating(def_skill, "rescale_contest")
         def_skill *= self.player_fatigue_modifier(defender) * 0.5 + 0.5
 
         # ── Game rhythm ──
