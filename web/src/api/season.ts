@@ -235,7 +235,7 @@ export const seasonApi = {
     ),
 
   roster: (sid: string, team: string) =>
-    apiGet<{ team_name: string; roster: RosterPlayer[]; prestige: number | null }>(
+    apiGet<{ team_name: string; roster: RosterPlayer[]; prestige: number | null; installation?: TeamInstallation }>(
       `/sessions/${sid}/season/roster/${enc(team)}`,
     ),
 
@@ -437,4 +437,22 @@ export async function createSeason(config: NewSeasonConfig): Promise<string> {
   const { session_id } = await apiSend<{ session_id: string }>("POST", "/sessions");
   await apiSend("POST", `/sessions/${session_id}/season`, config);
   return session_id;
+}
+
+export interface InstallationUnit {
+  family: string;
+  family_familiarity: number;
+  coach_id: string;
+  signature: string;
+  familiarity: number;
+  execution_factor: number;
+  seasons_together: number;
+  vestigial: { signature: string; weight: number }[];
+  packages: { package_id: string; name: string; familiarity: number }[];
+}
+export interface TeamInstallation {
+  team?: string;
+  offense?: InstallationUnit;
+  defense?: InstallationUnit;
+  recent_changes?: { year: number | null; event: string; from?: string; to?: string }[];
 }

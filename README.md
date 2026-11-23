@@ -628,6 +628,23 @@ There is no automatic home field bonus. The home team's edge comes from the visi
 
 ---
 
+## Coaching Staffs and Team Installation
+
+Every coordinator has a lasting tactical signature, such as Vertical Attack, Territory Control or Run to Kick for an offensive coordinator, and she takes it with her when she changes jobs. The head coach decides how much room the coordinator gets. Signatures shift which legal plays get called (formation, play type, kick pass type and featured player) by at most 20% either way, and never make an illegal play possible.
+
+A program also has its own installation: what its players have actually learned.
+
+- **Familiarity.** A team executes its coordinator's signature only as well as it knows her system. A staff in place when tracking starts begins at 0.75. A new coordinator from outside starts at 0.30. Familiarity rises a little each game and 0.20 each season together, up to full.
+- **Coaching trees.** A new coordinator who worked under the current head coach, or under the same head coach as the coordinator she replaces, starts 0.25 higher. One who reads the book the same way as her predecessor starts 0.20 higher, up to 0.85 in all. A coach promoted from the same staff keeps at least 0.70.
+- **Old habits.** When a coordinator leaves, a trace of her tendencies stays with the program and fades over the next season or two.
+- **Base book.** Switching offensive or defensive books resets the team's familiarity with the book to 0.35, which trims how much of the coordinator's signature shows until it is learned.
+- **Packages.** Each coordinator installs up to two packages from the playbook catalog (`data/playbooks`) that fit her preferences, the team's book and its roster, up to four per side. A package nudges play calls toward its formations and plays only in its own situations, such as Heavy Push in short yardage, and only as much as the team knows it. Packages tied to drive starts or a tired defense wait until the engine reports those.
+- **Defense.** Defensive installation is recorded the same way, and its game effect comes with the defensive coordinator identity work.
+
+Each offseason, CPU programs review their staffs, fire and hire through the coaching portal, and every coach ages and develops. The human program's staff changes only by the human's choice. Installations are saved with the dynasty, and the team page shows each team's familiarity, any fading habits and its installed packages.
+
+**Program count.** A dynasty season needs an even number of programs. If the count is odd when a season starts, Coast Guard is retired, or Merchant Marine if Coast Guard is the human's program. Retiring a different program beforehand keeps the count even and skips this.
+
 ## Roster and Substitution Rules
 
 ### Active Roster

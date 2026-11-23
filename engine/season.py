@@ -1246,6 +1246,10 @@ class Season:
     # Coaching staffs: team_name -> { role -> CoachCard }
     coaching_staffs: Dict[str, dict] = field(default_factory=dict)
 
+    # CCH-04 team installations: team_name -> installation record. A dynasty
+    # attaches its own dict so records carry from season to season.
+    team_installations: Dict[str, dict] = field(default_factory=dict)
+
     # FCS/lower-division teams generated for schedule fill (name -> mascot)
     fcs_teams: Dict[str, str] = field(default_factory=dict)
 
@@ -1912,6 +1916,24 @@ class Season:
             if "game_week" not in injury_kwargs:
                 coaching_kwargs["game_week"] = game.week
 
+        # CCH-04: bring each team's installation in line with its staff and
+        # books, then hand it to the engine on the team object.
+        from engine import team_installation as _ti
+        if getattr(self, "_roster_profiles", None) is None:
+            self._roster_profiles = _ti.league_roster_profiles(self.teams)
+        _installs = []
+        for _tname, _tobj, _cfg in ((game.home_team, home_team, home_style_config),
+                                    (game.away_team, away_team, away_style_config)):
+            _staff = self.coaching_staffs.get(_tname) if self.coaching_staffs else None
+            _rec = _ti.sync_installation(
+                self.team_installations, _tname, _staff,
+                _cfg.get("offense_style", getattr(_tobj, "offense_style", "balanced")),
+                _cfg.get("defense_style", getattr(_tobj, "defense_style", "swarm")),
+                team_stats=self._roster_profiles.get(_tname),
+                year=getattr(self, "dynasty_year", None))
+            _tobj.installation = _rec
+            _installs.append(_rec)
+
         nfz_kwargs = {}
         home_record = self.standings.get(game.home_team)
         away_record = self.standings.get(game.away_team)
@@ -1967,6 +1989,8 @@ class Season:
             **nfz_kwargs,
         )
         result = engine.simulate_game()
+        for _rec in _installs:
+            _ti.record_game(_rec)
         result["is_rivalry_game"] = game.is_rivalry_game
         _carry_workload(home_team, engine.home_team)
         _carry_workload(away_team, engine.away_team)

@@ -54,6 +54,7 @@ V2_ENGINE_CONFIG = {
     "play_family_adaptation_enabled": True,
     # CCH-02: independent coach-owned tactical decisions for paired tests.
     "coach_tactics_enabled": True,
+    "team_installation_enabled": True,
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -1855,6 +1856,12 @@ def generate_referee_pool(n: int = 360, seed: int = 12345) -> List[Dict]:
 
     rng = random.Random(seed)
     pool = []
+    # The name generator draws from the global random stream. Run it under
+    # this pool's own seed and put the global stream back afterwards, so
+    # building the pool (on the first game in a process) neither shifts
+    # that game's dice nor depends on what ran before it (VAL-02).
+    _global_state = random.getstate()
+    random.seed(seed)
 
     # Try to use the name generator for diverse, realistic names
     try:
@@ -1908,6 +1915,7 @@ def generate_referee_pool(n: int = 360, seed: int = 12345) -> List[Dict]:
             "consistency": round(consistency, 4),
         })
 
+    random.setstate(_global_state)
     _REFEREE_POOL_CACHE = pool
     return pool
 
@@ -4045,6 +4053,15 @@ class ViperballEngine:
         self.away_oc_tactics = (resolve_offensive_tactics(away_coaching)
                                 if V2_ENGINE_CONFIG.get("coach_tactics_enabled", True)
                                 else {})
+        # CCH-04: what each team has installed scales the OC's signature,
+        # keeps a fading trace of the previous OC, and adds situational
+        # packages. No installation record leaves CCH-02 behavior unchanged.
+        if V2_ENGINE_CONFIG.get("team_installation_enabled", True):
+            from .team_installation import apply_installation_to_offense
+            self.home_oc_tactics = apply_installation_to_offense(
+                self.home_oc_tactics, getattr(self.home_team, "installation", None))
+            self.away_oc_tactics = apply_installation_to_offense(
+                self.away_oc_tactics, getattr(self.away_team, "installation", None))
         self._coach_tactics_usage = {
             "home": {"formation": {}, "family": {}, "kick_pass": {},
                      "featured_rushes": 0, "featured_targets": 0},
@@ -4204,6 +4221,19 @@ class ViperballEngine:
             return getattr(self, "home_oc_tactics", {})
         return getattr(self, "away_oc_tactics", {})
 
+    def _oc_bias(self, key: str) -> Dict:
+        """The OC bias for one category this play: the installation scaled
+        signature plus any installed package whose situation is live."""
+        tactics = self._current_oc_tactics()
+        if not tactics.get("packages"):
+            return tactics.get(key, {})
+        from .team_installation import situational_bias
+        st = self.state
+        diff = (st.home_score - st.away_score) if st.possession == "home" else (st.away_score - st.home_score)
+        context = {"down": st.down, "yards_to_go": st.yards_to_go, "field_position": st.field_position,
+                   "quarter": st.quarter, "time_remaining": st.time_remaining, "score_diff": diff}
+        return situational_bias(tactics, key, context, self._coach_tactics_usage[st.possession])
+
     def _record_oc_choice(self, category: str, value: str):
         """Track choices by offensive side, independent of resulting turnovers."""
         if not self._current_oc_tactics():
@@ -4221,6 +4251,7 @@ class ViperballEngine:
             "authority": tactics["authority"],
             "featured_position": tactics["featured_position"],
             "selected": dict(self._coach_tactics_usage[side]),
+            "installation": tactics.get("installation", {}),
         }
 
     def _coaching_mods(self) -> Dict:
@@ -7935,7 +7966,7 @@ class ViperballEngine:
         tactics = self._current_oc_tactics()
         if tactics:
             base = apply_weight_bias(
-                base, tactics["formation_bias"], tactics["authority"])
+                base, self._oc_bias("formation_bias"), tactics["authority"])
 
         # ── Normalize (floor at 0.01 to avoid zero weights) ──
         total = sum(max(0.01, v) for v in base.values())
@@ -8368,7 +8399,7 @@ class ViperballEngine:
         tactics = self._current_oc_tactics()
         if tactics:
             weights = apply_weight_bias(
-                weights, tactics["family_bias"], tactics["authority"])
+                weights, self._oc_bias("family_bias"), tactics["authority"])
 
         families = list(PlayFamily)
         hard_zero = set()
@@ -8639,7 +8670,7 @@ class ViperballEngine:
         tactics = self._current_oc_tactics()
         if tactics:
             base = apply_weight_bias(
-                base, tactics["kick_pass_bias"], tactics["authority"])
+                base, self._oc_bias("kick_pass_bias"), tactics["authority"])
 
         # Normalize and select
         subfamilies = [
