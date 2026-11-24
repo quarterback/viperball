@@ -55,7 +55,10 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
     scores = fr["final_score"]
     for side,name in (("home",game.home_team),("away",game.away_team)):
         if name not in teams:
-            continue
+            raise RuntimeError(f"Game includes inactive program: {name}")
+        stats = fr["stats"][side]
+        if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
+            raise RuntimeError(f"Score ledger mismatch for {name}")
         dc = fr["defensive_coach_tactics"][side]
         if not dc:
             raise RuntimeError("Active program without DC decisions: "+name)
@@ -228,6 +231,13 @@ def run(seasons, nteams, seed, out, *, national=False):
             expected_games = min(12, len(active) - 1)
             wrong = {t: scheduled_counts[t] for t in names
                      if scheduled_counts[t] != expected_games}
+            report.setdefault("schedule_preflight", {})[str(year)] = {
+                "active_programs": len(active), "requested_per_program": expected_games,
+                "scheduled_games": len(season.schedule),
+                "expected_games": len(active)*expected_games//2,
+                "wrong_quota": wrong,
+            }
+            checkpoint()
             if wrong:
                 raise RuntimeError(f"Schedule quota mismatch (expected {expected_games}): {wrong}")
             start=snapshot(season.teams)
@@ -246,16 +256,17 @@ def run(seasons, nteams, seed, out, *, national=False):
                 raise RuntimeError("Duplicate player identities: "
                                    +json.dumps(duplicate_identities,sort_keys=True))
             if expected_rosters is not None:
-                # Compare actual roster entries rather than a dictionary
-                # keyed by player ID, which can conceal duplicate identities.
-                actual={t:sorted(p.name for p in team.players) for t,team in season.teams.items()}
+                # Compare actual roster identities, names and positions rather
+                # than a dictionary that can conceal duplicate entries.
+                actual={t:sorted((p.player_id, p.name, p.position) for p in team.players)
+                        for t,team in season.teams.items()}
                 if actual!=expected_rosters:
                     differences={}
                     for t in sorted(set(actual) | set(expected_rosters)):
                         got=Counter(actual.get(t, []))
                         want=Counter(expected_rosters.get(t, []))
                         if got != want:
-                            differences[t]={"missing":dict(want-got),"extra":dict(got-want)}
+                            differences[t]={"missing":list((want-got).items()),"extra":list((got-want).items())}
                     raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
                                        +json.dumps(differences,sort_keys=True))
             staff=staff_ids(dyn)
@@ -377,7 +388,7 @@ def run(seasons, nteams, seed, out, *, national=False):
             saved_rosters=deepcopy(dyn._next_season_rosters)
             if set(saved_rosters) != active:
                 raise RuntimeError(f"Offseason saved roster program mismatch: extra={sorted(set(saved_rosters)-active)}, missing={sorted(active-set(saved_rosters))}")
-            expected_rosters={t:sorted((r["first_name"]+" "+r["last_name"]) for r in rows)
+            expected_rosters={t:sorted((r.get("player_id", ""), r["first_name"]+" "+r["last_name"], r["position"]) for r in rows)
                               for t,rows in saved_rosters.items()}
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
