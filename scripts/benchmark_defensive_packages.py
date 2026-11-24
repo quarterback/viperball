@@ -27,6 +27,10 @@ CASES = [
     ("blitz_pack", "rugby_rush_line", "lateral_spread"),
     ("predator", "afl_kick_in_press", "boot_raid"),
     ("chaos", "lax_ride", "boot_raid"),
+    ("swarm", "swarm_containment", "lateral_spread"),
+    ("shadow", "shadow_robber", "boot_raid"),
+    ("chaos", "chaos_lateral_trap", "lateral_spread"),
+    ("predator", "predator_exhaustion_press", "boot_raid"),
     # Same offense and roster for base scheme pressure comparison.
     ("swarm", None, "boot_raid"),
     ("blitz_pack", None, "boot_raid"),
