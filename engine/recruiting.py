@@ -2433,6 +2433,7 @@ def generate_hs_class(
     size: int = 1500,
     rng: Optional[random.Random] = None,
     seed: Optional[int] = None,
+    graduation_year: Optional[int] = None,
 ) -> List[HSProspect]:
     """Generate a high school class at a specific grade level.
 
@@ -2441,6 +2442,7 @@ def generate_hs_class(
         size: Number of prospects in the class.
         rng: Seeded Random for reproducibility.
         seed: Alternative to rng — creates Random(seed).
+        graduation_year: Stable class identity for a persistent dynasty pipeline.
 
     Returns:
         List of HSProspect objects sorted by scouted_stars descending.
@@ -2450,7 +2452,8 @@ def generate_hs_class(
 
     prospects: List[HSProspect] = []
     for i in range(size):
-        rid = f"HS-{grade}-{i:04d}"
+        rid = (f"HS-{graduation_year}-{i:04d}" if graduation_year is not None
+               else f"HS-{grade}-{i:04d}")
         recruit = generate_single_recruit(recruit_id=rid, rng=rng)
         scouted = _apply_scouting_noise(recruit.stars, grade, rng)
         prospect = HSProspect(recruit=recruit, grade=grade, scouted_stars=scouted)
@@ -2789,6 +2792,7 @@ class HSRecruitingPipeline:
             rng = random.Random(base_seed + i * 1000)
             self.classes[grade] = generate_hs_class(
                 grade=grade, size=size_per_class, rng=rng,
+                graduation_year=base_seed + 4 - i,
             )
             # Seed recruiting interest so profiles aren't empty
             if team_names:
@@ -2838,6 +2842,7 @@ class HSRecruitingPipeline:
         # Generate fresh 9th graders
         self.classes["9th"] = generate_hs_class(
             grade="9th", size=size, rng=random.Random(new_9th_seed),
+            graduation_year=new_9th_seed + 4,
         )
 
         return graduates
@@ -2956,6 +2961,28 @@ class HSRecruitingPipeline:
             grade: [p.to_dict() for p in prospects]
             for grade, prospects in self.classes.items()
         }
+
+    def save_state(self) -> dict:
+        """Lossless internal save; keep the public flattened to_dict unchanged."""
+        from dataclasses import asdict
+        return {"version": 1, "classes": {
+            grade: [asdict(p) for p in prospects]
+            for grade, prospects in self.classes.items()
+        }}
+
+    @classmethod
+    def from_save_state(cls, data: dict) -> "HSRecruitingPipeline":
+        if data.get("version") != 1:
+            raise ValueError("Unsupported high school pipeline save version")
+        classes = {}
+        for grade, prospects in data["classes"].items():
+            if grade not in _HS_GRADES:
+                raise ValueError(f"Invalid saved high school grade: {grade}")
+            classes[grade] = [
+                HSProspect(**{**p, "recruit": Recruit(**p["recruit"])})
+                for p in prospects
+            ]
+        return cls(classes=classes)
 
     def pipeline_summary(self) -> dict:
         """Summary stats for each grade in the pipeline."""
