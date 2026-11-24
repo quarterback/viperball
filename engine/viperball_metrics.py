@@ -28,37 +28,37 @@ from typing import List, Dict, Optional
 # ═══════════════════════════════════════════════════════════════
 
 def calculate_ppd(drives: List[Dict], team: str) -> float:
-    """Points Per Drive (PPD).
+    """Actual points scored during own offensive possessions per drive.
 
-    How many points this team scores per offensive possession.
-    A fan says: "They averaged 4.2 points per drive."
-
-    Elite: 5.0+  |  Good: 3.5-5.0  |  Average: 2.5-3.5  |  Poor: <2.5
+    Use the post-drive scoreboard instead of treating every successful
+    scoring kick as 4.2 points. Scores earned while the opponent has a
+    possession (including defensive return touchdowns) are excluded.
+    Older archived drives with no score snapshots retain the historical
+    approximate fallback and should not be interpreted as exact.
     """
     team_drives = [d for d in drives if d.get("team") == team]
     if not team_drives:
-        return 3.0
+        return 0.0
+    if all(d.get("home_score_after") is not None and
+           d.get("away_score_after") is not None for d in drives):
+        prev = {"home": 0.0, "away": 0.0}
+        points = 0.0
+        for drive in drives:
+            cur = {side: float(drive[side + "_score_after"])
+                   for side in ("home", "away")}
+            if drive.get("team") == team:
+                # Bells on a defensive play are not offensive PPD.
+                points += max(0.0, cur[team] - prev[team])
+            prev = cur
+        return round(points / len(team_drives), 2)
 
-    # Count actual scoring drives by type for accurate weighting
-    td_drives = sum(1 for d in team_drives
-                    if d.get("result") == "touchdown")
-    kick_drives = sum(1 for d in team_drives
-                      if d.get("result") == "successful_kick")
-    pindown_drives = sum(1 for d in team_drives
-                         if d.get("result") == "pindown")
-    safety_drives = sum(1 for d in team_drives
-                        if d.get("result") == "safety")
-
-    # Calculate actual points scored across drives
-    # TD = 9, DK/PK average = 4 (weighted toward DK=5 in aggressive
-    # offenses, PK=3 in conservative ones), Pindown = 1, Safety = 2
-    # Use 4.2 as the league-average kick value (DK slightly more common
-    # than PK due to 5-point payoff incentivizing attempts)
-    total_drive_pts = (td_drives * 9 + kick_drives * 4.2
-                       + pindown_drives * 1 + safety_drives * 2)
-
-    ppd = total_drive_pts / len(team_drives)
-    return round(ppd, 2)
+    # Historical exports lack drive scoreboard snapshots.
+    tds = sum(d.get("result") == "touchdown" for d in team_drives)
+    kicks = sum(d.get("result") == "successful_kick" for d in team_drives)
+    pindowns = sum(d.get("result") == "pindown" for d in team_drives)
+    safeties = sum(d.get("result") == "safety" for d in team_drives)
+    return round((9 * tds + 4.2 * kicks + pindowns + 2 * safeties) /
+                 len(team_drives), 2)
 
 
 def calculate_conversion_pct(plays: List[Dict], team: str) -> float:
@@ -134,59 +134,45 @@ def calculate_conversion_by_field_zone(plays: List[Dict], team: str) -> Dict:
 
 
 def calculate_delta_profile(plays: List[Dict], drives: List[Dict],
-                            team: str) -> Dict:
-    """Delta profile — how much difficulty a team faces vs creates.
+                            team: str, game_stats: Optional[Dict] = None) -> Dict:
+    """Report the restart field-position cost, not the teams' yardage gap.
 
-    Measures the environment each team operates in:
-      - delta_yds:    net yardage differential (positive = gaining more)
-      - delta_drives: net drive count differential
-      - delta_scores: net scoring differential
-      - kill_pct:     how often drives end with total failure (TOD, no gain)
-
-    Low KILL% + positive delta = controlled winning
-    High KILL% + negative delta = chaotic losing (disruption without control)
+    Positive Delta Yards means a team was pushed backwards by the
+    score-dependent restart. Negative means it received an advantage.
+    Only drives with an observed restart delta enter PK/PP buckets;
+    no restart after the last score can be assigned to an unplayed drive.
     """
-    team_plays = [p for p in plays if p.get("possession") == team]
-    opp_plays = [p for p in plays if p.get("possession") != team]
-
-    team_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in team_plays)
-    opp_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in opp_plays)
-
     team_drives = [d for d in drives if d.get("team") == team]
     opp_drives = [d for d in drives if d.get("team") != team]
-
-    team_scoring = sum(
-        1 for d in team_drives
-        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
-    )
-    opp_scoring = sum(
-        1 for d in opp_drives
-        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
-    )
-
-    # Kill %: drives that end in total failure (turnover on downs or punt with minimal gain)
-    team_kills = sum(
-        1 for d in team_drives
-        if d.get("result") in ("turnover_on_downs", "punt")
-        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
-    )
-    opp_kills = sum(
-        1 for d in opp_drives
-        if d.get("result") in ("turnover_on_downs", "punt")
-        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
-    )
-
-    total_drives = len(team_drives)
-    opp_total_drives = len(opp_drives)
-
+    delta = (game_stats or {}).get("delta_yards")
+    if delta is None:
+        delta = sum(d.get("delta_cost", 0) for d in team_drives)
+    pk = [d for d in team_drives if d.get("delta_cost", 0) > 0]
+    pp = [d for d in team_drives if d.get("delta_cost", 0) < 0]
+    neutral = [d for d in team_drives if d.get("delta_cost", 0) == 0]
+    def rates(ds):
+        total = len(ds)
+        scores = sum(d.get("result") in ("touchdown", "successful_kick")
+                     for d in ds)
+        kills = sum(d.get("result") in ("turnover_on_downs", "punt")
+                    and (d.get("yards") or 0) <= 5 for d in ds)
+        return {"drives": total, "scores": scores, "kills": kills,
+                "score_rate": round(100 * scores / total, 1) if total else None}
     return {
-        "delta_yds": team_yards - opp_yards,
-        "delta_drives": total_drives - opp_total_drives,
-        "delta_scores": team_scoring - opp_scoring,
-        "team_kill_pct": round(team_kills / max(1, total_drives) * 100, 1),
-        "opp_kill_pct": round(opp_kills / max(1, opp_total_drives) * 100, 1),
-        "team_drives": total_drives,
-        "opp_drives": opp_total_drives,
+        "delta_yds": delta,  # legacy name, now correct definition
+        "delta_yards": delta,
+        "net_yards_advantage": sum(p.get("yards") or 0 for p in plays
+                                    if (p.get("snap_possession") or p.get("possession")) == team)
+                                - sum(p.get("yards") or 0 for p in plays
+                                      if (p.get("snap_possession") or p.get("possession")) != team),
+        "delta_drives": len(team_drives) - len(opp_drives),
+        "delta_scores": rates(team_drives)["scores"] - rates(opp_drives)["scores"],
+        "penalty_kill": rates(pk),
+        "power_play": rates(pp),
+        "neutral": rates(neutral),
+        "team_kill_pct": round(100 * rates(team_drives)["kills"] / len(team_drives), 1) if team_drives else 0.0,
+        "opp_kill_pct": round(100 * rates(opp_drives)["kills"] / len(opp_drives), 1) if opp_drives else 0.0,
+        "team_drives": len(team_drives), "opp_drives": len(opp_drives),
     }
 
 
@@ -558,7 +544,7 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
 
     # Field-position-conditioned conversion rates
     conv_by_zone = calculate_conversion_by_field_zone(plays, team)
-    delta = calculate_delta_profile(plays, drives, team)
+    delta = calculate_delta_profile(plays, drives, team, game_stats)
 
     # Quarter-by-quarter scoring (tennis set analogy)
     quarter_scoring = calculate_quarter_scoring(plays, team)
