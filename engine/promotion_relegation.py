@@ -151,7 +151,13 @@ def simulate_promotion_playoff(
     movements = []
 
     if home_team and away_team:
-        result = fast_sim_game(home_team, away_team, seed=rng.randint(0, 999999) if rng else 0)
+        from engine.game_engine import ViperballEngine
+        from engine.pro_scale import engine_scale
+        _offs = ((2.5 - higher_tier) * 3.0, (2.5 - (higher_tier + 1)) * 3.0)
+        with engine_scale(home_team, away_team, offsets=_offs):
+            result = ViperballEngine(home_team, away_team,
+                                     seed=rng.randint(0, 999999) if rng else random.randint(0, 999999),
+                                     is_playoff=True).simulate_game()
         final = result.get("final_score", {})
         home_score = final.get("home", {}).get("score", result.get("home_score", 0))
         away_score = final.get("away", {}).get("score", result.get("away_score", 0))

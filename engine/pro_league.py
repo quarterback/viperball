@@ -626,7 +626,7 @@ class ProLeagueSeason:
         self.schedule = matchups_by_week
         self.total_weeks = len(matchups_by_week)
 
-    def sim_week(self, use_fast_sim: bool = True) -> dict:
+    def sim_week(self, use_fast_sim: bool = False) -> dict:
         if self.phase != "regular_season":
             return {"error": "Season is not in regular season phase"}
         if self.current_week >= self.total_weeks:
@@ -676,13 +676,19 @@ class ProLeagueSeason:
                     unavailable_away=unavail_away,
                 )
             else:
-                engine = ViperballEngine(
-                    home, away,
-                    seed=random.randint(1, 1_000_000),
-                    weather=weather_key,
-                    injury_tracker=self.injury_tracker,
-                )
-                result = engine.simulate_game()
+                from engine.pro_scale import engine_scale, league_scale
+                _center, _off = league_scale(self)
+                with engine_scale(home, away, center=_center, offsets=(_off, _off)):
+                    engine = ViperballEngine(
+                        home, away,
+                        seed=random.randint(1, 1_000_000),
+                        weather=weather_key,
+                        injury_tracker=self.injury_tracker,
+                        game_week=week_num,
+                        unavailable_home=unavail_home,
+                        unavailable_away=unavail_away,
+                    )
+                    result = engine.simulate_game()
 
             home_score = result["final_score"]["home"]["score"]
             away_score = result["final_score"]["away"]["score"]
@@ -742,7 +748,7 @@ class ProLeagueSeason:
             } for g in week_results],
         }
 
-    def sim_all(self, use_fast_sim: bool = True) -> dict:
+    def sim_all(self, use_fast_sim: bool = False) -> dict:
         results = []
         while self.current_week < self.total_weeks:
             week_result = self.sim_week(use_fast_sim=use_fast_sim)
@@ -1284,7 +1290,14 @@ class ProLeagueSeason:
                     home_team = self.teams.get(matchup["home"]["team_key"])
                     away_team = self.teams.get(matchup["away"]["team_key"])
                     if home_team and away_team:
-                        result = fast_sim_game(home_team, away_team, neutral_site=True)
+                        from engine.pro_scale import engine_scale, league_scale
+                        _center, _off = league_scale(self)
+                        with engine_scale(home_team, away_team, center=_center, offsets=(_off, _off)):
+                            result = ViperballEngine(
+                                home_team, away_team,
+                                seed=random.randint(1, 1_000_000),
+                                neutral_site=True, is_playoff=True,
+                            ).simulate_game()
                         h_score = result["final_score"]["home"]["score"]
                         a_score = result["final_score"]["away"]["score"]
                         winner_key = matchup["home"]["team_key"] if h_score > a_score else matchup["away"]["team_key"]

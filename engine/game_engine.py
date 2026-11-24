@@ -4971,6 +4971,12 @@ class ViperballEngine:
         self.game_form = {"home": 1.0, "away": 1.0}
         self.half_form = {"home": [1.0, 1.0], "away": [1.0, 1.0]}
         self.team_form = {"home": 1.0, "away": 1.0}
+        # WVL owner investment (0 to 8 team strength points, set by
+        # WVLDynasty) lifts the day's form, as it lifted fast sim strength.
+        inv_w = V2_ENGINE_CONFIG.get("investment_form_per_point", 0.006)
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            inv = getattr(team, "investment_modifier", 0.0) or 0.0
+            self.game_form[side] = self.team_form[side] = 1.0 + inv * inv_w
         if not sigma or sigma <= 0:
             return
         pivot = V2_ENGINE_CONFIG.get("form_star_pivot", 88.0)
@@ -4978,7 +4984,8 @@ class ViperballEngine:
         for side, team in (("home", self.home_team), ("away", self.away_team)):
             best = max((scale_rating(p.overall) for p in team.players), default=pivot)
             mean = 1.0 + (best - pivot) * w
-            self.game_form[side] = random.gauss(mean, sigma)
+            inv = getattr(team, "investment_modifier", 0.0) or 0.0
+            self.game_form[side] = random.gauss(mean + inv * inv_w, sigma)
 
     def _roll_half_form(self, half_index: int):
         """Hot or cold spell for a half, on top of the day's form."""

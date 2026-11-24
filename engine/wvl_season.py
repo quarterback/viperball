@@ -133,7 +133,7 @@ class WVLMultiTierSeason:
         if self.tier_seasons:
             self.phase = "regular_season"
 
-    def sim_week_all_tiers(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def sim_week_all_tiers(self, use_fast_sim: bool = False) -> Dict[int, dict]:
         """Simulate one week across all tiers. Returns tier_num → week results."""
         results = {}
         for tier_num, season in self.tier_seasons.items():
@@ -159,7 +159,7 @@ class WVLMultiTierSeason:
 
         return results
 
-    def sim_all(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def sim_all(self, use_fast_sim: bool = False) -> Dict[int, dict]:
         """Simulate entire regular season for all tiers."""
         all_results = {}
         for tier_num, season in self.tier_seasons.items():
@@ -198,7 +198,7 @@ class WVLMultiTierSeason:
 
         return results
 
-    def run_full_season(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def run_full_season(self, use_fast_sim: bool = False) -> Dict[int, dict]:
         """Sim entire season (regular + playoffs) for all tiers."""
         self.sim_all(use_fast_sim=use_fast_sim)
         self.start_playoffs_all()

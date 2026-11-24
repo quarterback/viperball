@@ -162,6 +162,7 @@ class WVLCareerLeague:
         self.results = {}
         self.current_week = 0
         self.phase = "regular"
+        self._engine_scale = None  # recomputed from this season's rosters
 
     # ─────────────────────────────────────────────────────────────
     # GRADUATE IMPORT
@@ -188,6 +189,10 @@ class WVLCareerLeague:
                     continue
                 if card.age is None:
                     card.age = DEFAULT_ENTRY_AGE
+                # CVL ratings use the current scale; pro clubs keep the old
+                # 60 to 100 scale (see engine/pro_scale.py).
+                from engine.pro_scale import card_to_legacy_scale
+                card_to_legacy_scale(card)
                 card.pro_status = "active"
                 self.cards[card.player_id] = card
                 imported.append(card)
@@ -321,8 +326,11 @@ class WVLCareerLeague:
             away = self.teams.get(away_key)
             if not home or not away:
                 continue
-            engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000))
-            result = engine.simulate_game()
+            from engine.pro_scale import engine_scale, league_scale
+            _center, _ = league_scale(self)
+            with engine_scale(home, away, center=_center):
+                engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000))
+                result = engine.simulate_game()
             hs = int(result["final_score"]["home"]["score"])
             as_ = int(result["final_score"]["away"]["score"])
             self._record(home_key, hs, as_)
