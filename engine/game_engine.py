@@ -4340,7 +4340,10 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go)
         rng = (self._away_dc_tactics_rng if def_side == "away"
                else self._home_dc_tactics_rng)
-        package = self._choose_defensive_package(def_side, tactics)
+        from .team_installation import active_situations
+        diff = self.state.home_score - self.state.away_score
+        situations = active_situations(self._package_context(diff if def_side == "home" else -diff))
+        package = self._choose_defensive_package(def_side, tactics, situations)
         if package:
             # Blend toward an existing posture; never add a second contest.
             strength = package["familiarity"]
@@ -4356,7 +4359,8 @@ class ViperballEngine:
             blitz_chance = max(0.02, min(0.65, blitz_chance +
                 package["blitz_shift"] * package["familiarity"]))
         blitz = rng.random() < blitz_chance
-        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz}
+        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz,
+                "situations": sorted(situations)}
         if package:
             call["package_id"] = package["package_id"]
             call["package_familiarity"] = package["familiarity"]
@@ -4367,7 +4371,7 @@ class ViperballEngine:
         counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
         counters["blitz_calls"] += int(blitz)
 
-    def _choose_defensive_package(self, side: str, tactics: Dict):
+    def _choose_defensive_package(self, side: str, tactics: Dict, situations=None):
         """Choose at most one installed package before the play family is known."""
         if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
                 and V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)):
@@ -4381,10 +4385,11 @@ class ViperballEngine:
         # The installation record was roster-filtered by sync_installation using
         # league-normalized personnel profiles. Do not compare raw fresh ratings
         # with the catalog's file-scale thresholds here.
-        st = self.state
-        diff = st.home_score - st.away_score
-        context = self._package_context(diff if side == "home" else -diff)
-        situations = active_situations(context)
+        if situations is None:
+            st = self.state
+            diff = st.home_score - st.away_score
+            context = self._package_context(diff if side == "home" else -diff)
+            situations = active_situations(context)
         # Existing alignments have real run-direction costs. The focus is a
         # finite read allocation, not a universal defense multiplier.
         effects = {
@@ -9818,9 +9823,14 @@ class ViperballEngine:
         surface = self._get_personnel_surface_weights("sack_rush")
         def score(p):
             return sum(getattr(p, attr, 75) * weight for attr, weight in surface.items()) * self.player_fatigue_modifier(p)
-        line = sorted((p for p, role in defenders if role == "Defensive Line"), key=score, reverse=True)
-        others = sorted((p for p, role in defenders if role != "Defensive Line"), key=score, reverse=True)
-        all_on = list(dict((p.name, p) for p, role in defenders).values())
+        # Preserve the first on-field role for each player if a depleted
+        # depth chart returned a duplicate emergency assignment.
+        unique = {}
+        for p, role in defenders:
+            unique.setdefault(p.name, (p, role))
+        line = sorted((p for p, role in unique.values() if role == "Defensive Line"), key=score, reverse=True)
+        others = sorted((p for p, role in unique.values() if role != "Defensive Line"), key=score, reverse=True)
+        all_on = [p for p, role in unique.values()]
         base_count = min(2, max(0, len(all_on) - 1))
         rushers = (line + others)[:base_count]
         if blitz:
