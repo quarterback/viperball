@@ -2312,6 +2312,11 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
     # expects a single number.
     if fr:
         _normalize_box_score_stats(fr)
+        fm = _face_map(season)
+        for side, tname in (("home", game.home_team), ("away", game.away_team)):
+            for p in (fr.get("player_stats") or {}).get(side, []) or []:
+                if isinstance(p, dict) and "name" in p:
+                    p["face_src"] = fm.get((tname, p["name"]))
 
     # Generate game analysis text if full result is available
     analysis_text = None
@@ -2793,6 +2798,22 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
     ))
 
 
+def _face_map(season):
+    """{(team, player name): pixel face url} for every player in the season. Cached."""
+    cached = _cache_get(season, "face_map")
+    if cached is not None:
+        return cached
+    fm = {}
+    if _get_face_pool_size():
+        for tname, team in season.teams.items():
+            for pl in team.players:
+                pid = getattr(pl, "player_id", "")
+                if pid:
+                    fm[(tname, pl.name)] = _face_url_for(pid)
+    _cache_set(season, "face_map", fm)
+    return fm
+
+
 def _cached_college_player_agg(season):
     """Aggregate all player stats from completed games, with derived stats. Cached."""
     cached = _cache_get(season, "college_player_agg")
@@ -2887,6 +2908,10 @@ def _cached_college_player_agg(season):
         r["war"] = calculate_war(r, r.get("position", ""))
         r["zbr"] = calculate_zbr(r)
         r["vpr"] = calculate_vpr(r)
+
+    fm = _face_map(season)
+    for r in players:
+        r["face_src"] = fm.get((r["team"], r["name"]))
 
     _cache_set(season, "college_player_agg", players)
     return players
