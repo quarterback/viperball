@@ -4281,11 +4281,11 @@ class ViperballEngine:
 
     def _package_context(self, score_diff):
         st = self.state
-        side = "away" if st.possession == "home" else "home"
         team = self.get_defensive_team()
-        on_field = self._on_field(team, self._unavailable_in_game(team), side)
+        on_field = self._on_field(team, self._unavailable_in_game(team), "defense")
         energy = (sum(p.game_energy for p in on_field) / len(on_field)
                   if on_field else None)
+        self._snap_defense_energy = energy
         return {"down": st.down, "yards_to_go": st.yards_to_go,
                 "field_position": st.field_position, "quarter": st.quarter,
                 "time_remaining": st.time_remaining, "score_diff": score_diff,
@@ -6687,6 +6687,7 @@ class ViperballEngine:
                         self.state.field_position = max(1, 100 - fp)
                     self.state.down = 1
                     self.state.yards_to_go = 20
+                    self._next_drive_origin = "other_restart"
 
         # Track compelled efficiency: did a delta-penalized drive end in a score?
         is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td")
@@ -7917,6 +7918,7 @@ class ViperballEngine:
         # Do not leak a prior defensive call onto a kick or penalty snap.
         self._active_defensive_call = None
         self._rush_event = None
+        self._snap_defense_energy = None
         self._possession_snap_count += 1
 
         # Save pre-play state.  Every Play in the log should show the
@@ -7931,6 +7933,7 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+        play.defense_energy = getattr(self, "_snap_defense_energy", None)
         play.possession_origin = self._drive_origin
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
@@ -9774,6 +9777,7 @@ class ViperballEngine:
                 blitz_skill = self._personnel_weighted_score(blitz_rusher, rush_surface)
                 if blitz_skill > rush_skill:
                     rusher = blitz_rusher
+                    rush_skill = blitz_skill
 
         # ── Sub-family release time modifier ──
         sf_sack_mod = {
@@ -15392,6 +15396,7 @@ class ViperballEngine:
             "play_family": play.play_family,
             "defensive_call": getattr(play, "defensive_call", None),
             "rush_event": getattr(play, "rush_event", None),
+            "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "formation": getattr(play, "formation", "") or "",
