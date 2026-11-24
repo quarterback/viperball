@@ -76,7 +76,7 @@ The Zeroback rise is the new sack exposure. Declines fall because offenses no lo
 Existing suite (`tests/`): 174 passed. The root level `test_wvl.py` fails to import `compute_season_revenue` on main as well; unrelated. Trial merge with PR #349 (ST-01/ST-02) is clean, and the punt returner label the exposure check reads is unchanged on that branch. STI-VAL belongs after both land.
 
 ## Limits
-- Run plays on main still show a gap between play log rushing yards and player rushing yards (975 yards over 20 games on main, 728 here). The rest comes from referee spot errors, which change the play's yards but not the runner's stat, and from trick plays. Not addressed here.
+- Run plays on main still show a gap between play log rushing yards and player rushing yards. Correction from the follow up run (`aar_2026-11-24_spot_errors_return_fouls.md`): spot errors were a small part of it. Most of the gap was runs that end in a fumble or a safety, which never credited the carrier, and lateral chain fumbles.
 - The sack safety branch in the kick pass code can never fire (`max(1, ...)` before a `<= 0` check). Left alone.
-- Kicking team fouls during a punt return are declined by the receiving team rather than added to the end of the return.
+- Kicking team fouls during a punt return are declined by the receiving team rather than added to the end of the return. Fixed in the follow up run.
 - Rolling the live ball foul before the play changes the random number sequence, so seeded games differ from main. Seeds still reproduce run to run.
