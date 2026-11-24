@@ -34,6 +34,20 @@ The React workbench at `/app` is retired ([PR #336](https://github.com/quarterba
 
 **Validation policy for this workstream (user decision):** Use existing smoke paths and focused outcome benchmarks. Do not create a new unit-test suite or CI workflow for each PR. Add regression tests only for actual bugs or critical invariants. Run the full existing suite at integration milestones. Report seeds, sample sizes, denominators, effects and limitations in one evolving AAR. Prefer intermediate commits on one branch over separate PRs. No claims of implemented mechanics or validation until observed.
 
+## Next integrated engine workstream — special teams, penalties and injuries (November 24 UTC)
+
+Owner: ChatGPT engine track. Start from current main; no stats-site redesign. Preserve canonical rules and existing defensive commitments. One combined implementation and outcome study; no new per-feature CI or test suite.
+
+| ID | Priority | Status | Scope and acceptance |
+|---|---|---|---|
+| PEN-01 | P0 | OPEN | Correct pre-snap attribution, possession and scoring on accepted/declined live-ball fouls; first-down distance, kick-pass auto-first, penalty enforcement spot and replayed downs. Reconcile official play/player/drive stats; retain legitimate physical fatigue/injury events. |
+| ST-01 | P1 | OPEN | Audit the five existing ST schemes and saved STC preferences; connect bounded coordinator decisions to legal punt/score/return/block/fake choices. Distinguish scheme from coach, quantify strengths and concessions. |
+| ST-02 | P1 | OPEN | Special teams personnel and matchup diversity: select actual eligible kicker/returner/coverage/rush players once per event; consistent block, muff, return and fake consequences, injury substitutions and field position. Verify drop vs place kick, missed-kick returns, pindowns and rouge rules. |
+| INJ-01 | P0 | OPEN | Explicit participant-team attribution; consistent fatigue risk for offense and defense, actual special teams/rush exposure, no duplicate checks, reliable substitutions and season/dynasty persistence. |
+| STI-VAL | P1 | OPEN | Combined matched full games across five ST schemes, coach profiles, roster depth, weather and fatigue; targeted rare-state replays for accepted/declined flags on scores/turnovers/kicks, depleted units and injury replacements; existing regression suite once. Report official scoring, possession, kick/penalty/injury denominators and player credit reconciliation. |
+
+Initial code evidence: game_engine.py select_kick_decision, _check_penalties, _should_decline_penalty, _apply_pre_snap_penalty, _apply_during_play_penalty, _apply_post_play_penalty, simulate_punt/drop_kick/place_kick and check_in_game_injury/check_defender_injury. Penalty attribution currently reads mutable possession after resolution; offensive accepted during-play rollback restores only field/down/distance, not score/possession/credits. Several enforcement paths do not update remaining distance, and kick-pass catalog is missing from auto-first lookup. Defensive injury path omits offensive fatigue adjustment; existing injury call sites lack explicit special teams exposure. ST_SCHEMES already defines Iron Curtain, Lightning Returns, Block Party, Chaos Unit and Aces; coach_tactics.py persists field_position_bias and return_aggression but needs runtime audit. Muff and return paths independently select returners; check consistency before changing rates. Do not add generic success bonuses or arbitrary injury/penalty frequency targets. Findings are code inspection, not benchmark evidence.
+
 ## Purpose and decision
 
 This is the shared work queue for agents making Viperball's simulation coherent, tactically differentiated, measurable, and visible to players. It preserves the findings of the November 23 repository/branch review and turns them into bounded, testable engineering tasks. It is **not** a change to the sport's rules, a blanket authorization to retune scoring, or a claim that all the listed defects are already proven by tests.
