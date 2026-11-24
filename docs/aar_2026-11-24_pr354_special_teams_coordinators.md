@@ -65,4 +65,4 @@ Existing suite (`tests/`) on the branch merged with main: 181 passed.
 ## Notes for whoever finishes ST-01/ST-02
 - Fakes are now rare: 9 in 400 games, against 14 on main. Check that this is intended before tuning anything that relies on them.
 - #349 also counts blocked kicks as kick attempts and awards a recovery bell on blocked drop kicks and place kicks. This PR does neither, so the two versions disagree on those stats.
-- Field position bias lowers the 5th down snap kick yardage line, so a territory minded coordinator takes more short 5th down snap kicks. That may be the opposite of the intent.
+- Field position bias lowers the 5th down snap kick yardage line, so a special teams coordinator who favors field position takes more short 5th down snap kicks. That may be the opposite of the intent.
