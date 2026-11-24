@@ -5,6 +5,7 @@ Mounts as a sub-application on the main FastAPI app under /stats/.
 All data comes from the in-memory sessions/pro_sessions/FIV state — no extra HTTP calls.
 """
 
+import json
 import os
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -1092,7 +1093,7 @@ def game_sim_result(request: Request, game_id: str):
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="tools", session_id="", oneoff=True,
         game=game, week=0, game_idx=0, bowl_name=None, is_playoff=False,
-        analysis_text=analysis_text,
+        analysis_text=analysis_text, tactics=_game_tactics(None, fr, game["home_team"], game["away_team"]),
         stadium_url=_stadium_url_for(game["home_team"]),
         benchmarks=None,
     ))
@@ -2171,6 +2172,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         academics=academics,
         team_chemistry=team_chemistry,
         installation=_installation_for(season, team_name),
+        season_tactics=_team_season_tactics(season, team_name),
         phase=sess.get("phase"),
     ))
 
@@ -2328,15 +2330,147 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
             pass
 
     benchmarks = _game_benchmarks_from_season(season)
+    tactics = _game_tactics(season, fr, game_data.get("home_team"), game_data.get("away_team")) if isinstance(game_data, dict) else None
 
     return templates.TemplateResponse("college/game.html", _ctx(
         request, section="college", session_id=session_id,
         game=game_data, week=week, game_idx=game_idx,
         bowl_name=bowl_name, is_playoff=is_playoff,
-        analysis_text=analysis_text,
+        analysis_text=analysis_text, tactics=tactics,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
         benchmarks=benchmarks,
     ))
+
+
+_PACKAGE_NAMES = None
+
+
+def _package_name(pid):
+    global _PACKAGE_NAMES
+    if _PACKAGE_NAMES is None:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                   "data", "playbooks", "packages.json")) as f:
+                _PACKAGE_NAMES = {p["package_id"]: p.get("name", p["package_id"])
+                                  for p in json.load(f).get("packages", [])}
+        except Exception:
+            _PACKAGE_NAMES = {}
+    return _PACKAGE_NAMES.get(pid) or pid.replace("_", " ").title()
+
+
+def _label(v):
+    return (v or "").replace("_", " ").title()
+
+
+def _mix(counts, top=None):
+    """{key: count} -> [(label, count, share)] sorted by count."""
+    counts = counts or {}
+    total = sum(counts.values()) or 1
+    rows = sorted(((_label(k), n, n / total) for k, n in counts.items() if n), key=lambda r: -r[1])
+    return rows[:top] if top else rows
+
+
+def _game_tactics(season, fr, home, away):
+    """Per-team view of the game plans each staff called and how the rush went."""
+    if not fr:
+        return None
+    ot, dt = fr.get("coach_tactics") or {}, fr.get("defensive_coach_tactics") or {}
+    reads, rush = fr.get("defensive_reads") or {}, fr.get("defensive_rush") or {}
+    if not any((ot.get(s) or dt.get(s) or rush.get(s)) for s in ("home", "away")):
+        return None
+    staffs = getattr(season, "coaching_staffs", None) or {} if season else {}
+
+    def coach_name(team, cid):
+        for card in (staffs.get(team) or {}).values():
+            c = card if isinstance(card, dict) else getattr(card, "__dict__", {})
+            if c.get("coach_id") == cid:
+                return f"{c.get('first_name', '')} {c.get('last_name', '')}".strip() or None
+        return None
+
+    out = []
+    for side, team in (("away", away), ("home", home)):
+        o, d, r = ot.get(side) or {}, dt.get(side) or {}, rush.get(side) or {}
+        sel = o.get("selected") or {}
+        rushers = []
+        for label, st in (r.get("by_player") or {}).items():
+            tag, _, name = label.partition(" ")
+            rushers.append({"name": name or label, "tag": tag, **st})
+        rushers.sort(key=lambda x: (-x["sacks"], -x["lead_hurries"], -x["rush_snaps"]))
+        attempts = r.get("attempts") or 0
+        out.append({
+            "side": side, "team": team,
+            "oc": {"name": coach_name(team, o.get("oc_id")), "signature": _label(o.get("signature")),
+                   "featured": o.get("featured_position")} if o else None,
+            "formations": _mix(sel.get("formation")),
+            "families": _mix(sel.get("family"), 6),
+            "off_packages": [(_package_name(k), n) for k, n in sorted((sel.get("packages") or {}).items(), key=lambda x: -x[1])],
+            "dc": {"name": coach_name(team, d.get("dc_id")), "signature": _label(d.get("signature")),
+                   "coverage": _label(d.get("coverage_focus")),
+                   "read_focus": ", ".join(_label(x) for x in d.get("read_focus") or [])} if d else None,
+            "calls": d.get("calls") or 0, "blitz_calls": d.get("blitz_calls") or 0,
+            "alignments": _mix(d.get("alignments")),
+            "def_packages": [(_package_name(k), n, (d.get("packages") or {}).get("eligible", {}).get(k, 0))
+                             for k, n in sorted(((d.get("packages") or {}).get("selected") or {}).items(), key=lambda x: -x[1])],
+            "def_eligible": sum(((d.get("packages") or {}).get("eligible") or {}).values()),
+            "reads": [(_label(k), (d.get("read_successes") or {}).get(k, 0), n)
+                      for k, n in sorted((d.get("read_attempts") or {}).items(), key=lambda x: -x[1])],
+            "read_total": reads.get(side) or {},
+            "rush": {"attempts": attempts, "pressures": r.get("pressures", 0), "hurries": r.get("hurries", 0),
+                     "sacks": r.get("sacks", 0),
+                     "avg_rushers": (r.get("rushers_committed", 0) / attempts) if attempts else 0,
+                     "by_count": sorted(((int(k), v) for k, v in (r.get("by_count") or {}).items())),
+                     "players": rushers[:8]},
+        })
+    return out
+
+
+def _team_season_tactics(season, team_name):
+    """Season totals of the game plans a team called and its pass rush, from every played game."""
+    key = f"team_tactics:{team_name}"
+    cached = _cache_get(season, key)
+    if cached is not None:
+        return cached
+
+    def add(dst, src):
+        for k, v in (src or {}).items():
+            if isinstance(v, dict):
+                add(dst.setdefault(k, {}), v)
+            elif isinstance(v, (int, float)) and not isinstance(v, bool):
+                dst[k] = dst.get(k, 0) + v
+
+    games, off, dfn, reads, rush = 0, {}, {}, {}, {}
+    sigs = {"oc": {}, "dc": {}}
+    for g in season.schedule:
+        fr = getattr(g, "full_result", None)
+        if not g.completed or not fr or team_name not in (g.home_team, g.away_team):
+            continue
+        side = "home" if g.home_team == team_name else "away"
+        o = (fr.get("coach_tactics") or {}).get(side) or {}
+        d = (fr.get("defensive_coach_tactics") or {}).get(side) or {}
+        if not (o or d or (fr.get("defensive_rush") or {}).get(side)):
+            continue
+        games += 1
+        add(off, o.get("selected"))
+        add(dfn, {k: d.get(k) for k in ("alignments", "packages", "read_attempts", "read_successes")})
+        dfn["calls"] = dfn.get("calls", 0) + (d.get("calls") or 0)
+        dfn["blitz_calls"] = dfn.get("blitz_calls", 0) + (d.get("blitz_calls") or 0)
+        add(reads, (fr.get("defensive_reads") or {}).get(side))
+        add(rush, (fr.get("defensive_rush") or {}).get(side))
+        for role, src in (("oc", o), ("dc", d)):
+            if src.get("signature"):
+                sigs[role][src["signature"]] = sigs[role].get(src["signature"], 0) + 1
+    if not games:
+        _cache_set(season, key, {})
+        return {}
+    fake = {"coach_tactics": {"home": {"selected": off,
+                                       "signature": max(sigs["oc"], key=sigs["oc"].get) if sigs["oc"] else ""}},
+            "defensive_coach_tactics": {"home": {**dfn,
+                                                 "signature": max(sigs["dc"], key=sigs["dc"].get) if sigs["dc"] else ""}},
+            "defensive_reads": {"home": reads}, "defensive_rush": {"home": rush}}
+    view = _game_tactics(None, fake, team_name, "")[1]
+    view["games"] = games
+    _cache_set(season, key, view)
+    return view
 
 
 def _aggregate_player_season_totals(season, team_name, player_name):

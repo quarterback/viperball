@@ -412,6 +412,70 @@
 <tr style="border-top:2px solid var(--border)"><td colspan="3" style="color:var(--accent);font-weight:bold;font-size:11px;letter-spacing:1px;padding-top:8px">{{ title }}</td></tr>
 {% endmacro %}
 
+{% if tactics %}
+{% macro tac_bar(label, n, share) %}
+<div class="tac-bar"><span>{{ label }}</span><span class="tac-track"><span style="width:{{ (share * 100) | round | int }}%"></span></span><span class="tac-n">{{ n }}</span></div>
+{% endmacro %}
+<style>
+.tac-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 32px; }
+.tac-grid h3 { margin: 4px 0 6px; }
+.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); }
+.tac-bar { display: grid; grid-template-columns: 150px 1fr 40px; gap: 10px; align-items: center; font-size: 14px; margin: 4px 0; }
+.tac-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.tac-track span { display: block; height: 100%; background: var(--accent); }
+.tac-n { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-dim); }
+.tac-who { font-size: 14px; margin: 0 0 8px; }
+.tac-grid table { margin-top: 6px; }
+</style>
+<h2>Game Plans</h2>
+<div class="tac-grid">
+{% for t in tactics %}
+<div>
+  <h3>{{ t.team }}</h3>
+
+  {% if t.oc %}
+  <h4>Offense</h4>
+  <p class="tac-who">{% if t.oc.name %}{{ t.oc.name }}, {% endif %}{{ t.oc.signature }}{% if t.oc.featured %}. Featured: {{ t.oc.featured }}{% endif %}</p>
+  {% for label, n, share in t.formations %}{{ tac_bar(label, n, share) }}{% endfor %}
+  {% if t.families %}<div style="height:8px"></div>{% for label, n, share in t.families %}{{ tac_bar(label, n, share) }}{% endfor %}{% endif %}
+  {% if t.off_packages %}<p class="tac-who" style="margin-top:8px">Packages: {% for name, n in t.off_packages %}{{ name }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  {% endif %}
+
+  {% if t.dc %}
+  <h4>Defense</h4>
+  <p class="tac-who">{% if t.dc.name %}{{ t.dc.name }}, {% endif %}{{ t.dc.signature }}{% if t.dc.coverage %}, {{ t.dc.coverage | lower }} coverage{% endif %}{% if t.dc.read_focus %}, reading {{ t.dc.read_focus | lower }}{% endif %}</p>
+  <p class="tac-who">{{ t.calls }} calls, {{ t.blitz_calls }} blitzes{% if t.read_total.attempts %}, {{ t.read_total.reads }} of {{ t.read_total.attempts }} plays read{% endif %}</p>
+  {% for label, n, share in t.alignments %}{{ tac_bar(label, n, share) }}{% endfor %}
+  {% if t.def_packages %}<p class="tac-who" style="margin-top:8px">Packages: {% for name, n, elig in t.def_packages %}{{ name }} called {{ n }} of {{ elig }} eligible snaps{% if not loop.last %}; {% endif %}{% endfor %}</p>
+  {% elif t.def_eligible %}<p class="tac-who" style="margin-top:8px">No package called on {{ t.def_eligible }} eligible snaps</p>{% endif %}
+  {% if t.reads %}
+  <table>
+    <thead><tr><th>Read</th><th class="num">Correct</th><th class="num">Tried</th><th class="num">Rate</th></tr></thead>
+    <tbody>{% for label, ok, n in t.reads %}<tr><td>{{ label }}</td><td class="num">{{ ok }}</td><td class="num">{{ n }}</td><td class="num">{{ '%.0f' | format(100 * ok / n) if n else '0' }}%</td></tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  {% endif %}
+
+  {% if t.rush.attempts %}
+  {% set r = t.rush %}
+  <h4>Pass rush</h4>
+  <p class="tac-who">{{ r.attempts }} kick-pass attempts faced, {{ r.pressures }} pressures ({{ '%.0f' | format(100 * r.pressures / r.attempts) }}%), {{ r.hurries }} hurries, {{ r.sacks }} sacks, {{ '%.1f' | format(r.avg_rushers) }} rushers per attempt</p>
+  <table>
+    <thead><tr><th class="num">Rushers</th><th class="num">Att</th><th class="num">Press</th><th class="num">Hurry</th><th class="num">Sack</th><th class="num">Comp</th></tr></thead>
+    <tbody>{% for k, b in r.by_count %}<tr><td class="num">{{ k }}</td><td class="num">{{ b.attempts }}</td><td class="num">{{ b.pressures }}</td><td class="num">{{ b.hurries }}</td><td class="num">{{ b.sacks }}</td><td class="num">{{ b.completions }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% if r.players %}
+  <table>
+    <thead><tr><th>Rusher</th><th class="num">Snaps</th><th class="num">Hurries</th><th class="num">Sacks</th></tr></thead>
+    <tbody>{% for p in r.players %}<tr><td><span style="color:var(--fg-dim)">{{ p.tag }}</span> <a href="/stats/college/{{ session_id }}/player/{{ t.team }}/{{ p.name }}">{{ p.name }}</a></td><td class="num">{{ p.rush_snaps }}</td><td class="num">{{ p.lead_hurries }}</td><td class="num {% if p.sacks %}stat-good{% endif %}">{{ p.sacks }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  {% endif %}
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
 <h2>Team Stats</h2>
 <table>
   <thead>
