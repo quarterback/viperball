@@ -16,3 +16,6 @@ Defensive rare-situation study #342 and dynasty study #344 are separate complete
 
 ## Next
 Refresh branch from main, implement ST-01/ST-02 plus PEN-01/INJ-01 integrity corrections, run STI-VAL after integration, append actual results and limitations here. No merge/deployment or runtime claims yet.
+
+## PEN-01 and INJ-01 status
+Implemented on `claude/pen01-inj01`. Details, numbers and limits in `aar_2026-11-24_pen01_inj01_enforcement_injuries.md`. ST-01/ST-02 untouched; trial merge with #349 is clean.
