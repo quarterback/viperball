@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }} — {{ team_name }} — {{ archive.label or archive.season_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/archives/">Archives</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/">{{ archive.label or archive.season_name }}</a><span class="sep">/</span><a href="/stats/archives/{{ archive_key }}/team/{{ team_name | urlencode }}">{{ team_name }}</a><span class="sep">/</span>{{ player.name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+{% if stadium_url %}<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>{% endif %}
+{% set p = player %}
+<div class="page-header">
+  <h1>{{ p.name }}</h1>
+  <div class="subtitle"><a href="/stats/archives/{{ archive_key }}/team/{{ team_name | urlencode }}">{{ team_name }}</a> &middot; #{{ p.number }} {{ p.position_full or p.position }} &middot; {{ p.year }}{% if p.redshirt %} (RS){% endif %} &middot; {{ archive.season_name }}</div>
+</div>
+
+<div class="grid-2" style="clear:both">
+<div>
+  <h2>Player Info</h2>
+  <table>
+    <tbody>
+      <tr><td>Overall</td><td><strong>{{ p.overall }}</strong></td></tr>
+      <tr><td>Potential</td><td>{% for i in range(p.potential or 0) %}&#9733;{% endfor %}{% for i in range(5 - (p.potential or 0)) %}&#9734;{% endfor %}{% if p.development %} ({{ p.development }}){% endif %}</td></tr>
+      <tr><td>Archetype</td><td>{{ (p.archetype or '') | replace('_', ' ') | title }}</td></tr>
+      <tr><td>Height / Weight</td><td>{{ p.height }} / {{ p.weight }} lbs</td></tr>
+      <tr><td>Hometown</td><td>{{ p.hometown_city }}{% if p.hometown_state %}, {{ p.hometown_state }}{% endif %}{% if p.hometown_country and p.hometown_country not in ('USA', 'United States') %}, {{ p.hometown_country }}{% endif %}</td></tr>
+      <tr><td>High School</td><td>{{ p.high_school }}</td></tr>
+      {% if awards or p.career_awards %}
+      <tr><td>Awards</td><td>{% for a in awards %}{{ a }}{% if not loop.last %}, {% endif %}{% endfor %}{% if awards and p.career_awards %}, {% endif %}{% for a in p.career_awards %}{{ a.award if a is mapping else a }}{% if a is mapping and a.year %} ({{ a.year }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+<div>
+  <h2>Attributes</h2>
+  <table>
+    <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
+    <tbody>
+    {% for k, lab in [('speed','Speed'),('power','Power'),('agility','Agility'),('hands','Hands'),('awareness','Awareness'),('stamina','Stamina'),('tackling','Tackling'),('kicking','Kicking'),('kick_power','Kick Power'),('kick_accuracy','Kick Accuracy'),('lateral_skill','Lateral Skill')] %}
+    {% if p[k] is defined %}
+    <tr><td>{{ lab }}</td><td class="num">{{ p[k] }}</td><td><span style="display:inline-block;width:100px;height:6px;background:var(--border);vertical-align:middle"><span style="display:block;height:100%;width:{{ p[k] }}%;background:var(--accent)"></span></span></td></tr>
+    {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+
+<h2>Game Log{% if games %} ({{ games | length }} game{{ "" if games | length == 1 else "s" }}){% endif %}</h2>
+{% if games %}
+{% set t = totals %}
+<div class="table-scroll"><table>
+  <thead><tr>
+    <th class="num">Wk</th><th></th><th>Opponent</th><th>Result</th>
+    <th class="num">TCH</th><th class="num">RUSH</th><th class="num">YDS</th><th class="num">TD</th><th class="num">FUM</th>
+    <th class="num">KP</th><th class="num">KPY</th><th class="num">REC</th><th class="num">LAT</th>
+    <th class="num">TKL</th><th class="num">TFL</th><th class="num">SCK</th><th class="num">HUR</th>
+  </tr></thead>
+  <tbody>
+  {% for g in games %}{% set s = g.s %}
+  <tr>
+    <td class="num">{{ g.week }}</td><td>{{ 'vs' if g.home else '@' }}</td>
+    <td><a href="/stats/archives/{{ archive_key }}/team/{{ g.opponent | urlencode }}">{{ g.opponent }}</a></td>
+    <td><span class="{{ 'w' if g.won else 'l' }}">{{ 'W' if g.won else 'L' }}</span> {{ g.score }}</td>
+    <td class="num">{{ s.touches or 0 }}</td><td class="num">{{ s.rush_carries or 0 }}</td><td class="num">{{ s.yards or 0 }}</td>
+    <td class="num">{{ s.tds or 0 }}</td><td class="num">{{ s.fumbles or 0 }}</td>
+    <td class="num">{% if s.kick_passes_thrown %}{{ s.kick_passes_completed or 0 }}/{{ s.kick_passes_thrown }}{% else %}&ndash;{% endif %}</td>
+    <td class="num">{{ s.kick_pass_yards or 0 }}</td><td class="num">{{ s.kick_pass_receptions or 0 }}</td><td class="num">{{ s.lateral_receptions or 0 }}</td>
+    <td class="num">{{ s.tackles or 0 }}</td><td class="num">{{ s.tfl or 0 }}</td><td class="num">{{ s.sacks or 0 }}</td><td class="num">{{ s.hurries or 0 }}</td>
+  </tr>
+  {% endfor %}
+  <tr style="font-weight:600">
+    <td colspan="4">Season</td>
+    <td class="num">{{ t.touches or 0 }}</td><td class="num">{{ t.rush_carries or 0 }}</td><td class="num">{{ t.yards or 0 }}</td>
+    <td class="num">{{ t.tds or 0 }}</td><td class="num">{{ t.fumbles or 0 }}</td>
+    <td class="num">{% if t.kick_passes_thrown %}{{ t.kick_passes_completed or 0 }}/{{ t.kick_passes_thrown }}{% else %}&ndash;{% endif %}</td>
+    <td class="num">{{ t.kick_pass_yards or 0 }}</td><td class="num">{{ t.kick_pass_receptions or 0 }}</td><td class="num">{{ t.lateral_receptions or 0 }}</td>
+    <td class="num">{{ t.tackles or 0 }}</td><td class="num">{{ t.tfl or 0 }}</td><td class="num">{{ t.sacks or 0 }}</td><td class="num">{{ t.hurries or 0 }}</td>
+  </tr>
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty">No saved box scores for this season, so there is no game log.</div>
+{% endif %}
+{% endblock %}

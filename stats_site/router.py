@@ -6030,6 +6030,65 @@ def archive_team(request: Request, archive_key: str, team_name: str):
     ))
 
 
+@router.get("/archives/{archive_key}/team/{team_name}/player/{player_name}", response_class=HTMLResponse)
+def archive_player(request: Request, archive_key: str, team_name: str, player_name: str):
+    """A player's page inside an archived season: profile from the archived
+    roster, game log from the saved box scores of that season."""
+    _, load_fn = _get_archives()
+    if not load_fn:
+        raise HTTPException(404, "Archive system unavailable")
+    data = load_fn(archive_key)
+    if data is None:
+        raise HTTPException(404, "Archive not found")
+    roster = (data.get("team_rosters", {}).get(team_name) or {}).get("players", [])
+    player = next((p for p in roster if p.get("name") == player_name), None)
+    if not player:
+        raise HTTPException(404, f"{player_name} not found on {team_name} in this archive")
+
+    games, totals = [], {}
+    sum_keys = ("touches", "rush_carries", "rushing_yards", "yards", "tds", "fumbles", "kick_passes_thrown",
+                "kick_passes_completed", "kick_pass_yards", "kick_pass_receptions", "laterals_thrown",
+                "lateral_receptions", "tackles", "tfl", "sacks", "hurries", "kick_pass_ints",
+                "kick_made", "kick_att", "keeper_tackles", "kick_returns", "kick_return_yards",
+                "punt_returns", "punt_return_yards", "all_purpose_yards", "offensive_snaps", "defensive_snaps")
+    sid = data.get("session_id")
+    if sid:
+        from engine.db import load_box_score
+        for g in data.get("schedule", []):
+            if not g.get("completed") or team_name not in (g.get("home_team"), g.get("away_team")):
+                continue
+            side = "home" if g["home_team"] == team_name else "away"
+            try:
+                fr = load_box_score(sid, g["week"], g["home_team"], g["away_team"])
+            except Exception:
+                fr = None
+            stats = next((x for x in ((fr or {}).get("player_stats") or {}).get(side, []) or []
+                          if isinstance(x, dict) and x.get("name") == player_name), None)
+            if not stats:
+                continue
+            _normalize_box_score_stats({"player_stats": {side: [stats]}})
+            us = g["home_score"] if side == "home" else g["away_score"]
+            them = g["away_score"] if side == "home" else g["home_score"]
+            games.append({"week": g["week"], "home": side == "home",
+                          "opponent": g["away_team"] if side == "home" else g["home_team"],
+                          "won": us > them, "score": f"{_fmt_pts(us)}-{_fmt_pts(them)}", "s": stats})
+            for k in sum_keys:
+                v = stats.get(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    totals[k] = totals.get(k, 0) + v
+
+    awards = []
+    aw = data.get("awards") or {}
+    for a in aw.get("individual_awards") or []:
+        if isinstance(a, dict) and a.get("player_name") == player_name and a.get("team_name", team_name) == team_name:
+            awards.append(a.get("award_name") or a.get("award") or "")
+    return templates.TemplateResponse("archives/player.html", _ctx(
+        request, section="archives", archive=data, archive_key=archive_key, team_name=team_name,
+        player=player, games=games, totals=totals, awards=[a for a in awards if a],
+        stadium_url=_stadium_url_for(team_name),
+    ))
+
+
 @router.get("/archives/{archive_key}/playoffs", response_class=HTMLResponse)
 def archive_playoffs(request: Request, archive_key: str):
     _, load_fn = _get_archives()
