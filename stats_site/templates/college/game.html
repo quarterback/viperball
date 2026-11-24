@@ -731,16 +731,18 @@
   {% set hb = hdye.get(bucket, {}) %}
   {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }} drives · {{ '%.2f'|format(ab.get('points_per_drive', 0)) }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD / {{ ab.get('kicks', 0) }} kicks{% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
     <td style="font-size:10px;">{{ label }}<span style="display:block;color:var(--fg-dim);">Points, not just scoring frequency</span></td>
-    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }} drives · {{ '%.2f'|format(hb.get('points_per_drive', 0)) }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD / {{ hb.get('kicks', 0) }} kicks{% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
   </tr>
   {% endif %}
   {% endfor %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ '%.2f'|format(as_.get('dye', {}).get('power_play', {}).get('points_vs_start_ep', 0)) }}</td>
-    <td style="font-size:10px;">Power Play points vs starting-position EP<br><span style="color:var(--fg-dim);">Static EP-table comparison, not points above replacement</span></td>
-    <td class="num" style="font-size:10px;">{{ '%.2f'|format(hs.get('dye', {}).get('power_play', {}).get('points_vs_start_ep', 0)) }}</td>
+    {% set a_pp = as_.get('dye', {}).get('power_play', {}) %}
+    {% set h_pp = hs.get('dye', {}).get('power_play', {}) %}
+    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(a_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in a_pp else '—' }} EP/start · {{ ('%+.2f'|format(a_pp.points_vs_start_ep)) if 'points_vs_start_ep' in a_pp else '—' }} points vs EP</td>
+    <td style="font-size:10px;">Power Play starting-position EP<br><span style="color:var(--fg-dim);">Static field-position table; not points above replacement</span></td>
+    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(h_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in h_pp else '—' }} EP/start · {{ ('%+.2f'|format(h_pp.points_vs_start_ep)) if 'points_vs_start_ep' in h_pp else '—' }} points vs EP</td>
   </tr>
   {# Mess Rate row #}
   {% set a_mr = as_.get('mess_rate') %}
