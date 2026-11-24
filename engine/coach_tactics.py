@@ -329,6 +329,9 @@ def resolve_defensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
         "pressure_bias": max(-0.15, min(0.15, float(defense.get("pressure_bias", 0.0)))),
         "run_support_bias": max(-0.15, min(0.15, float(defense.get("run_support_bias", 0.0)))),
         "coverage_focus": str(defense.get("coverage_focus", "")),
+        "aggression": max(0.0, min(1.0, float((dc.personality_sliders or {}).get("aggression", 50))/100)),
+        "adaptability": max(0.0, min(1.0, float((dc.personality_sliders or {}).get("adaptability", 50))/100)),
+        "stubbornness": max(0.0, min(1.0, float((dc.personality_sliders or {}).get("stubbornness", 50))/100)),
         "read_focus": focus,
     }
 

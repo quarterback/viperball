@@ -284,6 +284,22 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
             s = 0.0
             for key, tag_field in _PACKAGE_TAGS.items():
                 s += sum(bias.get(key, {}).get(t, 0.0) for t in pkg.get(tag_field, []))
+            if side == "defense":
+                from engine.defensive_commitments import PRESS_PACKAGES, COVER_PACKAGES, WALL_PACKAGES
+                defense = _profile(card).get("defense", {})
+                pressure = float(defense.get("pressure_bias", 0.0))
+                support = float(defense.get("run_support_bias", 0.0))
+                focus = defense.get("coverage_focus", "")
+                if pid in PRESS_PACKAGES:
+                    s += pressure
+                elif pid in COVER_PACKAGES:
+                    s -= pressure
+                    s += .04 if focus in ("deep", "intermediate", "perimeter") else 0.0
+                elif pid in WALL_PACKAGES:
+                    s += support
+                # Keep the program's native book a meaningful consideration.
+                if pkg["origin_family"] == family:
+                    s += .06
             if pkg["origin_family"] == family:
                 s += 0.01   # tie break toward the home book's own packages
             return s

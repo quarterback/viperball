@@ -11,6 +11,7 @@ from benchmark_defensive_coaches import ROOT, coach, dc_variant
 from engine.game_engine import V2_ENGINE_CONFIG, ViperballEngine, load_team_from_json
 from engine.team_installation import new_installation
 from engine.playbook_catalog import get_package
+from engine.defensive_commitments import eligibility
 
 # Each case is a native or compatible package, versus an offense that
 # exercises its benefit or concession. Cases share roster pairs and seeds.
@@ -26,26 +27,28 @@ CASES = [
     ("blitz_pack", "rugby_rush_line", "lateral_spread"),
     ("predator", "afl_kick_in_press", "boot_raid"),
     ("chaos", "lax_ride", "boot_raid"),
+    ("swarm", "swarm_containment", "lateral_spread"),
+    ("shadow", "shadow_robber", "boot_raid"),
+    ("chaos", "chaos_lateral_trap", "lateral_spread"),
+    ("predator", "predator_exhaustion_press", "boot_raid"),
     # Same offense and roster for base scheme pressure comparison.
     ("swarm", None, "boot_raid"),
     ("blitz_pack", None, "boot_raid"),
     ("lockdown", None, "boot_raid"),
 ]
 
-def eligible(package, tags):
+def eligible(package, call):
     if not package:
-        return False
-    if package == "afl_kick_in_press":
-        return {"backed_up", "first_play_of_drive"} <= tags
-    if package == "lax_ride":
-        return {"after_takeaway", "first_play_of_drive"} <= tags
-    return bool(set(get_package(package)["situation_tags"]) & tags)
+        return 0.0
+    return eligibility(package, call.get("situations", []), call.get("tactical_context", {}),
+                       get_package(package)["situation_tags"])
 
 def summarize_rush(g, r):
     rushers, cover = set(r["rushers"]), set(r["coverage_players"])
     on = set(r["defenders_on_field"])
     if (len(rushers) != r["rusher_count"] or len(cover) != r["coverage_count"]
         or rushers & cover or rushers | cover != on
+        or not 0 <= r["rusher_count"] <= min(6, max(0, len(on)-1))
         or len(set(r["blockers"])) != r["blocker_count"]
         or (r["rusher"] and r["rusher"] not in rushers)
         or (r["matched_coverage_defender"] and r["matched_coverage_defender"] not in cover)):
@@ -76,6 +79,8 @@ def run(games, seed):
                 for n in range(games):
                     i = 2*(n % 2)
                     a, b = deepcopy(teams[i]), deepcopy(teams[i+1])
+                    # Alternate DC signatures independently of roster matchup.
+                    staff["dc"] = dc_variant("run_wall" if (n//2)%2 == 0 else "selective_pressure")
                     rec = new_installation(b.name, staff, "boot_raid", scheme, 2026)
                     rec["defense"].update(familiarity=1.0, family_familiarity=1.0,
                         packages=[{"package_id": package, "familiarity": 1.0}] if package else [])
@@ -87,6 +92,7 @@ def run(games, seed):
                     dc = game["defensive_coach_tactics"]["away"]
                     counts["calls"] += dc["calls"]
                     counts["selected"] += dc["packages"]["selected"].get(package, 0)
+                    counts["secondary_selected"] += dc["packages"].get("secondary_selected", {}).get(package, 0)
                     counts["blitz"] += dc["blitz_calls"]
                     for p in game["play_by_play"]:
                         call = p.get("defensive_call") or {}
@@ -96,15 +102,18 @@ def run(games, seed):
                             for key in ("rush:all", "rush:count:"+str(rush["rusher_count"]),
                                         "rush:"+rush["subfamily"]):
                                 summarize_rush(groups[key], rush)
+                            summarize_rush(groups["rush:coach:"+dc["signature"]+":count:"+str(rush["rusher_count"])], rush)
                             if selected:
                                 summarize_rush(groups["selected:rush:"+rush["subfamily"]], rush)
                         if call.get("defending_side") != "away" or p.get("yards") is None:
                             continue
-                        if not eligible(package, set(call.get("situations", []))):
+                        tier = eligible(package, call)
+                        if not tier:
                             if selected:
                                 raise RuntimeError("Package called outside its situation")
                             continue
                         counts["eligible"] += 1
+                        counts["secondary_eligible"] += int(tier < 1)
                         fam = p.get("play_family")
                         y = p["yards"]
                         keys = ["eligible:"+str(fam)]
@@ -115,6 +124,7 @@ def run(games, seed):
                             g["snaps"] += 1
                             g["yards"] += y
                             g["explosives"] += int(y >= 30)
+                            g["short_gains"] += int(0 < y <= 5)
                             g["conversions"] += int(y >= (p.get("yards_to_go") or 20))
                             if rush:
                                 g["kick_attempts"] += 1
@@ -155,7 +165,7 @@ if __name__ == "__main__":
               "complete",rate(g,"completions","attempts"),"rushers",rate(g,"rushers","attempts"))
         for name,b in sorted(v["groups"].items()):
             if name.startswith("rush:count:"):
-                print(" ",name,b["attempts"],"pressure",rate(b,"pressure","attempts"),"complete",rate(b,"completions","attempts"))
+                print(" ",name,b["attempts"],"pressure",rate(b,"pressure","attempts"),"complete",rate(b,"completions","attempts"),"released_completion",round(b.get("completions",0)/max(1,b["attempts"]-b.get("sack",0)),4))
             elif name.startswith("eligible:"):
                 print(" ",name,b["snaps"],"yards",rate(b,"yards","snaps"),"conversion",rate(b,"conversions","snaps"),
-                      "complete",rate(b,"completions","kick_attempts"))
+                      "complete",rate(b,"completions","kick_attempts"),"explosive",rate(b,"explosives","snaps"))

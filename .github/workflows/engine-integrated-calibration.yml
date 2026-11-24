@@ -5,6 +5,8 @@ on:
     paths:
       - engine/game_engine.py
       - engine/team_installation.py
+      - engine/defensive_commitments.py
+      - data/playbooks/packages.json
       - scripts/benchmark_defensive_packages.py
       - .github/workflows/engine-integrated-calibration.yml
   workflow_dispatch:
