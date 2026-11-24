@@ -43,7 +43,7 @@ below is checked.
 ### Other workbench pages
 - [x] Game Sim (single game)
 - [x] Compare runs
-- [ ] DraftyQueenz picks and parlays
+- [x] DraftyQueenz picks and parlays
 - [x] Export
 
 ### Removal

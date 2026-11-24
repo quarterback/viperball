@@ -51,7 +51,8 @@
 <div class="table-scroll"><table>
   <thead><tr><th>Your bet</th><th>Matchup</th><th class="num">Stake</th><th>Result</th></tr></thead>
   <tbody>
-  {% for p in b.contest.picks %}<tr><td>{{ p.pick_type | replace('_', ' ') }}: {{ p.selection }}</td><td>{{ p.matchup }}</td><td class="num">{{ p.amount }}</td><td>{{ p.result or 'pending' }}</td></tr>{% endfor %}
+  {% set kinds = {'winner': 'Moneyline', 'spread': 'Spread', 'over_under': 'Total'} %}
+  {% for p in b.contest.picks %}<tr><td>{{ kinds.get(p.pick_type, p.pick_type) }}: {{ p.selection | capitalize if p.pick_type == 'over_under' else p.selection }}</td><td>{{ p.matchup }}</td><td class="num">{{ p.amount }}</td><td>{{ p.result or 'pending' }}</td></tr>{% endfor %}
   {% for p in b.contest.parlays %}<tr><td>{{ p.legs | length }} leg parlay</td><td>{% for l in p.legs %}{{ l.selection }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td class="num">{{ p.amount }}</td><td>{{ p.result or 'pending' }}</td></tr>{% endfor %}
   </tbody>
 </table></div>
@@ -78,7 +79,7 @@
       <td class="num">{{ o.home_ml_display }}</td>
       <td class="num">{{ '%+.1f' | format(hs) }}</td>
       <td class="num">{{ '%.1f' | format(o.over_under) }}</td>
-      <td><select name="bet_{{ o.game_idx }}" aria-label="Bet on {{ o.away_team }} at {{ o.home_team }}">
+      <td><select style="width:100%;min-width:210px" name="bet_{{ o.game_idx }}" aria-label="Bet on {{ o.away_team }} at {{ o.home_team }}">
         <option value="">No bet</option>
         <option value="winner|{{ o.game_idx }}|{{ o.away_team }}">{{ o.away_team }} to win</option>
         <option value="winner|{{ o.game_idx }}|{{ o.home_team }}">{{ o.home_team }} to win</option>
