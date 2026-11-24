@@ -7040,6 +7040,10 @@ class ViperballEngine:
         snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
         dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
         dk_comfort *= snap_kick_agg
+        # ST-01: territory-minded coordinators narrow optional early
+        # snap-kick range; aggressive scoring preferences widen it slightly.
+        dk_comfort = self._stc_choice(self.state.possession, dk_comfort,
+                                     "field_position_bias", scale=-.20, ceiling=75.0)
 
         # ── Situational awareness ──
         score_diff = self._get_score_diff()
@@ -12944,8 +12948,10 @@ class ViperballEngine:
             rtag = player_tag(td_returner)
             td_returner.game_punt_returns += 1
             td_returner.game_punt_return_tds += 1
-            new_pos = 100 - min(99, self.state.field_position + distance)
-            td_returner.game_punt_return_yards += new_pos
+            catch_spot = 100 - min(99, self.state.field_position + distance)
+            return_td_yards = 100 - catch_spot
+            td_returner.game_punt_return_yards += return_td_yards
+            new_pos = return_td_yards
             self.drain_player_energy(td_returner, "carrier")
             self.change_possession()
             self.add_score(9)
@@ -13019,9 +13025,9 @@ class ViperballEngine:
             return_yards = self._calculate_punt_return_yards(
                 returner, returning_team, punt_coverage_team
             )
-            # Can't return past midfield+ without it being a TD (handled above)
-            # Ensure we don't go past our own territory unrealistically
-            final_position = max(1, landing_spot - return_yards)
+            # The return advances FROM the receiving team's catch spot.
+            # The separate return-TD branch handles a breakaway to the goal.
+            final_position = min(99, landing_spot + return_yards)
             returner.game_punt_returns += 1
             returner.game_punt_return_yards += return_yards
             self.drain_player_energy(returner, "carrier")
