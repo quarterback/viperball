@@ -100,7 +100,26 @@ reported **15/16 team-game score ledger failures**, all with zero
 final-score difference but interim score reversals. That diagnostic
 revealed the zero-snapshot bonus/overtime markers above. The audit was
 not waived or weakened; the engine markers were repaired at their
-source.
+source. The failing run's trace showed the synthetic
+`bonus_possession` marker at index 92 resetting scores from
+46.5/40.0 to 0/0; this directly confirmed the cause.
+
+### Corrected integration result
+
+[CI run 45435203046](https://github.com/quarterback/viperball/actions/runs/45435203046),
+seed `20261124`, `PYTHONHASHSEED=0`:
+
+- **181 full Python tests passed**, including seven BOX-01 invariants.
+- Focused CCH-03/04 installation tests passed: **35**.
+- **8 complete game simulations**, two roster matchups and alternating
+  clear/rain; **16 team-game score accounts**, **199 scoring events**.
+- **1,141.5 combined points** across those 16 team-game accounts,
+  reconciled exactly with the official final scores.
+- **0 score reversals, 0 unmatched final-score points, 0 unclassified
+  scoring points, 0 team/player kick-pass discrepancies**.
+- The initial audit failed 15 of 16 team-game accounts solely because
+  the old synthetic markers had zeroed snapshots. The corrected audit
+  does not ignore or filter such events.
 
 ### Final validation gate
 
@@ -112,10 +131,11 @@ PYTHONHASHSEED=0 python -m pytest tests/ -q
 PYTHONHASHSEED=0 python scripts/benchmark_boxscore_reconciliation.py --games 8 --seed 20261124
 ```
 
-Accept only when the full-game audit reports zero scoring gaps and
-team/player kick-pass differences. Record the exact seed and sample
-size from CI. A failure is evidence of an upstream engine defect
-requiring further repair, not permission to rewrite the scoreboard.
+The targeted scoring/box-score gate is **PASSED**. The broader
+coaching/defense matched-game workflows remain independently tracked
+by GitHub Actions; they must complete before final merge. No
+post-merge deployment or backfill of the historical UALR/Lehigh
+event log has been verified.
 
 ## Outside this PR
 
