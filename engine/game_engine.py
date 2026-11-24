@@ -13119,10 +13119,13 @@ class ViperballEngine:
                                          "return_aggression", scale=.4, ceiling=.06)
 
         if random.random() < dk_block_prob:
+            kicker.game_kick_attempts += 1
+            kicker.game_dk_attempts += 1
             blocker = dw_blocker if dw_blocker and dw_blocker.name not in self._unavailable_in_game(def_team) else self._st_blocker(def_team)
             btag = player_tag(blocker)
             if random.random() < 0.70:
                 self.change_possession()
+                self.add_score(0.5)  # Bell: recovering a blocked live kick.
                 block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
                 self.state.field_position = 100 - block_spot
                 self.state.down = 1
@@ -13139,7 +13142,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9 (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
                 else:
@@ -13151,7 +13154,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position} (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
             else:
@@ -13441,6 +13444,9 @@ class ViperballEngine:
         # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
         block_prob = self.calculate_block_probability(kick_type="kick")
         if random.random() < block_prob:
+            # A blocked place kick counts as a kick attempt.
+            kicker.game_kick_attempts += 1
+            kicker.game_pk_attempts += 1
             # BLOCKED KICK!
             def_team = self.get_defensive_team()
             blocker = self._st_blocker(def_team)
@@ -13450,6 +13456,7 @@ class ViperballEngine:
             if random.random() < 0.70:
                 # Defense recovers - chance for return TD or short field
                 self.change_possession()
+                self.add_score(0.5)  # Bell: recovering a blocked live kick.
                 # Ball is behind LOS
                 block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
                 self.state.field_position = 100 - block_spot  # Flip for receiving team
@@ -13469,7 +13476,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} place kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        description=f"{ptag} place kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9 (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
                 else:
@@ -13481,7 +13488,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} place kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        description=f"{ptag} place kick BLOCKED by {btag}! Defense recovers at {self.state.field_position} (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
             else:
