@@ -460,6 +460,163 @@
       "benefits": "Squeezes sweeps and lateral chains before they get wide.",
       "cost": "A short kick over the rushing line finds space.",
       "counter": "A quick kick chain."
+    },
+    {
+      "version": 1,
+      "package_id": "swarm_containment",
+      "side": "defense",
+      "name": "Containment",
+      "origin_family": "swarm",
+      "compatible_families": [
+        "swarm",
+        "fortress",
+        "drift",
+        "shadow"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "sweep_option",
+        "speed_option",
+        "viper_jet"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "strong_defense"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "ground_pound"
+      ],
+      "tradeoffs": [
+        "lighter_box"
+      ],
+      "inspiration": "Contain defense and rugby edge defense.",
+      "scenario": "Open-field early downs, especially against repeated perimeter runs.",
+      "benefits": "Keeps perimeter runs in front of the defense and reduces their explosive potential.",
+      "cost": "Concedes inside runs.",
+      "counter": "Run inside the contain front."
+    },
+    {
+      "version": 1,
+      "package_id": "shadow_robber",
+      "side": "defense",
+      "name": "Robber Coverage",
+      "origin_family": "shadow",
+      "compatible_families": [
+        "shadow",
+        "lockdown",
+        "drift",
+        "swarm"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory",
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "strong_defense"
+      ],
+      "situation_tags": [
+        "late_downs"
+      ],
+      "countered_by": [
+        "sa_vertical_shot",
+        "gp_heavy_push"
+      ],
+      "tradeoffs": [
+        "space_behind",
+        "lighter_box"
+      ],
+      "inspiration": "Intermediate zone robber concepts.",
+      "scenario": "Late downs and frequent territory releases.",
+      "benefits": "Closes the intermediate kick-pass lane.",
+      "cost": "Concedes deep bombs and interior runs.",
+      "counter": "Throw over the robber or run inside."
+    },
+    {
+      "version": 1,
+      "package_id": "chaos_lateral_trap",
+      "side": "defense",
+      "name": "Lateral Trap",
+      "origin_family": "chaos",
+      "compatible_families": [
+        "chaos",
+        "swarm",
+        "predator",
+        "shadow"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "ec_quick_kick_chain"
+      ],
+      "tradeoffs": [
+        "lighter_box",
+        "kick_pass_seams"
+      ],
+      "inspiration": "Rugby and lacrosse second-phase pressure.",
+      "scenario": "Early downs, especially when the opponent repeatedly laterals.",
+      "benefits": "Invites the first lateral but contests later transfers more aggressively.",
+      "cost": "Concedes straight inside runs and quick kick passes.",
+      "counter": "Avoid chaining laterals into the trap."
+    },
+    {
+      "version": 1,
+      "package_id": "predator_exhaustion_press",
+      "side": "defense",
+      "name": "Exhaustion Press",
+      "origin_family": "predator",
+      "compatible_families": [
+        "predator",
+        "blitz_pack",
+        "chaos",
+        "swarm"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "speed_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "deep_conditioning",
+        "team_speed"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "sa_vertical_shot",
+        "gp_heavy_push"
+      ],
+      "tradeoffs": [
+        "space_behind",
+        "defensive_fatigue"
+      ],
+      "inspiration": "Pressing a fatigued opponent.",
+      "scenario": "Early in a series against tired on-field offensive personnel.",
+      "benefits": "Commits extra rushers and disrupts short releases.",
+      "cost": "Costs defender energy and exposes space behind the rush.",
+      "counter": "A protected long kick or fresh interior runners."
     }
   ]
 }
