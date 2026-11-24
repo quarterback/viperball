@@ -1,6 +1,7 @@
 # AAR: League-scale calibration, rush credits, Delta Yards, and deployment
 
 **Date:** November 24, 2026
+**Merged:** [PR #355](https://github.com/quarterback/viperball/pull/355), commit [`caa5fdc`](https://github.com/quarterback/viperball/commit/caa5fdc95ead850751ae3b84d09adb0894cf26e9).
 **Workstream:** DEF-08, DEL-01, DEL-02, VAL-03 and OPS-02
 **Branch:** `engine/league-calibration-rush-delta-20261124`
 **Base:** current main, prior to open special-teams PRs #349 and #354.
