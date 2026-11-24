@@ -2779,6 +2779,7 @@ class HSRecruitingPipeline:
     and a new 9th grade class is generated.
     """
     classes: Dict[str, List[HSProspect]] = field(default_factory=dict)
+    next_graduation_year: Optional[int] = None
 
     def generate_initial_pipeline(
         self,
@@ -2788,6 +2789,7 @@ class HSRecruitingPipeline:
         team_prestige: Optional[Dict[str, int]] = None,
     ) -> None:
         """Generate all four HS grade classes from scratch."""
+        self.next_graduation_year = base_seed + 5
         for i, grade in enumerate(_HS_GRADES):
             rng = random.Random(base_seed + i * 1000)
             self.classes[grade] = generate_hs_class(
@@ -2839,10 +2841,14 @@ class HSRecruitingPipeline:
             _rank_hs_class(prospects)
             self.classes[new_grade] = prospects
 
-        # Generate fresh 9th graders
+        # The cohort sequence advances even if a caller repeats an RNG seed.
+        graduation_year = self.next_graduation_year
+        if graduation_year is None:
+            graduation_year = new_9th_seed + 4
+        self.next_graduation_year = graduation_year + 1
         self.classes["9th"] = generate_hs_class(
             grade="9th", size=size, rng=random.Random(new_9th_seed),
-            graduation_year=new_9th_seed + 4,
+            graduation_year=graduation_year,
         )
 
         return graduates
@@ -2965,7 +2971,7 @@ class HSRecruitingPipeline:
     def save_state(self) -> dict:
         """Lossless internal save; keep the public flattened to_dict unchanged."""
         from dataclasses import asdict
-        return {"version": 1, "classes": {
+        return {"version": 1, "next_graduation_year": self.next_graduation_year, "classes": {
             grade: [asdict(p) for p in prospects]
             for grade, prospects in self.classes.items()
         }}
@@ -2982,7 +2988,7 @@ class HSRecruitingPipeline:
                 HSProspect(**{**p, "recruit": Recruit(**p["recruit"])})
                 for p in prospects
             ]
-        return cls(classes=classes)
+        return cls(classes=classes, next_graduation_year=data.get("next_graduation_year"))
 
     def pipeline_summary(self) -> dict:
         """Summary stats for each grade in the pipeline."""
