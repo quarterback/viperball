@@ -313,7 +313,7 @@ class Dynasty:
     _team_installations: Dict[str, dict] = field(default_factory=dict, repr=False)
     coaching_history: Dict[int, dict] = field(default_factory=dict)
 
-    # High school recruiting pipeline (not serialised — rebuilt each dynasty load)
+    # High school recruiting pipeline (persisted by the application database)
     _hs_pipeline: Optional[object] = field(default=None, repr=False)
 
     # High school league (simulated each offseason to produce real recruits)
