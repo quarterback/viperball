@@ -429,6 +429,7 @@
 .tac-grid table { margin-top: 6px; }
 </style>
 <h2>Game Plans</h2>
+{% if not oneoff %}<p style="font-size:14px">Defensive call log: <a href="/stats/college/{{ session_id }}/game/{{ week }}/{{ game_idx }}/calls?side=away">{{ game.away_team }}</a> &middot; <a href="/stats/college/{{ session_id }}/game/{{ week }}/{{ game_idx }}/calls?side=home">{{ game.home_team }}</a></p>{% endif %}
 <div class="tac-grid">
 {% for t in tactics %}
 <div>

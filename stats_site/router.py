@@ -2259,6 +2259,85 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     ))
 
 
+def _defensive_call_log(fr, side):
+    """One row per defensive call made by `side`, with the situation it was made in."""
+    rows = []
+    for p in (fr or {}).get("play_by_play") or []:
+        d = p.get("defensive_call")
+        if not isinstance(d, dict) or d.get("defending_side") != side:
+            continue
+        c = d.get("tactical_context") or {}
+        ev = p.get("rush_event") or {}
+        t = p.get("time_remaining", c.get("time_remaining"))
+        off_score = p.get("away_score") if side == "home" else p.get("home_score")
+        def_score = p.get("home_score") if side == "home" else p.get("away_score")
+        pid = d.get("package_id")
+        rows.append({
+            "n": p.get("play_number"), "q": p.get("quarter", c.get("quarter")),
+            "clock": f"{int(t) // 60}:{int(t) % 60:02d}" if isinstance(t, (int, float)) else "",
+            "down": p.get("down", c.get("down")), "togo": p.get("yards_to_go", c.get("yards_to_go")),
+            "field": p.get("field_position", c.get("field_position")),
+            "score": f"{_fmt_pts(def_score)}-{_fmt_pts(off_score)}" if def_score is not None else "",
+            "drive": _label(c.get("drive_start") or p.get("possession_origin")),
+            "drive_play": c.get("drive_play_index", p.get("possession_snap_index")),
+            "def_energy": c.get("defense_energy", p.get("defense_energy")),
+            "off_energy": c.get("offense_energy"),
+            "recent": [(lab, c.get(k)) for lab, k in (("Kick", "recent_kick_rate"), ("Deep", "recent_deep_rate"),
+                                                       ("Explosive", "recent_explosive_rate"),
+                                                       ("Perimeter", "recent_perimeter_rate"),
+                                                       ("Lateral", "recent_lateral_rate")) if c.get(k)],
+            "alignment": _label(d.get("alignment")), "blitz": bool(d.get("blitz")),
+            "called": d.get("intended_rushers"),
+            "package": _package_name(pid) if pid else "",
+            "package_side": (d.get("package_eligibility") or 0) < 0.99 if pid else False,
+            "strength": d.get("package_strength") if pid else None,
+            "situations": ", ".join(_label(x) for x in d.get("situations") or []),
+            "play": _label(p.get("kick_pass_subfamily") or p.get("play_family") or p.get("play_type")),
+            "yards": p.get("yards"),
+            "rush": ({"sent": ev.get("rusher_count"), "outcome": ev.get("outcome"),
+                      "lead": (ev.get("rusher") or "").partition(" ")[2]} if "outcome" in ev else None),
+            "result": p.get("result") or "",
+        })
+    return rows
+
+
+def _fmt_pts(v):
+    if v is None:
+        return ""
+    return str(int(v)) if float(v).is_integer() else f"{v:g}"
+
+
+@router.get("/college/{session_id}/game/{week}/{game_idx}/calls", response_class=HTMLResponse)
+def college_game_calls(request: Request, session_id: str, week: int, game_idx: int, side: str = "away"):
+    """Separate log of every defensive call in a game and the situation behind it."""
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    season = api["require_season"](sess)
+    week_games = [g for g in season.schedule if g.week == week]
+    if not week_games:
+        week_games = ([g for g in (season.playoff_bracket or []) if g.week == week]
+                      or [bg.game for bg in (season.bowl_games or []) if bg.game.week == week])
+    if game_idx < 0 or game_idx >= len(week_games):
+        raise HTTPException(404, "Game not found")
+    game = week_games[game_idx]
+    fr = getattr(game, "full_result", None)
+    if not fr and game.completed:
+        try:
+            from engine.db import load_box_score
+            fr = load_box_score(session_id, week, game.home_team, game.away_team)
+        except Exception:
+            fr = None
+    side = side if side in ("home", "away") else "away"
+    team = game.home_team if side == "home" else game.away_team
+    opp = game.away_team if side == "home" else game.home_team
+    rows = _defensive_call_log(fr, side)
+    has_context = any(r["off_energy"] is not None or r["recent"] for r in rows)
+    return templates.TemplateResponse("college/game_calls.html", _ctx(
+        request, section="college", session_id=session_id, week=week, game_idx=game_idx,
+        game=game, side=side, team=team, opp=opp, rows=rows, has_context=has_context,
+    ))
+
+
 @router.get("/college/{session_id}/game/{week}/{game_idx}", response_class=HTMLResponse)
 def college_game(request: Request, session_id: str, week: int, game_idx: int):
     api = _get_api()

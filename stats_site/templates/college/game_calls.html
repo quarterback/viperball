@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ team }} defensive calls — {{ game.away_team }} at {{ game.home_team }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/game/{{ week }}/{{ game_idx }}">{{ game.away_team }} at {{ game.home_team }}</a><span class="sep">/</span>Defensive calls
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Defensive calls</h1>
+  <div class="subtitle">{{ game.away_team }} {{ game.away_score | int }}, {{ game.home_team }} {{ game.home_score | int }} &middot; Week {{ week }}</div>
+</div>
+
+<div class="tabs">
+  <a href="?side=away" {% if side == 'away' %}class="active"{% endif %}>{{ game.away_team }} defense</a>
+  <a href="?side=home" {% if side == 'home' %}class="active"{% endif %}>{{ game.home_team }} defense</a>
+</div>
+
+{% if not rows %}
+<div class="empty">No defensive calls were recorded for this game. Games played before the call log existed have none.</div>
+{% else %}
+<style>
+.calls td { vertical-align: top; }
+.calls td.wrap { white-space: normal; min-width: 150px; max-width: 220px; }
+.calls th, .calls td { padding-left: 8px; padding-right: 8px; }
+.calls .sub { display: block; font-size: 12px; color: var(--fg-dim); }
+.calls .pkg { color: var(--accent); font-weight: 600; }
+.calls .out-sack { color: var(--green, #2e7d32); font-weight: 600; }
+.calls .out-hurry { color: var(--accent); }
+.calls tr.q-start td { border-top: 2px solid var(--border); }
+</style>
+<p style="font-size:14px">{{ rows | length }} calls by {{ team }} against {{ opp }}. Score is shown defense first.{% if not has_context %} This defense had no installed packages, so the engine did not record energy or recent tendencies for its calls.{% endif %}</p>
+<div class="table-scroll"><table class="calls">
+  <thead><tr>
+    <th class="num">#</th><th>Q</th><th class="num">Clock</th><th>Down</th><th class="num">Ball</th><th class="num">Score</th>
+    <th>Drive</th>
+    {% if has_context %}<th class="num" title="Average energy on the field, defense / offense">Energy</th><th title="Share of the offense's recent plays">Recent offense</th>{% endif %}
+    <th>Call</th><th>Package</th><th>Play</th><th class="num">Yds</th><th>Rush</th>
+  </tr></thead>
+  <tbody>
+  {% set ns = namespace(q=None) %}
+  {% for r in rows %}
+  <tr class="{% if ns.q is not none and r.q != ns.q %}q-start{% endif %}">{% set ns.q = r.q %}
+    <td class="num">{{ r.n }}</td>
+    <td>{{ r.q }}</td>
+    <td class="num">{{ r.clock }}</td>
+    <td>{% if r.down %}{{ r.down }} &amp; {{ r.togo }}{% endif %}</td>
+    <td class="num">{{ r.field if r.field is not none else '' }}</td>
+    <td class="num">{{ r.score }}</td>
+    <td>{{ r.drive }}{% if r.drive_play %}<span class="sub">snap {{ r.drive_play }}</span>{% endif %}</td>
+    {% if has_context %}
+    <td class="num">{{ '%.0f' | format(r.def_energy) if r.def_energy is not none else '' }} / {{ '%.0f' | format(r.off_energy) if r.off_energy is not none else '' }}</td>
+    <td class="wrap">{% for lab, v in r.recent %}{{ lab }} {{ '%.0f' | format(100 * v) }}%{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    {% endif %}
+    <td>{{ r.alignment }}{% if r.blitz %}, blitz{% endif %}{% if r.called is not none %}<span class="sub">{{ r.called }} rusher{{ '' if r.called == 1 else 's' }} called</span>{% endif %}</td>
+    <td class="wrap">{% if r.package %}<span class="pkg">{{ r.package }}</span><span class="sub">{{ 'side' if r.package_side else 'main' }}{% if r.strength is not none %}, {{ '%.0f' | format(100 * r.strength) }}% strength{% endif %}</span>{% endif %}{% if r.situations %}<span class="sub">{{ r.situations }}</span>{% endif %}</td>
+    <td>{{ r.play }}{% if r.result %}<span class="sub">{{ r.result | replace('_', ' ') }}</span>{% endif %}</td>
+    <td class="num">{{ r.yards if r.yards is not none else '' }}</td>
+    <td>{% if r.rush %}{{ r.rush.sent }} sent<span class="sub {% if r.rush.outcome == 'sack' %}out-sack{% elif r.rush.outcome == 'hurry' %}out-hurry{% endif %}">{{ r.rush.outcome }}{% if r.rush.outcome in ('sack', 'hurry') and r.rush.lead %}, {{ r.rush.lead }}{% endif %}</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endblock %}
