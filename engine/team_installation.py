@@ -461,20 +461,19 @@ def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) 
 _EVALUABLE_RULE_KEYS = {"yards_per_down_min", "yards_to_go_max", "yards_to_go_min",
                         "field_position_min", "field_position_max", "down_min", "down_max",
                         "lead_min_q4", "lead_min_second_half", "deficit_min_second_half",
-                        "deficit_min_last_300s", "quarters", "time_remaining_max"}
+                        "deficit_min_last_300s", "quarters", "time_remaining_max",
+                        "drive_play_index", "drive_start", "defense_energy_max"}
 
 
 def evaluable_situations() -> set:
-    """Catalog situations the engine can check today. Drive start and
-    defense energy situations wait until the engine reports them."""
+    """Catalog situations the engine can evaluate from live context."""
     from engine import playbook_catalog as pc
     return {tag for tag, spec in pc.vocabulary()["situations"].items()
             if spec.get("rule") and not set(spec["rule"]) - _EVALUABLE_RULE_KEYS}
 
 
 def active_situations(context: Dict[str, Any]) -> set:
-    """Catalog situations true right now, by the catalog's own rules. Rules
-    the engine cannot evaluate yet (drive start, defense energy) are off."""
+    """Catalog situations true right now; missing event inputs never match."""
     from engine import playbook_catalog as pc
     out = set()
     down = context.get("down", 1)
@@ -510,6 +509,14 @@ def active_situations(context: Dict[str, Any]) -> set:
         if "deficit_min_second_half" in rule:
             ok = ok and ((q >= 3 and -diff >= rule["deficit_min_second_half"]) or
                          (q == 4 and tr <= 300 and -diff >= rule.get("deficit_min_last_300s", 1)))
+        if "drive_play_index" in rule and context.get("drive_play_index") != rule["drive_play_index"]:
+            ok = False
+        if "drive_start" in rule and context.get("drive_start") not in rule["drive_start"]:
+            ok = False
+        if "defense_energy_max" in rule:
+            energy = context.get("defense_energy")
+            if energy is None or energy >= rule["defense_energy_max"]:
+                ok = False
         if ok:
             out.add(tag)
     return out
