@@ -62,6 +62,6 @@ Tests: 201 pass, plus the five root scripts.
 
 ## Open
 
-- High school regular season (about 7,100 games a year) still uses the quick model; on the
-  engine it would take about 11 minutes each dynasty offseason (0.09 seconds a game).
+- High school regular season (about 7,100 games a year) stays on the quick model by Ron's
+  decision; on the engine it would take about 11 minutes each dynasty offseason.
 - Back history requested for many years will take about three minutes a year.
