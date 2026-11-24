@@ -118,7 +118,7 @@
   <tbody>
   {% for p in roster %}
   <tr>
-    <td style="font-weight:bold;">{{ p.name }}
+    <td style="font-weight:bold;">{% if session_id %}<a href="/stats/college/{{ session_id }}/player/{{ team_name | urlencode }}/{{ p.name | urlencode }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}
       {% if p.awards %}
         {% for a in p.awards %}
         <br><span style="font-size:9px;color:var(--yellow);">{{ a.award }} ({{ a.year }})</span>
