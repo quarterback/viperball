@@ -96,6 +96,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     8.4, about 3 missed calls a game. Every team file and pro system moved to the current
     rating scale; the per game conversion is gone. → `aar_2026-11-24_officiating_and_rating_scale.md`
 
+23. **Fast sim removed, scoring floats, officiating levels** (November 24). The fast sim and
+    its options are gone (back history now plays real engine games); scoring targets
+    removed from the benchmark and README; college crews less accurate and more spread out
+    than pro crews. → `aar_2026-11-24_fast_sim_removed_scoring_floats_ref_levels.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -140,16 +145,16 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 
 ## Open work
 
-Updated November 24 after step 22.
+Updated November 24 after step 23.
 
 1. A live Fly deploy and a click through of the stats site are still unverified.
 2. Done: recruiting, development, HS and portal players use the talent ladder.
-3. Done for pro leagues, WVL and HS title games; HS regular season and dynasty back history
-   still use quick models.
+3. Done: the fast sim is deleted and back history plays engine games. The HS regular
+   season still uses a quick model.
 4. Done: odd program counts retire Coast Guard or Merchant Marine.
 5. Done: rulebooks rewritten and checked by tests.
 6. Done: the root test scripts run again.
-7. Done: touchdowns about 3 per team again; the turnover rise was a counting fix.
+7. Done: scoring is no longer measured against targets.
 8. Done: sack rate about 7%.
 9. Done: accepted flags about 8 per team with no calls and missed calls (PEN-02).
 10. Done: every league on the current rating scale (PRO-01).
