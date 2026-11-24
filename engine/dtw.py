@@ -328,9 +328,13 @@ def calculate_game_dtw(game_result: Dict,
     home_signals = _build_signals(home_dye, home_trad)
     away_signals = _build_signals(away_dye, away_trad)
 
-    # Compute weighted composite edge
+    # Each signed contribution is the actual weighted input to the
+    # composite, rather than a post-hoc explanation inferred from results.
+    # A turnover *margin* is deliberately excluded from this model;
+    # bonus-possession conversion is the only turnover-derived input.
     composite = 0.0
     edges = {}
+    contributions = {}
     for metric, weight in _DTW_WEIGHTS.items():
         edge = _normalize_edge(
             home_signals[metric],
@@ -338,7 +342,19 @@ def calculate_game_dtw(game_result: Dict,
             _EDGE_SCALES[metric],
         )
         edges[metric] = round(edge, 3)
-        composite += edge * weight
+        contributions[metric] = edge * weight
+        composite += contributions[metric]
+    delta_inputs = ("pk_score_rate", "pk_efficiency", "pp_conversion", "mess_rate")
+    turnover_inputs = ("bonus_conv",)
+    raw_inputs = tuple(k for k in _DTW_WEIGHTS
+                       if k not in delta_inputs and k not in turnover_inputs)
+    components = {
+        "raw_performance": round(sum(contributions[k] for k in raw_inputs), 4),
+        "delta_context": round(sum(contributions[k] for k in delta_inputs), 4),
+        "turnover_bonus_conversion": round(sum(contributions[k] for k in turnover_inputs), 4),
+        "direct_turnover_margin": None,
+        "final_edge": round(composite, 4),
+    }
 
     # Convert composite edge to probability via sigmoid
     temperature = 0.35
@@ -347,7 +363,10 @@ def calculate_game_dtw(game_result: Dict,
     away_dtw = 1.0 - home_dtw
 
     # Determine deserved winner
-    if abs(home_dtw - 0.50) < 0.03:
+    # A 55–45 edge is the minimum for categorical DTW labels. A narrow
+    # edge is explicitly inconclusive, irrespective of who won.
+    separation_threshold = 0.55
+    if max(home_dtw, away_dtw) < separation_threshold:
         deserved_winner = "toss-up"
     elif home_dtw > 0.50:
         deserved_winner = "home"
@@ -358,12 +377,12 @@ def calculate_game_dtw(game_result: Dict,
     fs = game_result.get("final_score", {})
     home_score = fs.get("home", {}).get("score", 0)
     away_score = fs.get("away", {}).get("score", 0)
-    if home_score == away_score:
+    if home_score == away_score or deserved_winner == "toss-up":
         upset = False
     elif home_score > away_score:
-        upset = away_dtw > 0.50
+        upset = deserved_winner == "away"
     else:
-        upset = home_dtw > 0.50
+        upset = deserved_winner == "home"
 
     home_name = fs.get("home", {}).get("team", "Home")
     away_name = fs.get("away", {}).get("team", "Away")
@@ -374,6 +393,9 @@ def calculate_game_dtw(game_result: Dict,
         "home_team": home_name,
         "away_team": away_name,
         "edges": edges,
+        "component_edges": components,
+        "separation_threshold": separation_threshold,
+        "confidence_band": "too_close" if deserved_winner == "toss-up" else "separated",
         "dye_breakdown": {
             "home": {
                 "pk_efficiency": round(home_dye["pk_efficiency"], 2),
