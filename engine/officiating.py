@@ -18,8 +18,9 @@ has its own share that matter, its own chance a material foul is seen, and
 its own chance an immaterial one is flagged anyway.
 
 Crews differ (the NFL's loosest and strictest crews threw 13 and 20 flags a
-game in the same season), and officials lean toward not deciding a close game
-late (omission bias, the "let them play" whistle).
+game in the same season), college crews differ more than pro ones (LEVELS),
+and officials lean toward not deciding a close game late (omission bias, the
+"let them play" whistle).
 """
 from __future__ import annotations
 
@@ -102,18 +103,51 @@ def foul_class(name: str) -> str:
     return _CLASS_BY_NAME.get(name, "blocking")
 
 
+# Officiating by level.  Pro crews are full time officials, graded on every
+# play, drawn from a small pool: tight around a high standard (the NFL's
+# loosest and strictest crews threw 13 and 20 flags a game).  College has many
+# more crews of uneven training and review, so crews sit further apart in
+# accuracy, strictness and home lean; high school further still.
+#   acc_mean: average crew accuracy
+#   acc_spread: how far crew accuracy spreads, relative to the referee pool
+#   strict_sd: spread of how tightly crews call a game
+#   favor_spread: spread of home lean, relative to the referee pool
+LEVELS = {
+    "pro": {"acc_mean": 0.965, "acc_spread": 0.5, "strict_sd": 0.09, "favor_spread": 0.5},
+    "college": {"acc_mean": 0.94, "acc_spread": 1.5, "strict_sd": 0.18, "favor_spread": 1.5},
+    "high_school": {"acc_mean": 0.91, "acc_spread": 2.0, "strict_sd": 0.25, "favor_spread": 2.0},
+}
+POOL_MEAN_ACCURACY = 0.945
+
+
+def apply_level(crew, level: str = "college") -> None:
+    """Set a game crew's accuracy, home lean, error rates and strictness for
+    its level.  Safe to call twice."""
+    if crew is None or getattr(crew, "_level_applied", None):
+        return
+    cfg = LEVELS.get(level, LEVELS["college"])
+    acc = getattr(crew, "accuracy", POOL_MEAN_ACCURACY) or POOL_MEAN_ACCURACY
+    acc = cfg["acc_mean"] + (acc - POOL_MEAN_ACCURACY) * cfg["acc_spread"]
+    acc = max(0.80, min(0.995, acc))
+    crew.accuracy = round(acc, 4)
+    crew.home_favor = max(-0.5, min(0.5, (getattr(crew, "home_favor", 0.0) or 0.0) * cfg["favor_spread"]))
+    inaccuracy = 1.0 - acc
+    crew.phantom_flag_rate = round(0.0005 + inaccuracy * 0.01, 5)
+    crew.spot_error_rate = round(0.001 + inaccuracy * 0.015, 5)
+    import zlib
+    seed = zlib.crc32(f"{getattr(crew, 'name', '')}|{level}".encode())
+    sd = cfg["strict_sd"]
+    crew.strictness = max(1 - 2.5 * sd, min(1 + 2.5 * sd, random.Random(seed).gauss(1.0, sd)))
+    crew.level = level
+    crew._level_applied = level
+
+
 def crew_strictness(crew) -> float:
-    """How tight a crew calls the game.  Stored on the crew once per game;
-    spread about +-20%, matching the gap between the NFL's loosest and
-    strictest crews (13 and 20 flags a game)."""
+    """How tight a crew calls the game (set by apply_level)."""
     s = getattr(crew, "strictness", None)
     if s is None:
-        seed = sum(ord(c) for c in getattr(crew, "name", "")) or 1
-        s = max(0.75, min(1.25, random.Random(seed).gauss(1.0, 0.12)))
-        try:
-            crew.strictness = s
-        except Exception:
-            pass
+        apply_level(crew, getattr(crew, "level", "college"))
+        s = getattr(crew, "strictness", 1.0)
     return s
 
 
@@ -140,7 +174,8 @@ def decide(name: str, crew, late_close: bool = False, playoff: bool = False,
         factor *= (1.0 - 0.15 * lean) if against_home else (1.0 + 0.15 * lean)
     if material:
         accuracy = getattr(crew, "accuracy", 0.95) or 0.95
-        p = see_material * factor * (0.6 + 0.4 * accuracy / 0.95)
+        # A less accurate crew sees fewer of the fouls that matter.
+        p = see_material * factor * (accuracy / 0.95) ** 3
         return ("called" if rng.random() < min(0.99, p) else "missed"), True
     p = call_immaterial * factor
     return ("called" if rng.random() < min(0.95, p) else "no_call"), False

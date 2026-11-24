@@ -582,7 +582,7 @@ side on close calls.
 
 ### Calls, no calls and missed calls
 
-Officials do not flag every foul. A foul that happens can be called, let go because it did not affect the play (holding away from the ball, a word after the whistle instead of a flag), or missed. Fouls in plain view, such as false starts and forward laterals, are almost always flagged; holding and coverage contact are flagged mostly when they affect the play. Crews differ in how tightly they call a game, a crew that leans toward the home side misses a few more home fouls on close calls, and late in a close fourth quarter officials let more judgment calls go. Crews also throw the occasional flag for a foul that did not happen. The box score shows each game's flags, fouls let go, missed calls and bad flags.
+Officials do not flag every foul. A foul that happens can be called, let go because it did not affect the play (holding away from the ball, a word after the whistle instead of a flag), or missed. Fouls in plain view, such as false starts and forward laterals, are almost always flagged; holding and coverage contact are flagged mostly when they affect the play. Crews differ in how tightly they call a game, a crew that leans toward the home side misses a few more home fouls on close calls, and late in a close fourth quarter officials let more judgment calls go. Crews also throw the occasional flag for a foul that did not happen. College crews are less accurate on average than pro crews and spread much further apart, in accuracy, in how tightly they call a game and in home lean, because there are far more of them with less training and review; high school crews spread further still. The box score shows each game's flags, fouls let go, missed calls and bad flags.
 
 ### Coach's challenge
 

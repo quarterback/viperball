@@ -49,3 +49,19 @@ def test_games_have_flags_let_go_and_missed_calls():
     assert 10 < statistics.mean(flags) < 24
     assert statistics.mean(lets) > 3
     assert statistics.mean(missed) > statistics.mean(phantom)
+
+
+def test_college_crews_spread_wider_than_pro_crews():
+    from engine.officiating import apply_level
+    acc, strict = {}, {}
+    for level in ("pro", "college", "high_school"):
+        a, s = [], []
+        for i, base in enumerate([0.91, 0.93, 0.945, 0.96, 0.98] * 20):
+            crew = RefereeCrew(name=f"Crew {i}", accuracy=base)
+            apply_level(crew, level)
+            a.append(crew.accuracy)
+            s.append(crew.strictness)
+        acc[level], strict[level] = a, s
+    assert statistics.mean(acc["pro"]) > statistics.mean(acc["college"]) > statistics.mean(acc["high_school"])
+    assert statistics.pstdev(acc["pro"]) < statistics.pstdev(acc["college"]) < statistics.pstdev(acc["high_school"])
+    assert statistics.pstdev(strict["pro"]) < statistics.pstdev(strict["college"])

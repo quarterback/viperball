@@ -3907,7 +3907,8 @@ class ViperballEngine:
                  away_brick_wall: bool = False,
                  home_turnover_machine: bool = False,
                  away_turnover_machine: bool = False,
-                 referee_crew: Optional["RefereeCrew"] = None):
+                 referee_crew: Optional["RefereeCrew"] = None,
+                 officiating_level: str = "college"):
         # Seed before ALL pregame player/archetype/variance rolls, not only
         # after they have already consumed global RNG. Matched coach-only
         # benchmarks rely on the no-coach-tactics control being identical.
@@ -3942,6 +3943,10 @@ class ViperballEngine:
         else:
             _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
             self.referee_crew = assign_referee(_ref_rng)
+        # College, pro and high school crews differ in accuracy and spread
+        # (engine/officiating.py LEVELS).
+        from engine.officiating import apply_level as _apply_officiating_level
+        _apply_officiating_level(self.referee_crew, officiating_level)
         self.seed = seed
         # Credit assignment does not consume the physical contest RNG.
         self._rush_credit_rng = random.Random(
@@ -16130,6 +16135,7 @@ class ViperballEngine:
             # ── Referee crew: name + challenge stats visible ──
             "referee": {
                 "name": self.referee_crew.name,
+                "level": getattr(self.referee_crew, "level", "college"),
                 "blown_calls": self.referee_crew.blown_calls,
                 "challenged_calls": self.referee_crew.challenged_calls,
                 "overturned_calls": self.referee_crew.overturned_calls,

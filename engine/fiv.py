@@ -1076,6 +1076,7 @@ def _play_match(
         home_prestige=home_team.rating,
         away_prestige=away_team.rating,
         is_playoff=(competition in ("wc_knockout", "continental_knockout", "playoff")),
+        officiating_level="pro",
         **coaching_kwargs,
     )
     result = engine.simulate_game()

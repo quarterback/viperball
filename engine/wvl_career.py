@@ -321,7 +321,8 @@ class WVLCareerLeague:
             away = self.teams.get(away_key)
             if not home or not away:
                 continue
-            engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000))
+            engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000),
+                                     officiating_level="pro")
             result = engine.simulate_game()
             hs = int(result["final_score"]["home"]["score"])
             as_ = int(result["final_score"]["away"]["score"])

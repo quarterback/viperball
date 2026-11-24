@@ -672,6 +672,7 @@ class ProLeagueSeason:
                 game_week=week_num,
                 unavailable_home=unavail_home,
                 unavailable_away=unavail_away,
+                officiating_level="pro",
             )
             result = engine.simulate_game()
 
@@ -1272,6 +1273,7 @@ class ProLeagueSeason:
                             home_team, away_team,
                             seed=random.randint(1, 1_000_000),
                             neutral_site=True, is_playoff=True,
+                            officiating_level="pro",
                         ).simulate_game()
                         h_score = result["final_score"]["home"]["score"]
                         a_score = result["final_score"]["away"]["score"]

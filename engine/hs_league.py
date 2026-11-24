@@ -397,7 +397,8 @@ def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
     """A title game on the full engine, with the same bookkeeping as the quick model."""
     from engine.game_engine import ViperballEngine
     result = ViperballEngine(_hs_engine_team(home), _hs_engine_team(away),
-                             seed=rng.randint(1, 1_000_000), is_playoff=True).simulate_game()
+                             seed=rng.randint(1, 1_000_000), is_playoff=True,
+                             officiating_level="high_school").simulate_game()
     home_score = result["final_score"]["home"]["score"]
     away_score = result["final_score"]["away"]["score"]
     if home_score == away_score:  # overtime cap reached: decide on a final kick
