@@ -89,10 +89,73 @@ That report was corrected to compare against the requested quota,
 and the scheduler now includes a narrow repair for the two excess
 slots that does not remove pinned or rivalry games.
 
-A final milestone now runs **40 matched games per rush/Delta condition
-and a complete national season** to establish whether the schedule
-repair works and whether first-week effects persist. Results are
-pending; do not claim they passed.
+## Completed national milestone and matched comparison
+
+[GitHub Actions run 45451738507](https://github.com/quarterback/viperball/actions/runs/45451738507)
+completed successfully at commit `ac5b273` with 181 Python tests,
+the BOX-01 accounting smoke, 40 matched full games per condition and a
+**complete 205-program national regular season**. All five relevant
+workflows succeeded on that commit, including defensive and coaching
+regressions. The output artifact is available in the same run.
+
+**National season:** 205 teams each had exactly **12 regular-season
+games**, yielding **1,230 scheduled and completed games** across 16
+simulated weeks. No program was under- or over-scheduled. This fixes
+the earlier two-school 13-game surplus for the tested season seed.
+It does not prove schedule parity for every future seed or conference
+alignment.
+
+**National performance (1,230 games, seed 20261124):**
+
+| Measure | Observed |
+|---|---:|
+| Average team points/game | 52.393 |
+| Average actual offensive points/drive | 3.054 |
+| Average accepted penalties/team-game | 21.537 |
+| Kick-pass completion fraction | 45.7% |
+| Rush attempts / physical pressures / sacks / hurries | 70,473 / 23,058 / 9,227 / 13,831 |
+| Physical pressure rate | 32.7% |
+| Physical sack rate | 13.1% |
+| Median top rusher share of team sack + lead-hurry credits | 54.55% (2,433 teams-with-credits) |
+| Defensive package activations | 30,374 |
+| Average net Delta Yards/team-game | -48.271 |
+
+The elevated physical sack frequency and penalties remain findings
+for a later controlled calibration. They are **not** justification to
+change scoring or defeat the score-based restart rule.
+
+**40 matched games per configuration, Delta enabled:**
+
+| Model | Mean top rusher credit share | Median final margin | Mean team points |
+|---|---:|---:|---:|
+| Historical highest rusher | 78.4% | 21.75 | 75.875 |
+| Weighted committed rusher | 52.0% | 19.25 | 77.344 |
+
+The new physical attribution spreads individual credit across actual
+participants; it does not apply a new sack-success bonus.
+With weighted credit, neutralizing Delta starts increased the
+median final margin from **19.25 to 33.0** in the matched sample.
+All 40 matched final scores differed; mean absolute home-score
+change was **25.275 points**. With the historical credit model,
+median margin changed from 21.75 with Delta to 36.0 without.
+Different matched paths evolve from the restart change, so these
+are system-level comparisons, not individual-play estimates.
+
+**Design decision:** Delta Yards remains the defining Viperball
+mechanic. The score differential adjusts the next restart field
+position, pushing a team with a lead backward and helping a team
+that trails. The `delta_restarts_enabled=False` switch is **only
+a calibration/ablation control**; normal games always default to
+`True`. No proposal to remove, reduce, or genericize Delta Yards
+is made. The observed change in margins supports keeping it
+unchanged while using the neutral control only to evaluate its
+impact.
+
+**Validation limits:** This is one national seed, one full season,
+and 40 matches per counterfactual condition. The national sample
+shows a complete schedule and a more distributed individual rush
+ledger, but does not establish a long-run league equilibrium.
+
 
 ## Validation and next decisions
 
@@ -103,6 +166,7 @@ Expected milestones:
 4. An eventual full national season across multiple seeds to examine schedule shortfalls, rare package adoption, point distribution and roster attrition.
 5. Final live Fly deployment health and actual SHA check when the service is intentionally running.
 
-**Status:** Initial CI study complete; complete-season run and updated
-Docker/Fly build-SHA verification are pending. No deployment claim until
-a running Fly instance returns the new commit SHA.
+**Status:** National full-season and matched calibration completed and
+passed. Build-SHA verification code is implemented, but a **live Fly
+deployment and running build SHA remain unverified**. Do not claim
+deployment success until the Fly health endpoint confirms the new SHA.
