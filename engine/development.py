@@ -174,6 +174,10 @@ _GAINS_BY_PROFILE = {
     },
 }
 
+# Multiplier on the positive end of every gain range (see the draw in
+# apply_offseason_development).
+DEV_GAIN_SCALE = 2.1
+
 # Physical decline in Senior/Graduate year (slight negative adjustment)
 _SENIOR_DECLINE_ATTRS = ["speed", "stamina", "agility"]
 _DECLINE_RANGE = (-2, 0)   # -2 to 0 points
@@ -253,8 +257,14 @@ def apply_offseason_development(
 
     for attr in attrs_to_develop:
         lo, hi = gains[attr]
-        scaled_hi = max(lo, int(hi * potential_scale * boost_scale))
-        delta = rng.randint(lo, scaled_hi)
+        # Gains are drawn as a fraction and rounded at random, so a small
+        # range still adds up over a career.  Rounding the top of the range
+        # down (the old int()) cut a normal player's growth to about half a
+        # point a year.  DEV_GAIN_SCALE matches four college years of growth
+        # to the class gaps in generated rosters (freshman to senior).
+        scaled_hi = max(float(lo), hi * potential_scale * boost_scale * DEV_GAIN_SCALE)
+        raw = rng.uniform(lo, scaled_hi) if scaled_hi > lo else float(lo)
+        delta = int(raw // 1) + (1 if rng.random() < raw - (raw // 1) else 0)
 
         # Apply gain
         old_val = getattr(card, attr)

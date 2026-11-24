@@ -343,6 +343,7 @@ class Recruit:
 
     true_potential: int     # 1-5
     true_development: str   # normal / quick / slow / late_bloomer
+    true_work_rate: int = 0  # 0 = derive from stamina (older saves)
 
     # ── Mental / Academic attributes ──────────
     # Field intelligence: how smart the player is ON the field.
@@ -501,6 +502,7 @@ class Recruit:
             kick_accuracy=self.true_kick_accuracy,
             lateral_skill=self.true_lateral_skill,
             tackling=self.true_tackling,
+            work_rate=self.true_work_rate,
             potential=self.true_potential,
             development=self.true_development,
             current_team=team_name,
@@ -534,6 +536,7 @@ class Recruit:
             "true_kick_accuracy": self.true_kick_accuracy,
             "true_lateral_skill": self.true_lateral_skill,
             "true_tackling": self.true_tackling,
+            "true_work_rate": self.true_work_rate,
             "field_intelligence": self.field_intelligence,
             "coachability": self.coachability,
             "gpa": self.gpa,
@@ -1013,51 +1016,28 @@ def generate_single_recruit(
     if region is None:
         region = _pick_region(rng)
 
-    # Star rating
+    # Level from the league talent ladder (the same ladder the opening
+    # rosters use), stats around it.  Stars follow the level, so a 5 star is
+    # a top 3% prospect and a 1 star is a project.  Before this every stat
+    # was a flat roll inside the star band, so classes had no stars and no
+    # projects, and linemen were floored at 55 speed from the old scale.
+    from engine.talent import COLLEGE_YEAR_MOD, roll_level, roll_level_for_stars, roll_stats, stars_for_level
     if stars is None:
-        star_vals = list(_STAR_DISTRIBUTION.keys())
-        star_wts = list(_STAR_DISTRIBUTION.values())
-        stars = rng.choices(star_vals, weights=star_wts, k=1)[0]
+        level = roll_level(rng)
+        stars = stars_for_level(level)
+    else:
+        level = roll_level_for_stars(stars, rng)
 
-    lo, hi = _STAT_RANGES[stars]
     first, last = _generate_recruit_name(region, rng)
     hometown = _generate_hometown(region, rng)
     hs = _generate_high_school(hometown, rng)
 
-    # Generate base stats in the star range
-    def _stat() -> int:
-        return rng.randint(lo, hi)
-
-    # Position-specific boosts
-    speed = _stat()
-    stamina = _stat()
-    agility = _stat()
-    power = _stat()
-    awareness = _stat()
-    hands = _stat()
-    kicking = _stat()
-    kick_power = _stat()
-    kick_accuracy = _stat()
-    lateral_skill = _stat()
-    tackling = _stat()
-
-    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
-        speed = min(85, speed + rng.randint(2, 6))
-        lateral_skill = min(85, lateral_skill + rng.randint(2, 5))
-        agility = min(85, agility + rng.randint(1, 4))
-    elif position in ("Offensive Line", "Defensive Line"):
-        tackling = min(85, tackling + rng.randint(3, 7))
-        power = min(85, power + rng.randint(3, 7))
-        speed = max(55, speed - rng.randint(2, 5))
-    elif position == "Zeroback":
-        awareness = min(85, awareness + rng.randint(3, 6))
-        kick_power = min(85, kick_power + rng.randint(2, 5))
-        kick_accuracy = min(85, kick_accuracy + rng.randint(2, 5))
-    elif position == "Keeper":
-        speed = min(85, speed + rng.randint(2, 6))
-        tackling = min(85, tackling + rng.randint(3, 7))
-        awareness = min(85, awareness + rng.randint(2, 5))
-        hands = min(85, hands + rng.randint(2, 5))
+    _s = roll_stats(level, position, rng, year_mod=COLLEGE_YEAR_MOD["Freshman"])
+    speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
+    power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
+    kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
+    lateral_skill, tackling = _s["lateral_skill"], _s["tackling"]
+    work_rate = _s["work_rate"]
 
     # Potential and development
     true_potential = rng.randint(max(1, stars - 1), min(5, stars + 1))
@@ -1158,6 +1138,7 @@ def generate_single_recruit(
         true_kick_accuracy=kick_accuracy,
         true_lateral_skill=lateral_skill,
         true_tackling=tackling,
+        true_work_rate=work_rate,
         true_potential=true_potential,
         true_development=true_dev,
         field_intelligence=field_intelligence,

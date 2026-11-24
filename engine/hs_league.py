@@ -40,6 +40,9 @@ class HSPlayer:
     kick_accuracy: int = 30
     lateral_skill: int = 30
     tackling: int = 30
+    work_rate: int = 0
+    # Ladder level of the college freshman she projects to (0 = unknown)
+    level: int = 0
     # Hidden scouting fields
     potential: int = 3
     development: str = "normal"
@@ -159,34 +162,19 @@ def _generate_hs_player(
 
     region = STATE_TO_REGION.get(state, 'midwest')
     first, last = _generate_recruit_name(region, rng)
-    lo, hi = HS_STAT_RANGES[year]
-
-    def _stat():
-        return rng.randint(lo, hi)
-
-    speed, stamina, agility = _stat(), _stat(), _stat()
-    power, awareness, hands = _stat(), _stat(), _stat()
-    kicking, kick_power, kick_accuracy = _stat(), _stat(), _stat()
-    lateral_skill, tackling = _stat(), _stat()
-
-    # Position boosts
-    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
-        speed = min(70, speed + rng.randint(2, 5))
-        lateral_skill = min(70, lateral_skill + rng.randint(1, 4))
-    elif position in ("Offensive Line", "Defensive Line"):
-        tackling = min(70, tackling + rng.randint(2, 6))
-        power = min(70, power + rng.randint(2, 6))
-    elif position == "Zeroback":
-        awareness = min(70, awareness + rng.randint(2, 5))
-        kicking = min(70, kicking + rng.randint(2, 5))
-    elif position == "Keeper":
-        tackling = min(70, tackling + rng.randint(2, 5))
-        awareness = min(70, awareness + rng.randint(2, 4))
+    # Level from the league talent ladder: the college freshman she will
+    # become.  Younger players sit further below it (talent.HS_YEAR_GAP).
+    from engine.talent import COLLEGE_YEAR_MOD, HS_YEAR_GAP, roll_level, roll_stats, stars_for_level
+    level = roll_level(rng)
+    _s = roll_stats(level, position, rng,
+                    year_mod=COLLEGE_YEAR_MOD["Freshman"] - HS_YEAR_GAP.get(year, 2))
+    speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
+    power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
+    kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
+    lateral_skill, tackling = _s["lateral_skill"], _s["tackling"]
 
     # Stars and dev trait
-    star_vals = list(_STAR_DISTRIBUTION.keys())
-    star_wts = list(_STAR_DISTRIBUTION.values())
-    stars = rng.choices(star_vals, weights=star_wts, k=1)[0]
+    stars = stars_for_level(level)
     potential = rng.randint(max(1, stars - 1), min(5, stars + 1))
     dev_options, dev_weights = zip(*_DEV_BY_STARS[stars])
     dev = rng.choices(dev_options, weights=dev_weights, k=1)[0]
@@ -200,6 +188,7 @@ def _generate_hs_player(
         power=power, awareness=awareness, hands=hands,
         kicking=kicking, kick_power=kick_power, kick_accuracy=kick_accuracy,
         lateral_skill=lateral_skill, tackling=tackling,
+        work_rate=_s["work_rate"], level=level,
         potential=potential, development=dev,
         hometown=f"{school_name.split()[0]}, {state}",
         high_school=school_name, region=region, state=state,
@@ -539,8 +528,11 @@ def graduating_class_to_recruits(league: HSLeague):
             if team.state_champ:
                 perf_bonus += 1
 
-            # Base stars from potential, boosted by performance
-            stars = min(5, max(1, p.potential + (1 if perf_bonus >= 2 else 0)))
+            # Stars from her ladder level (older leagues without one fall
+            # back on potential), boosted by a big senior season.
+            from engine.talent import stars_for_level
+            base_stars = stars_for_level(p.level) if p.level else p.potential
+            stars = min(5, max(1, base_stars + (1 if perf_bonus >= 2 else 0)))
 
             recruit = Recruit(
                 recruit_id=rid,
@@ -564,6 +556,7 @@ def graduating_class_to_recruits(league: HSLeague):
                 true_kick_accuracy=p.kick_accuracy,
                 true_lateral_skill=p.lateral_skill,
                 true_tackling=p.tackling,
+                true_work_rate=p.work_rate,
                 true_potential=p.potential,
                 true_development=p.development,
             )
@@ -650,24 +643,25 @@ def _apply_hs_player_development(player: HSPlayer, rng: random.Random):
     dev = player.development
     year = player.year
 
-    # Base gain range by dev trait
+    # Base gain range by dev trait.  A normal player gains about 2 a year,
+    # the gap between high school classes in talent.HS_YEAR_GAP.
     if dev == "quick":
-        lo, hi = 1, 4
+        lo, hi = 1, 5
     elif dev == "late_bloomer":
-        lo, hi = (0, 1) if year in ("Sophomore", "Junior") else (2, 5)
+        lo, hi = (0, 2) if year in ("Sophomore", "Junior") else (2, 6)
     elif dev == "bust":
-        lo, hi = -2, 0
+        lo, hi = -2, 1
     elif dev == "slow":
-        lo, hi = 0, 1
+        lo, hi = 0, 2
     else:  # normal
-        lo, hi = 0, 3
+        lo, hi = 0, 4
 
     for attr in ("speed", "stamina", "agility", "power", "awareness",
                  "hands", "kicking", "kick_power", "kick_accuracy",
                  "lateral_skill", "tackling"):
         delta = rng.randint(lo, hi)
         old = getattr(player, attr)
-        setattr(player, attr, max(10, min(75, old + delta)))
+        setattr(player, attr, max(10, min(96, old + delta)))
 
 
 # ──────────────────────────────────────────────

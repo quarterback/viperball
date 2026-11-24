@@ -992,35 +992,15 @@ def generate_quick_portal(
             k=1,
         )[0]
 
-        # Stat range: portal players start with modest base stats — in-game
-        # multipliers and development are what make them competitive
-        lo, hi = 28, 52
-        if year_class in ("Senior", "Graduate"):
-            lo, hi = 32, 56
-
-        def _stat():
-            return rng.randint(lo, hi)
-
-        # Position adjustments
-        speed = _stat()
-        stamina = _stat()
-        agility = _stat()
-        power = _stat()
-        awareness = _stat()
-        hands = _stat()
-        kicking = _stat()
-        kick_power = _stat()
-        kick_accuracy = _stat()
-        lateral_skill = _stat()
-        tackling = _stat()
-
-        if pos in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback"):
-            speed = min(85, speed + rng.randint(2, 5))
-            lateral_skill = min(85, lateral_skill + rng.randint(1, 4))
-        elif pos in ("Offensive Line", "Defensive Line"):
-            tackling = min(85, tackling + rng.randint(3, 6))
-            power = min(85, power + rng.randint(3, 6))
-            speed = max(55, speed - rng.randint(2, 4))
+        # Level from the league talent ladder, stats around it for her class.
+        # The old flat 28 to 52 roll gave every portal player the same middling
+        # rating and floored linemen at 55 speed.
+        from engine.talent import COLLEGE_YEAR_MOD, roll_level, roll_stats
+        _s = roll_stats(roll_level(rng), pos, rng, year_mod=COLLEGE_YEAR_MOD.get(year_class, 0))
+        speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
+        power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
+        kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
+        lateral_skill, tackling = _s["lateral_skill"], _s["tackling"]
 
         # Height / weight
         if pos in ("Offensive Line", "Defensive Line"):
@@ -1068,6 +1048,7 @@ def generate_quick_portal(
             kick_accuracy=kick_accuracy,
             lateral_skill=lateral_skill,
             tackling=tackling,
+            work_rate=_s["work_rate"],
             potential=potential,
             development=dev,
             current_team="",

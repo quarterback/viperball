@@ -528,6 +528,7 @@ class Dynasty:
                     year="Freshman",
                     potential=attrs.get("potential", 3),
                     development=attrs.get("development", "normal"),
+                    work_rate=attrs.get("work_rate", 0),
                 ))
 
     def advance_season(
