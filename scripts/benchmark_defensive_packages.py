@@ -20,6 +20,8 @@ def run(games, seed):
         ("fortress", "fortress_short_yardage_wall", "ground_pound"),
         ("lockdown", "lockdown_long_yardage_bracket", "boot_raid"),
         ("blitz_pack", "blitz_short_yardage_pressure", "ground_pound"),
+        ("predator", "afl_kick_in_press", "boot_raid"),
+        ("chaos", "lax_ride", "boot_raid"),
     ]
     out = {}
     old = V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)
@@ -46,6 +48,15 @@ def run(games, seed):
                     counts["selected"] += dc["packages"]["selected"].get(package, 0)
                     counts["blitz"] += dc["blitz_calls"]
                     for p in game["play_by_play"]:
+                        rush = p.get("rush_event") or {}
+                        if rush.get("defending_side") == "away":
+                            for key in ("rush:all", "rush:blitz" if rush["blitz"] else "rush:base",
+                                        "rush:" + rush["subfamily"]):
+                                g = groups[key]
+                                g["attempts"] += 1
+                                g[rush["outcome"]] += 1
+                                g["pressure"] += int(rush["pressure"])
+                                g["completion_probability_loss_basis_points"] += round(10000 * (rush["completion_before"] - rush["completion_after"]))
                         call = p.get("defensive_call") or {}
                         if call.get("defending_side") != "away":
                             continue
@@ -65,6 +76,8 @@ def run(games, seed):
                             g["yards"] += y
                             g["explosives"] += int(y >= 30)
                             g["blitz"] += int(call["blitz"])
+                            g["opening_snaps"] += int(p.get("possession_snap_index") == 1)
+                            g["takeaway_snaps"] += int(p.get("possession_origin") in ("turnover", "bonus_possession"))
                             g[call["alignment"]] += 1
                 out[f"{scheme}:{enabled}"] = {"counts": dict(counts),
                     "mean_points_allowed": statistics.mean(scores),
