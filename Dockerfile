@@ -13,6 +13,9 @@ COPY . .
 # Create writable directory for NiceGUI storage
 RUN mkdir -p /app/.nicegui
 
+# Read-only build provenance for health checks; no credentials exposed.
+ARG VIPERBALL_BUILD_SHA=unknown
+ENV VIPERBALL_BUILD_SHA=${VIPERBALL_BUILD_SHA}
 ENV PORT=8080
 EXPOSE 8080
 
