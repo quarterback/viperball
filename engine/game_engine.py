@@ -4430,7 +4430,7 @@ class ViperballEngine:
             "afl_kick_in_press": ("aggressive", 0.06, ["kick_pass"]),
             "lax_ride": ("aggressive", 0.08, ["speed_option", "viper_jet", "kick_pass"]),
         }
-        # Drive-specific packages require both their opening snap and origin/field conditions.
+        # Drive-specific packages have primary and lower-frequency secondary triggers.
         choices = []
         counts = self._defensive_package_usage[side]
         for installed in sorted(unit.get("packages", []), key=lambda p: p.get("package_id", "")):
@@ -9844,8 +9844,8 @@ class ViperballEngine:
         """Assign distinct on-field players to rush and coverage.
 
         Five defensive line slots do not mean five automatic rushers.
-        Base pressure sends two; a blitz sends an additional defender,
-        or two for Blitz Pack. Remaining defenders cover the release.
+        A DC commits one to six actual defenders; the remaining players
+        cover the release. A depleted lineup always retains coverage.
         """
         defenders = self._lineup(def_team, self._unavailable_in_game(def_team), "defense")
         attackers = self._lineup(team, self._unavailable_in_game(team), "offense")
@@ -10302,7 +10302,10 @@ class ViperballEngine:
             center += formation_yard_adj
             # The pre-snap DC alignment must affect the actual run contest.
             # A stacked front denies interior runs but concedes the edge.
-            center *= 1.0 + self._called_run_delta(play_family)
+            tactical_call = self._active_dc_call()
+            tactical_delta = self._called_run_delta(play_family)
+            if not tactical_call.get("package_id"):
+                center *= 1.0 + tactical_delta
             # Formation × Defense matchup multiplier
             center *= self._formation_defense_multiplier()
             # Style matchup and one tactical read. These are separate from
@@ -10372,6 +10375,10 @@ class ViperballEngine:
             effective_mult = center / pre_modifier_center
             if effective_mult < min_mult:
                 center = pre_modifier_center * min_mult
+        # Apply the selected package once, after the generic stacking floor.
+        # The package has its own bounded commitment and replaces alignment.
+        if play_family is not None and tactical_call.get("package_id"):
+            center *= 1.0 + tactical_delta
 
         # ── V2.1 / V2.9: Yardage polarization ──
         # Bimodal distribution: occasional busts and explosives,
