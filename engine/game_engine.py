@@ -15093,9 +15093,19 @@ class ViperballEngine:
             stats["total_yards"] = rush + kp
             stats["yards_per_play"] = round(stats["total_yards"] / max(1, stats["total_plays"]), 2)
             stats["rushing_carries"] = sum(p.game_rush_carries for p in team.players)
+            # The final player counters incorporate catch outcomes, sack
+            # accounting and PEN-01 nullifications. Do not infer catches
+            # from a broad play-result label that includes non-catches.
+            stats["kick_passes_attempted"] = sum(p.game_kick_passes_thrown for p in team.players)
+            stats["kick_passes_completed"] = sum(p.game_kick_passes_completed for p in team.players)
+            stats["kick_pass_interceptions"] = sum(p.game_kick_pass_interceptions for p in team.players)
+            stats["kick_pass_tds"] = sum(p.game_kick_pass_tds for p in team.players)
 
         _reconcile_yards(home_stats, self.home_team)
         _reconcile_yards(away_stats, self.away_team)
+        # Official scores for the same ledger used by scoring profiles.
+        home_stats["official_score"] = self.state.home_score
+        away_stats["official_score"] = self.state.away_score
 
         away_turnovers = len([p for p in away_plays if p.fumble and p.result == "fumble"])
         home_turnovers = len([p for p in home_plays if p.fumble and p.result == "fumble"])
