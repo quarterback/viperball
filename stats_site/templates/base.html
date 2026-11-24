@@ -1182,6 +1182,14 @@ button, input[type="submit"] { font-family: var(--font-ui); font-size: 14px; }
 .setup-form label { font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
 select, input[type="text"], input[type="search"], input[type="number"], textarea { font-family: var(--font-ui); font-size: 14px; }
 .tag { font-family: var(--font-ui); font-size: 11px; }
+.flash { margin: 14px 0 0; padding: 10px 14px; font-size: 14px; border-left: 4px solid; background: var(--bg-alt); }
+.flash-err { border-color: var(--red); color: var(--fg-bright); }
+.flash-ok { border-color: var(--green); color: var(--fg-bright); }
+.inline-form { display: inline; }
+.btn-small { font-size: 12px !important; padding: 2px 10px; }
+.control-panel { margin: 8px 0 24px; display: grid; gap: 12px; }
+.control-panel details > summary { cursor: pointer; font-weight: 600; font-size: 15px; color: var(--fg-bright); }
+.control-panel details[open] > summary { margin-bottom: 10px; }
 </style>
 <script>
 (function(){
@@ -1204,12 +1212,14 @@ select, input[type="text"], input[type="search"], input[type="number"], textarea
     <nav id="main-nav">
       <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
       <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
+      <a href="/stats/dynasty/" {% if section == 'dynasty' %}class="active"{% endif %}>Dynasty</a>
       <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
       <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>WVL</a>
       <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>International</a>
       <a href="/stats/recruiting/" {% if section == 'recruiting' %}class="active"{% endif %}>Recruiting</a>
       <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>Archives</a>
       <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>Search</a>
+      <a href="/stats/saves" {% if section == 'saves' %}class="active"{% endif %}>Saves</a>
       <a href="/stats/my-team/" {% if section == 'my-team' %}class="active"{% endif %} style="color:var(--green);font-weight:bold;">My Team</a>
     </nav>
     <div class="theme-switcher">
@@ -1239,6 +1249,8 @@ select, input[type="text"], input[type="search"], input[type="number"], textarea
 {% block breadcrumb %}{% endblock %}
 
 <div class="container wide">
+{% if request and request.query_params.get('err') %}<div class="flash flash-err" role="alert">{{ request.query_params.get('err') }}</div>{% endif %}
+{% if request and request.query_params.get('ok') %}<div class="flash flash-ok" role="status">{{ request.query_params.get('ok') }}</div>{% endif %}
 {% block content %}{% endblock %}
 </div>
 

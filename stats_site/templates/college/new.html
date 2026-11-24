@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_controls.html" import conference_editor, style_selects %}
 {% block title %}New season — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
@@ -10,10 +11,10 @@
 {% block content %}
 <div class="page-header">
   <h1>New season</h1>
-  <div class="subtitle">{{ teams|length }} teams</div>
+  <div class="subtitle">{{ teams|length }} teams in {{ conferences|length }} conferences, 12 games each</div>
 </div>
 
-<form class="setup-form" method="post" action="/stats/college/new">
+<form class="setup-form" style="max-width:1100px" method="post" action="/stats/college/new">
   <div>
     <label for="name">Season name</label>
     <input type="text" id="name" name="name" value="2026 CVL Season" style="width:100%">
@@ -21,14 +22,18 @@
 
   <div>
     <label>Your teams (up to 4, leave blank for all AI)</label>
-    <div class="row">
+    <div style="display:grid;gap:8px">
       {% for i in range(4) %}
-      <select name="human_teams">
-        <option value="">None</option>
-        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-      </select>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <select name="human_{{ i }}" aria-label="Team {{ i + 1 }}" style="min-width:220px">
+          <option value="">None</option>
+          {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+        {{ style_selects(styles, 'h' ~ i ~ '_') }}
+      </div>
       {% endfor %}
     </div>
+    <div class="hint">Offense, defense and special teams apply to the team on the same line.</div>
   </div>
 
   <div>
@@ -56,6 +61,8 @@
       <div class="hint">0 rolls a new one each run</div>
     </div>
   </div>
+
+  {{ conference_editor(conferences) }}
 
   <div><button class="btn-run" type="submit">Create season</button></div>
 </form>

@@ -16,6 +16,9 @@
   </div>
   {# Run controls: these replace the /app workbench's Sim Week / Sim Rest /
      postseason buttons. One form, the action rides on the button pressed. #}
+  {% if dynasty and phase == 'complete' %}
+  <div class="run-bar"><a href="/stats/dynasty/{{ session_id }}/"><button class="btn-run" type="button">Back to the dynasty</button></a></div>
+  {% endif %}
   {% if phase and phase != 'complete' %}
   <form class="run-bar" method="post" action="/stats/college/{{ session_id }}/advance">
     <span class="run-phase">
@@ -28,6 +31,7 @@
     {% if phase == 'regular' %}
       <button class="btn-run" name="what" value="week">Sim week</button>
       <button name="what" value="rest">Sim rest of season</button>
+      {% if dynasty %}<a href="/stats/dynasty/{{ session_id }}/" style="margin-left:8px">Dynasty</a>{% endif %}
     {% elif phase == 'portal' %}
       <button class="btn-run" name="what" value="skip_portal">Skip portal and start season</button>
     {% elif phase == 'bowls_pending' %}

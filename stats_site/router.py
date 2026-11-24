@@ -827,55 +827,295 @@ async def college_import_dynasty(request: Request):
     )
 
 
+# ── Generic action route ─────────────────────────────────────────────────
+# Every control that used to live in the /app React workbench posts here.
+# The form names the API endpoint it wants (_path, optional _method) and the
+# page to return to (_back). The body is built from the other fields:
+#   name            -> string
+#   name:int / :float / :bool / :json  -> typed value; name:csv -> list
+#   name[]          -> list (repeat the field)
+#   a.b             -> nested object {"a": {"b": ...}}
+# Blank typed fields are left out, so the API's own defaults apply.
+# _pre names an endpoint to POST first (e.g. "/sessions"); its JSON reply is
+# used to fill {placeholders} in _path and _next. The API stays the only place
+# any game rule lives; this route only translates a form into a request.
+
+_ACTION_PREFIXES = ("/sessions", "/api/", "/archives/")
+
+
+def _form_to_body(form):
+    import json as _json
+    body = {}
+    for key, raw in form.multi_items():
+        if key.startswith("_"):
+            continue
+        name, _, typ = key.partition(":")
+        is_list = name.endswith("[]")
+        if is_list:
+            name = name[:-2]
+        val = raw
+        if typ:
+            if raw == "":
+                continue
+            if typ == "int":
+                val = int(raw)
+            elif typ == "float":
+                val = float(raw)
+            elif typ == "bool":
+                val = str(raw).lower() in ("1", "true", "on", "yes")
+            elif typ == "json":
+                val = _json.loads(raw)
+            elif typ == "csv":
+                val = [x.strip() for x in raw.split(",") if x.strip()]
+        parts = name.split(".")
+        node = body
+        for part in parts[:-1]:
+            node = node.setdefault(part, {})
+        leaf = parts[-1]
+        if is_list:
+            if val != "":
+                node.setdefault(leaf, []).append(val)
+        else:
+            node[leaf] = val
+    return body
+
+
+async def _api_call(method, path, body=None):
+    import httpx
+    from api.main import app as api_app
+    transport = httpx.ASGITransport(app=api_app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://internal", timeout=None) as c:
+        kw = {"json": body} if (body is not None and method != "GET") else {}
+        r = await c.request(method, path, **kw)
+    try:
+        data = r.json()
+    except Exception:
+        data = {}
+    return r.status_code, data
+
+
+@router.post("/do")
+async def stats_do(request: Request):
+    from starlette.responses import RedirectResponse
+    from urllib.parse import quote
+    form = await request.form()
+    back = form.get("_back") or "/stats/"
+    method = (form.get("_method") or "POST").upper()
+    fill = {}
+    pre = form.get("_pre")
+    if pre:
+        code, data = await _api_call("POST", pre, {})
+        if code >= 400:
+            msg = data.get("detail") if isinstance(data, dict) else None
+            return RedirectResponse(f"{back}{'&' if '?' in back else '?'}err={quote(str(msg or code))}", status_code=303)
+        if isinstance(data, dict):
+            fill.update({k: v for k, v in data.items() if isinstance(v, (str, int, float))})
+    path = (form.get("_path") or "").format(**fill)
+    if not path.startswith(_ACTION_PREFIXES):
+        raise HTTPException(400, "Unknown action")
+    body = _form_to_body(form)
+    code, data = await _api_call(method, path, body if body or method in ("POST", "PATCH", "PUT") else None)
+    if isinstance(data, dict):
+        fill.update({k: v for k, v in data.items() if isinstance(v, (str, int, float))})
+    if code >= 400:
+        msg = data.get("detail") if isinstance(data, dict) else None
+        if isinstance(msg, list):
+            msg = "; ".join(str(m.get("msg", m)) for m in msg)
+        target = back
+        return RedirectResponse(f"{target}{'&' if '?' in target else '?'}err={quote(str(msg or f'Error {code}'))}", status_code=303)
+    nxt = form.get("_next")
+    target = nxt.format(**fill) if nxt else back
+    ok = form.get("_ok")
+    if ok:
+        target = f"{target}{'&' if '?' in target else '?'}ok={quote(ok)}"
+    return RedirectResponse(target, status_code=303)
+
+
+# ── Saves (replaces the workbench's Saves & Experiments page) ──────────────
+
+@router.get("/saves", response_class=HTMLResponse)
+def saves_page(request: Request):
+    from api.saves_api import list_all_saves
+    rows = []
+    for sv in list_all_saves():
+        d = sv.model_dump() if hasattr(sv, "model_dump") else dict(sv)
+        sep = d["id"].find("::")
+        d["type"], d["key"] = d["id"][:sep], d["id"][sep + 2:]
+        rows.append(d)
+    return templates.TemplateResponse("saves.html", _ctx(request, section="saves", saves=rows))
+
+
 # ── College season controls (replace the /app workbench's League hub) ──
 # These forms call the same API functions the React workbench called, then
 # send the browser back to the page it came from. No second implementation:
 # every rule about phases and request shapes stays in api/main.py.
 
-def _college_teams():
-    import json as _json, os as _os
-    from api.main import TEAMS_DIR
-    out = []
-    for f in sorted(_os.listdir(TEAMS_DIR)):
-        if f.endswith(".json"):
-            try:
-                d = _json.load(open(_os.path.join(TEAMS_DIR, f)))
-                out.append(d.get("team_info", {}).get("school_name") or d.get("name") or f[:-5])
-            except Exception:
-                continue
-    return sorted(set(out))
+def _setup_data():
+    """Defaults every setup form needs: conference alignment, styles, archetypes."""
+    from api.main import conference_defaults, list_styles, program_archetypes
+    confs = conference_defaults()["conferences"]
+    teams = sorted({t for members in confs.values() for t in members})
+    return {
+        "conferences": confs,
+        "teams": teams,
+        "styles": list_styles(),
+        "archetypes": program_archetypes()["archetypes"],
+    }
+
+
+def _form_conferences(form):
+    """conf__<team> fields -> {conference: [teams]} (None if the form had none)."""
+    out = {}
+    for key, val in form.multi_items():
+        if key.startswith("conf__") and val:
+            out.setdefault(val, []).append(key[len("conf__"):])
+    return out or None
+
+
+def _form_int(form, key, default):
+    try:
+        return int(form.get(key) or default)
+    except (TypeError, ValueError):
+        return default
 
 
 @router.get("/college/new", response_class=HTMLResponse)
 def college_new_form(request: Request):
     return templates.TemplateResponse("college/new.html", _ctx(
-        request, section="college", teams=_college_teams(),
-        playoff_sizes=[4, 8, 12, 16, 24, 32],
+        request, section="college", playoff_sizes=[4, 8, 12, 16, 24, 32], **_setup_data(),
     ))
 
 
 @router.post("/college/new")
 async def college_new_submit(request: Request):
     from starlette.responses import RedirectResponse
+    from urllib.parse import quote
     from api.main import create_session, create_season_endpoint, CreateSeasonRequest
     form = await request.form()
-    human = [t for t in form.getlist("human_teams") if t][:4]
-    def _int(k, d):
-        try:
-            return int(form.get(k) or d)
-        except ValueError:
-            return d
+    human, configs = [], {}
+    for i in range(4):
+        team = form.get(f"human_{i}")
+        if team and team not in human:
+            human.append(team)
+            configs[team] = {
+                "offense_style": form.get(f"h{i}_offense_style") or "balanced",
+                "defense_style": form.get(f"h{i}_defense_style") or "swarm",
+                "st_scheme": form.get(f"h{i}_st_scheme") or "aces",
+            }
+    confs = _form_conferences(form)
     req = CreateSeasonRequest(
         name=(form.get("name") or "2026 CVL Season").strip(),
-        playoff_size=_int("playoff_size", 8),
-        bowl_count=_int("bowl_count", 0),
-        ai_seed=_int("ai_seed", 0),
-        history_years=_int("history_years", 0),
+        playoff_size=_form_int(form, "playoff_size", 8),
+        bowl_count=_form_int(form, "bowl_count", 0),
+        ai_seed=_form_int(form, "ai_seed", 0),
+        history_years=_form_int(form, "history_years", 0),
         human_teams=human,
+        human_configs=configs,
+        conferences=confs,
+        num_conferences=len(confs) if confs else 10,
     )
     sid = create_session()["session_id"]
-    create_season_endpoint(sid, req)
+    try:
+        create_season_endpoint(sid, req)
+    except HTTPException as e:
+        return RedirectResponse(f"/stats/college/new?err={quote(str(e.detail))}", status_code=303)
     return RedirectResponse(f"/stats/college/{sid}/", status_code=303)
+
+
+# ── Dynasty (replaces the workbench's Dynasty pages) ───────────────────────
+
+@router.get("/dynasty/", response_class=HTMLResponse)
+async def dynasty_index(request: Request):
+    api = _get_api()
+    _, saved = await _api_call("GET", "/dynasties")
+    active = []
+    for sid, sess in api["sessions"].items():
+        d = sess.get("dynasty")
+        if d is not None:
+            active.append({"session_id": sid, "name": d.dynasty_name, "team": d.coach.team_name,
+                           "year": d.current_year, "phase": sess.get("phase")})
+    return templates.TemplateResponse("dynasty/index.html", _ctx(
+        request, section="dynasty", saved=(saved or {}).get("dynasties", []), active=active,
+    ))
+
+
+@router.get("/dynasty/new", response_class=HTMLResponse)
+def dynasty_new_form(request: Request):
+    return templates.TemplateResponse("dynasty/new.html", _ctx(
+        request, section="dynasty", playoff_sizes=[4, 8, 12, 16, 24, 32], **_setup_data(),
+    ))
+
+
+@router.post("/dynasty/new")
+async def dynasty_new_submit(request: Request):
+    from starlette.responses import RedirectResponse
+    from urllib.parse import quote
+    from api.main import create_session
+    form = await request.form()
+    confs = _form_conferences(form)
+    body = {
+        "dynasty_name": (form.get("dynasty_name") or "My Viperball Dynasty").strip(),
+        "coach_name": (form.get("coach_name") or "Coach").strip(),
+        "coach_team": form.get("coach_team"),
+        "starting_year": _form_int(form, "starting_year", 2026),
+        "program_archetype": form.get("program_archetype") or None,
+        "history_years": _form_int(form, "history_years", 0),
+        "games_per_team": _form_int(form, "games_per_team", 12),
+        "playoff_size": _form_int(form, "playoff_size", 8),
+        "bowl_count": _form_int(form, "bowl_count", 4),
+        "num_conferences": len(confs) if confs else 10,
+        "conferences": confs,
+    }
+    sid = create_session()["session_id"]
+    code, data = await _api_call("POST", f"/sessions/{sid}/dynasty", body)
+    if code >= 400:
+        return RedirectResponse(f"/stats/dynasty/new?err={quote(str(data.get('detail', code)))}", status_code=303)
+    return RedirectResponse(f"/stats/dynasty/{sid}/", status_code=303)
+
+
+@router.get("/dynasty/{session_id}/", response_class=HTMLResponse)
+async def dynasty_hub(request: Request, session_id: str):
+    code, status = await _api_call("GET", f"/sessions/{session_id}/dynasty/status")
+    if code >= 400:
+        raise HTTPException(404, "No dynasty in this session")
+    api = _get_api()
+    sess = api["sessions"].get(session_id, {})
+    ctx = {"session_id": session_id, "status": status, "phase": sess.get("phase")}
+    oc, off = await _api_call("GET", f"/sessions/{session_id}/offseason/status")
+    ctx["offseason"] = off if oc < 400 else None
+    season = sess.get("season")
+    if season is not None and not ctx["offseason"]:
+        ctx["season"] = {
+            "name": season.name,
+            "games_played": sum(1 for g in season.schedule if g.completed),
+            "total_games": len(season.schedule),
+            "champion": season.champion,
+        }
+    if ctx["offseason"]:
+        ph = ctx["offseason"]["phase"]
+        if ph == "nil":
+            _, ctx["nil"] = await _api_call("GET", f"/sessions/{session_id}/offseason/nil")
+        elif ph == "portal":
+            _, ctx["portal"] = await _api_call("GET", f"/sessions/{session_id}/offseason/portal")
+            if isinstance(ctx["portal"], dict):
+                ctx["portal"]["entries"] = sorted(ctx["portal"].get("entries", []),
+                                                  key=lambda e: -(e.get("overall") or 0))
+        elif ph == "recruiting":
+            _, ctx["recruiting"] = await _api_call("GET", f"/sessions/{session_id}/offseason/recruiting")
+    _, progs = await _api_call("GET", f"/sessions/{session_id}/dynasty/programs")
+    _, hist = await _api_call("GET", f"/sessions/{session_id}/dynasty/team-histories")
+    _, awards = await _api_call("GET", f"/sessions/{session_id}/dynasty/awards")
+    _, records = await _api_call("GET", f"/sessions/{session_id}/dynasty/record-book")
+    ctx["programs"] = progs or {}
+    ctx["histories"] = sorted((hist or {}).get("team_histories", {}).values(),
+                              key=lambda h: (-h.get("total_championships", 0), -h.get("win_percentage", 0)))
+    ctx["awards"] = sorted(((int(y), a) for y, a in (awards or {}).get("awards_history", {}).items()), reverse=True)
+    ctx["records"] = (records or {}).get("record_book", {})
+    from api.main import list_styles, program_archetypes
+    ctx["styles"] = list_styles()
+    ctx["archetypes"] = program_archetypes()["archetypes"]
+    ctx["view"] = request.query_params.get("view", "command")
+    return templates.TemplateResponse("dynasty/hub.html", _ctx(request, section="dynasty", **ctx))
 
 
 @router.post("/college/{session_id}/advance")

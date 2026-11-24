@@ -13,19 +13,19 @@ below is checked.
 - [x] Sim week, sim rest of season
 - [x] Bowls, playoffs
 - [x] Skip transfer portal
-- [ ] New season: per team offense, defense and special teams styles
-- [ ] New season: conference alignment editor
+- [x] New season: per team offense, defense and special teams styles
+- [x] New season: conference alignment editor
 - [ ] In-season portal: commit a player to a team
 - [ ] Player edit, player add, player move, team rename and team details
 - [ ] Archive a finished season (stats site has a fetch button already; move to a form)
 
 ### Saves
-- [ ] One list of every save (`/api/saves`): open, fork, rename, tag, delete
+- [x] One list of every save (`/api/saves`): open, fork, rename, tag, delete
 
 ### Dynasty
-- [ ] Create dynasty, start season, advance
-- [ ] Programs: add, retire, restore
-- [ ] Offseason: NIL allocation, portal offer/commit/resolve, recruiting scout/offer/assign/resolve, recruit editor, complete
+- [x] Create dynasty, start season, advance
+- [x] Programs: add, retire, restore
+- [x] Offseason: NIL allocation, portal offer/commit/resolve, recruiting scout/offer/assign/resolve, recruit editor, complete
 
 ### My Team
 - [x] Already on the stats site (retention lock, portal bid/advance, sim, run it back)

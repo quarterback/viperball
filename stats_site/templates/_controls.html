@@ -1,0 +1,50 @@
+{# Shared form pieces for the run controls that replaced the /app workbench. #}
+
+{% macro conference_editor(conferences) %}
+{# One select per team, grouped by its starting conference. The route turns
+   the conf__<team> fields back into {conference: [teams]}. #}
+{% set names = conferences.keys()|list|sort %}
+<div>
+  <label>Conference alignment</label>
+  <div class="hint" style="margin:0 0 8px">{{ names|length }} conferences. Open one to move its teams.</div>
+  {% for conf in names %}
+  <details style="margin:2px 0">
+    <summary style="cursor:pointer;font-size:14px">{{ conf }} <span style="color:var(--fg-dim)">{{ conferences[conf]|length }}</span></summary>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 18px;margin:8px 0 12px">
+      {% for team in conferences[conf] %}
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+        <span style="font-size:14px">{{ team }}</span>
+        <select name="conf__{{ team }}" aria-label="Conference for {{ team }}">
+          {% for c in names %}<option value="{{ c }}" {% if c == conf %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro style_selects(styles, prefix, current=None) %}
+{% set cur = current or {} %}
+<select name="{{ prefix }}offense_style" aria-label="Offense">
+  {% for k, v in styles.offense_styles.items() %}<option value="{{ k }}" {% if cur.get('offense_style', 'balanced') == k %}selected{% endif %}>{{ v.label }}</option>{% endfor %}
+</select>
+<select name="{{ prefix }}defense_style" aria-label="Defense">
+  {% for k, v in styles.defense_styles.items() %}<option value="{{ k }}" {% if cur.get('defense_style', 'swarm') == k %}selected{% endif %}>{{ v.label }}</option>{% endfor %}
+</select>
+<select name="{{ prefix }}st_scheme" aria-label="Special teams">
+  {% for k, v in styles.st_schemes.items() %}<option value="{{ k }}" {% if cur.get('st_scheme', 'aces') == k %}selected{% endif %}>{{ v.label }}</option>{% endfor %}
+</select>
+{% endmacro %}
+
+{% macro action(path, label, back, ok=None, method='POST', cls='btn-small', confirm=None, hidden={}) %}
+<form class="inline-form" method="post" action="/stats/do"{% if confirm %} onsubmit="return confirm('{{ confirm|e }}')"{% endif %}>
+  <input type="hidden" name="_path" value="{{ path }}">
+  {% if method != 'POST' %}<input type="hidden" name="_method" value="{{ method }}">{% endif %}
+  <input type="hidden" name="_back" value="{{ back }}">
+  {% if ok %}<input type="hidden" name="_ok" value="{{ ok }}">{% endif %}
+  {% for k, v in hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="{{ cls }}" type="submit">{{ label }}</button>
+</form>
+{% endmacro %}

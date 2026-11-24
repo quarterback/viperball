@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% from "_controls.html" import style_selects, action %}
+{% set here = '/stats/dynasty/' ~ session_id ~ '/' %}
+{% set c = status.coach %}
+{% block title %}{{ status.dynasty_name }} — Viperball Stats{% endblock %}
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide"><a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/dynasty/">Dynasty</a><span class="sep">/</span>{{ status.dynasty_name }}</div></div>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ status.dynasty_name }}</h1>
+  <div class="subtitle">{{ c.name }} at {{ c.team }} · {{ status.current_year }} · {{ status.seasons_played }} season{{ '' if status.seasons_played == 1 else 's' }} played · {{ status.team_count }} programs</div>
+</div>
+
+<div class="grid-4" style="margin-bottom:8px">
+  <div class="metric"><div class="label">Career record</div><div class="value">{{ c.career_wins }}-{{ c.career_losses }}</div></div>
+  <div class="metric"><div class="label">Win %</div><div class="value">{{ '%.1f'|format(c.win_percentage * 100) }}</div></div>
+  <div class="metric"><div class="label">National titles</div><div class="value">{{ c.championships }}</div></div>
+  <div class="metric"><div class="label">Playoffs · conference titles · bowl wins</div><div class="value">{{ c.playoff_appearances }} · {{ c.conference_titles }} · {{ c.bowl_wins }}</div></div>
+</div>
+
+<div class="tabs">
+  {% for key, label in [('command', 'This year'), ('programs', 'Programs'), ('history', 'Team history'), ('awards', 'Awards'), ('records', 'Record book')] %}
+  <a href="{{ here }}?view={{ key }}" {% if view == key %}class="active"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if view == 'command' %}
+
+  {% if offseason %}
+    {% set ph = offseason.phase %}
+    <h2>{{ status.current_year }} offseason</h2>
+    <div class="tabs" style="margin-bottom:12px">
+      {% for key, label in [('nil', 'NIL'), ('portal', 'Transfer portal'), ('recruiting', 'Recruiting'), ('ready', 'Finalize')] %}
+      <a {% if ph == key %}class="active"{% endif %} style="pointer-events:none">{{ label }}</a>
+      {% endfor %}
+    </div>
+
+    {% if ph == 'nil' and nil %}
+    <p style="max-width:720px">Split this year's NIL budget of <strong>${{ '{:,}'.format(nil.annual_budget|int) }}</strong> across the three pools.</p>
+    <form class="setup-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/offseason/nil/allocate">
+      <input type="hidden" name="_back" value="{{ here }}">
+      <div class="row">
+        <div><label for="rp">Recruiting pool</label><input type="number" id="rp" name="recruiting_pool:float" step="1000" min="0" value="{{ nil.recruiting_pool|int }}"></div>
+        <div><label for="pp">Portal pool</label><input type="number" id="pp" name="portal_pool:float" step="1000" min="0" value="{{ nil.portal_pool|int }}"></div>
+        <div><label for="tp">Retention pool</label><input type="number" id="tp" name="retention_pool:float" step="1000" min="0" value="{{ nil.retention_pool|int }}"></div>
+      </div>
+      <div><button class="btn-run" type="submit">Allocate and open the portal</button></div>
+    </form>
+
+    {% elif ph == 'portal' and portal %}
+    <p>{{ portal.entries|length }} players in the portal. {% if offseason.transfers_remaining >= 0 %}{{ offseason.transfers_remaining }} transfer spots left.{% endif %}</p>
+    <div class="run-bar" style="margin:0 0 12px">{{ action('/sessions/' ~ session_id ~ '/offseason/portal/resolve', 'Close the portal', here, cls='btn-run') }}</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Pot</th><th>Year</th><th>From</th><th class="num">Offers</th><th>Offer NIL</th><th></th></tr></thead>
+      <tbody>
+      {% for e in portal.entries %}
+      <tr>
+        <td>{{ e.player_name }}</td><td>{{ e.position }}</td><td class="num">{{ e.overall }}</td><td class="num">{{ e.potential }}</td>
+        <td>{{ e.year }}</td><td>{{ e.origin_team }}</td><td class="num">{{ e.offers_count }}</td>
+        <td>
+          <form class="inline-form" method="post" action="/stats/do">
+            <input type="hidden" name="_path" value="/sessions/{{ session_id }}/offseason/portal/offer">
+            <input type="hidden" name="_back" value="{{ here }}">
+            <input type="hidden" name="_ok" value="Offer sent to {{ e.player_name }}">
+            <input type="hidden" name="entry_index:int" value="{{ e.global_index }}">
+            <input type="number" name="nil_amount:float" value="0" step="1000" min="0" style="width:110px" aria-label="NIL amount">
+            <button class="btn-small" type="submit">Offer</button>
+          </form>
+        </td>
+        <td>{{ action('/sessions/' ~ session_id ~ '/offseason/portal/commit', 'Sign now', here, ok='Signed ' ~ e.player_name, hidden={'entry_index:int': e.global_index}) }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+
+    {% elif ph == 'recruiting' and recruiting %}
+    {% set b = recruiting.board %}
+    <p>{{ b.scholarships_available }} scholarships · {{ b.scouting_points }} scouting points · up to {{ b.max_offers }} offers</p>
+    <div class="run-bar" style="margin:0 0 12px">{{ action('/sessions/' ~ session_id ~ '/offseason/recruiting/resolve', 'Signing day', here, cls='btn-run') }}</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Recruit</th><th>Pos</th><th class="num">Stars</th><th>Hometown</th><th>Scouted</th><th class="num">OVR</th><th></th></tr></thead>
+      <tbody>
+      {% for r in recruiting.recruits %}
+      <tr>
+        <td style="white-space:normal">
+          <details>
+            <summary style="cursor:pointer">{{ r.name }}</summary>
+            {% set first = r.name.split(' ', 1)[0] %}{% set last = r.name.split(' ', 1)[1] if ' ' in r.name else '' %}
+            <form method="post" action="/stats/do" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:8px 0;max-width:760px">
+              <input type="hidden" name="_path" value="/sessions/{{ session_id }}/offseason/recruiting/{{ r.pool_index }}">
+              <input type="hidden" name="_method" value="PATCH">
+              <input type="hidden" name="_back" value="{{ here }}">
+              <input type="hidden" name="_ok" value="Updated {{ r.name }}">
+              <input type="text" name="fields.first_name" value="{{ first }}" aria-label="First name" placeholder="First name">
+              <input type="text" name="fields.last_name" value="{{ last }}" aria-label="Last name" placeholder="Last name">
+              <select name="fields.position" aria-label="Position">{% for p in ['Viper','Zeroback','Halfback','Wingback','Slotback','Keeper','Offensive Line','Defensive Line'] %}<option {% if r.position_full == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
+              <input type="number" name="fields.stars:int" value="{{ r.stars }}" min="1" max="5" aria-label="Stars">
+              <input type="text" name="fields.region" value="{{ r.region }}" aria-label="Region" placeholder="Region">
+              <input type="text" name="fields.hometown" value="{{ r.hometown }}" aria-label="Hometown" placeholder="Hometown">
+              {% for k, lab in [('true_speed','Speed'),('true_power','Power'),('true_agility','Agility'),('true_hands','Hands'),('true_awareness','Awareness'),('true_stamina','Stamina'),('true_tackling','Tackling'),('true_kicking','Kicking'),('true_potential','Potential')] %}
+              <input type="number" name="fields.{{ k }}:int" value="{{ r[k] if r[k] is defined and r[k] is not none else '' }}" min="1" max="99" placeholder="{{ lab }}" aria-label="{{ lab }}" title="{{ lab }}">
+              {% endfor %}
+              <select name="fields.true_development" aria-label="Development">{% for d in ['normal','quick','slow','late_bloomer','bust'] %}<option {% if r.true_development == d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>
+              <input type="number" name="fields.gpa:float" value="{{ r.gpa if r.gpa is defined and r.gpa is not none else '' }}" step="0.01" placeholder="GPA" aria-label="GPA">
+              <input type="number" name="fields.sat_score:int" value="{{ r.sat_score if r.sat_score is defined and r.sat_score is not none else '' }}" placeholder="SAT" aria-label="SAT">
+              <div><button class="btn-small" type="submit">Save recruit</button></div>
+            </form>
+            <form method="post" action="/stats/do" style="margin:0 0 8px">
+              <input type="hidden" name="_path" value="/sessions/{{ session_id }}/offseason/recruiting/assign">
+              <input type="hidden" name="_back" value="{{ here }}">
+              <input type="hidden" name="_ok" value="Assigned {{ r.name }}">
+              <input type="hidden" name="recruit_index:int" value="{{ r.pool_index }}">
+              <select name="team" aria-label="Assign to team">{% for p in programs.programs or [] %}{% if not p.retired %}<option {% if p.name == c.team %}selected{% endif %}>{{ p.name }}</option>{% endif %}{% endfor %}</select>
+              <button class="btn-small" type="submit">Sign to this team</button>
+            </form>
+          </details>
+        </td>
+        <td>{{ r.position }}</td><td class="num">{{ r.stars }}</td><td>{{ r.hometown }}</td><td>{{ r.scout_level }}</td>
+        <td class="num">{{ r.true_overall if r.true_overall is defined and r.true_overall is not none else '' }}</td>
+        <td style="white-space:nowrap">
+          {% if r.scout_level == 'none' %}{{ action('/sessions/' ~ session_id ~ '/offseason/recruiting/scout', 'Scout', here, hidden={'recruit_index:int': r.pool_index, 'level': 'basic'}) }}{% endif %}
+          {% if r.scout_level != 'full' %}{{ action('/sessions/' ~ session_id ~ '/offseason/recruiting/scout', 'Full scout', here, hidden={'recruit_index:int': r.pool_index, 'level': 'full'}) }}{% endif %}
+          {{ action('/sessions/' ~ session_id ~ '/offseason/recruiting/offer', 'Offer', here, ok='Offered ' ~ r.name, hidden={'recruit_index:int': r.pool_index}) }}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+
+    {% elif ph == 'ready' %}
+    <p>The offseason is done. Finalizing graduates the seniors, adds the new class and opens the {{ status.current_year }} season setup.</p>
+    <div class="run-bar">{{ action('/sessions/' ~ session_id ~ '/offseason/complete', 'Finalize offseason', here, cls='btn-run') }}</div>
+    {% endif %}
+
+  {% elif season %}
+    <h2>{{ season.name }}</h2>
+    <p>{{ season.games_played }}/{{ season.total_games }} games played{% if season.champion %} · Champion: {{ season.champion }}{% endif %}</p>
+    <div class="run-bar">
+      <a href="/stats/college/{{ session_id }}/"><button class="btn-run" type="button">Play the season</button></a>
+      {% if season.champion %}{{ action('/sessions/' ~ session_id ~ '/dynasty/advance', 'Advance to offseason', here) }}{% endif %}
+    </div>
+    {% if not season.champion %}<p class="hint" style="color:var(--fg-dim);font-size:13px;margin-top:8px">Finish the season, including the playoffs, to advance.</p>{% endif %}
+
+  {% else %}
+    <h2>Start the {{ status.current_year }} season</h2>
+    <form class="setup-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/dynasty/start-season">
+      <input type="hidden" name="_back" value="{{ here }}">
+      <input type="hidden" name="_next" value="/stats/college/{{ session_id }}/">
+      <input type="hidden" name="games_per_team:int" value="{{ status.games_per_team or 12 }}">
+      <input type="hidden" name="playoff_size:int" value="{{ status.playoff_size or 8 }}">
+      <input type="hidden" name="bowl_count:int" value="{{ status.bowl_count if status.bowl_count is not none else 4 }}">
+      <div>
+        <label>{{ c.team }} style</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">{{ style_selects(styles, '') }}</div>
+      </div>
+      <div style="max-width:240px"><label for="seed">AI seed</label><input type="number" id="seed" name="ai_seed:int" value="" min="1" placeholder="Random"></div>
+      <div><button class="btn-run" type="submit">Start season</button></div>
+    </form>
+  {% endif %}
+
+{% elif view == 'programs' %}
+  <p>{{ programs.active_count }} active programs{% if programs.even is defined and not programs.even %} (an odd count; the schedule needs an even number){% endif %}.</p>
+  <details style="margin:8px 0 20px">
+    <summary style="cursor:pointer;font-weight:600">Add a program</summary>
+    <form class="setup-form" method="post" action="/stats/do" style="margin-top:10px">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/dynasty/program/add">
+      <input type="hidden" name="_back" value="{{ here }}?view=programs">
+      <input type="hidden" name="_ok" value="Program added">
+      <div class="row">
+        <div><label>Name</label><input type="text" name="team_name" required></div>
+        <div><label>Conference</label><select name="conference">{% for cf in programs.conferences or [] %}<option>{{ cf }}</option>{% endfor %}</select></div>
+        <div><label>Abbreviation</label><input type="text" name="abbreviation"></div>
+        <div><label>Mascot</label><input type="text" name="mascot"></div>
+        <div><label>City</label><input type="text" name="city"></div>
+        <div><label>State</label><input type="text" name="state"></div>
+        <div><label>Prestige</label><input type="number" name="prestige:int" min="1" max="99"></div>
+        <div><label>Archetype</label><select name="program_archetype"><option value="">None</option>{% for k, a in archetypes.items() %}<option value="{{ k }}">{{ a.label }}</option>{% endfor %}</select></div>
+      </div>
+      <div><button class="btn-run" type="submit">Add program</button></div>
+    </form>
+  </details>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Program</th><th>Conference</th><th class="num">Prestige</th><th class="num">W-L</th><th class="num">Titles</th><th></th></tr></thead>
+    <tbody>
+    {% for p in programs.programs or [] %}
+    <tr>
+      <td>{{ p.name }}{% if p.custom %} <span class="tag">custom</span>{% endif %}{% if p.retired %} <span class="tag">retired</span>{% endif %}</td>
+      <td>{{ p.conference or '' }}</td><td class="num">{{ p.prestige }}</td><td class="num">{{ p.wins }}-{{ p.losses }}</td><td class="num">{{ p.championships }}</td>
+      <td>
+        {% if p.retired %}
+        <form class="inline-form" method="post" action="/stats/do">
+          <input type="hidden" name="_path" value="/sessions/{{ session_id }}/dynasty/program/restore">
+          <input type="hidden" name="_back" value="{{ here }}?view=programs">
+          <input type="hidden" name="team" value="{{ p.name }}">
+          <select name="conference" aria-label="Conference">{% for cf in programs.conferences or [] %}<option>{{ cf }}</option>{% endfor %}</select>
+          <button class="btn-small" type="submit">Restore</button>
+        </form>
+        {% elif p.name != c.team %}
+        {{ action('/sessions/' ~ session_id ~ '/dynasty/program/retire', 'Retire', here ~ '?view=programs', confirm='Retire ' ~ p.name ~ '?', hidden={'team': p.name}) }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+{% elif view == 'history' %}
+  <div class="table-scroll"><table>
+    <thead><tr><th>Program</th><th class="num">W-L</th><th class="num">Win %</th><th class="num">Titles</th><th class="num">Playoffs</th><th class="num">Best season</th><th>Title years</th></tr></thead>
+    <tbody>
+    {% for h in histories %}
+    <tr><td>{{ h.team_name }}</td><td class="num">{{ h.total_wins }}-{{ h.total_losses }}</td><td class="num">{{ '%.3f'|format(h.win_percentage) }}</td>
+      <td class="num">{{ h.total_championships }}</td><td class="num">{{ h.total_playoff_appearances }}</td>
+      <td class="num">{{ h.best_season_wins }} ({{ h.best_season_year }})</td><td>{{ h.championship_years|join(', ') }}</td></tr>
+    {% else %}<tr><td colspan="7" style="color:var(--fg-dim)">No seasons played yet.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+
+{% elif view == 'awards' %}
+  <table>
+    <thead><tr><th class="num">Year</th><th>Champion</th><th>Coach of the year</th><th>Highest scoring</th><th>Best defense</th></tr></thead>
+    <tbody>
+    {% for y, a in awards %}
+    <tr><td class="num">{{ y }}</td><td>{{ a.champion }}</td><td>{{ a.coach_of_year }}</td><td>{{ a.highest_scoring }}</td><td>{{ a.best_defense }}</td></tr>
+    {% else %}<tr><td colspan="5" style="color:var(--fg-dim)">No seasons played yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+
+{% elif view == 'records' %}
+  <table>
+    <thead><tr><th>Record</th><th>Holder</th><th class="num">Value</th><th class="num">Year</th></tr></thead>
+    <tbody>
+    {% for key, r in records.items() %}
+    {% set holder = r.team or r.coach %}
+    {% set vals = [] %}{% for k, v in r.items() if k not in ('team', 'coach', 'year') %}{% set _ = vals.append(v) %}{% endfor %}
+    <tr><td>{{ key|replace('_', ' ')|capitalize }}</td><td>{{ holder or 'Not set' }}</td><td class="num">{{ vals|join(', ') }}</td><td class="num">{{ r.year or '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}
