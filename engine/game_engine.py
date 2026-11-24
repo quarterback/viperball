@@ -12570,8 +12570,16 @@ class ViperballEngine:
         # Don't fake from your own end zone — too risky
         if self.state.field_position > 15 and random.random() < fake_rate:
             # Fake punt — runner or passer from punt formation
-            playmaker = max(team.players[:6],
-                            key=lambda p: p.speed * 0.5 + getattr(p, 'agility', 75) * 0.3 + getattr(p, 'hands', 75) * 0.2)
+            available = self._unavailable_in_game(team)
+            fake_candidates = [p for p in team.players
+                               if p.name not in available and p.position in
+                               ("Halfback", "Wingback", "Slotback", "Viper", "Zeroback", "Keeper")]
+            if not fake_candidates:
+                fake_candidates = [p for p in team.players if p.name not in available]
+            # The punter is always already available, even if injuries empty the unit.
+            playmaker = max(fake_candidates or [punter],
+                            key=lambda p: p.speed * 0.5 + getattr(p, 'agility', 75) * 0.3 +
+                            getattr(p, 'hands', 75) * 0.2)
             ftag = player_tag(playmaker)
             # 45% chance of success (first down), 55% turnover on downs
             success_roll = random.random()
