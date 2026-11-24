@@ -28,37 +28,37 @@ from typing import List, Dict, Optional
 # ═══════════════════════════════════════════════════════════════
 
 def calculate_ppd(drives: List[Dict], team: str) -> float:
-    """Points Per Drive (PPD).
+    """Actual points scored during own offensive possessions per drive.
 
-    How many points this team scores per offensive possession.
-    A fan says: "They averaged 4.2 points per drive."
-
-    Elite: 5.0+  |  Good: 3.5-5.0  |  Average: 2.5-3.5  |  Poor: <2.5
+    Use the post-drive scoreboard instead of treating every successful
+    scoring kick as 4.2 points. Scores earned while the opponent has a
+    possession (including defensive return touchdowns) are excluded.
+    Older archived drives with no score snapshots retain the historical
+    approximate fallback and should not be interpreted as exact.
     """
     team_drives = [d for d in drives if d.get("team") == team]
     if not team_drives:
-        return 3.0
+        return 0.0
+    if all(d.get("home_score_after") is not None and
+           d.get("away_score_after") is not None for d in drives):
+        prev = {"home": 0.0, "away": 0.0}
+        points = 0.0
+        for drive in drives:
+            cur = {side: float(drive[side + "_score_after"])
+                   for side in ("home", "away")}
+            if drive.get("team") == team:
+                # Bells on a defensive play are not offensive PPD.
+                points += max(0.0, cur[team] - prev[team])
+            prev = cur
+        return round(points / len(team_drives), 2)
 
-    # Count actual scoring drives by type for accurate weighting
-    td_drives = sum(1 for d in team_drives
-                    if d.get("result") == "touchdown")
-    kick_drives = sum(1 for d in team_drives
-                      if d.get("result") == "successful_kick")
-    pindown_drives = sum(1 for d in team_drives
-                         if d.get("result") == "pindown")
-    safety_drives = sum(1 for d in team_drives
-                        if d.get("result") == "safety")
-
-    # Calculate actual points scored across drives
-    # TD = 9, DK/PK average = 4 (weighted toward DK=5 in aggressive
-    # offenses, PK=3 in conservative ones), Pindown = 1, Safety = 2
-    # Use 4.2 as the league-average kick value (DK slightly more common
-    # than PK due to 5-point payoff incentivizing attempts)
-    total_drive_pts = (td_drives * 9 + kick_drives * 4.2
-                       + pindown_drives * 1 + safety_drives * 2)
-
-    ppd = total_drive_pts / len(team_drives)
-    return round(ppd, 2)
+    # Historical exports lack drive scoreboard snapshots.
+    tds = sum(d.get("result") == "touchdown" for d in team_drives)
+    kicks = sum(d.get("result") == "successful_kick" for d in team_drives)
+    pindowns = sum(d.get("result") == "pindown" for d in team_drives)
+    safeties = sum(d.get("result") == "safety" for d in team_drives)
+    return round((9 * tds + 4.2 * kicks + pindowns + 2 * safeties) /
+                 len(team_drives), 2)
 
 
 def calculate_conversion_pct(plays: List[Dict], team: str) -> float:
@@ -134,59 +134,45 @@ def calculate_conversion_by_field_zone(plays: List[Dict], team: str) -> Dict:
 
 
 def calculate_delta_profile(plays: List[Dict], drives: List[Dict],
-                            team: str) -> Dict:
-    """Delta profile — how much difficulty a team faces vs creates.
+                            team: str, game_stats: Optional[Dict] = None) -> Dict:
+    """Report the restart field-position cost, not the teams' yardage gap.
 
-    Measures the environment each team operates in:
-      - delta_yds:    net yardage differential (positive = gaining more)
-      - delta_drives: net drive count differential
-      - delta_scores: net scoring differential
-      - kill_pct:     how often drives end with total failure (TOD, no gain)
-
-    Low KILL% + positive delta = controlled winning
-    High KILL% + negative delta = chaotic losing (disruption without control)
+    Positive Delta Yards means a team was pushed backwards by the
+    score-dependent restart. Negative means it received an advantage.
+    Only drives with an observed restart delta enter PK/PP buckets;
+    no restart after the last score can be assigned to an unplayed drive.
     """
-    team_plays = [p for p in plays if p.get("possession") == team]
-    opp_plays = [p for p in plays if p.get("possession") != team]
-
-    team_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in team_plays)
-    opp_yards = sum(p.get("yards", p.get("yards_gained", 0)) for p in opp_plays)
-
     team_drives = [d for d in drives if d.get("team") == team]
     opp_drives = [d for d in drives if d.get("team") != team]
-
-    team_scoring = sum(
-        1 for d in team_drives
-        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
-    )
-    opp_scoring = sum(
-        1 for d in opp_drives
-        if d.get("result") in ("touchdown", "successful_kick", "pindown", "safety")
-    )
-
-    # Kill %: drives that end in total failure (turnover on downs or punt with minimal gain)
-    team_kills = sum(
-        1 for d in team_drives
-        if d.get("result") in ("turnover_on_downs", "punt")
-        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
-    )
-    opp_kills = sum(
-        1 for d in opp_drives
-        if d.get("result") in ("turnover_on_downs", "punt")
-        and (d.get("yards", 0) if isinstance(d.get("yards", 0), (int, float)) else 0) <= 5
-    )
-
-    total_drives = len(team_drives)
-    opp_total_drives = len(opp_drives)
-
+    delta = (game_stats or {}).get("delta_yards")
+    if delta is None:
+        delta = sum(d.get("delta_cost", 0) for d in team_drives)
+    pk = [d for d in team_drives if d.get("delta_cost", 0) > 0]
+    pp = [d for d in team_drives if d.get("delta_cost", 0) < 0]
+    neutral = [d for d in team_drives if d.get("delta_cost", 0) == 0]
+    def rates(ds):
+        total = len(ds)
+        scores = sum(d.get("result") in ("touchdown", "successful_kick")
+                     for d in ds)
+        kills = sum(d.get("result") in ("turnover_on_downs", "punt")
+                    and (d.get("yards") or 0) <= 5 for d in ds)
+        return {"drives": total, "scores": scores, "kills": kills,
+                "score_rate": round(100 * scores / total, 1) if total else None}
     return {
-        "delta_yds": team_yards - opp_yards,
-        "delta_drives": total_drives - opp_total_drives,
-        "delta_scores": team_scoring - opp_scoring,
-        "team_kill_pct": round(team_kills / max(1, total_drives) * 100, 1),
-        "opp_kill_pct": round(opp_kills / max(1, opp_total_drives) * 100, 1),
-        "team_drives": total_drives,
-        "opp_drives": opp_total_drives,
+        "delta_yds": delta,  # legacy name, now correct definition
+        "delta_yards": delta,
+        "net_yards_advantage": sum(p.get("yards") or 0 for p in plays
+                                    if (p.get("snap_possession") or p.get("possession")) == team)
+                                - sum(p.get("yards") or 0 for p in plays
+                                      if (p.get("snap_possession") or p.get("possession")) != team),
+        "delta_drives": len(team_drives) - len(opp_drives),
+        "delta_scores": rates(team_drives)["scores"] - rates(opp_drives)["scores"],
+        "penalty_kill": rates(pk),
+        "power_play": rates(pp),
+        "neutral": rates(neutral),
+        "team_kill_pct": round(100 * rates(team_drives)["kills"] / len(team_drives), 1) if team_drives else 0.0,
+        "opp_kill_pct": round(100 * rates(opp_drives)["kills"] / len(opp_drives), 1) if opp_drives else 0.0,
+        "team_drives": len(team_drives), "opp_drives": len(opp_drives),
     }
 
 
@@ -223,23 +209,26 @@ def calculate_explosive_plays(plays: List[Dict], team: str) -> int:
 
 
 def calculate_to_margin(plays: List[Dict], team: str) -> int:
-    """Turnover Margin (TO+/-).
+    """Turnovers forced minus lost, attributed to the team at the snap.
 
-    Turnovers forced minus turnovers lost. Every fan knows this.
-    A fan says: "They were plus-3 in turnovers."
+    Kick-pass and lateral interceptions, including pick-sixes, count once.
+    Safeties are points, not turnovers in this measure.
     """
-    turnovers_lost = sum(
-        1 for p in plays
-        if p.get("possession") == team and p.get("result") in ["fumble", "turnover_on_downs"]
-    )
-
-    opponent_plays = [p for p in plays if p.get("possession") != team]
-    turnovers_forced = sum(
-        1 for p in opponent_plays
-        if p.get("result") in ["fumble", "turnover_on_downs", "safety"]
-    )
-
-    return turnovers_forced - turnovers_lost
+    results = {
+        "fumble", "turnover_on_downs", "kick_pass_intercepted",
+        "lateral_intercepted", "int_return_td",
+    }
+    lost = 0
+    forced = 0
+    for play in plays:
+        if play.get("result") not in results:
+            continue
+        offense = play.get("snap_possession") or play.get("possession")
+        if offense == team:
+            lost += 1
+        elif offense in ("home", "away"):
+            forced += 1
+    return forced - lost
 
 
 def calculate_avg_start(plays: List[Dict], team: str) -> float:
@@ -369,97 +358,92 @@ def calculate_team_rating(metrics: Dict) -> float:
 
 def calculate_scoring_profile(plays: List[Dict], drives: List[Dict],
                               team: str, game_stats: Optional[Dict] = None) -> Dict:
-    """Scoring Profile — breakdown of HOW a team scores.
+    """Score methods from the official post-play scoreboard.
 
-    A fan says: "They're a snapkick team — 60% of their points come
-    from the boot." Or: "Their defense wins games — they got 14 points
-    off bonus possessions."
-
-    Returns point totals and percentages for each scoring method:
-      - Rush TDs (touchdowns from rushing plays)
-      - Lateral TDs (touchdowns involving lateral chains)
-      - Kick-Pass TDs (touchdowns from kick-pass completions)
-      - Drop Kicks (5 pts each — the bold/risky option)
-      - Place Kicks (3 pts each — the safe option)
-      - Return TDs (punt/kick return touchdowns)
-      - Defensive Points (points scored on bonus possessions —
-        Viperball's unique "defense wins you extra offense" mechanic)
+    Bonus-possession conversions are a separate annotation: their points
+    are already counted in TDs or scoring kicks. Unclassified points and
+    score gaps stay visible instead of being attributed to invented plays.
+    Historical games without score snapshots use a limited legacy fallback.
     """
+    from .box_score_ledger import scoring_ledger
+
     team_plays = [p for p in plays if p.get("possession") == team]
-
-    # Count scoring plays by type
-    rush_tds = sum(1 for p in team_plays
-                   if p.get("result") == "touchdown"
-                   and (p.get("laterals") or 0) == 0
-                   and p.get("play_type") not in ("kick_pass", "drop_kick", "place_kick"))
-    lateral_tds = sum(1 for p in team_plays
-                      if p.get("result") == "touchdown"
-                      and (p.get("laterals") or 0) > 0)
-    kp_tds = sum(1 for p in team_plays
-                 if p.get("result") == "touchdown"
-                 and p.get("play_type") == "kick_pass")
-    dk_made = sum(1 for p in team_plays
-                  if p.get("play_type") == "drop_kick"
-                  and p.get("result") == "successful_kick")
-    pk_made = sum(1 for p in team_plays
-                  if p.get("play_type") == "place_kick"
-                  and p.get("result") == "successful_kick")
-    return_tds = sum(1 for p in team_plays
-                     if p.get("result") in ("punt_return_td", "kick_return_td",
-                                            "missed_dk_return_td", "int_return_td"))
-
-    # Points
-    rush_td_pts = rush_tds * 9
-    lateral_td_pts = lateral_tds * 9
-    kp_td_pts = kp_tds * 9
-    dk_pts = dk_made * 5
-    pk_pts = pk_made * 3
-    return_td_pts = return_tds * 9
-    total_pts = rush_td_pts + lateral_td_pts + kp_td_pts + dk_pts + pk_pts + return_td_pts
-
-    # Bonus possession scoring (defense-generated offense)
     bonus_drives = [d for d in drives
                     if d.get("team") == team and d.get("bonus_drive")]
     bonus_scores = sum(1 for d in bonus_drives
                        if d.get("result") in ("touchdown", "successful_kick"))
-    # Estimate bonus points (rough: 7 avg per scoring bonus drive)
-    bonus_pts = 0
     if game_stats:
-        bonus_pts = game_stats.get("bonus_possession_scores", 0) * 7
-    elif bonus_scores > 0:
-        bonus_pts = bonus_scores * 7
+        bonus_scores = game_stats.get("bonus_possession_scores", bonus_scores)
 
-    total_with_bonus = total_pts + bonus_pts
+    # Score deltas include defensive points even when possession belongs
+    # to the opposing team. They also handle bells awarded with TD returns.
+    ledger = scoring_ledger(
+        plays, {team: game_stats.get("official_score")}
+        if game_stats and game_stats.get("official_score") is not None else None)
+    if ledger is not None:
+        row = ledger[team]
+        count, points = row["counts"], row["points"]
+        total = (game_stats or {}).get("official_score", row["score_from_plays"])
+        total = float(total)
+        def pct(value):
+            return round(value / total * 100, 1) if total else 0.0
+        return {
+            "rush_tds": count["rush_td"], "lateral_tds": count["lateral_td"],
+            "kp_tds": count["kp_td"], "return_tds": count["return_td"],
+            "dk_made": count["dk"], "pk_made": count["pk"],
+            "safeties": count["safety"], "pindowns": count["pindown"],
+            "bells": count["bell"], "bonus_scores": bonus_scores,
+            "rush_td_pts": points["rush_td"], "lateral_td_pts": points["lateral_td"],
+            "kp_td_pts": points["kp_td"], "return_td_pts": points["return_td"],
+            "dk_pts": points["dk"], "pk_pts": points["pk"],
+            "safety_pts": points["safety"], "pindown_pts": points["pindown"],
+            "bell_pts": points["bell"], "other_pts": points["other"],
+            "other_scores": count["other"],
+            "unrecorded_pts": row["unrecorded_points"],
+            "score_consistent": row["score_consistent"],
+            "total_pts": total,
+            "rush_pct": pct(points["rush_td"]), "lateral_pct": pct(points["lateral_td"]),
+            "kp_pct": pct(points["kp_td"]), "return_pct": pct(points["return_td"]),
+            "dk_pct": pct(points["dk"]), "pk_pct": pct(points["pk"]),
+            "snapkick_pct": pct(points["dk"] + points["pk"]),
+            "safety_pct": pct(points["safety"]), "pindown_pct": pct(points["pindown"]),
+            "bell_pct": pct(points["bell"]), "other_pct": pct(points["other"]),
+            "bonus_pts": 0, "bonus_pct": 0,
+        }
 
-    def pct(pts):
-        return round(pts / max(1, total_with_bonus) * 100, 1)
-
+    # Historical analytics fixtures may lack after-score snapshots.
+    # Preserve their original scoring classes without treating a bonus
+    # drive as an additional score.
+    rush_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                   and not p.get("laterals") and p.get("play_type") != "kick_pass")
+    lateral_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                      and p.get("laterals"))
+    kp_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                 and p.get("play_type") == "kick_pass")
+    dk_made = sum(1 for p in team_plays if p.get("play_type") == "drop_kick"
+                  and p.get("result") == "successful_kick")
+    pk_made = sum(1 for p in team_plays if p.get("play_type") == "place_kick"
+                  and p.get("result") == "successful_kick")
+    return_tds = sum(1 for p in team_plays if p.get("result") in (
+        "punt_return_td", "kick_return_td", "missed_dk_return_td", "int_return_td"))
+    total = 9 * (rush_tds + lateral_tds + kp_tds + return_tds) + 5 * dk_made + 3 * pk_made
+    def pct(value):
+        return round(value / total * 100, 1) if total else 0.0
     return {
-        "rush_td_pts": rush_td_pts,
-        "lateral_td_pts": lateral_td_pts,
-        "kp_td_pts": kp_td_pts,
-        "dk_pts": dk_pts,
-        "pk_pts": pk_pts,
-        "return_td_pts": return_td_pts,
-        "bonus_pts": bonus_pts,
-        "total_pts": total_with_bonus,
-        # Percentages — how the team scores
-        "rush_pct": pct(rush_td_pts),
-        "lateral_pct": pct(lateral_td_pts),
-        "kp_pct": pct(kp_td_pts),
-        "snapkick_pct": pct(dk_pts + pk_pts),
-        "dk_pct": pct(dk_pts),
-        "pk_pct": pct(pk_pts),
-        "return_pct": pct(return_td_pts),
-        "bonus_pct": pct(bonus_pts),
-        # Counts for display
-        "rush_tds": rush_tds,
-        "lateral_tds": lateral_tds,
-        "kp_tds": kp_tds,
-        "dk_made": dk_made,
-        "pk_made": pk_made,
-        "return_tds": return_tds,
-        "bonus_scores": bonus_scores,
+        "rush_tds": rush_tds, "lateral_tds": lateral_tds, "kp_tds": kp_tds,
+        "return_tds": return_tds, "dk_made": dk_made, "pk_made": pk_made,
+        "rush_td_pts": 9 * rush_tds, "lateral_td_pts": 9 * lateral_tds,
+        "kp_td_pts": 9 * kp_tds, "return_td_pts": 9 * return_tds,
+        "dk_pts": 5 * dk_made, "pk_pts": 3 * pk_made,
+        "rush_pct": pct(9 * rush_tds), "lateral_pct": pct(9 * lateral_tds),
+        "kp_pct": pct(9 * kp_tds), "return_pct": pct(9 * return_tds),
+        "dk_pct": pct(5 * dk_made), "pk_pct": pct(3 * pk_made),
+        "snapkick_pct": pct(5 * dk_made + 3 * pk_made),
+        "bonus_scores": bonus_scores, "bonus_pts": 0, "bonus_pct": 0,
+        "total_pts": total, "score_consistent": None,
+        "unrecorded_pts": None, "other_pts": 0, "other_scores": 0,
+        "safeties": 0, "pindowns": 0, "bells": 0,
+        "safety_pct": 0, "pindown_pct": 0, "bell_pct": 0, "other_pct": 0,
     }
 
 
@@ -501,14 +485,17 @@ def calculate_defensive_impact(plays: List[Dict], drives: List[Dict],
         bonus_yards = game_stats.get("bonus_possession_yards", bonus_yards)
         bonus_conv_rate = round(bonus_scores / max(1, bonus_count) * 100, 1) if bonus_count else 0.0
 
-    bonus_pts = bonus_scores * 7  # rough estimate
+    # There is no independently scored 7-point bonus. Actual points are
+    # already credited to the TD, place-kick or snap-kick scoring event.
+    bonus_pts = 0
 
     # Turnovers forced (opponent plays that resulted in turnovers)
-    opponent_plays = [p for p in plays if p.get("possession") != team]
+    opponent_plays = [p for p in plays
+                      if (p.get("snap_possession") or p.get("possession")) != team]
     fumbles_forced = sum(1 for p in opponent_plays if p.get("result") == "fumble")
     tod_forced = sum(1 for p in opponent_plays if p.get("result") == "turnover_on_downs")
     ints_forced = sum(1 for p in opponent_plays
-                      if p.get("result") in ("kick_pass_intercepted", "lateral_intercepted"))
+                      if p.get("result") in ("kick_pass_intercepted", "lateral_intercepted", "int_return_td"))
     total_turnovers_forced = fumbles_forced + tod_forced + ints_forced
 
     # Defensive stops: opponent drives that did NOT score
@@ -557,7 +544,7 @@ def calculate_comprehensive_rating(plays: List[Dict], drives: List[Dict], team: 
 
     # Field-position-conditioned conversion rates
     conv_by_zone = calculate_conversion_by_field_zone(plays, team)
-    delta = calculate_delta_profile(plays, drives, team)
+    delta = calculate_delta_profile(plays, drives, team, game_stats)
 
     # Quarter-by-quarter scoring (tennis set analogy)
     quarter_scoring = calculate_quarter_scoring(plays, team)

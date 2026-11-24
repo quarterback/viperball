@@ -6,6 +6,7 @@ V2 Architecture: Halo Model, Power Ratios, Composure, Star Designation,
 Hero Ball, Fatigue Tiers, R/E/C Archetypes, Prestige-Driven Decision Matrix.
 """
 
+import re
 import math
 import random
 import json
@@ -60,6 +61,10 @@ V2_ENGINE_CONFIG = {
     "team_installation_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
+    # DEL-01: counterfactual neutral-field restarts for paired calibration.
+    "delta_restarts_enabled": True,
+    # DEF-08: explicit control for matched attribution study.
+    "rush_credit_model": "weighted",
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -367,6 +372,26 @@ class FormationShell(Enum):
     SPREAD = "spread"
     HEAVY = "heavy"
 
+
+# Plays that end with the officials spotting the ball, and the yardage
+# counters a bad spot changes.
+SPOT_PLAY_TYPES = {"run", "lateral_chain", "kick_pass", "trick_play"}
+SPOT_YARD_COUNTERS = ("game_yards", "game_rushing_yards", "game_lateral_yards",
+                      "game_kick_pass_yards")
+
+# Kicks the receiving team caught and ran back.
+KICK_RETURNED_RESULTS = {"punt", "punt_return_td", "missed_dk_returned", "missed_dk_return_td"}
+KICK_RETURN_TD_RESULTS = {"punt_return_td", "missed_dk_return_td"}
+# Blocking fouls a receiving team commits during its own return.
+RETURN_TEAM_FOULS = {"Illegal Block in Back", "Clipping", "Targeting"}
+# game_* counters that track fatigue, role or participation rather than
+# production.  A play wiped out by a penalty was still physically run,
+# so these stay.
+PLAY_STATE_COUNTERS = {
+    "game_energy", "game_energy_start", "game_recv_rank",
+    "game_offensive_snaps", "game_defensive_snaps", "game_field_snaps",
+    "game_shifts", "game_coverage_snaps",
+}
 
 LIVE_TURNOVER_RESULTS = {
     "fumble", "muffed_punt", "blocked_kick", "blocked_punt", "chaos_recovery",
@@ -1765,6 +1790,16 @@ class Penalty:
     declined: bool = False
     phase: str = "pre_snap"
     blown_call: bool = False  # True if this penalty was a referee error
+    # Catalog flags carried from the definition that was rolled, so
+    # enforcement never has to look the name up again (names repeat
+    # across catalogs with different flags).
+    auto_first: bool = False
+    loss_of_down: bool = False
+    # How the foul was enforced: "previous_spot" (play wiped out),
+    # "end_of_play" (play stands, yardage added) or "succeeding_spot"
+    # (dead ball foul after the play).  Empty when declined.
+    enforcement: str = ""
+    nullified: bool = False
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -2120,8 +2155,10 @@ PENALTY_CATALOG = {
     "during_play_kick": [
         {"name": "Roughing the Kicker", "yards": 15, "on": "defense", "prob": 0.008, "auto_first": True},
         {"name": "Running Into Kicker", "yards": 5, "on": "defense", "prob": 0.010},
-        {"name": "Fair Catch Interference", "yards": 15, "on": "defense", "prob": 0.004},
-        {"name": "Kick Catch Interference", "yards": 15, "on": "defense", "prob": 0.003},
+        # Interfering with the returner's chance to catch is a foul by the
+        # kicking team, and only a punt has a returner to interfere with.
+        {"name": "Fair Catch Interference", "yards": 15, "on": "offense", "prob": 0.004, "punt_only": True},
+        {"name": "Kick Catch Interference", "yards": 15, "on": "offense", "prob": 0.003, "punt_only": True},
         {"name": "Illegal Kick", "yards": 10, "on": "offense", "prob": 0.002},
         {"name": "Holding", "yards": 10, "on": "offense", "prob": 0.010},
         {"name": "Illegal Block in Back", "yards": 10, "on": "either", "prob": 0.005},
@@ -3873,6 +3910,9 @@ class ViperballEngine:
             _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
             self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
+        # Credit assignment does not consume the physical contest RNG.
+        self._rush_credit_rng = random.Random(
+            f"rush-credit:{seed}" if seed is not None else None)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
         self._drive_yards = 0  # Track drive yards for timeout decisions
@@ -4111,6 +4151,7 @@ class ViperballEngine:
         }
         self._active_defensive_call = None
         self._rush_event = None
+        self._pending_delay_of_game = None
         self._rush_plan = None
         self._next_drive_origin = "opening"
         self._drive_origin = "opening"
@@ -5834,6 +5875,10 @@ class ViperballEngine:
                         description=f"BONUS POSSESSION — {bonus_team_name} gets an extra drive after the interception",
                         fatigue=round(stamina, 1),
                     )
+                    # Synthetic markers must carry the live score; otherwise
+                    # box-score consumers see an artificial reset to 0-0.
+                    bonus_play.home_score_after = self.state.home_score
+                    bonus_play.away_score_after = self.state.away_score
                     self.play_log.append(bonus_play)
 
                 _is_bonus = getattr(self, '_next_drive_is_bonus', False)
@@ -5994,6 +6039,8 @@ class ViperballEngine:
                 description=f"{ot_label} — {self.home_team.name} {self.state.home_score}, {self.away_team.name} {self.state.away_score}",
                 fatigue=round(stamina, 1),
             )
+            ot_play.home_score_after = self.state.home_score
+            ot_play.away_score_after = self.state.away_score
             self.play_log.append(ot_play)
 
             # Run the OT quarter like a normal quarter
@@ -6177,7 +6224,9 @@ class ViperballEngine:
         point_differential = their_score - opp_score  # positive = leading
         # Cap at opponent's 20 (field position 80) — even in a blowout,
         # the trailing team never starts past the opp 20.
-        start_position = max(1, min(80, int(baseline - point_differential)))
+        start_position = (max(1, min(80, int(baseline - point_differential)))
+                          if V2_ENGINE_CONFIG.get("delta_restarts_enabled", True)
+                          else max(1, min(80, int(baseline))))
 
         # Track delta yards — field position cost of the score-differential kickoff system
         # Leading teams start drives further back; delta yards = yards lost to this mechanic
@@ -6455,17 +6504,21 @@ class ViperballEngine:
                 # avoidance_chance: 0.55 at clock_mgmt=0.0, 0.95 at clock_mgmt=1.0
                 avoidance_chance = 0.55 + 0.40 * clock_mgmt
                 if random.random() > avoidance_chance:
-                    # Delay of game — 5 yards, replay the down
-                    self.state.field_position = max(1, self.state.field_position - 5)
-                    play.description += " | DELAY OF GAME — play clock expired. 5-yard penalty, replay the down."
-                    play.penalty = Penalty(
-                        name="Delay of Game", yards=5, on_team=drive_team,
-                        player="", declined=False, phase="pre_snap",
-                    )
-                    # Don't advance the down — it's replayed
-                    self.state.down = getattr(self, '_pre_play_down', self.state.down)
-                    self.state.yards_to_go = getattr(self, '_pre_play_ytg', self.state.yards_to_go) + 5
-                    # Still deduct the play clock limit worth of time (they burned 40s doing nothing)
+                    # Delay of game.  The play that just ran stands; the
+                    # violation is on the NEXT snap, so it is queued and
+                    # enforced as a pre-snap foul if the same offense
+                    # lines up again.  The clock still runs out.
+                    if (self.state.possession == drive_team
+                            and play.result not in (
+                                "touchdown", "successful_kick", "safety",
+                                "punt_return_td", "int_return_td",
+                                "missed_dk_return_td", "turnover_on_downs",
+                                "punt", "pindown", "missed_kick")):
+                        self._pending_delay_of_game = {
+                            "team": drive_team,
+                            "quarter": self.state.quarter,
+                            "play_number": self.state.play_number,
+                        }
                     final_time = play_clock_limit
                 else:
                     # Coach snapped just in time — clamp to the limit
@@ -6588,7 +6641,12 @@ class ViperballEngine:
             # based on ref reputation, game situation, and their judgment.
             is_auto_review = (self.state.quarter in (2, 4)
                               and self.state.time_remaining <= 180)
-            if not is_auto_review:
+            if is_auto_review:
+                # The booth reviews every play here; a bad spot is fixed.
+                if getattr(play, "_spot_undo", None) and self._undo_spot_error(play):
+                    self.referee_crew.overturned_calls += 1
+                    play.description += " | REPLAY REVIEW — spot corrected"
+            else:
                 challenge_result = self._coach_considers_challenge(play)
                 if challenge_result:
                     is_success = not challenge_result.startswith("FAILED:")
@@ -6598,8 +6656,10 @@ class ViperballEngine:
                     challenges_left = (self.state.home_challenges if team_key == "home"
                                       else self.state.away_challenges)
                     if is_success:
+                        fixed = (", spot corrected"
+                                 if getattr(play, "spot_error_corrected", False) else "")
                         play.description += (
-                            f" | CHALLENGE {team_name} — OVERTURNED"
+                            f" | CHALLENGE {team_name} — OVERTURNED{fixed}"
                             f" ({challenges_left} remaining)"
                         )
                     else:
@@ -6607,6 +6667,8 @@ class ViperballEngine:
                             f" | CHALLENGE {team_name} — call stands"
                             f" ({challenges_left} remaining)"
                         )
+            # Review is over; the bad spot, if any, now stands for good.
+            play._spot_undo = None
 
             # Increment plays_since_last_touch for all non-involved players
             team_on_off = self.get_offensive_team()
@@ -6618,6 +6680,27 @@ class ViperballEngine:
             if play.result in ("snap_kick_recovery", "missed_snap_kick_retained"):
                 drive_result = play.result
                 continue
+
+            # A blocked kick or a muffed punt is not on the drive-ending list
+            # below, because the kicking team sometimes keeps the ball.  When
+            # the other side takes it, or runs it back for a touchdown, the
+            # drive is over like any other turnover or score.
+            if play.result in ("blocked_kick", "blocked_punt", "muffed_punt"):
+                pre_h, pre_a = getattr(self, "_pre_play_scores",
+                                       (self.state.home_score, self.state.away_score))
+                holder = self.state.possession
+                holder_gain = (self.state.home_score - pre_h if holder == "home"
+                               else self.state.away_score - pre_a)
+                if holder != drive_team and holder_gain >= 6:
+                    # Returned for a touchdown: the scorers kick off.
+                    drive_result = play.result
+                    self.kickoff("away" if holder == "home" else "home")
+                    self._next_drive_origin = "other_restart"
+                    break
+                if holder != drive_team:
+                    drive_result = play.result
+                    self._next_drive_origin = "turnover"
+                    break
 
             if play.result in ["touchdown", "turnover_on_downs", "fumble", "successful_kick", "missed_kick", "punt", "pindown", "punt_return_td", "int_return_td", "chaos_recovery", "safety", "lateral_intercepted", "kick_pass_intercepted", "missed_dk_returned", "missed_dk_return_td"]:
                 drive_result = play.result
@@ -7559,6 +7642,15 @@ class ViperballEngine:
             catalog_key = phase
 
         penalties = PENALTY_CATALOG.get(catalog_key, [])
+        if catalog_key == "during_play_kick" and play_type != "punt":
+            penalties = [d for d in penalties if not d.get("punt_only")]
+        # Fouls during or after a play belong to the sides as they lined
+        # up for the snap.  The live possession may already have changed
+        # (turnover, punt, score), so it cannot say who was on offense.
+        if phase == "pre_snap":
+            snap_side = self.state.possession
+        else:
+            snap_side = getattr(self, "_snap_possession", None) or self.state.possession
 
         weather_penalty_boost = 0.0
         if self.weather in ("rain", "snow", "sleet"):
@@ -7574,9 +7666,9 @@ class ViperballEngine:
             if random.random() < prob:
                 on_side = pen_def["on"]
                 if on_side == "offense":
-                    team_name = self.state.possession
+                    team_name = snap_side
                 elif on_side == "defense":
-                    team_name = "away" if self.state.possession == "home" else "home"
+                    team_name = "away" if snap_side == "home" else "home"
                 else:
                     team_name = random.choice(["home", "away"])
 
@@ -7614,6 +7706,8 @@ class ViperballEngine:
                     on_team=team_name,
                     player=ptag,
                     phase=phase,
+                    auto_first=bool(pen_def.get("auto_first", False)),
+                    loss_of_down=bool(pen_def.get("loss_of_down", False)),
                 )
 
         # ── Referee: phantom flag ──
@@ -7622,13 +7716,13 @@ class ViperballEngine:
         # coach doesn't see that flag — they just see a penalty and
         # decide whether to challenge based on their own judgment.
         if random.random() < self.referee_crew.phantom_flag_rate:
-            phantom_penalties = PENALTY_CATALOG.get(catalog_key, [])
+            phantom_penalties = penalties
             if phantom_penalties:
                 pen_def = random.choice(phantom_penalties)
                 if random.random() < 0.5 + self.referee_crew.home_favor * 0.3:
-                    team_name = "away" if self.state.possession == "home" else "home"
+                    team_name = "away" if snap_side == "home" else "home"
                 else:
-                    team_name = self.state.possession
+                    team_name = snap_side
 
                 team_obj = self.home_team if team_name == "home" else self.away_team
                 pen_pool = team_obj.players[:10]
@@ -7653,6 +7747,8 @@ class ViperballEngine:
                     player=ptag,
                     phase=phase,
                     blown_call=True,  # Only the engine knows this
+                    auto_first=bool(pen_def.get("auto_first", False)),
+                    loss_of_down=bool(pen_def.get("loss_of_down", False)),
                 )
 
         return None
@@ -7691,9 +7787,22 @@ class ViperballEngine:
         # Coaches can only challenge the play itself: spot, catch,
         # fumble, and scoring.
 
+        # Situation 0: the ball really was spotted wrong.  The side it hurt
+        # sees the replay on the board and is far more likely to throw the
+        # flag, most of all when the spot decided a first down.
+        spot_undo = getattr(play, "_spot_undo", None)
+        if spot_undo:
+            challenger = off_side if getattr(play, "spot_error", 0) < 0 else def_side
+            if spot_undo.get("possession") != off_side:
+                # The bad spot turned the ball over: the old offense is now
+                # on defense and it is the side that was hurt.
+                challenger = def_side
+            challenge_reason = "spot"
+            base_prob = 0.35 if spot_undo["result"] != play.result else 0.08
+
         # Situation 1: Close first-down/scoring situation — offense challenges
         # the spot of the ball when they JUST missed
-        if play.result in ("gain",) and play.yards_gained > 0:
+        elif play.result in ("gain",) and play.yards_gained > 0:
             ytg = getattr(self, '_pre_play_ytg', self.state.yards_to_go)
             # Just barely short of the first down marker (within 2 yards)
             if 0 < ytg - play.yards_gained <= 2:
@@ -7789,6 +7898,10 @@ class ViperballEngine:
         # For non-penalty challenges, the spot/catch/fumble was a
         # "judgment call" by the ref — success rate applies directly
         challenge_succeeds = has_blown_call or (random.random() < success_rate)
+        if challenge_reason == "spot":
+            # Replay can measure a spot.  It is overturned exactly when the
+            # officials got it wrong, and the ball moves back when it is.
+            challenge_succeeds = self._undo_spot_error(play)
 
         if challenge_succeeds:
             self.referee_crew.overturned_calls += 1
@@ -7819,59 +7932,361 @@ class ViperballEngine:
 
         return challenger if challenge_succeeds else f"FAILED:{challenger}"
 
-    def _check_spot_error(self, yards_gained: int) -> int:
-        """Referee spot error: occasionally the ball is spotted 1-3 yards off.
+    def _roll_spot_error(self) -> int:
+        """Referee spot error: occasionally the ball is spotted 1-3 yards
+        off.  Rolled at the snap (the rate does not depend on the play), so
+        the engine knows in advance which plays need their stat lines
+        saved.  Returns the error in yards, 0 almost always."""
+        if random.random() >= self.referee_crew.spot_error_rate:
+            return 0
+        error = random.choice([-3, -2, -1, 1, 2, 3])
+        # Home favor nudges spot errors toward benefiting the home team
+        if self.state.possession == "home" and self.referee_crew.home_favor > 0:
+            error = abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+        elif self.state.possession == "away" and self.referee_crew.home_favor > 0:
+            error = -abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+        return error
 
-        Returns the adjusted yards gained.  Most of the time returns the
-        input unchanged.  ~0.3-0.7% of plays get a small spot error.
-        """
-        if random.random() < self.referee_crew.spot_error_rate:
-            error = random.choice([-3, -2, -1, 1, 2, 3])
-            # Home favor nudges spot errors toward benefiting the home team
-            if self.state.possession == "home" and self.referee_crew.home_favor > 0:
-                error = abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
-            elif self.state.possession == "away" and self.referee_crew.home_favor > 0:
-                error = -abs(error) if random.random() < 0.5 + self.referee_crew.home_favor * 0.3 else error
+    def _apply_spot_error(self, play: Play) -> None:
+        """Put a pending spot error on the play, if the play ends with a
+        spot: the offense kept the ball, nothing scored, no accepted foul.
 
-            self.referee_crew.blown_calls += 1
-            self.referee_crew.blown_call_log.append({
-                "type": "spot_error",
-                "quarter": self.state.quarter,
-                "time_remaining": self.state.time_remaining,
-                "original_yards": yards_gained,
-                "error_yards": error,
-                "adjusted_yards": yards_gained + error,
-                "field_position": self.state.field_position,
-                "possession": self.state.possession,
-            })
-            return yards_gained + error
-        return yards_gained
+        Everything that reads the spot moves with it: field position, the
+        down and distance (a bad spot can give or take a first down), the
+        result, and the yardage credited to the ball carrier, receiver and
+        kicker.  The undo record lets a successful challenge put it back."""
+        error = getattr(self, "_pending_spot_error", 0)
+        self._pending_spot_error = 0
+        if not error:
+            return
+        snap = getattr(self, "_snap_possession", None) or self.state.possession
+        if (play.result not in ("gain", "first_down")
+                or play.play_type not in SPOT_PLAY_TYPES
+                or self.state.possession != snap
+                or (play.penalty is not None and not play.penalty.declined)
+                or not play.yards_gained):
+            return
+
+        pre_fp = getattr(self, "_pre_play_fp", self.state.field_position)
+        pre_down = getattr(self, "_pre_play_down", self.state.down)
+        pre_ytg = getattr(self, "_pre_play_ytg", self.state.yards_to_go)
+        undo = {
+            "field_position": self.state.field_position,
+            "down": self.state.down,
+            "yards_to_go": self.state.yards_to_go,
+            "kick_mode": self.state.kick_mode,
+            "possession": self.state.possession,
+            "result": play.result,
+            "yards_gained": play.yards_gained,
+            "credits": [],
+        }
+
+        new_fp = max(1, min(99, self.state.field_position + error))
+        error = new_fp - self.state.field_position
+        if not error:
+            return
+        original = play.yards_gained
+        adjusted = original + error
+
+        # Yardage counters that moved by exactly the play's yards belong to
+        # the players the play credited; they move with the spot.
+        snapshot = getattr(self, "_spot_stat_snapshot", None) or []
+        for p, saved in snapshot:
+            for k in SPOT_YARD_COUNTERS:
+                now = getattr(p, k, 0)
+                if now - saved.get(k, 0) == original:
+                    setattr(p, k, now + error)
+                    undo["credits"].append((p, k, error))
+
+        self.state.field_position = new_fp
+        play.yards_gained = adjusted
+        undo["description"] = play.description
+        # The call shows in the yardage, the way a real bad spot does.
+        play.description = re.sub(rf"→ {original}(?![\d.])", f"→ {adjusted}",
+                                  play.description, count=1)
+        gained = new_fp - pre_fp
+        if gained >= pre_ytg:
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            self.state.kick_mode = False
+            play.result = "first_down"
+        else:
+            self.state.down = pre_down + 1
+            self.state.yards_to_go = pre_ytg - gained
+            self.state.kick_mode = getattr(self, "_pre_play_kick_mode", self.state.kick_mode)
+            play.result = "gain"
+            if self.state.down > 6:
+                # A bad spot short of the line on the last down.
+                self.change_possession()
+                self.state.field_position = 100 - self.state.field_position
+                self.state.down = 1
+                self.state.yards_to_go = 20
+                play.result = PlayResult.TURNOVER_ON_DOWNS.value
+                play.possession = self.state.possession
+
+        play.spot_error = error
+        play._spot_undo = undo
+        self.referee_crew.blown_calls += 1
+        self.referee_crew.blown_call_log.append({
+            "type": "spot_error",
+            "quarter": self.state.quarter,
+            "time_remaining": self.state.time_remaining,
+            "original_yards": original,
+            "error_yards": error,
+            "adjusted_yards": adjusted,
+            "field_position": new_fp,
+            "possession": snap,
+            "changed_result": undo["result"] != play.result,
+        })
+
+    def _rushing_total(self) -> int:
+        return sum(p.game_rushing_yards for t in (self.home_team, self.away_team)
+                   for p in t.players)
+
+    def _credit_uncredited_run(self, play: Play, rush_before: int) -> None:
+        """A run that ends in a fumble or a safety counts its yards on the
+        play and in team rushing, but the run code never put them on the
+        carrier.  Credit the carrier the yards to where the play ended, as
+        the scorebook does, so player and team rushing agree."""
+        if play.play_type != "run" or play.result == "penalty" or not play.yards_gained:
+            return
+        if self._rushing_total() != rush_before:
+            return   # the run code already credited someone
+        snap = getattr(self, "_snap_possession", None) or self.state.possession
+        team = self.home_team if snap == "home" else self.away_team
+        carrier = self._find_player_by_label(team, (play.players_involved or [None])[0])
+        if carrier is None:
+            return
+        carrier.game_rushing_yards += play.yards_gained
+        carrier.game_yards += play.yards_gained
+        undo = getattr(play, "_spot_undo", None)
+        if undo is not None and getattr(play, "spot_error", 0):
+            undo["credits"].append((carrier, "game_rushing_yards", play.spot_error))
+            undo["credits"].append((carrier, "game_yards", play.spot_error))
+
+    def _undo_spot_error(self, play: Play) -> bool:
+        """Replay review: put the ball back where it should have been."""
+        undo = getattr(play, "_spot_undo", None)
+        if not undo:
+            return False
+        self.state.possession = undo["possession"]
+        self.state.field_position = undo["field_position"]
+        self.state.down = undo["down"]
+        self.state.yards_to_go = undo["yards_to_go"]
+        self.state.kick_mode = undo["kick_mode"]
+        play.possession = undo["possession"]
+        play.result = undo["result"]
+        play.yards_gained = undo["yards_gained"]
+        play.description = undo.get("description", play.description)
+        for p, k, delta in undo["credits"]:
+            setattr(p, k, getattr(p, k, 0) - delta)
+        play.spot_error_corrected = True
+        play._spot_undo = None
+        return True
+
+    # ── Penalty enforcement ────────────────────────────────────────
+    # The side that did NOT commit the foul chooses whether to accept
+    # it.  Every decision compares the play as it happened against what
+    # the penalty would give, measured from the snap: who had the ball,
+    # the score, the spot, the down and the line to gain.
+
+    def _play_outcome_vs_snap(self) -> Dict:
+        """How the play changed possession and score relative to the snap."""
+        snap = getattr(self, "_snap_possession", None) or self.state.possession
+        pre_home, pre_away = getattr(self, "_pre_play_scores",
+                                     (self.state.home_score, self.state.away_score))
+        home_delta = self.state.home_score - pre_home
+        away_delta = self.state.away_score - pre_away
+        off_delta = home_delta if snap == "home" else away_delta
+        def_delta = away_delta if snap == "home" else home_delta
+        return {
+            "snap": snap,
+            "offense_scored": off_delta > 0,
+            "defense_scored": def_delta > 0,
+            "changed_hands": self.state.possession != snap,
+        }
+
+    def _kick_return_case(self, penalty: Penalty, play: Play, out: Dict) -> Optional[str]:
+        """Fouls on a kick that the receiving team returned.
+
+        "kicking_team": the kicking team fouled and the receivers have the
+        ball, so the yardage goes on the end of the return.
+        "return_foul": the receivers blocked illegally during the return,
+        so it is walked off against them.  Returns None otherwise."""
+        if not out["changed_hands"]:
+            return None
+        foul_on_kickers = (penalty.on_team == out["snap"])
+        if (foul_on_kickers and play.result in KICK_RETURNED_RESULTS
+                and play.result not in KICK_RETURN_TD_RESULTS):
+            return "kicking_team"
+        if (not foul_on_kickers and penalty.name in RETURN_TEAM_FOULS
+                and play.result in KICK_RETURNED_RESULTS):
+            return "return_foul"
+        return None
 
     def _should_decline_penalty(self, penalty: Penalty, play: Play) -> bool:
-        on_offense = (penalty.on_team == self.state.possession)
+        """Decision by the non-offending team on a live ball foul."""
+        out = self._play_outcome_vs_snap()
+        if self._kick_return_case(penalty, play, out):
+            return False   # always worth yardage to the side that was fouled
+        foul_on_offense = (penalty.on_team == out["snap"])
+        intentional_kick = play.play_type in ("punt", "drop_kick", "place_kick")
+        pre_ytg = getattr(self, "_pre_play_ytg", self.state.yards_to_go)
+        gives_first = penalty.auto_first or penalty.yards >= pre_ytg
 
-        if on_offense:
-            if play.result in ("touchdown", "successful_kick"):
+        if foul_on_offense:
+            # The defense decides.  Wipe out any score the offense made;
+            # keep anything the defense took away.
+            if out["offense_scored"]:
+                return False
+            if out["defense_scored"] or out["changed_hands"]:
                 return True
-            if play.yards_gained > penalty.yards:
-                return True
-        else:
-            if play.result in ("fumble", "turnover_on_downs"):
-                return True
-            if play.yards_gained <= -(penalty.yards):
-                return True
+            # Accept unless the play already cost more than the foul.
+            return play.yards_gained <= -penalty.yards
 
+        # Defensive foul: the offense decides.  Keep its own points.
+        if out["offense_scored"]:
+            return True
+        if out["defense_scored"]:
+            return False
+        if out["changed_hands"]:
+            if not intentional_kick:
+                return False   # erase the turnover
+            if play.result in ("missed_kick", "missed_dk_returned"):
+                return False   # take the yardage and keep the ball
+            # A deliberate punt: only worth taking back if the foul
+            # keeps the drive alive.
+            return not gives_first
+        # Offense kept the ball: the yardage is added on top.
         return False
+
+    def _enforce_return_foul(self, penalty: Penalty, play: Play) -> None:
+        """Illegal block by the receiving team during a return.  The
+        receivers keep the ball and lose the yardage.  On a return that
+        went all the way, the touchdown comes off and the foul is taken
+        to have happened halfway through the return: the yards up to
+        that spot count, the rest and the touchdown do not."""
+        receiving = self.state.possession
+        if play.result in KICK_RETURN_TD_RESULTS:
+            ret_len = max(0, int(play.yards_gained or 0))
+            foul_spot = 100 - ret_len + ret_len // 2
+            pre = getattr(self, "_pre_play_scores", None)
+            if pre is not None:
+                self.state.home_score, self.state.away_score = pre
+            returner = None
+            if len(play.players_involved or []) >= 2:
+                team = self.home_team if receiving == "home" else self.away_team
+                returner = self._find_player_by_label(team, play.players_involved[1])
+            if returner is not None:
+                self._trim_return_credit(returner, ret_len, ret_len // 2)
+            self.state.field_position = max(1, foul_spot - penalty.yards)
+            self.state.down = 1
+            self.state.yards_to_go = 20
+            play.yards_gained = ret_len // 2
+            play.result = ("punt" if play.result == "punt_return_td"
+                           else "missed_dk_returned")
+            penalty.nullified = True
+            penalty.enforcement = "spot_of_foul"
+        else:
+            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+            penalty.enforcement = "end_of_play"
+
+    def _trim_return_credit(self, returner, full: int, kept: int) -> None:
+        """Take a called-back return touchdown off the returner's line and
+        cut the return yards to the part that counted."""
+        snapshot = getattr(self, "_play_stat_snapshot", None) or []
+        saved = next((d for p, d in snapshot if p is returner), None)
+        for k, v in list(returner.__dict__.items()):
+            if not k.startswith("game_") or isinstance(v, bool) or not isinstance(v, (int, float)):
+                continue
+            before = saved.get(k, 0) if saved is not None else None
+            if before is None or v == before:
+                continue
+            if k.endswith("_tds") or k == "game_tds":
+                setattr(returner, k, before)
+            elif "return_yards" in k and v - before == full:
+                setattr(returner, k, before + kept)
+
+    def _snapshot_play_stats(self) -> list:
+        """Numeric per-game counters for every player, taken at the snap."""
+        snap = []
+        for team in (self.home_team, self.away_team):
+            for p in team.players:
+                snap.append((p, {k: v for k, v in p.__dict__.items()
+                                 if k.startswith("game_")
+                                 and isinstance(v, (int, float))
+                                 and not isinstance(v, bool)}))
+        return snap
+
+    def _restore_play_stats(self, snapshot: list) -> None:
+        for p, saved in snapshot:
+            for k, v in list(p.__dict__.items()):
+                if not k.startswith("game_") or isinstance(v, bool):
+                    continue
+                if k in PLAY_STATE_COUNTERS:
+                    continue   # fatigue and snap counts: the play was run
+                if not isinstance(v, (int, float)):
+                    continue
+                if k in saved:
+                    if v != saved[k]:
+                        setattr(p, k, saved[k])
+                else:
+                    setattr(p, k, type(v)(0))
+
+    def _nullify_play(self, play: Play) -> None:
+        """Wipe out the play: possession, score and stat credits revert
+        to the snap.  Clock, fatigue and injuries stay, because the play
+        was physically run."""
+        snap = getattr(self, "_snap_possession", None)
+        if snap:
+            self.state.possession = snap
+        pre = getattr(self, "_pre_play_scores", None)
+        if pre is not None:
+            self.state.home_score, self.state.away_score = pre
+        self.state.kick_mode = getattr(self, "_pre_play_kick_mode", self.state.kick_mode)
+        self.state.bonus_possession_team = getattr(
+            self, "_pre_play_bonus_team", self.state.bonus_possession_team)
+        snapshot = getattr(self, "_play_stat_snapshot", None)
+        if snapshot is not None:
+            self._restore_play_stats(snapshot)
+        self._pending_transition = None
+        play.possession = self.state.possession
+        play.yards_gained = 0
+        play.result = "penalty"
+
+    def _enforce_against_offense(self, penalty: Penalty, from_fp: int,
+                                 down: int, ytg: int) -> None:
+        """Back the snap offense up from `from_fp`; distance grows by the
+        yardage actually walked off."""
+        new_fp = max(1, from_fp - penalty.yards)
+        walked = from_fp - new_fp
+        self.state.field_position = new_fp
+        self.state.down = down + (1 if penalty.loss_of_down else 0)
+        self.state.yards_to_go = ytg + walked
+
+    def _enforce_for_offense(self, penalty: Penalty, from_fp: int,
+                             pre_fp: int, pre_down: int, pre_ytg: int) -> None:
+        """Move the snap offense forward from `from_fp`; first down when
+        the foul carries one or the total gain from the snap reaches the
+        line to gain, otherwise the down is replayed with less to go."""
+        new_fp = min(99, from_fp + penalty.yards)
+        gained = new_fp - pre_fp
+        self.state.field_position = new_fp
+        if penalty.auto_first or gained >= pre_ytg:
+            self.state.down = 1
+            self.state.yards_to_go = 20
+        else:
+            self.state.down = pre_down
+            self.state.yards_to_go = max(1, pre_ytg - gained)
 
     def _apply_pre_snap_penalty(self, penalty: Penalty) -> Play:
         on_offense = (penalty.on_team == self.state.possession)
+        fp, down, ytg = self.state.field_position, self.state.down, self.state.yards_to_go
         if on_offense:
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+            self._enforce_against_offense(penalty, fp, down, ytg)
         else:
-            self.state.field_position = min(99, self.state.field_position + penalty.yards)
-            if penalty.yards >= self.state.yards_to_go:
-                self.state.down = 1
-                self.state.yards_to_go = 20
+            self._enforce_for_offense(penalty, fp, fp, down, ytg)
+        penalty.enforcement = "previous_spot"
 
         team_label = "OFFENSE" if on_offense else "DEFENSE"
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -7901,59 +8316,93 @@ class ViperballEngine:
             play.description += f" [DECLINED: {penalty.name}]"
             return play
 
-        on_offense = (penalty.on_team == self.state.possession)
-        if on_offense:
-            # Offensive penalty negates the play — restore pre-play state
-            # then apply the penalty yardage.  The play simulation already
-            # advanced down/ytg/FP, so we must revert all three.
-            pre_fp = getattr(self, '_pre_play_fp', self.state.field_position)
-            pre_down = getattr(self, '_pre_play_down', self.state.down)
-            pre_ytg = getattr(self, '_pre_play_ytg', self.state.yards_to_go)
-            self.state.field_position = max(1, pre_fp - penalty.yards)
-            self.state.down = pre_down
-            self.state.yards_to_go = pre_ytg
-            play.yards_gained = 0
-            play.result = "penalty"
-        else:
-            all_during = PENALTY_CATALOG.get("during_play_run", []) + PENALTY_CATALOG.get("during_play_lateral", []) + PENALTY_CATALOG.get("during_play_kick", [])
-            penalty_def = next((p for p in all_during if p["name"] == penalty.name), None)
-            auto_first = penalty_def.get("auto_first", False) if penalty_def else False
+        snap = getattr(self, "_snap_possession", None) or self.state.possession
+        pre_fp = getattr(self, '_pre_play_fp', self.state.field_position)
+        pre_down = getattr(self, '_pre_play_down', self.state.down)
+        pre_ytg = getattr(self, '_pre_play_ytg', self.state.yards_to_go)
+        on_offense = (penalty.on_team == snap)
+        out = self._play_outcome_vs_snap()
+        kick_case = self._kick_return_case(penalty, play, out)
+
+        if kick_case == "kicking_team":
+            # The return stands; the receivers get the yardage on top.
             self.state.field_position = min(99, self.state.field_position + penalty.yards)
-            if auto_first or penalty.yards >= self.state.yards_to_go:
+            penalty.enforcement = "end_of_play"
+        elif kick_case == "return_foul":
+            self._enforce_return_foul(penalty, play)
+        elif on_offense:
+            # The play comes off the board and the foul is walked off
+            # from the previous spot.
+            self._nullify_play(play)
+            self._enforce_against_offense(penalty, pre_fp, pre_down, pre_ytg)
+            penalty.enforcement = "previous_spot"
+            penalty.nullified = True
+            if self.state.down > 6:
+                # Loss of down on the last down hands the ball over.
+                self.change_possession()
+                self.state.field_position = 100 - self.state.field_position
                 self.state.down = 1
                 self.state.yards_to_go = 20
-            play.yards_gained = penalty.yards
+                play.result = PlayResult.TURNOVER_ON_DOWNS.value
+                play.possession = self.state.possession
+        elif out["changed_hands"] or out["defense_scored"]:
+            # The offense takes the foul to erase the turnover or the
+            # score against it: replay from the previous spot plus yards.
+            self._nullify_play(play)
+            self._enforce_for_offense(penalty, pre_fp, pre_fp, pre_down, pre_ytg)
+            penalty.enforcement = "previous_spot"
+            penalty.nullified = True
+        else:
+            # The offense kept the ball: the play stands with its own
+            # yards and the foul is added at the end of it.
+            self._enforce_for_offense(penalty, self.state.field_position,
+                                      pre_fp, pre_down, pre_ytg)
+            penalty.enforcement = "end_of_play"
 
         play.field_position = self.state.field_position
         play.down = self.state.down
         play.yards_to_go = self.state.yards_to_go
         play.penalty = penalty
-        team_label = "OFFENSE" if on_offense else "DEFENSE"
-        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
+        if kick_case:
+            team_label = "KICKING TEAM" if on_offense else "RECEIVING TEAM"
+        else:
+            team_label = "OFFENSE" if on_offense else "DEFENSE"
+        if kick_case == "return_foul" and penalty.nullified:
+            tail = ", touchdown called back"
+        elif kick_case == "kicking_team":
+            tail = ", added to the end of the play"
+        elif kick_case:
+            tail = ", walked off against the return"
+        else:
+            tail = ", play nullified" if penalty.nullified else ""
+        play.description += f" | PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds{tail}"
 
         return play
 
     def _apply_post_play_penalty(self, penalty: Penalty, play: Play) -> Play:
-        if self._should_decline_penalty(penalty, play):
-            penalty.declined = True
-            play.penalty = penalty
-            play.description += f" [DECLINED: {penalty.name}]"
-            return play
-
-        on_offense = (penalty.on_team == play.possession)
-        if on_offense:
-            self.state.field_position = max(1, self.state.field_position - penalty.yards)
+        """Dead ball foul after the play.  The play stands and the foul is
+        walked off from the succeeding spot against whichever side
+        committed it, whoever has the ball now."""
+        offending_has_ball = (penalty.on_team == self.state.possession)
+        fp, down, ytg = self.state.field_position, self.state.down, self.state.yards_to_go
+        if offending_has_ball:
+            new_fp = max(1, fp - penalty.yards)
+            self.state.field_position = new_fp
+            self.state.yards_to_go = ytg + (fp - new_fp)
         else:
-            self.state.field_position = min(99, self.state.field_position + penalty.yards)
-            # Defensive post-play penalties that advance past the first-down
-            # marker grant an automatic first down (same as pre-snap logic).
-            if penalty.yards >= self.state.yards_to_go:
+            new_fp = min(99, fp + penalty.yards)
+            gained = new_fp - fp
+            self.state.field_position = new_fp
+            if penalty.auto_first or gained >= ytg:
                 self.state.down = 1
                 self.state.yards_to_go = 20
+            else:
+                self.state.yards_to_go = max(1, ytg - gained)
+        penalty.enforcement = "succeeding_spot"
 
-        play.field_position = self.state.field_position
         play.penalty = penalty
-        team_label = "OFFENSE" if on_offense else "DEFENSE"
+        snap = getattr(self, "_snap_possession", None) or play.possession
+        team_label = "OFFENSE" if penalty.on_team == snap else "DEFENSE"
         play.description += f" | POST-PLAY PENALTY: {penalty.name} on {team_label} ({penalty.player}) — {penalty.yards} yds"
 
         return play
@@ -8079,8 +8528,24 @@ class ViperballEngine:
         self._pre_play_fp = self.state.field_position
         self._pre_play_down = self.state.down
         self._pre_play_ytg = self.state.yards_to_go
+        # Who had the ball and the score at the snap.  Fouls are charged
+        # against the sides as they lined up, and a foul that wipes out
+        # the play restores both.
+        self._snap_possession = self.state.possession
+        self._pre_play_scores = (self.state.home_score, self.state.away_score)
+        self._pre_play_kick_mode = self.state.kick_mode
+        self._pre_play_bonus_team = self.state.bonus_possession_team
+        self._live_foul_rolled = False
+        self._pending_live_foul = None
+        self._play_stat_snapshot = None
+        self._pending_spot_error = self._roll_spot_error()
+        self._spot_stat_snapshot = (self._snapshot_play_stats()
+                                    if self._pending_spot_error else None)
+        rush_before = self._rushing_total()
 
         play = self._simulate_play_core()
+        play.snap_possession = self._snap_possession
+        self._check_exposure_injuries(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
         play.possession_origin = self._drive_origin
         play.possession_snap_index = self._possession_snap_count
@@ -8095,20 +8560,9 @@ class ViperballEngine:
             caught = self.away_team if self._fast_break == "home" else self.home_team
             play.description = f"FAST BREAK, {caught.name} caught changing. {play.description}"
 
-        # ── Referee: spot error on non-scoring, non-penalty plays ──
-        if (play.result not in ("touchdown", "safety", "penalty", "kneel",
-                                "punt_return_td", "int_return_td",
-                                "missed_dk_return_td", "successful_kick",
-                                "bonus_possession")
-                and play.play_type not in ("penalty", "kneel", "bonus_possession")
-                and play.yards_gained != 0):
-            adjusted = self._check_spot_error(play.yards_gained)
-            if adjusted != play.yards_gained:
-                spot_diff = adjusted - play.yards_gained
-                # Adjust field position by the spot error delta
-                self.state.field_position = max(1, min(99,
-                    self.state.field_position + spot_diff))
-                play.yards_gained = adjusted
+        # ── Referee: spot error on plays that end with a spot ──
+        self._apply_spot_error(play)
+        self._credit_uncredited_run(play, rush_before)
 
         # Stamp pre-play state on the Play so the play-by-play always
         # shows "3rd & 5 at the 50" as the starting situation.
@@ -8178,6 +8632,17 @@ class ViperballEngine:
         self._spread_thin_active = getattr(self, '_spread_thin_next_play', False)
         self._spread_thin_next_play = False
 
+        # A play clock violation called after the last play is enforced
+        # here, before this snap, as the pre-snap foul it is.
+        delay = getattr(self, "_pending_delay_of_game", None)
+        self._pending_delay_of_game = None
+        if (delay and delay["team"] == self.state.possession
+                and delay["quarter"] == self.state.quarter
+                and delay["play_number"] == self.state.play_number - 1):
+            return self._apply_pre_snap_penalty(Penalty(
+                name="Delay of Game", yards=5, on_team=delay["team"],
+                player="", declined=False, phase="pre_snap"))
+
         pre_snap_pen = self._check_penalties("pre_snap")
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
@@ -8191,6 +8656,7 @@ class ViperballEngine:
             if self.state.down == 5 and self.state.yards_to_go <= 5:
                 pass  # Fall through to normal play selection
             else:
+                self._pre_roll_live_foul("drop_kick")
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
 
@@ -8202,9 +8668,11 @@ class ViperballEngine:
         if self.state.down <= 4:
             kick_decision = self.select_kick_decision()
             if kick_decision == PlayType.DROP_KICK:
+                self._pre_roll_live_foul("drop_kick")
                 play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
                 return self._apply_post_play_penalties(play)
             if kick_decision == PlayType.PLACE_KICK:
+                self._pre_roll_live_foul("place_kick")
                 play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
                 return self._apply_post_play_penalties(play)
             # else: go for advancement, fall through to normal play
@@ -8222,6 +8690,7 @@ class ViperballEngine:
                 else:
                     family = PlayFamily.PUNT
                 play_type = kick_decision
+                self._pre_roll_live_foul(play_type.value)
                 play = self._dispatch_play(play_type, family)
                 return self._apply_post_play_penalties(play)
 
@@ -8239,6 +8708,7 @@ class ViperballEngine:
         # Credit snap counts before the play resolves
         self._credit_snap_counts()
 
+        self._pre_roll_live_foul(play_type.value)
         play = self._dispatch_play(play_type, play_family)
         # Stamp formation on the play object and prepend to description
         formation = self._current_formation
@@ -8268,9 +8738,23 @@ class ViperballEngine:
         else:
             return self.simulate_run(play_family)
 
+    def _pre_roll_live_foul(self, play_type: str) -> None:
+        """Decide before the snap whether a live ball foul happens on this
+        play.  Knowing it up front lets the engine save the stat counters
+        only on the plays a foul could wipe out."""
+        self._live_foul_rolled = True
+        self._pending_live_foul = self._check_penalties("during_play", play_type=play_type)
+        self._play_stat_snapshot = (self._snapshot_play_stats()
+                                    if self._pending_live_foul else None)
+
     def _apply_post_play_penalties(self, play: Play) -> Play:
         actual_type = play.play_type if play else "run"
-        during_pen = self._check_penalties("during_play", play_type=actual_type)
+        if getattr(self, "_live_foul_rolled", False):
+            during_pen = self._pending_live_foul
+        else:
+            during_pen = self._check_penalties("during_play", play_type=actual_type)
+        self._live_foul_rolled = False
+        self._pending_live_foul = None
         if during_pen:
             play = self._apply_during_play_penalty(during_pen, play)
         else:
@@ -9959,7 +10443,17 @@ class ViperballEngine:
                            "on_field": all_on,
                            "rush_skill": sum(score(p) for p in rushers) / len(rushers) if rushers else 0.0,
                            "protection_skill": sum(protection(p) for p in blockers) / len(blockers) if blockers else 30.0,
-                           "lead_rusher": max(rushers, key=score) if rushers else None}
+                           # Any committed rusher can win the individual
+                           # contest. Stronger/fresher players are favored,
+                           # but the highest-rated player is not guaranteed
+                           # every sack and hurry on every snap.
+                           "lead_rusher": (
+                               (max(rushers, key=score)
+                                if V2_ENGINE_CONFIG.get("rush_credit_model") == "highest"
+                                else self._rush_credit_rng.choices(
+                                    rushers,
+                                    weights=[max(1.0, score(p)) ** 2 for p in rushers],
+                                    k=1)[0]) if rushers else None)}
         return self._rush_plan
 
     def compute_sack_probability(self, team, def_team, subfamily, formation=None):
@@ -11900,6 +12394,12 @@ class ViperballEngine:
                 completed=False)
         if rush_outcome == "hurry":
             completion_prob = max(0.08, completion_prob * 0.85)
+            # One hurry outcome, one credit, to a player actually rushing.
+            # The old late-incompletion roll could create phantom hurries
+            # unrelated to the single resolved pressure contest.
+            if rusher is not None:
+                rusher.game_hurries += 1
+                rusher.game_plays_involved += 1
         if self._rush_event is not None:
             self._rush_event["completion_after"] = completion_prob
         if rush_outcome == "sack":
@@ -11932,8 +12432,12 @@ class ViperballEngine:
                     fatigue=round(stamina_s, 1),
                 )
 
+            sack_loss = self.state.field_position - new_fp
             self.state.field_position = new_fp
             self.state.down += 1
+            # The line to gain does not move, so the distance grows by
+            # the yards lost behind the line.
+            self.state.yards_to_go += sack_loss
             sack_result = PlayResult.GAIN
             sack_desc = f"{kicker_tag} SACKED by {player_tag(sacker)} for -{sack_yards}"
             if self.state.down > 6:
@@ -12074,7 +12578,9 @@ class ViperballEngine:
                         raw_fp = max(1, 100 - int_spot)
                         int_return = max(0, int(random.gauss(35, 18)))
                         new_fp = min(100, raw_fp + int_return)
-                        kicker.game_kick_pass_interceptions += 1
+                        # This turnover comes on the lateral AFTER a
+                        # completed kick pass. Do not also charge a
+                        # kick-pass interception to the Zeroback.
 
                         if new_fp >= 100:
                             self.state.field_position = 25
@@ -12398,25 +12904,8 @@ class ViperballEngine:
         # Reset rhythm_escalation chain on incompletion
         self._drive_consecutive_completions = 0
 
-        # ── Hurry credit ──
-        # On incomplete passes, there's a chance a defender pressured
-        # the kicker (hurry = affected the throw without getting a sack).
-        # DL preferred but Keepers eligible (blitzing linebackers).
-        if random.random() < 0.35:
-            hurry_def_team = self.get_defensive_team()
-            hurry_eligible = [p for p in hurry_def_team.players
-                              if p.position in ("Defensive Line", "Keeper")
-                              and p.name not in self._unavailable_in_game(hurry_def_team)]
-            if hurry_eligible:
-                hurry_weights = []
-                for hp in hurry_eligible:
-                    hw = hp.tackling * 0.4 + hp.power * 0.3 + hp.speed * 0.3
-                    if hp.position == "Defensive Line":
-                        hw *= 2.0
-                    hurry_weights.append(hw)
-                hurrier = random.choices(hurry_eligible, weights=hurry_weights, k=1)[0]
-                hurrier.game_hurries += 1
-                hurrier.game_plays_involved += 1
+        # A hurry is credited above only when the physical rush contest
+        # actually resolves as a hurry. No second incompletion-based roll.
 
         # ── Interception: H2H-driven per sub-family ──
         # Each sub-family has a different base INT rate driven by the matched
@@ -13752,15 +14241,81 @@ class ViperballEngine:
         available = [p for p in team.players if p.name not in injured]
         return available[:top_n]
 
+    def _team_of_player(self, player) -> Optional[Team]:
+        """The roster a player belongs to, by identity.  Possession can
+        flip during a play, so it never decides whose player got hurt."""
+        for team in (self.home_team, self.away_team):
+            for p in team.players:
+                if p is player:
+                    return team
+        return None
+
+    def _find_player_by_label(self, team: Team, label: str):
+        if not label:
+            return None
+        for p in team.players:
+            if player_label(p) == label:
+                return p
+        return None
+
+    def _roll_player_injury(self, player, team: Team, play_type: str) -> Optional[dict]:
+        """One injury roll for one participant.  Fatigue raises the risk
+        the same way for every player on the field, offense or defense."""
+        if self.injury_tracker is None or team is None:
+            return None
+        if player.injured_in_game:
+            return None
+        is_home = (team is self.home_team)
+
+        # Apply fatigue-driven injury multiplier to the player's stamina
+        # before rolling (lower current_stamina = higher injury chance in
+        # the injury tracker's roll_in_game_injury)
+        original_stamina = getattr(player, 'current_stamina', 100.0)
+        fatigue_mult = self.fatigue_injury_multiplier(player)
+        if fatigue_mult > 1.0:
+            player.current_stamina = max(10.0, original_stamina / fatigue_mult)
+
+        injury = self.injury_tracker.roll_in_game_injury(
+            player, team.name, self.game_week, play_type
+        )
+
+        if fatigue_mult > 1.0:
+            player.current_stamina = original_stamina
+        if injury is None:
+            return None
+
+        # Mark player as out for the rest of this game
+        player.injured_in_game = True
+        injured_set = (self._home_injured_in_game if is_home
+                       else self._away_injured_in_game)
+        injured_set.add(player.name)
+
+        from engine.injuries import find_substitute, InGameInjuryEvent
+        sub, is_oop = find_substitute(
+            team.players, player, set(), injured_set
+        )
+
+        event = InGameInjuryEvent(
+            player_name=player.name,
+            position=player.position,
+            description=injury.description,
+            tier=injury.tier,
+            category=injury.category,
+            is_season_ending=injury.is_season_ending,
+            substitute_name=sub.name if sub else None,
+            substitute_position=sub.position if sub else None,
+            is_out_of_position=is_oop,
+        )
+        self.in_game_injuries.append(event)
+        return event
+
     def check_in_game_injury(self, player, play_type: str = "default") -> Optional[dict]:
         """
-        Roll for an in-game injury on a player after a play.
+        Roll for an in-game injury on a ball handler after a play.
 
         Uses the "structural strain" model: fatigue increases injury risk.
-        Plus a 0.2% "freak injury" chaos factor on any play.
-
-        Returns an injury event dict if injured, None otherwise.
-        Marks the player as injured and finds a substitute.
+        Plus a 0.2% "freak injury" chaos factor on any play.  The player's
+        own roster decides the team, not whoever has the ball afterward.
         """
         if self.injury_tracker is None:
             return None
@@ -13771,57 +14326,11 @@ class ViperballEngine:
         if random.random() < 0.002:
             play_type = "run"  # Force a check with normal rates
 
-        team = self.get_offensive_team()
-        team_name = team.name
-        is_home = (team == self.home_team)
-
-        # Apply fatigue-driven injury multiplier to the player's stamina
-        # before rolling (lower current_stamina = higher injury chance in
-        # the injury tracker's roll_in_game_injury)
-        original_stamina = getattr(player, 'current_stamina', 100.0)
-        fatigue_mult = self.fatigue_injury_multiplier(player)
-        if fatigue_mult > 1.0:
-            # Temporarily reduce current_stamina to amplify injury chance
-            player.current_stamina = max(10.0, original_stamina / fatigue_mult)
-
-        injury = self.injury_tracker.roll_in_game_injury(
-            player, team_name, self.game_week, play_type
-        )
-
-        # Restore original stamina
-        if fatigue_mult > 1.0:
-            player.current_stamina = original_stamina
-        if injury is None:
-            return None
-
-        # Mark player as out for the rest of this game
-        player.injured_in_game = True
-        if is_home:
-            self._home_injured_in_game.add(player.name)
-        else:
-            self._away_injured_in_game.add(player.name)
-
-        # Find a substitute
-        from engine.injuries import find_substitute, InGameInjuryEvent
-        injured_set = (self._home_injured_in_game if is_home
-                       else self._away_injured_in_game)
-        sub, is_oop = find_substitute(
-            team.players, player, set(), injured_set
-        )
-
-        event = InGameInjuryEvent(
-            player_name=player.name,
-            position=player.position,
-            description=injury.description,
-            tier=injury.tier,
-            category=injury.category,
-            is_season_ending=injury.is_season_ending,
-            substitute_name=sub.name if sub else None,
-            substitute_position=sub.position if sub else None,
-            is_out_of_position=is_oop,
-        )
-        self.in_game_injuries.append(event)
-        return event
+        team = self._team_of_player(player)
+        if team is None:
+            snap = getattr(self, "_snap_possession", None) or self.state.possession
+            team = self.home_team if snap == "home" else self.away_team
+        return self._roll_player_injury(player, team, play_type)
 
     def check_defender_injury(self, player, play_type: str = "tackle") -> Optional[dict]:
         """Roll for in-game injury on a defensive player."""
@@ -13829,43 +14338,38 @@ class ViperballEngine:
             return None
         if player.injured_in_game:
             return None
+        team = self._team_of_player(player)
+        if team is None:
+            snap = getattr(self, "_snap_possession", None) or self.state.possession
+            team = self.away_team if snap == "home" else self.home_team
+        return self._roll_player_injury(player, team, play_type)
 
-        team = self.get_defensive_team()
-        team_name = team.name
-        is_home = (team == self.home_team)
+    def _check_exposure_injuries(self, play: Play) -> None:
+        """Contact the play functions do not roll for themselves: the
+        punt returner who gets tackled, and the passer and rusher on a
+        sack.  Each participant is named on the play or the rush event
+        and looked up on their own roster; nobody is assumed."""
+        if self.injury_tracker is None:
+            return
+        snap = getattr(self, "_snap_possession", None) or self.state.possession
+        offense = self.home_team if snap == "home" else self.away_team
+        defense = self.away_team if snap == "home" else self.home_team
 
-        injury = self.injury_tracker.roll_in_game_injury(
-            player, team_name, self.game_week, play_type
-        )
-        if injury is None:
-            return None
+        if (play.play_type == "punt" and play.result == "punt"
+                and len(play.players_involved or []) >= 2):
+            returner = self._find_player_by_label(defense, play.players_involved[1])
+            if returner is not None:
+                self._roll_player_injury(returner, defense, "punt")
 
-        player.injured_in_game = True
-        if is_home:
-            self._home_injured_in_game.add(player.name)
-        else:
-            self._away_injured_in_game.add(player.name)
-
-        from engine.injuries import find_substitute, InGameInjuryEvent
-        injured_set = (self._home_injured_in_game if is_home
-                       else self._away_injured_in_game)
-        sub, is_oop = find_substitute(
-            team.players, player, set(), injured_set
-        )
-
-        event = InGameInjuryEvent(
-            player_name=player.name,
-            position=player.position,
-            description=injury.description,
-            tier=injury.tier,
-            category=injury.category,
-            is_season_ending=injury.is_season_ending,
-            substitute_name=sub.name if sub else None,
-            substitute_position=sub.position if sub else None,
-            is_out_of_position=is_oop,
-        )
-        self.in_game_injuries.append(event)
-        return event
+        rush = getattr(self, "_rush_event", None)
+        if rush and rush.get("outcome") == "sack" and play.play_type == "kick_pass":
+            passer = self._find_player_by_label(
+                offense, (play.players_involved or [None])[0])
+            if passer is not None:
+                self._roll_player_injury(passer, offense, "run")
+            rusher = self._find_player_by_label(defense, rush.get("rusher"))
+            if rusher is not None:
+                self._roll_player_injury(rusher, defense, "tackle")
 
     def get_fatigue_factor(self) -> float:
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -14939,11 +15443,24 @@ class ViperballEngine:
         return impacts.get(self.viper_position, 1.0)
 
     def generate_game_summary(self) -> Dict:
-        home_plays = [p for p in self.play_log if p.possession == "home"]
-        away_plays = [p for p in self.play_log if p.possession == "away"]
+        # Attribute the action to the team at the snap. Some return and
+        # interception paths change possession before constructing Play.
+        home_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "home"]
+        away_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "away"]
 
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
+        # Penalties belong to the side that committed them, not to the
+        # side whose snap it was.
+        for _side, _stats in (("home", home_stats), ("away", away_stats)):
+            _flags = [p.penalty for p in self.play_log
+                      if p.penalty is not None and p.penalty.on_team == _side]
+            _accepted = [f for f in _flags if not f.declined]
+            _stats["penalties"] = len(_accepted)
+            _stats["penalty_yards"] = sum(f.yards for f in _accepted)
+            _stats["penalties_declined"] = len(_flags) - len(_accepted)
 
         def _reconcile_yards(stats, team):
             rush = sum(p.game_rushing_yards for p in team.players)
@@ -14955,9 +15472,26 @@ class ViperballEngine:
             stats["total_yards"] = rush + kp
             stats["yards_per_play"] = round(stats["total_yards"] / max(1, stats["total_plays"]), 2)
             stats["rushing_carries"] = sum(p.game_rush_carries for p in team.players)
+            # The final player counters incorporate catch outcomes, sack
+            # accounting and PEN-01 nullifications. Do not infer catches
+            # from a broad play-result label that includes non-catches.
+            stats["kick_passes_attempted"] = sum(p.game_kick_passes_thrown for p in team.players)
+            stats["kick_passes_completed"] = sum(p.game_kick_passes_completed for p in team.players)
+            stats["kick_pass_interceptions"] = sum(p.game_kick_pass_interceptions for p in team.players)
+            # Both kicker and target receive a personal KP TD credit;
+            # team touchdowns must count the scoring event only once.
+            stats["kick_pass_tds"] = sum(
+                1 for play in self.play_log
+                if (getattr(play, "snap_possession", None) or play.possession)
+                   == ("home" if team is self.home_team else "away")
+                and play.play_type == "kick_pass" and play.result == "touchdown"
+            )
 
         _reconcile_yards(home_stats, self.home_team)
         _reconcile_yards(away_stats, self.away_team)
+        # Official scores for the same ledger used by scoring profiles.
+        home_stats["official_score"] = self.state.home_score
+        away_stats["official_score"] = self.state.away_score
 
         away_turnovers = len([p for p in away_plays if p.fumble and p.result == "fumble"])
         home_turnovers = len([p for p in home_plays if p.fumble and p.result == "fumble"])
@@ -14969,8 +15503,16 @@ class ViperballEngine:
         away_stats["bells"] = home_turnovers
 
         # Delta yards and adjusted yardage (AdjY)
-        home_stats["delta_yards"] = self.state.home_delta_yards
-        away_stats["delta_yards"] = self.state.away_delta_yards
+        # Charge only restarts actually used by a drive. A kickoff
+        # after the final score can schedule a restart without a snap.
+        home_stats["delta_yards"] = sum(d.get("delta_cost", 0) for d in self.drive_log
+                                         if d.get("team") == "home")
+        away_stats["delta_yards"] = sum(d.get("delta_cost", 0) for d in self.drive_log
+                                         if d.get("team") == "away")
+        home_stats["delta_restart_unplayed"] = (self.state.home_delta_yards -
+                                                home_stats["delta_yards"])
+        away_stats["delta_restart_unplayed"] = (self.state.away_delta_yards -
+                                                away_stats["delta_yards"])
         home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_delta_yards
         away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_delta_yards
 
@@ -15050,6 +15592,12 @@ class ViperballEngine:
                 "pp_efficiency": pp_efficiency,
             }
             stats["mess_rate"] = mess_rate
+            # Single definition for all consumers (including DTW).
+            # Count eligible penalty-kill drives, not just every restart
+            # recorded in mutable GameState after a score.
+            stats["delta_drives"] = pk_stats["count"]
+            stats["delta_scores"] = pk_stats["scores"]
+            stats["kill_rate"] = pk_stats["score_rate"] if pk_stats["count"] else None
 
         # ── Bonus Possession stats (pesäpallo-inspired) ──
         # Count bonus drives from the drive_log and tally yards/scores.
@@ -15571,7 +16119,7 @@ class ViperballEngine:
         kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
         kick_pass_ints = [p for p in kick_passes if p.result in ("kick_pass_intercepted", "int_return_td")]
         kick_pass_yards = sum(p.yards_gained for p in kick_pass_completions)
-        lateral_ints = [p for p in laterals if p.result == "lateral_intercepted"]
+        lateral_ints = [p for p in plays if p.result == "lateral_intercepted"]
 
         kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
         kick_percentage = round(len(kick_plays) / max(1, total_plays) * 100, 1)
@@ -15667,6 +16215,9 @@ class ViperballEngine:
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
+            "snap_possession": getattr(play, "snap_possession", None),
+            "spot_error": getattr(play, "spot_error", None),
+            "spot_error_corrected": getattr(play, "spot_error_corrected", None),
             "formation": getattr(play, "formation", "") or "",
             "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,
@@ -15688,6 +16239,8 @@ class ViperballEngine:
                 "player": play.penalty.player,
                 "declined": play.penalty.declined,
                 "phase": play.penalty.phase,
+                "enforcement": play.penalty.enforcement or None,
+                "nullified": play.penalty.nullified or None,
             }
         return d
 

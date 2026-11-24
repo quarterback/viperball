@@ -1784,6 +1784,55 @@ class Season:
                 )
                 _add_game(home, away, is_conf)
 
+        # A final greedy nonconference fill can leave two schools with
+        # one extra game even when every school has its requested quota.
+        # With an even requested degree (e.g., 205 programs x 12 games)
+        # those extra games are avoidable. Rewire two ordinary nonconference
+        # games into one, never removing a protected rivalry or pinned game.
+        # This changes no schedule unless exactly two programs have a
+        # single excess game and both have an eligible replacement.
+        overfull = [t for t in team_names if game_counts[t] == games_per_team + 1]
+        if (len(overfull) == 2 and
+            all(game_counts[t] >= games_per_team for t in team_names) and
+            all(game_counts[t] <= games_per_team + 1 for t in team_names)):
+            a, b = overfull
+            protected = {tuple(sorted(pair)) for pair in (pinned_matchups or [])}
+            for team, rivals in self.rivalries.items():
+                for kind in ("conference", "non_conference"):
+                    for rival in self._rivalry_list(rivals.get(kind)):
+                        protected.add(tuple(sorted((team, rival))))
+            regular = lambda g: (not g.is_conference_game and
+                                 tuple(sorted((g.home_team, g.away_team))) not in protected)
+            def other(g, t):
+                if g.home_team == t: return g.away_team
+                if g.away_team == t: return g.home_team
+                return None
+            fixed = False
+            for ga in list(games):
+                c = other(ga, a)
+                if c is None or c == b or not regular(ga):
+                    continue
+                for gb in list(games):
+                    d = other(gb, b)
+                    if d is None or d in (a, c) or not regular(gb):
+                        continue
+                    pair = tuple(sorted((c, d)))
+                    if pair in scheduled_pairs:
+                        continue
+                    if (self.team_conferences.get(c) and
+                        self.team_conferences.get(c) == self.team_conferences.get(d)):
+                        continue
+                    for old in (ga, gb):
+                        games.remove(old)
+                        scheduled_pairs.discard(tuple(sorted((old.home_team, old.away_team))))
+                        game_counts[old.home_team] -= 1
+                        game_counts[old.away_team] -= 1
+                    _add_game(c, d, False)
+                    fixed = True
+                    break
+                if fixed:
+                    break
+
         self.schedule = games
 
     def generate_round_robin_schedule(self):

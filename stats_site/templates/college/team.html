@@ -9,11 +9,11 @@
 {% endblock %}
 
 {% block content %}
-{% if stadium_url %}
-<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
-{% endif %}
 {% if banner_url %}
 <div class="team-banner"><img src="{{ banner_url }}" alt=""></div>
+{% endif %}
+{% if stadium_url %}
+<div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
 {% endif %}
 <style>
 .championship-banners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

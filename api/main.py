@@ -269,6 +269,7 @@ def health_check():
     mem_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return {
         "status": "ok",
+        "build_sha": os.environ.get("VIPERBALL_BUILD_SHA", "unknown"),
         "sessions": len(sessions),
         "pro_sessions": len(pro_sessions),
         "wvl_sessions": len(wvl_sessions),

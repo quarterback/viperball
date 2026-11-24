@@ -34,7 +34,7 @@ jobs:
         run: |
           for attempt in 1 2 3; do
             echo "Deploy attempt $attempt..."
-            if flyctl deploy --remote-only; then
+            if flyctl deploy --remote-only --build-arg VIPERBALL_BUILD_SHA="${GITHUB_SHA}"; then
               echo "Deploy succeeded on attempt $attempt"
               exit 0
             fi
@@ -57,8 +57,12 @@ jobs:
             echo "Health check attempt $attempt..."
             status=$(curl -s -o /dev/null -w "%{http_code}" https://viperball.fly.dev/api/health || true)
             if [ "$status" = "200" ]; then
-              echo "Health check passed (HTTP 200)"
-              exit 0
+              sha=$(curl -fsS https://viperball.fly.dev/api/health | python -c 'import json,sys; print(json.load(sys.stdin).get("build_sha","unknown"))')
+              if [ "$sha" = "$GITHUB_SHA" ]; then
+                echo "Health and deployed build SHA verified: $sha"
+                exit 0
+              fi
+              echo "Health returned 200 but build SHA differs: $sha != $GITHUB_SHA"
             fi
             echo "Got HTTP $status, retrying in 15s..."
             sleep 15
