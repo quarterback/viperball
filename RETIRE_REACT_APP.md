@@ -38,7 +38,7 @@ below is checked.
 - [x] Create, sim week, sim all, advance season, import graduates
 
 ### International (FIV)
-- [ ] New cycle, sim stage, continental sim all
+- [x] New cycle, sim stage, continental sim all
 
 ### Other workbench pages
 - [ ] Game Sim (single game)

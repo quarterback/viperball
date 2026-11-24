@@ -4726,9 +4726,14 @@ def intl_index(request: Request):
     if fiv_rankings:
         rankings_list = fiv_rankings.get_ranked_list()
 
+    try:
+        from engine.fiv import _load_all_nations
+        nations = sorted(((n.code, n.name) for n in _load_all_nations().values()), key=lambda x: x[1])
+    except Exception:
+        nations = []
     return templates.TemplateResponse("international/index.html", _ctx(
         request, section="international",
-        fiv_data=fiv_data, rankings=rankings_list,
+        fiv_data=fiv_data, rankings=rankings_list, nations=nations,
     ))
 
 

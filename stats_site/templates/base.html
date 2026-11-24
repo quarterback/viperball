@@ -1025,6 +1025,14 @@ button:hover, input[type="submit"]:hover {
   color: var(--fg-bright);
   border-color: var(--accent);
 }
+/* A <summary> that opens a small form looks like a button */
+summary.btn-run, summary.btn-small {
+  list-style: none; display: inline-block; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 2px;
+  padding: 6px 14px; font-family: var(--font-ui); font-size: 14px;
+}
+summary.btn-small { padding: 2px 10px; background: var(--bg-alt); }
+summary.btn-run::-webkit-details-marker, summary.btn-small::-webkit-details-marker { display: none; }
 
 /* Copy Table button */
 .copy-table-btn {

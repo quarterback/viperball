@@ -11,37 +11,43 @@
 <div class="page-header">
   <h1>FIV — INTERNATIONAL VIPERBALL</h1>
   <div class="subtitle">Continental Championships &middot; World Cup &middot; National Team Rankings</div>
-  {% if fiv_data and fiv_data.get('phase') == 'completed' %}
-  <div style="margin-top: 8px;">
-    <button onclick="archiveFiv()" id="archive-fiv-btn" style="background: var(--bg-alt); color: var(--accent); border: 1px solid var(--accent); padding: 4px 12px; font-family: inherit; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">Archive This Cycle</button>
-    <span id="archive-fiv-status" style="margin-left: 8px; font-size: 11px; color: var(--fg-dim);"></span>
+  {% set ph = fiv_data.get('phase') if fiv_data else None %}
+  {% set steps = {
+    'roster_generation': ('/api/fiv/continental/sim-all', 'Sim the continental championships'),
+    'continental': ('/api/fiv/playoff/sim-all', 'Sim the qualifying playoff'),
+    'playoff': ('/api/fiv/worldcup/draw', 'Draw the World Cup groups'),
+    'wc_draw': ('/api/fiv/worldcup/sim-stage', 'Sim the World Cup group stage'),
+    'wc_groups': ('/api/fiv/worldcup/sim-stage', 'Sim the World Cup knockouts'),
+  } %}
+  <div class="run-bar">
+    {% if ph in steps %}
+    <form class="inline-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="{{ steps[ph][0] }}">
+      <input type="hidden" name="_back" value="/stats/international/">
+      <button class="btn-run" type="submit">{{ steps[ph][1] }}</button>
+    </form>
+    {% endif %}
+    {% if ph == 'completed' %}
+    <form class="inline-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="/archives/fiv">
+      <input type="hidden" name="_back" value="/stats/international/">
+      <input type="hidden" name="_next" value="/stats/archives/{archive_key}/">
+      <button class="btn-small" type="submit">Archive this cycle</button>
+    </form>
+    {% endif %}
+    <details class="inline-form">
+      <summary class="{{ 'btn-run' if not ph or ph == 'completed' else 'btn-small' }}">New cycle</summary>
+      <form method="post" action="/stats/do" style="margin-top:8px"
+            {% if ph and ph != 'completed' %}onsubmit="return confirm('Replace the cycle in progress?')"{% endif %}>
+        <input type="hidden" name="_path" value="/api/fiv/cycle/new">
+        <input type="hidden" name="_back" value="/stats/international/">
+        <input type="hidden" name="_ok" value="New cycle started">
+        <select name="host_nation:str" aria-label="Host nation"><option value="">Random host</option>{% for code, name in nations %}<option value="{{ code }}">{{ name }}</option>{% endfor %}</select>
+        <input type="number" name="seed:int" placeholder="Seed (optional)" style="width:140px">
+        <button class="btn-small" type="submit">Start</button>
+      </form>
+    </details>
   </div>
-  <script>
-  async function archiveFiv() {
-    const btn = document.getElementById('archive-fiv-btn');
-    const status = document.getElementById('archive-fiv-status');
-    btn.disabled = true;
-    status.textContent = 'Archiving...';
-    try {
-      const resp = await fetch('/archives/fiv', { method: 'POST' });
-      const data = await resp.json();
-      if (resp.ok) {
-        status.style.color = 'var(--green)';
-        status.textContent = 'Archived! View in Archives tab.';
-        btn.textContent = 'Archived';
-      } else {
-        status.style.color = 'var(--red)';
-        status.textContent = data.detail || 'Archive failed';
-        btn.disabled = false;
-      }
-    } catch (e) {
-      status.style.color = 'var(--red)';
-      status.textContent = 'Network error';
-      btn.disabled = false;
-    }
-  }
-  </script>
-  {% endif %}
 </div>
 
 {% if fiv_data %}
