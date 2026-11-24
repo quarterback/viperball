@@ -36,5 +36,5 @@ only differ in depleted lineups, so the Short column will usually read zero.
 
 ## Not done
 `tactical_context` (recent offensive tendencies, energy, score and clock at
-the call) is not shown. It is per snap and reads best inside play by play,
-which is a separate change.
+the call) was not shown here. The owner placed it in its own game log rather
+than the play by play; see AAR_2026-11-24_defensive_call_log.md.
