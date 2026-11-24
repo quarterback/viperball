@@ -1124,7 +1124,12 @@
   <a href="/stats/college/{{ session_id }}/referee/{{ rname }}">{{ rname }}</a>
   {% endfor %}
   {% set bc_log = ref.get('blown_call_log', []) %}
-  {% if bc_log %}
+  {% if ref.get('infractions') is not none %}
+  &middot; {{ ref.get('flags_thrown', 0) }} flag{{ 's' if ref.get('flags_thrown', 0) != 1 }}
+  &middot; {{ ref.get('no_calls', 0) }} let go
+  {% if ref.get('missed_calls', 0) %}&middot; <span style="color:var(--red)">{{ ref.missed_calls }} missed call{{ 's' if ref.missed_calls != 1 }}</span>{% endif %}
+  {% if ref.get('phantom_flags', 0) %}&middot; <span style="color:var(--red)">{{ ref.phantom_flags }} bad flag{{ 's' if ref.phantom_flags != 1 }}</span>{% endif %}
+  {% elif bc_log %}
   &middot; <span style="color:var(--red)">{{ bc_log|length }} questionable call{{ 's' if bc_log|length != 1 }}</span>
   {% endif %}
   {% if ref.get('challenged_calls', 0) %}

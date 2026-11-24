@@ -7739,13 +7739,28 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
-                # ── Referee: swallowed whistle ──
-                # Crew might miss a legitimate penalty call.
-                # The penalty simply doesn't get called — no one knows
-                # it happened except the post-game review.
-                if random.random() < self.referee_crew.swallowed_whistle_rate:
-                    self.referee_crew.blown_calls += 1
-                    self.referee_crew.blown_call_log.append({
+                # ── Officials: call, no call or missed call ──
+                # The catalog rate is how often the foul happens.  Whether a
+                # flag comes out depends on whether it affected the play,
+                # how visible the foul is and how tight the crew calls it
+                # (engine/officiating.py).
+                from engine.officiating import decide as _decide_call
+                crew = self.referee_crew
+                crew.infractions = getattr(crew, "infractions", 0) + 1
+                score_gap = abs(self.state.home_score - self.state.away_score)
+                late_close = (self.state.quarter >= 4 and self.state.time_remaining < 300
+                              and score_gap <= 9)
+                outcome, material = _decide_call(
+                    pen_def["name"], crew, late_close=late_close,
+                    playoff=getattr(self, "_is_playoff", False),
+                    against_home=(team_name == "home"))
+                if outcome == "no_call":
+                    crew.no_calls = getattr(crew, "no_calls", 0) + 1
+                    return None
+                if outcome == "missed":
+                    crew.missed_calls = getattr(crew, "missed_calls", 0) + 1
+                    crew.blown_calls += 1
+                    crew.blown_call_log.append({
                         "type": "swallowed_whistle",
                         "quarter": self.state.quarter,
                         "time_remaining": self.state.time_remaining,
@@ -7755,7 +7770,8 @@ class ViperballEngine:
                         "yards": pen_def["yards"],
                         "field_position": self.state.field_position,
                     })
-                    return None  # Ref missed the call
+                    return None
+                crew.flags_thrown = getattr(crew, "flags_thrown", 0) + 1
 
                 return Penalty(
                     name=pen_def["name"],
@@ -16118,6 +16134,14 @@ class ViperballEngine:
                 "challenged_calls": self.referee_crew.challenged_calls,
                 "overturned_calls": self.referee_crew.overturned_calls,
                 "blown_call_log": list(self.referee_crew.blown_call_log),
+                # Fouls that happened, flags for them, fouls let go because
+                # they did not affect the play, and material fouls missed.
+                "infractions": getattr(self.referee_crew, "infractions", 0),
+                "flags_thrown": getattr(self.referee_crew, "flags_thrown", 0),
+                "no_calls": getattr(self.referee_crew, "no_calls", 0),
+                "missed_calls": getattr(self.referee_crew, "missed_calls", 0),
+                "phantom_flags": sum(1 for b in self.referee_crew.blown_call_log
+                                     if b.get("type") == "phantom_flag"),
                 "home_challenges_remaining": self.state.home_challenges,
                 "away_challenges_remaining": self.state.away_challenges,
             },
