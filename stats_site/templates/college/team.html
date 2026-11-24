@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_tactics.html" import call_detail %}
 {% block title %}{{ team_name }} — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
@@ -478,6 +479,7 @@
 <style>
 .tac-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 32px; }
 .tac-grid h3 { margin: 4px 0 8px; }
+.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); }
 .tac-bar { display: grid; grid-template-columns: 140px 1fr 44px; gap: 10px; align-items: center; font-size: 14px; margin: 4px 0; }
 .tac-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .tac-track span { display: block; height: 100%; background: var(--accent); }
@@ -521,6 +523,7 @@
   </div>
   {% endif %}
 </div>
+{% if st.calls_detail %}{{ call_detail(st.calls_detail) }}{% endif %}
 {% endif %}
 
 {# ── Academic Profile ── #}

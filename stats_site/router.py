@@ -2370,6 +2370,65 @@ def _mix(counts, top=None):
     return rows[:top] if top else rows
 
 
+def _side_calls(fr, side):
+    """(defensive_call, rush_event, yards) for every snap the given side defended."""
+    out = []
+    for p in (fr or {}).get("play_by_play") or []:
+        d = p.get("defensive_call")
+        if isinstance(d, dict) and d.get("defending_side") == side:
+            out.append((d, p.get("rush_event") or None, p.get("yards") or 0))
+    return out
+
+
+def _call_details(calls):
+    """Intended against actual rushers and how each package call went, from per-snap calls."""
+    if not calls:
+        return None
+    intents, rush_rows, pk = {}, {}, {}
+    ypp_all = sum(y for _, _, y in calls) / len(calls)
+    for d, ev, y in calls:
+        n = d.get("intended_rushers")
+        if n is not None:
+            intents[n] = intents.get(n, 0) + 1
+        if ev and "outcome" in ev:
+            k = ev.get("intended_rusher_count", n)
+            row = rush_rows.setdefault(k, {"attempts": 0, "actual": 0, "short": 0, "pressures": 0, "sacks": 0, "completions": 0})
+            row["attempts"] += 1
+            row["actual"] += ev.get("rusher_count") or 0
+            row["short"] += int((ev.get("rusher_count") or 0) < (k or 0))
+            row["pressures"] += int(bool(ev.get("pressure")))
+            row["sacks"] += int(ev.get("outcome") == "sack")
+            row["completions"] += int(bool(ev.get("completed")))
+        pid = d.get("package_id")
+        if pid:
+            r = pk.setdefault(pid, {"calls": 0, "primary": 0, "strength": 0.0, "familiarity": 0.0,
+                                    "yards": 0, "focus": d.get("package_focus") or [], "situations": {}})
+            r["calls"] += 1
+            r["primary"] += int((d.get("package_eligibility") or 0) >= 0.99)
+            r["strength"] += d.get("package_strength") or 0
+            r["familiarity"] += d.get("package_familiarity") or 0
+            r["yards"] += y
+            for sit in d.get("situations") or []:
+                r["situations"][sit] = r["situations"].get(sit, 0) + 1
+    total = sum(intents.values()) or 1
+    packages = []
+    for pid, r in sorted(pk.items(), key=lambda x: -x[1]["calls"]):
+        c = r["calls"]
+        packages.append({
+            "name": _package_name(pid), "calls": c, "primary": r["primary"], "secondary": c - r["primary"],
+            "strength": r["strength"] / c, "familiarity": r["familiarity"] / c, "ypp": r["yards"] / c,
+            "focus": ", ".join(_label(f) for f in r["focus"]),
+            "situations": ", ".join(_label(k) for k, _ in sorted(r["situations"].items(), key=lambda x: -x[1])[:3]),
+        })
+    return {
+        "snaps": len(calls), "ypp_all": ypp_all,
+        "intent_mix": [(k, v, v / total) for k, v in sorted(intents.items())],
+        "intent_rows": [{"intended": k, **v, "avg_actual": v["actual"] / v["attempts"]}
+                        for k, v in sorted(rush_rows.items(), key=lambda x: (x[0] is None, x[0] or 0))],
+        "packages": packages,
+    }
+
+
 def _game_tactics(season, fr, home, away):
     """Per-team view of the game plans each staff called and how the rush went."""
     if not fr:
@@ -2398,7 +2457,7 @@ def _game_tactics(season, fr, home, away):
         rushers.sort(key=lambda x: (-x["sacks"], -x["lead_hurries"], -x["rush_snaps"]))
         attempts = r.get("attempts") or 0
         out.append({
-            "side": side, "team": team,
+            "side": side, "team": team, "calls_detail": _call_details(_side_calls(fr, side)),
             "oc": {"name": coach_name(team, o.get("oc_id")), "signature": _label(o.get("signature")),
                    "featured": o.get("featured_position")} if o else None,
             "formations": _mix(sel.get("formation")),
@@ -2439,6 +2498,7 @@ def _team_season_tactics(season, team_name):
                 dst[k] = dst.get(k, 0) + v
 
     games, off, dfn, reads, rush = 0, {}, {}, {}, {}
+    all_calls = []
     sigs = {"oc": {}, "dc": {}}
     for g in season.schedule:
         fr = getattr(g, "full_result", None)
@@ -2450,6 +2510,7 @@ def _team_season_tactics(season, team_name):
         if not (o or d or (fr.get("defensive_rush") or {}).get(side)):
             continue
         games += 1
+        all_calls.extend(_side_calls(fr, side))
         add(off, o.get("selected"))
         add(dfn, {k: d.get(k) for k in ("alignments", "packages", "read_attempts", "read_successes")})
         dfn["calls"] = dfn.get("calls", 0) + (d.get("calls") or 0)
@@ -2469,6 +2530,7 @@ def _team_season_tactics(season, team_name):
             "defensive_reads": {"home": reads}, "defensive_rush": {"home": rush}}
     view = _game_tactics(None, fake, team_name, "")[1]
     view["games"] = games
+    view["calls_detail"] = _call_details(all_calls)
     _cache_set(season, key, view)
     return view
 

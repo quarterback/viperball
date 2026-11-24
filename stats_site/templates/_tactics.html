@@ -1,0 +1,54 @@
+{# Per-snap defensive call detail: rushers called against sent, and each package call. #}
+{% macro call_detail(cd) %}
+{% if cd %}
+<style>
+.tac-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); column-gap: 32px; }
+.tac-detail h4 { margin: 18px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); }
+</style>
+<div class="tac-detail">
+<div>
+{% if cd.intent_mix %}
+<h4>Rushers called</h4>
+<p class="tac-who">Over {{ cd.snaps }} defensive calls</p>
+{% for k, n, share in cd.intent_mix %}
+<div class="tac-bar"><span>{{ k }} rusher{{ '' if k == 1 else 's' }}</span><span class="tac-track"><span style="width:{{ (share * 100) | round | int }}%"></span></span><span class="tac-n">{{ (share * 100) | round | int }}%</span></div>
+{% endfor %}
+{% endif %}
+{% if cd.intent_rows %}
+<div class="table-scroll"><table>
+  <thead><tr><th class="num" title="Rushers the coordinator called on kick-pass attempts">Called</th><th class="num">Att</th><th class="num" title="Average number who actually rushed">Sent</th><th class="num" title="Attempts where fewer rushed than called">Short</th><th class="num">Press %</th><th class="num">Sack</th><th class="num">Comp %</th></tr></thead>
+  <tbody>
+  {% for r in cd.intent_rows %}
+  <tr><td class="num">{{ r.intended if r.intended is not none else '?' }}</td><td class="num">{{ r.attempts }}</td>
+    <td class="num">{{ '%.1f' | format(r.avg_actual) }}</td>
+    <td class="num">{{ r.short }}</td>
+    <td class="num">{{ '%.0f' | format(100 * r.pressures / r.attempts) }}%</td>
+    <td class="num">{{ r.sacks }}</td>
+    <td class="num">{{ '%.0f' | format(100 * r.completions / r.attempts) }}%</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+</div>
+<div>
+{% if cd.packages %}
+<h4>Package calls</h4>
+<div class="table-scroll"><table>
+  <thead><tr><th>Package</th><th class="num">Calls</th><th class="num" title="Calls in the package's main situation / in a secondary one, where it runs weaker">Main / side</th><th class="num" title="Average execution strength on the call">Strength</th><th class="num" title="How well the team knows the package">Known</th><th class="num">Yds/play</th></tr></thead>
+  <tbody>
+  {% for p in cd.packages %}
+  <tr><td>{{ p.name }}{% if p.situations %}<br><span style="font-size:12px;color:var(--fg-dim)">{{ p.situations }}</span>{% endif %}</td>
+    <td class="num">{{ p.calls }}</td>
+    <td class="num">{{ p.primary }} / {{ p.secondary }}</td>
+    <td class="num">{{ '%.0f' | format(100 * p.strength) }}%</td>
+    <td class="num">{{ '%.0f' | format(100 * p.familiarity) }}%</td>
+    <td class="num">{{ '%.1f' | format(p.ypp) }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p class="tac-who" style="font-size:13px;color:var(--fg-dim)">All snaps: {{ '%.1f' | format(cd.ypp_all) }} yards per play</p>
+{% endif %}
+</div>
+</div>
+{% endif %}
+{% endmacro %}

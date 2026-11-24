@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_tactics.html" import call_detail %}
 {% block title %}{{ game.away_team }} @ {{ game.home_team }} — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
@@ -471,6 +472,7 @@
   </table>
   {% endif %}
   {% endif %}
+  {{ call_detail(t.calls_detail) }}
 </div>
 {% endfor %}
 </div>
