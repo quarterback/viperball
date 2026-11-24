@@ -2780,25 +2780,9 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         team_archetypes=dyn_archetypes,
     )
 
-    # ── Roster continuity: restore developed rosters from previous season ──
-    # If offseason_complete() persisted roster data, replace the fresh-loaded
-    # players with the developed ones (preserving team metadata like state).
-    next_rosters = getattr(dynasty, '_next_season_rosters', None)
-    if next_rosters:
-        from engine.player_card import PlayerCard, card_to_player
-        for team_name, team in teams.items():
-            card_dicts = next_rosters.get(team_name)
-            if card_dicts:
-                restored_players = []
-                for cd in card_dicts:
-                    try:
-                        card = PlayerCard.from_dict(cd)
-                        restored_players.append(card_to_player(card))
-                    except Exception:
-                        pass
-                if restored_players:
-                    team.players = restored_players
-        dynasty._next_season_rosters = None
+    # Delay restoration until custom programs have also been constructed.
+    # Do not consume the saved roster until season setup succeeds.
+    next_rosters = getattr(dynasty, "_next_season_rosters", None)
 
     seed = req.ai_seed if req.ai_seed is not None else random.randint(0, 999999)
     ai_configs = auto_assign_all_teams(
@@ -2872,6 +2856,14 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
                 auto_retired = _cand
                 logger.info("odd program count: auto retired %s", _cand)
                 break
+
+    if next_rosters:
+        from engine.roster_continuity import restore_finalized_rosters
+        try:
+            restore_finalized_rosters(teams, next_rosters)
+        except ValueError as exc:
+            logger.error("Cannot restore finalized dynasty roster: %s", exc)
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     retired = set(getattr(dynasty, "retired_programs", []) or [])
     if retired:
@@ -2975,6 +2967,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     _status = _serialize_season_status(session)
     if auto_retired:
         _status["auto_retired"] = auto_retired
+    if next_rosters:
+        dynasty._next_season_rosters = None
     return _status
 
 

@@ -197,11 +197,20 @@ def run(seasons, nteams, seed, out):
             if wrong:
                 raise RuntimeError(f"Schedule quota mismatch (expected {expected_games}): {wrong}")
             start=snapshot(season.teams)
-            duplicate_identities = {t: len(team.players)-len(start[t]) for t,team in season.teams.items()
-                                    if len(team.players)!=len(start[t])}
-            if duplicate_identities:
-                print("DUPLICATE_PLAYER_IDENTITIES",year,duplicate_identities,flush=True)
+            identity_owners = defaultdict(list)
+            for team_name, team in season.teams.items():
+                for player in team.players:
+                    identity_owners[identity(player)].append(
+                        {"team": team_name, "name": player.name})
+            duplicate_identities = {
+                pid: owners for pid, owners in identity_owners.items()
+                if len(owners) > 1
+            }
             report.setdefault("identity_collisions",{})[str(year)]=duplicate_identities
+            if duplicate_identities:
+                checkpoint()
+                raise RuntimeError("Duplicate player identities: "
+                                   +json.dumps(duplicate_identities,sort_keys=True))
             if expected_rosters is not None:
                 # Compare actual roster entries rather than a dictionary
                 # keyed by player ID, which can conceal duplicate identities.
@@ -315,12 +324,16 @@ def run(seasons, nteams, seed, out):
             post(base+"/offseason/complete")
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
+            expected_pipeline=dyn._hs_pipeline.save_state() if dyn._hs_pipeline else None
             saved_rosters=deepcopy(dyn._next_season_rosters)
             expected_rosters={t:sorted((r["first_name"]+" "+r["last_name"]) for r in rows)
                               for t,rows in saved_rosters.items()}
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
                 raise RuntimeError("Application DB roundtrip lost installation, staff or roster")
+            loaded_pipeline=loaded._hs_pipeline.save_state() if loaded._hs_pipeline else None
+            if loaded_pipeline != expected_pipeline:
+                raise RuntimeError("Application DB roundtrip lost high school pipeline state")
             # Reload into the live session via the actual endpoint and continue.
             post(base+"/dynasty/load?save_key="+sid)
             trans={"from_year":year,"to_year":year+1,"database_roundtrip":True,
