@@ -369,97 +369,92 @@ def calculate_team_rating(metrics: Dict) -> float:
 
 def calculate_scoring_profile(plays: List[Dict], drives: List[Dict],
                               team: str, game_stats: Optional[Dict] = None) -> Dict:
-    """Scoring Profile — breakdown of HOW a team scores.
+    """Score methods from the official post-play scoreboard.
 
-    A fan says: "They're a snapkick team — 60% of their points come
-    from the boot." Or: "Their defense wins games — they got 14 points
-    off bonus possessions."
-
-    Returns point totals and percentages for each scoring method:
-      - Rush TDs (touchdowns from rushing plays)
-      - Lateral TDs (touchdowns involving lateral chains)
-      - Kick-Pass TDs (touchdowns from kick-pass completions)
-      - Drop Kicks (5 pts each — the bold/risky option)
-      - Place Kicks (3 pts each — the safe option)
-      - Return TDs (punt/kick return touchdowns)
-      - Defensive Points (points scored on bonus possessions —
-        Viperball's unique "defense wins you extra offense" mechanic)
+    Bonus-possession conversions are a separate annotation: their points
+    are already counted in TDs or scoring kicks. Unclassified points and
+    score gaps stay visible instead of being attributed to invented plays.
+    Historical games without score snapshots use a limited legacy fallback.
     """
+    from .box_score_ledger import scoring_ledger
+
     team_plays = [p for p in plays if p.get("possession") == team]
-
-    # Count scoring plays by type
-    rush_tds = sum(1 for p in team_plays
-                   if p.get("result") == "touchdown"
-                   and (p.get("laterals") or 0) == 0
-                   and p.get("play_type") not in ("kick_pass", "drop_kick", "place_kick"))
-    lateral_tds = sum(1 for p in team_plays
-                      if p.get("result") == "touchdown"
-                      and (p.get("laterals") or 0) > 0)
-    kp_tds = sum(1 for p in team_plays
-                 if p.get("result") == "touchdown"
-                 and p.get("play_type") == "kick_pass")
-    dk_made = sum(1 for p in team_plays
-                  if p.get("play_type") == "drop_kick"
-                  and p.get("result") == "successful_kick")
-    pk_made = sum(1 for p in team_plays
-                  if p.get("play_type") == "place_kick"
-                  and p.get("result") == "successful_kick")
-    return_tds = sum(1 for p in team_plays
-                     if p.get("result") in ("punt_return_td", "kick_return_td",
-                                            "missed_dk_return_td", "int_return_td"))
-
-    # Points
-    rush_td_pts = rush_tds * 9
-    lateral_td_pts = lateral_tds * 9
-    kp_td_pts = kp_tds * 9
-    dk_pts = dk_made * 5
-    pk_pts = pk_made * 3
-    return_td_pts = return_tds * 9
-    total_pts = rush_td_pts + lateral_td_pts + kp_td_pts + dk_pts + pk_pts + return_td_pts
-
-    # Bonus possession scoring (defense-generated offense)
     bonus_drives = [d for d in drives
                     if d.get("team") == team and d.get("bonus_drive")]
     bonus_scores = sum(1 for d in bonus_drives
                        if d.get("result") in ("touchdown", "successful_kick"))
-    # Estimate bonus points (rough: 7 avg per scoring bonus drive)
-    bonus_pts = 0
     if game_stats:
-        bonus_pts = game_stats.get("bonus_possession_scores", 0) * 7
-    elif bonus_scores > 0:
-        bonus_pts = bonus_scores * 7
+        bonus_scores = game_stats.get("bonus_possession_scores", bonus_scores)
 
-    total_with_bonus = total_pts + bonus_pts
+    # Score deltas include defensive points even when possession belongs
+    # to the opposing team. They also handle bells awarded with TD returns.
+    ledger = scoring_ledger(
+        plays, {team: game_stats.get("official_score")}
+        if game_stats and game_stats.get("official_score") is not None else None)
+    if ledger is not None:
+        row = ledger[team]
+        count, points = row["counts"], row["points"]
+        total = (game_stats or {}).get("official_score", row["score_from_plays"])
+        total = float(total)
+        def pct(value):
+            return round(value / total * 100, 1) if total else 0.0
+        return {
+            "rush_tds": count["rush_td"], "lateral_tds": count["lateral_td"],
+            "kp_tds": count["kp_td"], "return_tds": count["return_td"],
+            "dk_made": count["dk"], "pk_made": count["pk"],
+            "safeties": count["safety"], "pindowns": count["pindown"],
+            "bells": count["bell"], "bonus_scores": bonus_scores,
+            "rush_td_pts": points["rush_td"], "lateral_td_pts": points["lateral_td"],
+            "kp_td_pts": points["kp_td"], "return_td_pts": points["return_td"],
+            "dk_pts": points["dk"], "pk_pts": points["pk"],
+            "safety_pts": points["safety"], "pindown_pts": points["pindown"],
+            "bell_pts": points["bell"], "other_pts": points["other"],
+            "other_scores": count["other"],
+            "unrecorded_pts": row["unrecorded_points"],
+            "score_consistent": row["score_consistent"],
+            "total_pts": total,
+            "rush_pct": pct(points["rush_td"]), "lateral_pct": pct(points["lateral_td"]),
+            "kp_pct": pct(points["kp_td"]), "return_pct": pct(points["return_td"]),
+            "dk_pct": pct(points["dk"]), "pk_pct": pct(points["pk"]),
+            "snapkick_pct": pct(points["dk"] + points["pk"]),
+            "safety_pct": pct(points["safety"]), "pindown_pct": pct(points["pindown"]),
+            "bell_pct": pct(points["bell"]), "other_pct": pct(points["other"]),
+            "bonus_pts": 0, "bonus_pct": 0,
+        }
 
-    def pct(pts):
-        return round(pts / max(1, total_with_bonus) * 100, 1)
-
+    # Historical analytics fixtures may lack after-score snapshots.
+    # Preserve their original scoring classes without treating a bonus
+    # drive as an additional score.
+    rush_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                   and not p.get("laterals") and p.get("play_type") != "kick_pass")
+    lateral_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                      and p.get("laterals"))
+    kp_tds = sum(1 for p in team_plays if p.get("result") == "touchdown"
+                 and p.get("play_type") == "kick_pass")
+    dk_made = sum(1 for p in team_plays if p.get("play_type") == "drop_kick"
+                  and p.get("result") == "successful_kick")
+    pk_made = sum(1 for p in team_plays if p.get("play_type") == "place_kick"
+                  and p.get("result") == "successful_kick")
+    return_tds = sum(1 for p in team_plays if p.get("result") in (
+        "punt_return_td", "kick_return_td", "missed_dk_return_td", "int_return_td"))
+    total = 9 * (rush_tds + lateral_tds + kp_tds + return_tds) + 5 * dk_made + 3 * pk_made
+    def pct(value):
+        return round(value / total * 100, 1) if total else 0.0
     return {
-        "rush_td_pts": rush_td_pts,
-        "lateral_td_pts": lateral_td_pts,
-        "kp_td_pts": kp_td_pts,
-        "dk_pts": dk_pts,
-        "pk_pts": pk_pts,
-        "return_td_pts": return_td_pts,
-        "bonus_pts": bonus_pts,
-        "total_pts": total_with_bonus,
-        # Percentages — how the team scores
-        "rush_pct": pct(rush_td_pts),
-        "lateral_pct": pct(lateral_td_pts),
-        "kp_pct": pct(kp_td_pts),
-        "snapkick_pct": pct(dk_pts + pk_pts),
-        "dk_pct": pct(dk_pts),
-        "pk_pct": pct(pk_pts),
-        "return_pct": pct(return_td_pts),
-        "bonus_pct": pct(bonus_pts),
-        # Counts for display
-        "rush_tds": rush_tds,
-        "lateral_tds": lateral_tds,
-        "kp_tds": kp_tds,
-        "dk_made": dk_made,
-        "pk_made": pk_made,
-        "return_tds": return_tds,
-        "bonus_scores": bonus_scores,
+        "rush_tds": rush_tds, "lateral_tds": lateral_tds, "kp_tds": kp_tds,
+        "return_tds": return_tds, "dk_made": dk_made, "pk_made": pk_made,
+        "rush_td_pts": 9 * rush_tds, "lateral_td_pts": 9 * lateral_tds,
+        "kp_td_pts": 9 * kp_tds, "return_td_pts": 9 * return_tds,
+        "dk_pts": 5 * dk_made, "pk_pts": 3 * pk_made,
+        "rush_pct": pct(9 * rush_tds), "lateral_pct": pct(9 * lateral_tds),
+        "kp_pct": pct(9 * kp_tds), "return_pct": pct(9 * return_tds),
+        "dk_pct": pct(5 * dk_made), "pk_pct": pct(3 * pk_made),
+        "snapkick_pct": pct(5 * dk_made + 3 * pk_made),
+        "bonus_scores": bonus_scores, "bonus_pts": 0, "bonus_pct": 0,
+        "total_pts": total, "score_consistent": None,
+        "unrecorded_pts": None, "other_pts": 0, "other_scores": 0,
+        "safeties": 0, "pindowns": 0, "bells": 0,
+        "safety_pct": 0, "pindown_pct": 0, "bell_pct": 0, "other_pct": 0,
     }
 
 
