@@ -62,6 +62,14 @@ def run(games, seed):
                                                           game["player_stats"][side])
                         totals["credited_hurries"] += sum(p["hurries"] for p in
                                                             game["player_stats"][side])
+                        # A physical rush is logged even when an accepted
+                        # foul cancels the play and restores official stats.
+                        for play in game["play_by_play"]:
+                            rush = play.get("rush_event") or {}
+                            foul = play.get("penalty") or {}
+                            if rush.get("defending_side") == side and foul.get("nullified"):
+                                totals["nullified_sacks"] += int(rush.get("outcome") == "sack")
+                                totals["nullified_hurries"] += int(rush.get("outcome") == "hurry")
                         rushing = [p["sacks"] + p["lead_hurries"]
                                    for p in row["by_player"].values()]
                         total = sum(rushing)
@@ -80,8 +88,15 @@ def run(games, seed):
                     "pressure_rate": round(totals["pressures"]/max(1,totals["attempts"]),4),
                     "sack_rate": round(totals["sacks"]/max(1,totals["attempts"]),4),
                 }
-                if totals["credited_sacks"] != totals["sacks"] or totals["credited_hurries"] != totals["hurries"]:
-                    raise RuntimeError("Player sack/hurry totals disagree with resolved rush events: "+k)
+                expected_sacks = totals["sacks"] - totals["nullified_sacks"]
+                expected_hurries = totals["hurries"] - totals["nullified_hurries"]
+                if (totals["credited_sacks"] != expected_sacks or
+                    totals["credited_hurries"] != expected_hurries):
+                    raise RuntimeError(
+                        f"Official rush credit parity {k}: "
+                        f"sacks {totals['credited_sacks']}/{expected_sacks}, "
+                        f"hurries {totals['credited_hurries']}/{expected_hurries}, "
+                        f"physical {totals['sacks']}/{totals['hurries']}")
                 scores[k] = completed_scores
         for credit in ("highest","weighted"):
             changed = sum(a!=b for a,b in zip(scores[f"{credit}/delta_on"],
