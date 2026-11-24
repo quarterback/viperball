@@ -16136,9 +16136,12 @@ class ViperballEngine:
         successful_laterals = sum(1 for p in laterals if not p.fumble)
 
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
-        drop_kicks_attempted = [p for p in plays if p.play_type == "drop_kick"]
+        # Accepted live-ball fouls can wipe out a kick, restoring player
+        # counters. The official team attempts must exclude that snap too.
+        official_kick = lambda p: not (p.penalty and p.penalty.nullified)
+        drop_kicks_attempted = [p for p in plays if p.play_type == "drop_kick" and official_kick(p)]
         place_kicks = [p for p in plays if p.play_type == "place_kick" and p.result == "successful_kick"]
-        place_kicks_attempted = [p for p in plays if p.play_type == "place_kick"]
+        place_kicks_attempted = [p for p in plays if p.play_type == "place_kick" and official_kick(p)]
         touchdowns = [p for p in plays if p.result == "touchdown"]
         punt_return_tds = [p for p in plays if p.result == "punt_return_td"]
         int_return_tds = [p for p in plays if p.result == "int_return_td"]
@@ -16146,7 +16149,7 @@ class ViperballEngine:
         fumbles_lost = [p for p in plays if p.fumble and p.result == "fumble"]
         turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
         pindowns = [p for p in plays if p.result == "pindown"]
-        punts = [p for p in plays if p.play_type == "punt"]
+        punts = [p for p in plays if p.play_type == "punt" and official_kick(p)]
         chaos_recoveries = [p for p in plays if p.result == "chaos_recovery"]
         kick_passes = [p for p in plays if p.play_type == "kick_pass"]
         kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
