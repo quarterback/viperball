@@ -47,6 +47,11 @@ historical box score, not a reproduced deterministic seed.
    possession before writing the Play record.
 5. A kick-pass touchdown credits both the kicker and target individually.
    Summing player KP touchdown credits therefore doubles team TDs.
+6. **Newly demonstrated by the full-engine audit:** synthetic bonus-possession
+   and overtime markers were appended with uninitialized score snapshots
+   (default 0-0), generating spurious *negative* score changes followed
+   by apparent phantom scoring. Fixing only the analytics layer would hide
+   this upstream event-log defect.
 
 ## Changes in this branch
 
@@ -70,7 +75,8 @@ historical box score, not a reproduced deterministic seed.
   penalties are resolved. Team kick-pass TDs count scored events,
   not both participants' individual credits. Team play partitions
   use the snap owner. The final score is attached to each team's
-  metrics context.
+  metrics context. Synthetic bonus/overtime play markers now retain the
+  actual current score instead of the default zero snapshot.
 - College, WVL and pro box-score templates show safeties, pindowns,
   bells, unknown scores, and a warning on an unreconciled score.
   Bonus conversions appear below scoring methods rather than as
@@ -86,8 +92,19 @@ historical box score, not a reproduced deterministic seed.
 
 ## Validation and acceptance
 
-At initial PR creation, tests and the full-game smoke have **not yet
-been executed**. Run:
+### Observed first CI run
+
+The existing suite passed **181 tests** and the focused coaching
+integration passed **35**. The first eight-game source-of-truth smoke
+reported **15/16 team-game score ledger failures**, all with zero
+final-score difference but interim score reversals. That diagnostic
+revealed the zero-snapshot bonus/overtime markers above. The audit was
+not waived or weakened; the engine markers were repaired at their
+source.
+
+### Final validation gate
+
+Re-run after the synthetic marker fix:
 
 ```sh
 PYTHONHASHSEED=0 python -m pytest tests/test_box_score_ledger.py -q
