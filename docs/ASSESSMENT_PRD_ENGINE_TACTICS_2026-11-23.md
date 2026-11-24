@@ -10,7 +10,7 @@
 
 The React workbench at `/app` is retired ([PR #336](https://github.com/quarterback/viperball/pull/336)); `web/` is deleted and `/app/*` redirects to `/stats`. Every UI task in this queue (UI-01, DEL-03 and any "React" wording below) now targets the stats site: `stats_site/router.py` and `stats_site/templates/`. The CCH-04 installation panel moved to the stats team page. Engine work keeps the same contract: add result fields, and the stats templates read them from `full_result`.
 
-**Stats-site finding for the engine workstream (Nov 24):** in a fresh three-week season the pass rush credits nearly every lead hurry and sack to one player per team (Alabama DL26: 28 hurries, 27 sacks, all other rushers zero). The lead `rusher` on each rush event appears to always be the best rusher. See AAR_2026-11-24_game_plans_report.md.
+**Stats-site finding for the engine workstream (Nov 24, rechecked after #340):** pass rush credit is still concentrated on one player per team. Before #340 a three-week season gave Alabama DL26 28 hurries and 27 sacks with every other rusher at zero. On main after #340 (fresh season, three weeks, all 205 teams): the top rusher holds a median 70% of a team's lead hurries plus sacks (90th percentile 96%), a median of four players get any credit, the median team leader has 6 sacks and the highest has 22. Better spread, still far from a realistic sack distribution. See AAR_2026-11-24_game_plans_report.md.
 
 ## Active engine follow-up — November 23, 2026
 

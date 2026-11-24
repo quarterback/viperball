@@ -40,6 +40,15 @@ season sack totals will be far out of range. Logged here and in the work
 queue; engine code was left alone because PR #340 is changing the same rush
 assignment code.
 
+## Recheck after #340
+#340 merged a few minutes before this PR and changed the rush assignment
+code. Measured again on main with both merged (fresh season, three weeks, all
+205 teams): the top rusher holds a median 70% of a team's lead hurries plus
+sacks, 96% at the 90th percentile; a median of four players get any credit;
+the median team leader has 6 sacks and the highest has 22. Much better than
+one player taking everything, still too concentrated. The work queue note was
+updated to these numbers.
+
 ## Not done
 - Score by channel and period, kick attempts by kind, bells and halftime
   adjustments from the UI-01 list still need their own pass.
