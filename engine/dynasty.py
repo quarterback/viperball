@@ -319,6 +319,9 @@ class Dynasty:
     # High school league (simulated each offseason to produce real recruits)
     _hs_league: Optional[object] = field(default=None, repr=False)
 
+    # Programs awaiting their one-time roster dispersal at a season boundary.
+    _pending_retired_dispersal: List[str] = field(default_factory=list, repr=False)
+
     # Persisted roster data for next season (populated by offseason_complete)
     _next_season_rosters: Optional[Dict[str, list]] = field(default=None, repr=False)
     # Program infrastructure per team: team_name -> {facilities, campus_life, ...}
