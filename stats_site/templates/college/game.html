@@ -158,7 +158,7 @@
   {% for label, key, src, fmt, desc in [
     ('Team Rating', 'team_rating', 'vm', '%.1f', 'Overall team grade 0-100.'),
     ('PPD', 'ppd', 'vm', '%.2f', 'Points Per Drive. Avg points scored each possession.'),
-    ('EPA', 'epa', 'ts', '%.1f', 'Expected Points Added. Positive = helped win, negative = hurt.'),
+    ('EPA', 'epa', 'ts', '%.1f', 'Modeled field-position EPA from the existing 6-down lookup, not a reconstruction of final-score points. Return TDs, bonus possessions, Delta restarts and bells are not fully reconciled in this model.'),
     ('Explosive Plays', 'explosive_plays', 'vm', '%d', 'Plays gaining 20+ yards.'),
   ] %}
   {% set b = bm.get(key) if bm else none %}
@@ -217,7 +217,7 @@
 {% set adye = dye.get('away', {}) %}
 <h2>Deserve to Win</h2>
 <p style="color:var(--fg-dim);font-size:12px;margin-bottom:12px;">
-  Who played better controlling for delta-system distortions? DTW strips away field-position gifts from trailing and penalties from leading.
+  Weighted model of performance, including Delta penalty-kill and power-play outcomes. This is a descriptive adjusted edge, not a calibrated win probability or proof that the result was undeserved.
 </p>
 
 {# DTW Headline bar #}
@@ -225,15 +225,19 @@
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
     <div style="text-align:center;flex:1;">
       <div style="font-size:11px;color:var(--fg-dim);">{{ game.away_team }}</div>
-      <div style="font-size:28px;font-weight:bold;{% if adtw > hdtw %}color:var(--green){% elif adtw < hdtw %}color:var(--fg-dim){% endif %}">{{ '%.0f'|format(adtw * 100) }}%</div>
+      <div style="font-size:28px;font-weight:bold;{% if adtw > hdtw %}color:var(--green){% elif adtw < hdtw %}color:var(--fg-dim){% endif %}">{{ '%.1f'|format(adtw * 100) }}%</div>
     </div>
     <div style="text-align:center;flex:0 0 auto;">
       <div style="font-size:11px;color:var(--fg-dim);">DTW</div>
-      {% if dtw.get('upset') %}<div style="font-size:11px;color:var(--yellow);font-weight:bold;">DTW UPSET</div>{% endif %}
+      {% if dtw.get('upset') and ((hdtw > 0.55) or (adtw > 0.55)) %}
+      <div style="font-size:11px;color:var(--yellow);font-weight:bold;">DTW UPSET</div>
+      {% elif dtw.get('deserved_winner') == 'toss-up' or (hdtw >= 0.45 and hdtw <= 0.55) %}
+      <div style="font-size:11px;color:var(--fg-dim);">TOO CLOSE</div>
+      {% endif %}
     </div>
     <div style="text-align:center;flex:1;">
       <div style="font-size:11px;color:var(--fg-dim);">{{ game.home_team }}</div>
-      <div style="font-size:28px;font-weight:bold;{% if hdtw > adtw %}color:var(--green){% elif hdtw < adtw %}color:var(--fg-dim){% endif %}">{{ '%.0f'|format(hdtw * 100) }}%</div>
+      <div style="font-size:28px;font-weight:bold;{% if hdtw > adtw %}color:var(--green){% elif hdtw < adtw %}color:var(--fg-dim){% endif %}">{{ '%.1f'|format(hdtw * 100) }}%</div>
     </div>
   </div>
 
@@ -244,13 +248,33 @@
   </div>
 </div>
 
+{# Model components are signed contributions to the actual composite
+   (home minus away); not independent probability percentage points. #}
+{% set parts = dtw.get('component_edges', {}) if dtw else {} %}
+{% if parts %}
+<div style="margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:6px;">
+  <div style="font-weight:600;margin-bottom:6px;">DTW model components — home minus away</div>
+  <p style="color:var(--fg-dim);font-size:11px;margin:0 0 10px;">
+    Signed weighted edges before conversion to 0–100. Positive favors {{ game.home_team }}; negative favors {{ game.away_team }}. A direct turnover-margin adjustment is not part of the model.
+  </p>
+  <div class="grid-4">
+    {% for label, key in [('Raw performance', 'raw_performance'), ('Delta context', 'delta_context'), ('Bonus-possession conversion', 'turnover_bonus_conversion'), ('Final adjusted edge', 'final_edge')] %}
+    <div class="metric">
+      <div class="label">{{ label }}</div>
+      <div class="value">{{ '%+.3f'|format(parts.get(key, 0)) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {# DYE Breakdown — Penalty Kill / Power Play #}
 {% if hdye or adye %}
 <div class="grid-4" style="margin-bottom:16px;">
   {% for label, key, desc, fmt, invert in [
     ('PK Efficiency', 'pk_efficiency', 'Performance when delta-penalized for leading. >1.0 = elite under pressure.', '%.2f', false),
     ('PK Score Rate', 'pk_score_rate', 'Scoring % on penalty-kill drives (leading, worse field position).', '%.1f%%', false),
-    ('PP Score Rate', 'pp_score_rate', 'Scoring % on power-play drives (trailing, better field position).', '%.1f%%', false),
+    ('PP Score Rate', 'pp_score_rate', 'Incidence of a TD or successful kick on power-play drives; different score types have different point value.', '%.1f%%', false),
     ('Mess Rate', 'mess_rate', 'Gap between PP and PK scoring. Lower = more consistent across delta contexts.', '%.1f', true),
   ] %}
   <div class="metric">
@@ -263,6 +287,10 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<p style="font-size:11px;color:var(--fg-dim);margin-bottom:12px;">
+  EPA scope: the existing play model compares field position and down using a fixed lookup table. It contains some scoring-play adjustments but does not fully account for defensive or return touchdowns, every bell or pindown, bonus-possession value, or Delta restart effects. Negative EPA can coexist with a win driven by those channels. The points/drive and scoring totals above use the actual game scoreboard instead.
+</p>
 
 {# Quarter Scoring — Tennis Set Analysis #}
 {% set hqs = hm.get('quarter_scoring', {}) %}
@@ -703,12 +731,19 @@
   {% set hb = hdye.get(bucket, {}) %}
   {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }}dr / {{ '%.1f'|format(ab.get('yards_per_drive', 0)) }}ypd / {{ '%.0f'|format(ab.get('score_rate', 0)) }}%</td>
-    <td style="font-size:10px;">{{ label }}</td>
-    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }}dr / {{ '%.1f'|format(hb.get('yards_per_drive', 0)) }}ypd / {{ '%.0f'|format(hb.get('score_rate', 0)) }}%</td>
+    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td style="font-size:10px;">{{ label }}<span style="display:block;color:var(--fg-dim);">Points, not just scoring frequency</span></td>
+    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
   </tr>
   {% endif %}
   {% endfor %}
+  <tr>
+    {% set a_pp = as_.get('dye', {}).get('power_play', {}) %}
+    {% set h_pp = hs.get('dye', {}).get('power_play', {}) %}
+    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(a_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in a_pp else '—' }} EP/start · {{ ('%+.2f'|format(a_pp.points_vs_start_ep)) if 'points_vs_start_ep' in a_pp else '—' }} points vs EP</td>
+    <td style="font-size:10px;">Power Play starting-position EP<br><span style="color:var(--fg-dim);">Static field-position table; not points above replacement</span></td>
+    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(h_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in h_pp else '—' }} EP/start · {{ ('%+.2f'|format(h_pp.points_vs_start_ep)) if 'points_vs_start_ep' in h_pp else '—' }} points vs EP</td>
+  </tr>
   {# Mess Rate row #}
   {% set a_mr = as_.get('mess_rate') %}
   {% set h_mr = hs.get('mess_rate') %}

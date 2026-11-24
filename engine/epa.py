@@ -17,6 +17,31 @@ Key concepts:
     big-play ability independent of consistency.
 """
 
+# Scope of the legacy EPA statistic. This is a lookup-based heuristic,
+# not a fitted Viperball expected-points model or an accounting of all six
+# score channels. See docs/aar_2026-11-24_scoring_dtw_epa_scope.md.
+EPA_SCOPE = {
+    "basis": "fixed field-position and down lookup (six downs, no score differential)",
+    "attribution": "logged play possession, which may change after a return or turnover",
+    "includes": [
+        "normal offensive gains/losses",
+        "nine-point touchdown and punt-return TD cases",
+        "five-point successful drop kicks and three-point successful place kicks",
+        "safety and pindown result cases",
+        "half-point assigned by the generic fumble result",
+        "turnover-on-downs opportunity lost",
+    ],
+    "not_fully_included": [
+        "defensive and interception-return touchdowns",
+        "missed-kick return touchdowns and blocked-kick return touchdowns",
+        "all live-ball recovery bells and pindowns",
+        "bonus-possession value above an ordinary possession",
+        "score-dependent Delta restart counterfactual",
+        "proper next-possession field-value handoffs on every turnover",
+    ],
+    "interpretation": "partial field-position EPA; not final-score point accounting",
+}
+
 EP_TABLE = {
     1: 0.05,
     5: 0.15,
@@ -143,6 +168,7 @@ def calculate_game_epa(all_plays: list, team: str) -> dict:
             "offense_epa": 0.0,
             "special_teams_epa": 0.0,
             "chaos_epa": 0.0,
+            "scope": EPA_SCOPE,
         }
 
     kick_types = ["punt", "drop_kick", "place_kick"]
@@ -181,4 +207,5 @@ def calculate_game_epa(all_plays: list, team: str) -> dict:
         "offense_epa": round(offense_wpa, 2),
         "special_teams_epa": round(special_teams_wpa, 2),
         "chaos_epa": round(chaos_wpa, 2),
+        "scope": EPA_SCOPE,
     }
