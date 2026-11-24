@@ -33,13 +33,37 @@
       <button name="what" value="rest">Sim rest of season</button>
       {% if dynasty %}<a href="/stats/dynasty/{{ session_id }}/" style="margin-left:8px">Dynasty</a>{% endif %}
     {% elif phase == 'portal' %}
-      <button class="btn-run" name="what" value="skip_portal">Skip portal and start season</button>
+      <button class="btn-run" name="what" value="skip_portal">Start the season</button>
     {% elif phase == 'bowls_pending' %}
       <button class="btn-run" name="what" value="bowls">Play bowls</button>
     {% elif phase == 'playoffs_pending' %}
       <button class="btn-run" name="what" value="playoffs">Play playoffs</button>
     {% endif %}
   </form>
+  {% endif %}
+  {% if season_portal %}
+  <div style="margin-top:16px">
+    <p>{{ season_portal.human_team }} can add {{ season_portal.transfers_remaining }} of {{ season_portal.transfer_cap }} transfers. {{ season_portal.available_count }} players available.</p>
+    {% if season_portal.committed %}<p>Signed: {% for e in season_portal.committed %}{{ e.player_name }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    <details>
+      <summary style="cursor:pointer;font-weight:600">Browse the portal</summary>
+      <div class="table-scroll" style="margin-top:8px"><table>
+        <thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Pot</th><th>Year</th><th>From</th><th></th></tr></thead>
+        <tbody>
+        {% for e in season_portal.entries %}
+        <tr><td>{{ e.player_name }}</td><td>{{ e.position }}</td><td class="num">{{ e.overall }}</td><td class="num">{{ e.potential }}</td><td>{{ e.year }}</td><td>{{ e.origin_team }}</td>
+          <td><form class="inline-form" method="post" action="/stats/do">
+            <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/portal/commit">
+            <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/">
+            <input type="hidden" name="_ok" value="Signed {{ e.player_name }}">
+            <input type="hidden" name="team_name" value="{{ season_portal.human_team }}">
+            <input type="hidden" name="entry_index:int" value="{{ e.global_index }}">
+            <button class="btn-small" type="submit">Sign</button></form></td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </details>
+  </div>
   {% endif %}
   {% if champion %}
   <div style="margin-top: 8px;">

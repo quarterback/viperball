@@ -15,8 +15,8 @@ below is checked.
 - [x] Skip transfer portal
 - [x] New season: per team offense, defense and special teams styles
 - [x] New season: conference alignment editor
-- [ ] In-season portal: commit a player to a team
-- [ ] Player edit, player add, player move, team rename and team details
+- [x] In-season portal: commit a player to a team
+- [x] Player edit, player add, player move, team rename and team details
 - [ ] Archive a finished season (stats site has a fetch button already; move to a form)
 
 ### Saves

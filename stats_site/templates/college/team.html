@@ -711,4 +711,53 @@
 </table>
 </div>
 
+
+{# Edit controls (replace the /app workbench's team editing) #}
+<h2>Edit team</h2>
+<div class="control-panel">
+  <details>
+    <summary>Name and details</summary>
+    <form method="post" action="/stats/do" style="margin:8px 0">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/team/{{ team_name|urlencode }}/rename">
+      <input type="hidden" name="_method" value="PATCH">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_next" value="/stats/college/{{ session_id }}/team/{new_name}">
+      <label for="new_name" style="display:block;font-size:13px;font-weight:500;margin-bottom:4px">Name</label>
+      <input type="text" id="new_name" name="new_name" value="{{ team_name }}">
+      <button class="btn-small" type="submit">Rename</button>
+    </form>
+    <form class="setup-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/team/{{ team_name|urlencode }}/meta">
+      <input type="hidden" name="_method" value="PATCH">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_ok" value="Team updated">
+      <div class="row">
+        <div><label>City</label><input type="text" name="city" value="{{ team.city if team.city is defined and team.city else '' }}"></div>
+        <div><label>State</label><input type="text" name="state" value="{{ team.state if team.state is defined and team.state else '' }}"></div>
+        <div><label>Mascot</label><input type="text" name="mascot" value="{{ team.mascot if team.mascot is defined and team.mascot else '' }}"></div>
+        <div><label>Prestige</label><input type="number" name="prestige:int" value="{{ prestige or (team.prestige if team.prestige is defined else '') }}" min="1" max="99"></div>
+      </div>
+      <div><button class="btn-small" type="submit">Save details</button></div>
+    </form>
+  </details>
+  <details>
+    <summary>Add a player</summary>
+    <form class="setup-form" method="post" action="/stats/do" style="max-width:900px;margin-top:8px">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/player/add">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_ok" value="Player added">
+      <input type="hidden" name="team" value="{{ team_name }}">
+      <div class="row">
+        <div><label>Name</label><input type="text" name="name" required></div>
+        <div><label>Position</label><select name="position">{% for p in ['Viper','Zeroback','Halfback','Wingback','Slotback','Keeper','Offensive Line','Defensive Line'] %}<option>{{ p }}</option>{% endfor %}</select></div>
+        <div><label>Number</label><input type="number" name="attributes.number:int" min="0" max="99" placeholder="Next free"></div>
+        <div><label>Class</label><select name="attributes.year">{% for y in ['Freshman','Sophomore','Junior','Senior','Graduate'] %}<option>{{ y }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row">
+        {% for k, lab in [('speed','Speed'),('power','Power'),('agility','Agility'),('hands','Hands'),('awareness','Awareness'),('stamina','Stamina'),('tackling','Tackling'),('kicking','Kicking'),('kick_power','Kick power'),('kick_accuracy','Kick accuracy'),('lateral_skill','Lateral')] %}<div><label>{{ lab }}</label><input type="number" name="attributes.{{ k }}:int" value="70" min="1" max="99"></div>{% endfor %}
+      </div>
+      <div><button class="btn-run" type="submit">Add player</button></div>
+    </form>
+  </details>
+</div>
 {% endblock %}

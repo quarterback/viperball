@@ -901,7 +901,8 @@ async def stats_do(request: Request):
     form = await request.form()
     back = form.get("_back") or "/stats/"
     method = (form.get("_method") or "POST").upper()
-    fill = {}
+    # Form values are available to _next as {field_name} (dots and type tags dropped).
+    fill = {k.split(':')[0].replace('.', '_'): v for k, v in form.items() if not k.startswith('_') and isinstance(v, str)}
     pre = form.get("_pre")
     if pre:
         code, data = await _api_call("POST", pre, {})
@@ -924,7 +925,7 @@ async def stats_do(request: Request):
         target = back
         return RedirectResponse(f"{target}{'&' if '?' in target else '?'}err={quote(str(msg or f'Error {code}'))}", status_code=303)
     nxt = form.get("_next")
-    target = nxt.format(**fill) if nxt else back
+    target = nxt.format(**{k: quote(str(v), safe='') for k, v in fill.items()}) if nxt else back
     ok = form.get("_ok")
     if ok:
         target = f"{target}{'&' if '?' in target else '?'}ok={quote(ok)}"
@@ -1020,6 +1021,16 @@ async def college_new_submit(request: Request):
     except HTTPException as e:
         return RedirectResponse(f"/stats/college/new?err={quote(str(e.detail))}", status_code=303)
     return RedirectResponse(f"/stats/college/{sid}/", status_code=303)
+
+
+def _season_portal(session_id):
+    from api.main import season_portal_get
+    try:
+        data = season_portal_get(session_id)
+    except HTTPException:
+        return None
+    data["entries"] = sorted(data.get("entries", []), key=lambda e: -(e.get("overall") or 0))
+    return data
 
 
 # ── Dynasty (replaces the workbench's Dynasty pages) ───────────────────────
@@ -1197,6 +1208,7 @@ def college_season(request: Request, session_id: str):
         recent_games=recent_games,
         last_updated=last_updated,
         phase=sess.get("phase"),
+        season_portal=_season_portal(session_id) if sess.get("phase") == "portal" else None,
     ))
 
 
@@ -2032,6 +2044,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         season_history=season_history,
         academics=academics,
         team_chemistry=team_chemistry,
+        phase=sess.get("phase"),
     ))
 
 
@@ -2649,6 +2662,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         player_awards=player_awards, face_src=_face_src,
         stadium_url=_stadium_url_for(team_name),
         intl_data=intl_data,
+        player_obj=player, all_teams=sorted(season.teams.keys()),
     ))
 
 
