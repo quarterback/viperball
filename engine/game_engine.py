@@ -4041,6 +4041,14 @@ class ViperballEngine:
         self.away_team.st_scheme = away_st
         self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
         self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
+        from .coach_tactics import resolve_special_teams_tactics
+        self._st_tactics = {
+            side: resolve_special_teams_tactics(staff)
+            if V2_ENGINE_CONFIG.get("special_teams_tactics_enabled", True) else {}
+            for side, staff in (("home", home_coaching), ("away", away_coaching))
+        }
+        self._st_calls = {"home": {}, "away": {}}
+        self._st_event = None
 
         # ROST-02: game roles must use the FINAL offense style after
         # caller overrides and migration, not an earlier default.
@@ -7178,6 +7186,7 @@ class ViperballEngine:
         #   (b) Bonus possession — the drive is "free" and you want to
         #       cash in points quickly.
         if down == 5:
+            territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
             is_bonus = getattr(self, '_is_bonus_drive', False)
 
             # Bonus possessions: more liberal — cash in points.
@@ -7209,7 +7218,7 @@ class ViperballEngine:
             # and leaves 6th down for a second try, while a miss on 6th is a
             # turnover. Go for it instead on short yardage.
             if (not dk_futile and dk_success >= 0.55
-                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)):
+                    and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4) - 4 * territory_bias)):
                 return PlayType.DROP_KICK
 
             # Stalled outside snap kick range but inside field goal range:
@@ -7238,7 +7247,8 @@ class ViperballEngine:
             if best_kick:
                 return best_kick
             # No kick available — punt to avoid TOD (field position)
-            if fp < 65:
+            territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
+            if fp < 65 + 10 * territory_bias:
                 return PlayType.PUNT
             # Deep in opponent territory but no kick — go for it
             if ytg <= 5:
@@ -8053,6 +8063,7 @@ class ViperballEngine:
         self._rush_event = None
         self._rush_plan = None
         self._snap_defense_energy = None
+        self._st_event = None
         self._possession_snap_count += 1
 
         # Save pre-play state.  Every Play in the log should show the
@@ -8071,6 +8082,10 @@ class ViperballEngine:
         play.possession_origin = self._drive_origin
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
+        if self._st_event:
+            self._st_event.update(result=play.result, end_possession=self.state.possession,
+                                  end_field_position=self.state.field_position)
+            play.special_teams_event = dict(self._st_event)
         # Copy the actual pre-snap call, even when the resulting play changes
         # possession. No additional RNG or defensive ratings are involved.
         dc_call = getattr(self, "_active_defensive_call", None)
@@ -9211,7 +9226,7 @@ class ViperballEngine:
 
         return max(0.0, block_prob)
 
-    def calculate_muff_probability(self) -> float:
+    def calculate_muff_probability(self, returner=None) -> float:
         """
         Calculate probability of muffed punt return based on defensive style,
         ST schemes, and returner's Keeper archetype.
@@ -9230,7 +9245,6 @@ class ViperballEngine:
 
         # Returner's keeper archetype muff rate (sure_hands = 0.03, return = 0.15)
         receiving_team = self.get_defensive_team()
-        returner = self._pick_returner(receiving_team)
         keeper_muff_mod = 1.0
         if returner and returner.position == "Keeper" and returner.archetype != "none":
             arch_info = get_archetype_info(returner.archetype)
@@ -9239,6 +9253,9 @@ class ViperballEngine:
             keeper_muff_mod = arch_muff / 0.10  # sure_hands: 0.3, return: 1.5, tackle: 1.2
 
         muff_prob = BASE_MUFF_PUNT * coverage_modifier * st_muff_bonus * returner_muff_rate * keeper_muff_mod
+        muff_prob *= 1.0 + 0.30 * self._st_return_factor(receiving_team)
+        if returner:
+            muff_prob *= 1.0 + max(0, 80 - returner.game_energy) / 160
         muff_prob += self.weather_info.get("muff_modifier", 0.0)
 
         receiving_side = "away" if self.state.possession == "home" else "home"
@@ -9247,7 +9264,7 @@ class ViperballEngine:
             cls_fx = recv_mods.get("classification_effects", {})
             muff_prob *= cls_fx.get("muff_reduction", 1.0)
 
-        return max(0.0, muff_prob)
+        return max(0.0, min(0.45, muff_prob))
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
         """
@@ -9402,6 +9419,26 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.away_team.defense_style
         return self.home_team.defense_style
+
+    def _st_side(self, team):
+        return "home" if team is self.home_team else "away"
+
+    def _st_preferences(self, team):
+        return self._st_tactics[self._st_side(team)]
+
+    def _st_count(self, side, key):
+        counts = self._st_calls[side]
+        counts[key] = counts.get(key, 0) + 1
+
+    def _begin_st_event(self, kind, kicker):
+        side = self.state.possession
+        self._st_event = {"kind": kind, "kicking_side": side,
+                          "kicker": player_label(kicker),
+                          "start_field_position": self.state.field_position}
+        self._st_count(side, kind + "_calls")
+
+    def _st_return_factor(self, team):
+        return self._st_preferences(team).get("return_aggression", 0.0)
 
     def _kicking_team_st(self) -> Dict:
         """Returns the ST scheme dict for the team currently punting/kicking."""
@@ -9662,6 +9699,7 @@ class ViperballEngine:
         # Returning team's ST scheme bonus
         ret_st = ST_SCHEMES.get(returning_team.st_scheme, ST_SCHEMES["aces"])
         returner_modifier *= ret_st["return_yards_modifier"]
+        returner_modifier *= (1.0 + 0.30 * self._st_return_factor(returning_team)) * self.player_fatigue_modifier(returner)
 
         # Punting team's ST scheme coverage quality reduces return yards
         punt_st = ST_SCHEMES.get(punting_team.st_scheme, ST_SCHEMES["aces"])
@@ -12518,15 +12556,23 @@ class ViperballEngine:
         team = self.get_offensive_team()
         punter = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(punter)
+        self._begin_st_event("punt", punter)
 
         # ── Fake Punt Check ──────────────────────────────────────────
         # ST scheme determines fake tendency. Chaos Unit fakes 12% of punts.
         kicking_st = self.home_st if self.state.possession == "home" else self.away_st
         fake_rate = kicking_st.get("fake_play_rate", 0.03)
+        fake_rate *= 1.0 - self._st_preferences(team).get("field_position_bias", 0.0)
+        if self.state.yards_to_go > 12:
+            fake_rate *= 0.5
+        if self.state.field_position < 35:
+            fake_rate *= 0.6
         # Don't fake from your own end zone — too risky
         if self.state.field_position > 15 and random.random() < fake_rate:
             # Fake punt — runner or passer from punt formation
-            playmaker = max(team.players[:6],
+            self._st_count(self.state.possession, "fake_calls")
+            self._st_event["fake"] = True
+            playmaker = max(self._offense_skill(team),
                             key=lambda p: p.speed * 0.5 + getattr(p, 'agility', 75) * 0.3 + getattr(p, 'hands', 75) * 0.2)
             ftag = player_tag(playmaker)
             # 45% chance of success (first down), 55% turnover on downs
@@ -12540,7 +12586,7 @@ class ViperballEngine:
             if success_roll < 0.45:
                 # Fake works! Gain 8-22 yards
                 fake_gain = random.randint(8, 22)
-                self.state.field_position = min(99, self.state.field_position + fake_gain)
+                self.state.field_position = min(100, self.state.field_position + fake_gain)
                 playmaker.game_touches += 1
                 playmaker.game_yards += fake_gain
                 playmaker.game_rushing_yards += fake_gain
@@ -12562,18 +12608,29 @@ class ViperballEngine:
                         description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — TOUCHDOWN! +9",
                         fatigue=round(stamina, 1),
                     )
-                self.state.down = 1
-                self.state.yards_to_go = 20
+                converted = fake_gain >= self.state.yards_to_go
+                if converted:
+                    self.state.down = 1
+                    self.state.yards_to_go = 20
+                else:
+                    self.state.down += 1
+                    self.state.yards_to_go -= fake_gain
+                    if self.state.down > 6:
+                        self.change_possession()
+                        self.state.field_position = 100 - self.state.field_position
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
+                result = "first_down" if converted else ("turnover_on_downs" if self.state.possession != self._st_event["kicking_side"] else "gain")
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                 return Play(
                     play_number=self.state.play_number, quarter=self.state.quarter,
                     time=self.state.time_remaining, possession=self.state.possession,
-                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    field_position=self.state.field_position, down=self.state.down, yards_to_go=self.state.yards_to_go,
                     play_type="fake_punt", play_family=family.value,
                     players_involved=[player_label(punter), player_label(playmaker)],
                     yards_gained=fake_gain,
-                    result="first_down",
-                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — FIRST DOWN!",
+                    result=result,
+                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — {result.upper()}!",
                     fatigue=round(stamina, 1),
                 )
             else:
@@ -12604,6 +12661,7 @@ class ViperballEngine:
         self.drain_player_energy(punter, "kick_pass")
 
         # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
+        receiving_team = self.get_defensive_team()
         block_prob = self.calculate_block_probability(kick_type="punt")
         if random.random() < block_prob:
             # BLOCKED PUNT!
@@ -12614,13 +12672,13 @@ class ViperballEngine:
             if random.random() < 0.60:
                 # Dead at spot - defense takes over
                 self.change_possession()
-                self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
+                self.state.field_position = max(1, min(99, 100 - (self.state.field_position + block_distance)))
                 self.state.down = 1
                 self.state.yards_to_go = 20
                 self.apply_stamina_drain(2)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
-                def_team = self.get_defensive_team()
+                def_team = receiving_team
                 blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
                 btag = player_tag(blocker)
 
@@ -12641,13 +12699,13 @@ class ViperballEngine:
                     # Defense recovers + bell
                     self.change_possession()
                     self.add_score(0.5)  # Bell for recovery
-                    self.state.field_position = max(1, min(99, self.state.field_position + block_distance + random.randint(0, 5)))
+                    self.state.field_position = max(1, min(99, 100 - (self.state.field_position + block_distance + random.randint(0, 5))))
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.apply_stamina_drain(2)
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
-                    def_team = self.get_defensive_team()
+                    def_team = receiving_team
                     blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
                     btag = player_tag(blocker)
 
@@ -12799,12 +12857,13 @@ class ViperballEngine:
                 return play
 
         # SPECIAL TEAMS CHAOS: Check for muffed punt return
-        muff_prob = self.calculate_muff_probability()
-        if random.random() < muff_prob:
+        returner = self._pick_returner(receiving_team)
+        self._st_event["returner"] = player_label(returner) if returner else None
+        muff_prob = self.calculate_muff_probability(returner)
+        if returner and random.random() < muff_prob:
             # MUFFED PUNT!
             kicking_team = self.state.possession
             def_team = self.get_defensive_team()
-            returner = max(self._offense_skill(def_team), key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
             rtag = player_tag(returner)
             returner.game_muffs += 1
             returner.game_punt_returns += 1
@@ -12863,7 +12922,7 @@ class ViperballEngine:
         # ── Punt Return TD check — skill-based ─────────────────────
         def_team = self.get_defensive_team()
         punt_team = self.get_offensive_team()
-        td_returner = self._pick_returner(def_team)
+        td_returner = returner
         base_td_rate = 0.03
         if td_returner:
             # Returner speed bonus: elite speedsters break more
@@ -12881,6 +12940,7 @@ class ViperballEngine:
             td_rate = base_td_rate * speed_bonus * arch_mod
             td_rate *= ret_st["return_td_modifier"]
             td_rate /= punt_st["coverage_modifier"]
+            td_rate *= 1.0 + 0.30 * self._st_return_factor(def_team)
         else:
             td_rate = base_td_rate
 
@@ -12888,7 +12948,7 @@ class ViperballEngine:
             rtag = player_tag(td_returner)
             td_returner.game_punt_returns += 1
             td_returner.game_punt_return_tds += 1
-            new_pos = 100 - min(99, self.state.field_position + distance)
+            new_pos = min(99, self.state.field_position + distance)
             td_returner.game_punt_return_yards += new_pos
             self.drain_player_energy(td_returner, "carrier")
             self.change_possession()
@@ -12955,7 +13015,6 @@ class ViperballEngine:
         punt_coverage_team = self.get_offensive_team()
         returning_team = self.get_defensive_team()
 
-        returner = self._pick_returner(returning_team)
         return_yards = 0
         returner_desc = ""
 
@@ -12965,7 +13024,8 @@ class ViperballEngine:
             )
             # Can't return past midfield+ without it being a TD (handled above)
             # Ensure we don't go past our own territory unrealistically
-            final_position = max(1, landing_spot - return_yards)
+            return_yards = min(return_yards, 99 - landing_spot)
+            final_position = max(1, landing_spot + return_yards)
             returner.game_punt_returns += 1
             returner.game_punt_return_yards += return_yards
             self.drain_player_energy(returner, "carrier")
@@ -12982,7 +13042,8 @@ class ViperballEngine:
             tackler.game_coverage_snaps += 1
         # Additional coverage snap for another unit member
         punt_cov_eligible = [p for p in punt_coverage_team.players
-                             if p.position in ("Keeper", "Defensive Line") and p != tackler]
+                             if p.position in ("Keeper", "Defensive Line") and p != tackler
+                             and p.name not in self._unavailable_in_game(punt_coverage_team)]
         if punt_cov_eligible:
             cov1 = random.choice(punt_cov_eligible)
             cov1.game_coverage_snaps += 1
@@ -13024,6 +13085,7 @@ class ViperballEngine:
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
         kicking_team = self.state.possession
+        self._begin_st_event("drop_kick", kicker)
 
         # ── Blocked drop kick check ──
         # Drop kicks have a small chance of being blocked.  Diving Wing
@@ -13035,7 +13097,7 @@ class ViperballEngine:
         dw_bonus = 0.0
         dw_blocker = None
         for p in def_team.players:
-            if p.archetype == "diving_wing":
+            if p.archetype == "diving_wing" and p.name not in self._unavailable_in_game(def_team):
                 tck_score = max(0, scale_rating(p.tackling, "rescale_yac") - 70) / 30.0
                 spd_score = max(0, p.speed - 78) / 22.0
                 kick_score = max(0, p.kicking - 40) / 50.0
@@ -13051,6 +13113,7 @@ class ViperballEngine:
         dk_block_prob *= OFFENSE_BLOCK_MODIFIERS.get(offense_style_name, 1.0)
         defense_style_name = self._current_defense_name()
         dk_block_prob *= DEFENSE_BLOCK_MODIFIERS.get(defense_style_name, 1.0)
+        dk_block_prob *= self._returning_team_st().get("block_rush_modifier", 1.0)
 
         weather_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
         if weather_mod < -0.05:
@@ -13193,8 +13256,11 @@ class ViperballEngine:
                     elif returner.speed >= 85:
                         td_rate = 0.06
 
+                    td_rate *= self._returning_team_st()["return_td_modifier"] / self._kicking_team_st()["coverage_modifier"]
+                    td_rate *= 1.0 + 0.30 * self._st_return_factor(def_team)
+                    self._st_event["returner"] = player_label(returner)
                     if random.random() < td_rate:
-                        return_yds = catch_spot_returner
+                        return_yds = 100 - catch_spot_returner
                         returner.game_kick_returns += 1
                         returner.game_kick_return_tds += 1
                         returner.game_kick_return_yards += return_yds
@@ -13378,6 +13444,7 @@ class ViperballEngine:
         kicker = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(kicker)
 
+        self._begin_st_event("place_kick", kicker)
         # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
         block_prob = self.calculate_block_probability(kick_type="kick")
         if random.random() < block_prob:
@@ -15259,6 +15326,7 @@ class ViperballEngine:
             },
             "defensive_reads": self._defense_read_counts,
             "defensive_rush": {side: self._rush_summary(side) for side in ("home", "away")},
+            "special_teams_tactics": {side: {"profile": self._st_tactics[side], "calls": self._st_calls[side]} for side in ("home", "away")},
             "weather": self.weather,
             "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
             "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
@@ -15578,6 +15646,7 @@ class ViperballEngine:
             "play_family": play.play_family,
             "defensive_call": getattr(play, "defensive_call", None),
             "rush_event": getattr(play, "rush_event", None),
+            "special_teams_event": getattr(play, "special_teams_event", None),
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
