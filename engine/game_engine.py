@@ -4041,6 +4041,9 @@ class ViperballEngine:
         self.away_team.st_scheme = away_st
         self.home_st = ST_SCHEMES.get(home_st, ST_SCHEMES["aces"])
         self.away_st = ST_SCHEMES.get(away_st, ST_SCHEMES["aces"])
+        from .special_teams_tactics import resolve_special_teams_tactics
+        self.home_stc_tactics = resolve_special_teams_tactics(home_coaching)
+        self.away_stc_tactics = resolve_special_teams_tactics(away_coaching)
 
         # ROST-02: game roles must use the FINAL offense style after
         # caller overrides and migration, not an earlier default.
@@ -9208,6 +9211,8 @@ class ViperballEngine:
         st_modifier = rushing_st.get("block_rush_modifier", 1.0)
 
         block_prob = base_prob * offense_modifier * defense_modifier * st_modifier
+        rushing_side = "away" if self.state.possession == "home" else "home"
+        block_prob = self._stc_choice(rushing_side, block_prob, "return_aggression", scale=.40)
 
         return max(0.0, block_prob)
 
@@ -9230,7 +9235,9 @@ class ViperballEngine:
 
         # Returner's keeper archetype muff rate (sure_hands = 0.03, return = 0.15)
         receiving_team = self.get_defensive_team()
-        returner = self._pick_returner(receiving_team)
+        returner = getattr(self, "_punt_event_returner", None)
+        if returner is None:
+            returner = self._pick_returner(receiving_team)
         keeper_muff_mod = 1.0
         if returner and returner.position == "Keeper" and returner.archetype != "none":
             arch_info = get_archetype_info(returner.archetype)
@@ -9247,6 +9254,8 @@ class ViperballEngine:
             cls_fx = recv_mods.get("classification_effects", {})
             muff_prob *= cls_fx.get("muff_reduction", 1.0)
 
+        receiving_side = "away" if self.state.possession == "home" else "home"
+        muff_prob = self._stc_choice(receiving_side, muff_prob, "return_aggression", scale=.30)
         return max(0.0, muff_prob)
 
     def get_defensive_read(self, play_family: PlayFamily) -> bool:
@@ -9402,6 +9411,30 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.away_team.defense_style
         return self.home_team.defense_style
+
+    def _stc_choice(self, side, value, preference, scale=0.30, ceiling=1.0):
+        from .special_teams_tactics import bounded_choice
+        tactics = self.home_stc_tactics if side == "home" else self.away_stc_tactics
+        if not tactics:
+            return value
+        return bounded_choice(value, tactics.get(preference, 0.0),
+                              tactics.get("authority", 1.0), scale=scale, ceiling=ceiling)
+
+    def _st_blocker(self, team):
+        """Eligible available kick rusher with specialist and depth priority."""
+        unavailable = self._unavailable_in_game(team)
+        candidates = [p for p in team.players if p.name not in unavailable and
+                      (p.position in ("Defensive Line", "Keeper", "Wingback", "Viper")
+                       or p.archetype == "diving_wing")]
+        if not candidates:
+            candidates = [p for p in team.players if p.name not in unavailable]
+        if not candidates:
+            return None
+        weights = [(p.speed*.35 + p.tackling*.35 + getattr(p, "awareness", 75)*.30) *
+                   (1.35 if p.archetype == "diving_wing" else 1.) *
+                   (1.15 if getattr(p, "game_st_role", "") == "STARTER" else 1.)
+                   for p in candidates]
+        return random.choices(candidates, weights=weights, k=1)[0]
 
     def _kicking_team_st(self) -> Dict:
         """Returns the ST scheme dict for the team currently punting/kicking."""
@@ -9662,6 +9695,9 @@ class ViperballEngine:
         # Returning team's ST scheme bonus
         ret_st = ST_SCHEMES.get(returning_team.st_scheme, ST_SCHEMES["aces"])
         returner_modifier *= ret_st["return_yards_modifier"]
+        returning_side = "home" if returning_team is self.home_team else "away"
+        returner_modifier = self._stc_choice(returning_side, returner_modifier,
+                                             "return_aggression", scale=.35, ceiling=10.0)
 
         # Punting team's ST scheme coverage quality reduces return yards
         punt_st = ST_SCHEMES.get(punting_team.st_scheme, ST_SCHEMES["aces"])
@@ -12523,6 +12559,8 @@ class ViperballEngine:
         # ST scheme determines fake tendency. Chaos Unit fakes 12% of punts.
         kicking_st = self.home_st if self.state.possession == "home" else self.away_st
         fake_rate = kicking_st.get("fake_play_rate", 0.03)
+        fake_rate = self._stc_choice(self.state.possession, fake_rate,
+                                     "field_position_bias", scale=-.50)
         # Don't fake from your own end zone — too risky
         if self.state.field_position > 15 and random.random() < fake_rate:
             # Fake punt — runner or passer from punt formation
@@ -12600,6 +12638,9 @@ class ViperballEngine:
                     fatigue=round(stamina, 1),
                 )
 
+        # Select the returner once per punt for consistent muff/return credit.
+        receiving_team = self.get_defensive_team()
+        self._punt_event_returner = self._pick_returner(receiving_team)
         # Punter exerts on every actual punt attempt
         self.drain_player_energy(punter, "kick_pass")
 
@@ -12607,6 +12648,7 @@ class ViperballEngine:
         block_prob = self.calculate_block_probability(kick_type="punt")
         if random.random() < block_prob:
             # BLOCKED PUNT!
+            st_blocker = self._st_blocker(self.get_defensive_team())
             kicking_team = self.state.possession
             block_distance = random.randint(-8, -2)  # Negative = loss
 
@@ -12621,7 +12663,7 @@ class ViperballEngine:
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                 def_team = self.get_defensive_team()
-                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+                blocker = st_blocker or max(self._defense_players(receiving_team), key=lambda p: p.speed)
                 btag = player_tag(blocker)
 
                 return Play(
@@ -12648,7 +12690,7 @@ class ViperballEngine:
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                     def_team = self.get_defensive_team()
-                    blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+                    blocker = st_blocker or max(self._defense_players(receiving_team), key=lambda p: p.speed)
                     btag = player_tag(blocker)
 
                     return Play(
@@ -12804,7 +12846,7 @@ class ViperballEngine:
             # MUFFED PUNT!
             kicking_team = self.state.possession
             def_team = self.get_defensive_team()
-            returner = max(self._offense_skill(def_team), key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
+            returner = self._punt_event_returner or max(self._offense_skill(def_team), key=lambda p: p.speed * 0.6 + getattr(p, 'hands', 75) * 0.4)
             rtag = player_tag(returner)
             returner.game_muffs += 1
             returner.game_punt_returns += 1
@@ -12863,7 +12905,7 @@ class ViperballEngine:
         # ── Punt Return TD check — skill-based ─────────────────────
         def_team = self.get_defensive_team()
         punt_team = self.get_offensive_team()
-        td_returner = self._pick_returner(def_team)
+        td_returner = self._punt_event_returner
         base_td_rate = 0.03
         if td_returner:
             # Returner speed bonus: elite speedsters break more
@@ -12880,6 +12922,8 @@ class ViperballEngine:
             punt_st = ST_SCHEMES.get(punt_team.st_scheme, ST_SCHEMES["aces"])
             td_rate = base_td_rate * speed_bonus * arch_mod
             td_rate *= ret_st["return_td_modifier"]
+            returning_side = "away" if self.state.possession == "home" else "home"
+            td_rate = self._stc_choice(returning_side, td_rate, "return_aggression", scale=.35)
             td_rate /= punt_st["coverage_modifier"]
         else:
             td_rate = base_td_rate
@@ -12955,7 +12999,7 @@ class ViperballEngine:
         punt_coverage_team = self.get_offensive_team()
         returning_team = self.get_defensive_team()
 
-        returner = self._pick_returner(returning_team)
+        returner = self._punt_event_returner
         return_yards = 0
         returner_desc = ""
 
@@ -13057,9 +13101,12 @@ class ViperballEngine:
             dk_block_prob += 0.005
 
         dk_block_prob = max(0.0, min(0.06, dk_block_prob))
+        defending_side = "away" if self.state.possession == "home" else "home"
+        dk_block_prob = self._stc_choice(defending_side, dk_block_prob,
+                                         "return_aggression", scale=.4, ceiling=.06)
 
         if random.random() < dk_block_prob:
-            blocker = dw_blocker if dw_blocker else max(self._defense_players(def_team), key=lambda p: p.speed)
+            blocker = dw_blocker if dw_blocker and dw_blocker.name not in self._unavailable_in_game(def_team) else self._st_blocker(def_team)
             btag = player_tag(blocker)
             if random.random() < 0.70:
                 self.change_possession()
@@ -13383,7 +13430,7 @@ class ViperballEngine:
         if random.random() < block_prob:
             # BLOCKED KICK!
             def_team = self.get_defensive_team()
-            blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+            blocker = self._st_blocker(def_team)
             btag = player_tag(blocker)
 
             # 70% defense recovers, 30% offense recovers
