@@ -21,7 +21,10 @@ come from available specialist/depth candidates, with a Diving Wing
 preference, instead of always crediting the fastest DL. The fallback
 excludes unavailable injured players. Normal punt coverage second-player
 credit excludes unavailable players. A blocked punt recovered by the
-defense now flips field position from the kicking side correctly.
+defense now flips field position from the kicking side correctly. Blocked
+place kicks and snap kicks count as kicker attempts; defensive recoveries
+award the half-point bell whether or not the recovery becomes a touchdown.
+The final game result includes `special_teams_coach_tactics` for each side.
 Fake punts can score when crossing the goal line, and successful trick
 plays must actually reach the yards to gain to reset downs.
 
