@@ -91,6 +91,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     ladder with development fixed; pro leagues, WVL and HS title games on the full engine.
     → `aar_2026-11-24_rules_drift_sacks_ladder_fastsim.md`
 
+22. **Calls, no calls and missed calls; one rating scale** (November 24). Fouls can now be
+    called, let go or missed by class, crew and situation: accepted flags per team 14.4 to
+    8.4, about 3 missed calls a game. Every team file and pro system moved to the current
+    rating scale; the per game conversion is gone. → `aar_2026-11-24_officiating_and_rating_scale.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -135,7 +140,7 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 
 ## Open work
 
-Updated November 24 after step 21.
+Updated November 24 after step 22.
 
 1. A live Fly deploy and a click through of the stats site are still unverified.
 2. Done: recruiting, development, HS and portal players use the talent ladder.
@@ -146,5 +151,5 @@ Updated November 24 after step 21.
 6. Done: the root test scripts run again.
 7. Done: touchdowns about 3 per team again; the turnover rise was a counting fix.
 8. Done: sack rate about 7%.
-9. Penalty level is about twice the NCAA's (PEN-02).
-10. Pro systems still use the old rating scale (PRO-01).
+9. Done: accepted flags about 8 per team with no calls and missed calls (PEN-02).
+10. Done: every league on the current rating scale (PRO-01).
