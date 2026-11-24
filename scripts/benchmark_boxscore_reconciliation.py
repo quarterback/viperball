@@ -51,7 +51,23 @@ def run(games=8, seed=20261124):
             summary["unclassified_x2"] += round(row["points"]["other"] * 2)
             summary["scoring_events"] += sum(row["counts"].values())
             if not row["score_consistent"]:
-                failures.append((i, side, "score ledger", row["unrecorded_points"]))
+                prior = 0.0
+                regressions = []
+                for idx, play in enumerate(game["play_by_play"]):
+                    score = play[side + "_score"]
+                    if score < prior:
+                        regressions.append({
+                            "index": idx, "before": prior, "after": score,
+                            "result": play.get("result"),
+                            "play_type": play.get("play_type"),
+                            "possession": play.get("possession"),
+                            "snap_possession": play.get("snap_possession"),
+                            "description": str(play.get("description", ""))[:100],
+                        })
+                    prior = score
+                failures.append((i, side, "score ledger",
+                                 row["unrecorded_points"], regressions[:3],
+                                 "reversals", len(regressions)))
             if sum(row["points"].values()) != row["score_from_plays"]:
                 failures.append((i, side, "method points not equal scoring events"))
             if profile["total_pts"] != final[side]:
