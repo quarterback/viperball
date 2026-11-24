@@ -160,6 +160,10 @@ def run(seasons, nteams, seed, out):
             "starting_year":2026,"conferences":conf,"games_per_team":12,
             "playoff_size":4,"bowl_count":0,"history_years":0})
         report={"seed":seed,"programs":names,"years":[],"transitions":[]}
+        out.mkdir(parents=True,exist_ok=True)
+        def checkpoint():
+            (out/"dynasty_results.json").write_text(json.dumps(report,indent=2,sort_keys=True))
+        checkpoint()
         prev_rosters=None
         prev_staff=None
         prev_units={}
@@ -193,10 +197,24 @@ def run(seasons, nteams, seed, out):
             if wrong:
                 raise RuntimeError(f"Schedule quota mismatch (expected {expected_games}): {wrong}")
             start=snapshot(season.teams)
+            duplicate_identities = {t: len(team.players)-len(start[t]) for t,team in season.teams.items()
+                                    if len(team.players)!=len(start[t])}
+            if duplicate_identities:
+                print("DUPLICATE_PLAYER_IDENTITIES",year,duplicate_identities,flush=True)
+            report.setdefault("identity_collisions",{})[str(year)]=duplicate_identities
             if expected_rosters is not None:
-                actual={t:sorted(p["name"] for p in rows.values()) for t,rows in start.items()}
+                # Compare actual roster entries rather than a dictionary
+                # keyed by player ID, which can conceal duplicate identities.
+                actual={t:sorted(p.name for p in team.players) for t,team in season.teams.items()}
                 if actual!=expected_rosters:
-                    raise RuntimeError("Reloaded next-season roster differs from finalized roster")
+                    differences={}
+                    for t in sorted(set(actual) | set(expected_rosters)):
+                        got=Counter(actual.get(t, []))
+                        want=Counter(expected_rosters.get(t, []))
+                        if got != want:
+                            differences[t]={"missing":dict(want-got),"extra":dict(got-want)}
+                    raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
+                                       +json.dumps(differences,sort_keys=True))
             staff=staff_ids(dyn)
             changes={t for t in names if prev_staff and staff[t].get("dc")!=prev_staff[t].get("dc")}
             groups,packages=defaultdict(Counter),defaultdict(Counter)
@@ -262,6 +280,7 @@ def run(seasons, nteams, seed, out):
                   "roster_fit_mismatches":fit,"roster_moves":roster_moves,
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
             report["years"].append(item)
+            checkpoint()
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],
                 "DC_changes",len(changes),"installed",sum(installed.values()),"package_ids",len(installed),
                 "fit_mismatches",len(fit),"calls",sum(v.get("selected",0) for v in packages.values()),
@@ -311,9 +330,10 @@ def run(seasons, nteams, seed, out):
                 "mean_defense_familiarity_before":average([u["defense"]["familiarity"] for u in pre.values()]),
                 "mean_defense_familiarity_after":average([u["defense"]["familiarity"] for u in expected.values()])}
             report["transitions"].append(trans)
+            checkpoint()
             print("TRANSITION",json.dumps(trans,sort_keys=True),flush=True)
-        out.mkdir(parents=True,exist_ok=True)
-        (out/"dynasty_results.json").write_text(json.dumps(report,indent=2,sort_keys=True))
+        report["complete"]=True
+        checkpoint()
         print("COMPLETED",len(report["years"]),"seasons",sum(y["regular_games"]+y["playoff_games"] for y in report["years"]),"full games",flush=True)
         return report
 
