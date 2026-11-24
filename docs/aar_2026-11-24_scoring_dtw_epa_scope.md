@@ -1,6 +1,7 @@
 # AAR: scoring-value metrics, DTW separation and EPA scope
 
 **Date:** November 24, 2026. **Track:** AN-01/DTW-01/EPA-01.
+**Merged:** [PR #360](https://github.com/quarterback/viperball/pull/360), commit `97b8d261c5b985641410cbffa06ae41314253a43`.
 **Context:** Four reviewed college box scores exposed equal Power Play scoring rates that hid different point values, near-50/50 DTW results labeled as upsets, and EPA sign mismatches despite wins created by return touchdowns and bonus possessions.
 
 ## Code findings on main
@@ -51,7 +52,7 @@ The result explicitly states that **direct turnover margin has no coefficient** 
 
 The script runs in the **existing** CCH-03/CCH-04 integration workflow alongside the existing 181-test regression suite and BOX-01 game-ledger checks. No new per-feature CI suite or probability retuning.
 
-**Current status:** Pending run evidence. Append result counts, seed and any defects before merging.
+**Validation observed before merge:** The 181-test existing Python suite, BOX-01 full-game scoring reconciliation, and the new 12-game analytics smoke completed successfully in [GitHub Actions run 45478926157](https://github.com/quarterback/viperball/actions/runs/45478926157), seed `20261124`. Additional tactical calibration and national-season workflow steps were still running at merge; do not describe them as completed on this PR. The targeted smoke found no DYE partitions, point-value, DTW component-sum, near-50/50 upset, or EPA-scope invariant failures. No live deployment verification was performed.
 
 ## Unresolved research
 
