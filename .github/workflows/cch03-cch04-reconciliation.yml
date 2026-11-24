@@ -35,6 +35,8 @@ jobs:
         run: python -m pytest tests/test_cch03_cch04_reconciliation.py tests/test_team_installation.py tests/test_coach_tactics_defense.py tests/test_dynasty_program_count.py -q
       - name: Full regression suite
         run: python -m pytest tests/ -q
+      - name: BOX-01 full-game accounting smoke
+        run: python scripts/benchmark_boxscore_reconciliation.py --games 8 --seed 20261124
 
   matched-games:
     runs-on: ubuntu-latest
