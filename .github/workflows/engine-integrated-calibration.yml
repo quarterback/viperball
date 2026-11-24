@@ -44,7 +44,7 @@ jobs:
           enabled=false
           if [ "$MANUAL" = "true" ]; then
             enabled=true
-          elif [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Eq '^scripts/benchmark_(national_dynasty|dynasty_tactics)\.py$|^\.github/workflows/engine-integrated-calibration\.yml
+          elif [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Eq '^scripts/benchmark_(national_dynasty|dynasty_tactics)\.py$|^\.github/workflows/engine-integrated-calibration\.yml$'; then
             enabled=true
           fi
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
@@ -64,63 +64,6 @@ jobs:
               python scripts/benchmark_dynasty_tactics.py --seasons 3 --teams 16 --seed "$seed" --out "reports/integrated-defense/dynasty-$seed" || failed=1
             done
             if [ "$RUN_NATIONAL" = "true" ] || changed scripts/benchmark_rare_tactics.py; then
-              python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense/rare || failed=1
-            fi
-            exit "$failed"
-          elif changed scripts/benchmark_rare_tactics.py; then
-            python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense
-          else
-            python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense
-          fi
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integrated-defense
-          path: reports/integrated-defense/
-
-  national:
-    needs: integrated
-    if: needs.integrated.outputs.run_national == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        seed: [20261124, 20261125]
-    env:
-      PYTHONHASHSEED: "0"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - name: National two-season dynasty
-        run: python scripts/benchmark_national_dynasty.py --seed ${{ matrix.seed }} --out reports/national-dynasty
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: national-dynasty-${{ matrix.seed }}
-          path: reports/national-dynasty/
-; then
-            enabled=true
-          fi
-          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
-      - run: pip install -r requirements.txt
-      - name: Combined engine smoke and calibration
-        env:
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          changed() {
-            [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq "$1"
-          }
-          if changed scripts/benchmark_dynasty_tactics.py; then
-            failed=0
-            for seed in 20261124 20261125 20261126; do
-              python scripts/benchmark_dynasty_tactics.py --seasons 3 --teams 16 --seed "$seed" --out "reports/integrated-defense/dynasty-$seed" || failed=1
-            done
-            if changed scripts/benchmark_rare_tactics.py; then
               python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense/rare || failed=1
             fi
             exit "$failed"
