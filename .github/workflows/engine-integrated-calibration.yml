@@ -1,0 +1,28 @@
+name: Integrated engine calibration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - engine/game_engine.py
+      - engine/team_installation.py
+      - scripts/benchmark_defensive_packages.py
+      - .github/workflows/engine-integrated-calibration.yml
+  workflow_dispatch:
+jobs:
+  integrated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Combined engine smoke and calibration
+        run: python scripts/benchmark_defensive_packages.py --games 40 --out reports/integrated-defense
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integrated-defense
+          path: reports/integrated-defense/
