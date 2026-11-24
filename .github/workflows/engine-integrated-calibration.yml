@@ -9,6 +9,9 @@ on:
       - data/playbooks/packages.json
       - scripts/benchmark_defensive_packages.py
       - scripts/benchmark_rare_tactics.py
+      - scripts/benchmark_dynasty_tactics.py
+      - engine/db.py
+      - engine/dynasty.py
       - .github/workflows/engine-integrated-calibration.yml
   workflow_dispatch:
 jobs:
@@ -30,7 +33,9 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq scripts/benchmark_rare_tactics.py; then
+          if [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq scripts/benchmark_dynasty_tactics.py; then
+            python scripts/benchmark_dynasty_tactics.py --seasons 3 --teams 16 --out reports/integrated-defense
+          elif [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq scripts/benchmark_rare_tactics.py; then
             python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense
           else
             python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense

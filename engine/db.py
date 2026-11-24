@@ -1365,6 +1365,9 @@ def serialize_dynasty(dynasty) -> dict:
     else:
         data["coaching_staffs"] = {}
 
+    # Preserve learned coordinator and package familiarity in real app saves.
+    data["team_installations"] = dict(getattr(dynasty, "_team_installations", {}) or {})
+
     # Next-season rosters (persisted by offseason_complete for roster continuity)
     next_rosters = getattr(dynasty, '_next_season_rosters', None)
     if next_rosters:
@@ -1424,7 +1427,8 @@ def deserialize_dynasty(data: dict):
     # Int-keyed history dicts
     dynasty.honors_history = {int(k): v for k, v in data.get("honors_history", {}).items()}
     dynasty.injury_history = {int(k): v for k, v in data.get("injury_history", {}).items()}
-    dynasty.development_history = {int(k): v for k, v in data.get("development_history", {}).items()}
+    dynasty.development_history = {int(k) if str(k).isdigit() else k: v
+                                   for k, v in data.get("development_history", {}).items()}
     dynasty.recruiting_history = {int(k): v for k, v in data.get("recruiting_history", {}).items()}
     dynasty.portal_history = {int(k): v for k, v in data.get("portal_history", {}).items()}
     dynasty.nil_history = {int(k): v for k, v in data.get("nil_history", {}).items()}
@@ -1454,6 +1458,12 @@ def deserialize_dynasty(data: dict):
     for conf in dynasty.conferences.values():
         if conf.championship_history:
             conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
+
+    from engine.team_installation import ensure_installation
+    dynasty._team_installations = {
+        name: ensure_installation(rec, name)
+        for name, rec in (data.get("team_installations") or {}).items() if rec
+    }
 
     # Next-season rosters (roster continuity across seasons)
     next_rosters = data.get("next_season_rosters")
