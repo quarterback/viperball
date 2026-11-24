@@ -155,7 +155,9 @@ class CoachingPortal:
         self.entries.append(entry)
 
     def add_vacancy(self, team_name: str, role: str) -> None:
-        self.vacancies.setdefault(team_name, []).append(role)
+        roles = self.vacancies.setdefault(team_name, [])
+        if role not in roles:
+            roles.append(role)
 
     def get_available(self) -> List[CoachingPortalEntry]:
         """Coaches not yet matched."""
@@ -300,7 +302,7 @@ def populate_coaching_portal(
                     origin_team=team_name,
                     reason="seeking_hc",
                     year_entered=portal.year,
-                    seeking_roles=get_acceptable_roles(card),
+                    seeking_roles=["head_coach"],
                 )
                 portal.add_entry(entry)
             elif card.overall >= 65 and rng.random() < 0.30:
@@ -309,7 +311,7 @@ def populate_coaching_portal(
                     origin_team=team_name,
                     reason="seeking_hc",
                     year_entered=portal.year,
-                    seeking_roles=get_acceptable_roles(card),
+                    seeking_roles=["head_coach"],
                 )
                 portal.add_entry(entry)
                 # Note: no vacancy created — their team keeps them unless matched
@@ -657,7 +659,7 @@ def _gale_shapley(
         iterations += 1
 
         # Pick a free vacancy
-        vacancy = next(iter(free_vacancies))
+        vacancy = min(free_vacancies)
         prefs = team_prefs.get(vacancy, [])
         idx = proposal_idx[vacancy]
 
@@ -758,8 +760,22 @@ def run_coaching_match(
     }
 
     changes: Dict[str, Dict[str, CoachCard]] = {}
+    # Detach all departures before assigning any new jobs. A still-employed
+    # assistant only leaves if matched; an advertised vacant job is vacated
+    # even if its former coach goes unmatched. Use the original staff slots,
+    # not mutable CoachCard.role, to avoid deleting a newly appointed coach.
+    vacancies = {(team, role) for team, roles in portal.vacancies.items() for role in roles}
+    incoming = set(matches.values())
+    occupied = {c.coach_id for staff in coaching_staffs.values() for c in staff.values()}
+    occupied.update(e.coach_id for e in portal.entries)
+    for team_name, staff in sorted(coaching_staffs.items()):
+        for role, coach in list(staff.items()):
+            if (team_name, role) in vacancies or coach.coach_id in incoming:
+                del staff[role]
+                vacancies.add((team_name, role))
+                portal.add_vacancy(team_name, role)
 
-    for (team_name, role), coach_id in matches.items():
+    for (team_name, role), coach_id in sorted(matches.items()):
         entry = coach_lookup.get(coach_id)
         if entry is None:
             continue
@@ -784,8 +800,6 @@ def run_coaching_match(
         entry.matched_to = team_name
         entry.matched_role = role
 
-        # If this coach left another team (seeking_hc or poaching), create
-        # a vacancy there too (handled by the caller in dynasty.py)
         portal.hires.append({
             "coach_name": coach.full_name,
             "coach_id": coach_id,
@@ -799,37 +813,33 @@ def run_coaching_match(
             "overall": coach.overall,
         })
 
-    # Fill remaining vacancies with generated coaches
-    filled_vacancies = set(matches.keys())
-    for team_name, roles in portal.vacancies.items():
-        for role in roles:
-            if (team_name, role) in filled_vacancies:
-                continue
-            # Generate a fallback coach
-            prestige = team_prestige.get(team_name, 40)
+    # The original matching is not rerun: accepted jobs remain accepted.
+    for team_name, role in sorted(vacancies):
+        if role in coaching_staffs.get(team_name, {}):
+            continue
+        # Keep the existing generated-fill fallback. It is explicit in the
+        # hire ledger, including for positions opened by a promotion.
+        prestige = team_prestige.get(team_name, 40)
+        fill = generate_coach_card(
+            role=role, team_name=team_name, prestige=max(20, prestige - 15),
+            year=year, rng=rng,
+        )
+        while fill.coach_id in occupied:
             fill = generate_coach_card(
-                role=role,
-                team_name=team_name,
-                prestige=max(20, prestige - 15),  # slightly below team level
-                year=year,
-                rng=rng,
+                role=role, team_name=team_name, prestige=max(20, prestige - 15),
+                year=year, rng=rng,
             )
-            fill.contract_years_remaining = rng.randint(1, 3)
-            coaching_staffs.setdefault(team_name, {})[role] = fill
-            changes.setdefault(team_name, {})[role] = fill
-
-            portal.hires.append({
-                "coach_name": fill.full_name,
-                "coach_id": fill.coach_id,
-                "from_team": "",
-                "to_team": team_name,
-                "role": role,
-                "reason": "generated_fill",
-                "salary": fill.contract_salary,
-                "years": fill.contract_years_remaining,
-                "development": fill.development,
-                "overall": fill.overall,
-            })
+        occupied.add(fill.coach_id)
+        fill.contract_years_remaining = rng.randint(1, 3)
+        coaching_staffs.setdefault(team_name, {})[role] = fill
+        changes.setdefault(team_name, {})[role] = fill
+        portal.hires.append({
+            "coach_name": fill.full_name, "coach_id": fill.coach_id,
+            "from_team": "", "to_team": team_name, "role": role,
+            "reason": "generated_fill", "salary": fill.contract_salary,
+            "years": fill.contract_years_remaining,
+            "development": fill.development, "overall": fill.overall,
+        })
 
     portal.resolved = True
     return changes
