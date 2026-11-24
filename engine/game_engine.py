@@ -5837,6 +5837,10 @@ class ViperballEngine:
                         description=f"BONUS POSSESSION — {bonus_team_name} gets an extra drive after the interception",
                         fatigue=round(stamina, 1),
                     )
+                    # Synthetic markers must carry the live score; otherwise
+                    # box-score consumers see an artificial reset to 0-0.
+                    bonus_play.home_score_after = self.state.home_score
+                    bonus_play.away_score_after = self.state.away_score
                     self.play_log.append(bonus_play)
 
                 _is_bonus = getattr(self, '_next_drive_is_bonus', False)
@@ -5997,6 +6001,8 @@ class ViperballEngine:
                 description=f"{ot_label} — {self.home_team.name} {self.state.home_score}, {self.away_team.name} {self.state.away_score}",
                 fatigue=round(stamina, 1),
             )
+            ot_play.home_score_after = self.state.home_score
+            ot_play.away_score_after = self.state.away_score
             self.play_log.append(ot_play)
 
             # Run the OT quarter like a normal quarter
