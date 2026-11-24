@@ -359,7 +359,7 @@ def _hs_fast_sim(
 # Title games run on the full game engine; earlier rounds and the regular
 # season (about 7,000 games a year) use the quick model above, which would
 # take about 17 minutes a dynasty offseason on the full engine.
-HS_ENGINE_ROUNDS = {"state_final", "regional", "national_semi", "national_final"}
+HS_ENGINE_ROUNDS = {"state_final", "regional", "national_round", "national_semi", "national_final"}
 
 _HS_OFFENSE_TO_ENGINE = {"triple_option": "ground_pound", "smashmouth": "ground_pound",
                          "tempo": "lateral_spread"}
@@ -572,7 +572,8 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             next_round = []
             for i in range(0, len(national_contenders) - 1, 2):
                 t1, t2 = national_contenders[i], national_contenders[i + 1]
-                rd = "national_semi" if len(national_contenders) > 2 else "national_final"
+                rd = ("national_final" if len(national_contenders) == 2 else
+                      "national_semi" if len(national_contenders) <= 4 else "national_round")
                 result = _hs_game(t1, t2, rng, week=week, playoff_round=rd)
                 league.schedule.append(result)
                 next_round.append(team_lookup[result.winner])

@@ -101,6 +101,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     removed from the benchmark and README; college crews less accurate and more spread out
     than pro crews. → `aar_2026-11-24_fast_sim_removed_scoring_floats_ref_levels.md`
 
+24. **High School section** (November 24). The HS league now has its own menu entry with
+    champions, the national bracket, state standings, team schedules and rosters.
+    → `aar_2026-11-24_high_school_section.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

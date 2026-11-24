@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ state_name }} High School — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/high-school/">High School</a><span class="sep">/</span>{{ state_name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ state_name|upper }}</h1>
+  <div class="subtitle">{{ league.year }} season{% if champion %} &middot; State champion <a href="/stats/high-school/team/{{ (team_keys.get(champion, champion))|urlencode }}">{{ champion }}</a>{% endif %}</div>
+</div>
+
+{% set tab = 'state' %}{% set state_tab = {'code': code, 'name': state_name} %}
+{% include "high_school/_tabs.html" %}
+
+{% if playoff_games %}
+<h2>Postseason</h2>
+<table>
+  <thead><tr><th>Round</th><th>Home</th><th class="num">Score</th><th>Away</th><th class="num">Score</th></tr></thead>
+  <tbody>
+  {% for g in playoff_games %}
+  <tr>
+    <td>{{ g.round }}</td>
+    <td>{% if g.winner == g.home %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.home, g.home))|urlencode }}">{{ g.home }}</a>{% if g.winner == g.home %}</strong>{% endif %}</td>
+    <td class="num">{{ g.home_score }}</td>
+    <td>{% if g.winner == g.away %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.away, g.away))|urlencode }}">{{ g.away }}</a>{% if g.winner == g.away %}</strong>{% endif %}</td>
+    <td class="num">{{ g.away_score }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% for conf in conferences %}
+<h2>{{ conf.name }}</h2>
+<table>
+  <thead><tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">Seniors</th><th>Titles</th></tr></thead>
+  <tbody>
+  {% for t in conf.teams %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/high-school/team/{{ (t.key)|urlencode }}">{{ t.name }}</a> <span style="color:var(--fg-dim)">{{ t.mascot }}</span></td>
+    <td class="record"><span class="w">{{ t.wins }}</span>-<span class="l">{{ t.losses }}</span></td>
+    <td class="num">{{ t.pf }}</td>
+    <td class="num">{{ t.pa }}</td>
+    <td class="num">{{ t.seniors }}</td>
+    <td>{% if t.national_champ %}National {% endif %}{% if t.region_champ %}Region {% endif %}{% if t.state_champ %}State {% endif %}{% if t.conf_champ %}Conference{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% endblock %}

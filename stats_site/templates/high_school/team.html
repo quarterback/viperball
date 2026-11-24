@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }} — High School — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/high-school/">High School</a><span class="sep">/</span><a href="/stats/high-school/state/{{ team.state }}">{{ state_name }}</a><span class="sep">/</span>{{ team.name }}
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ team.name|upper }}</h1>
+  <div class="subtitle">{{ team.mascot }} &middot; {{ team.conference }}, {{ state_name }} &middot; {{ team.wins }}-{{ team.losses }} &middot; {{ team.pf }} PF, {{ team.pa }} PA{% if team.national_champ %} &middot; National champion{% elif team.region_champ %} &middot; Regional champion{% elif team.state_champ %} &middot; State champion{% elif team.conf_champ %} &middot; Conference champion{% endif %}</div>
+</div>
+
+{% set tab = 'team' %}{% set state_tab = {'code': team.state, 'name': state_name} %}
+{% include "high_school/_tabs.html" %}
+
+<h2>Schedule</h2>
+<table>
+  <thead><tr><th>Opponent</th><th></th><th>Result</th><th class="num">Score</th><th>Round</th></tr></thead>
+  <tbody>
+  {% for g in games %}
+  <tr>
+    <td><a href="/stats/high-school/team/{{ (team_keys.get(g.opponent, g.opponent))|urlencode }}">{{ g.opponent }}</a></td>
+    <td style="color:var(--fg-dim)">{{ 'home' if g.home else 'away' }}</td>
+    <td class="{{ 'stat-good' if g.won else 'stat-bad' }}">{{ 'W' if g.won else 'L' }}</td>
+    <td class="num">{{ g.us }}-{{ g.them }}</td>
+    <td>{{ g.round }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Roster</h2>
+<table>
+  <thead><tr><th class="num">#</th><th>Player</th><th>Pos</th><th>Year</th><th class="num">OVR</th><th class="num">Stars</th><th>Development</th><th class="num">Yds</th><th class="num">TD</th><th class="num">Tkl</th><th class="num">Kicks</th></tr></thead>
+  <tbody>
+  {% for p in players %}
+  <tr>
+    <td class="num">{{ p.number }}</td>
+    <td>{{ p.name }}</td>
+    <td>{{ p.position }}</td>
+    <td>{{ p.year }}</td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ p.stars }}&#9733;</td>
+    <td>{{ p.development|replace('_', ' ') }}</td>
+    <td class="num">{{ p.yards }}</td>
+    <td class="num">{{ p.tds }}</td>
+    <td class="num">{{ p.tackles }}</td>
+    <td class="num">{{ p.kicks }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
