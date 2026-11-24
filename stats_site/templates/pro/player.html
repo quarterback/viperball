@@ -57,13 +57,13 @@
   {% if ht.get('city') %}<tr><td style="color:var(--fg-dim)">Hometown</td><td>{{ ht.city }}{% if ht.state %}, {{ ht.state }}{% endif %}{% if ht.country and ht.country != 'USA' %} ({{ ht.country }}){% endif %}</td></tr>{% endif %}
   <tr><td style="color:var(--fg-dim)">Overall</td>
     {% set ovr = card.get('ratings', {}).get('overall', player.overall if player.overall is defined else 0) %}
-    <td class="{% if ovr >= 85 %}stat-elite{% elif ovr >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td>
+    <td class="{% if ovr >= 65 %}stat-elite{% elif ovr >= 45 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td>
   </tr>
   {% if card.get('contract_salary') %}<tr><td style="color:var(--fg-dim)">Contract</td><td>Tier {{ card.contract_salary }} &middot; {{ card.get('contract_years', '?') }}yr</td></tr>{% endif %}
   {% if card.get('pro_status') %}<tr><td style="color:var(--fg-dim)">Status</td><td>{{ card.pro_status | replace('_', ' ') | title }}</td></tr>{% endif %}
   {% else %}
   {% set ovr = player.overall if player.overall is defined else 0 %}
-  <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if ovr >= 85 %}stat-elite{% elif ovr >= 70 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td></tr>
+  <tr><td style="color:var(--fg-dim)">Overall</td><td class="{% if ovr >= 65 %}stat-elite{% elif ovr >= 45 %}stat-good{% endif %}" style="font-weight:bold;font-size:14px">{{ ovr }}</td></tr>
   {% endif %}
   </tbody>
 </table>

@@ -32,7 +32,7 @@
   </div>
   <div class="metric-card">
     <div class="metric-label">Avg Overall</div>
-    <div class="metric-value {% if avg_overall >= 75 %}stat-good{% elif avg_overall < 55 %}stat-bad{% endif %}">{{ avg_overall }}</div>
+    <div class="metric-value {% if avg_overall >= 40 %}stat-good{% elif avg_overall < 28 %}stat-bad{% endif %}">{{ avg_overall }}</div>
   </div>
   <div class="metric-card">
     <div class="metric-label">Prestige</div>
@@ -126,7 +126,7 @@
       {% endif %}
     </td>
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
-    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% elif p.overall < 20 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
     <td style="font-size:11px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:9px;">(last yr)</span>{% endif %}</td>
     <td class="num">{{ p.speed }}</td>

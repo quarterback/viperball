@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}High School — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>High School
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>HIGH SCHOOL</h1>
+  {% if league %}
+  <div class="subtitle">{{ league.year }} season &middot; {{ team_count }} teams &middot; {{ player_count }} players &middot; {{ game_count }} games</div>
+  {% endif %}
+</div>
+
+{% set tab = 'overview' %}
+{% include "high_school/_tabs.html" %}
+
+{% if not league %}
+<div class="empty">
+  The high school league runs inside a dynasty. Start or load a dynasty and its high school season appears here.
+</div>
+{% else %}
+
+<h2>National champion</h2>
+{% if national_champion %}
+<p style="font-size:18px;margin:4px 0 12px"><strong><a href="/stats/high-school/team/{{ (team_keys.get(national_champion, national_champion))|urlencode }}">{{ national_champion }}</a></strong></p>
+{% endif %}
+{% if national_games %}
+<table>
+  <thead><tr><th>Round</th><th>Home</th><th class="num">Score</th><th>Away</th><th class="num">Score</th></tr></thead>
+  <tbody>
+  {% for g in national_games %}
+  <tr>
+    <td>{{ g.round }}</td>
+    <td>{% if g.winner == g.home %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.home, g.home))|urlencode }}">{{ g.home }}</a>{% if g.winner == g.home %}</strong>{% endif %}</td>
+    <td class="num">{{ g.home_score }}</td>
+    <td>{% if g.winner == g.away %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.away, g.away))|urlencode }}">{{ g.away }}</a>{% if g.winner == g.away %}</strong>{% endif %}</td>
+    <td class="num">{{ g.away_score }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Regional champions</h2>
+<table>
+  <thead><tr><th>Region</th><th>Champion</th><th>States</th></tr></thead>
+  <tbody>
+  {% for r in regions %}
+  <tr>
+    <td>{{ r.name }}</td>
+    <td>{% if r.champion %}<a href="/stats/high-school/team/{{ (team_keys.get(r.champion, r.champion))|urlencode }}">{{ r.champion }}</a>{% endif %}</td>
+    <td>{% for s in r.states %}<a href="/stats/high-school/state/{{ s }}">{{ s }}</a>{% if not loop.last %} {% endif %}{% endfor %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Top 25 teams</h2>
+<table>
+  <thead><tr><th class="num">#</th><th>Team</th><th>State</th><th>Conference</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th>Titles</th></tr></thead>
+  <tbody>
+  {% for t in top_teams %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td><a href="/stats/high-school/team/{{ (t.key)|urlencode }}">{{ t.name }}</a></td>
+    <td><a href="/stats/high-school/state/{{ t.state }}">{{ t.state }}</a></td>
+    <td>{{ t.conference }}</td>
+    <td class="record"><span class="w">{{ t.wins }}</span>-<span class="l">{{ t.losses }}</span></td>
+    <td class="num">{{ t.pf }}</td>
+    <td class="num">{{ t.pa }}</td>
+    <td>{% if t.national_champ %}National {% endif %}{% if t.region_champ %}Region {% endif %}{% if t.state_champ %}State {% endif %}{% if t.conf_champ %}Conference{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Top seniors</h2>
+<p style="color:var(--fg-dim);font-size:12px;margin:0 0 8px">This year's graduating class, by rating. They enter college recruiting this offseason. <a href="/stats/recruiting/hs-rankings">Full HS rankings</a></p>
+<table>
+  <thead><tr><th class="num">#</th><th>Player</th><th>Pos</th><th>School</th><th>State</th><th class="num">OVR</th><th class="num">Stars</th><th class="num">Yds</th><th class="num">TD</th><th class="num">Tkl</th></tr></thead>
+  <tbody>
+  {% for p in top_seniors %}
+  <tr>
+    <td class="num rank">{{ loop.index }}</td>
+    <td>{{ p.name }}</td>
+    <td>{{ p.position }}</td>
+    <td><a href="/stats/high-school/team/{{ (p.school ~ "_" ~ p.state)|urlencode }}">{{ p.school }}</a></td>
+    <td><a href="/stats/high-school/state/{{ p.state }}">{{ p.state }}</a></td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num">{{ p.stars }}&#9733;</td>
+    <td class="num">{{ p.yards }}</td>
+    <td class="num">{{ p.tds }}</td>
+    <td class="num">{{ p.tackles }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>States</h2>
+<table>
+  <thead><tr><th>State</th><th class="num">Teams</th><th>State champion</th></tr></thead>
+  <tbody>
+  {% for s in states %}
+  <tr>
+    <td><a href="/stats/high-school/state/{{ s.code }}">{{ s.name }}</a></td>
+    <td class="num">{{ s.teams }}</td>
+    <td>{% if s.champion %}<a href="/stats/high-school/team/{{ (team_keys.get(s.champion, s.champion))|urlencode }}">{{ s.champion }}</a>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

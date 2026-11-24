@@ -15,6 +15,7 @@ All other signings are fully autonomous via AI president.
 
 import json
 import random
+from engine.rating_scale import current_to_legacy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -72,7 +73,7 @@ def build_free_agent_pool_from_data(data: list) -> List[FreeAgent]:
         card.pro_status = "free_agent"
         card.contract_years = 0
         card.contract_salary = 0
-        salary = max(1, min(5, card.overall // 20))
+        salary = max(1, min(5, int(current_to_legacy(card.overall)) // 20))
         pool.append(FreeAgent(
             player_card=card,
             asking_salary=salary,
@@ -120,12 +121,13 @@ def generate_synthetic_fa_pool(
         first_name = rng.choice(firsts)
         last_name = rng.choice(lasts)
 
-        # Stats: CVL graduate quality (55-88 range, gaussian centered at 68)
+        # Stats: CVL graduate quality on the current scale (old 68 +- 10,
+        # clamped 45 to 90, is 31 +- 20 clamped 10 to 75).
         stats = {}
         for attr in ["speed", "stamina", "kicking", "lateral_skill", "tackling",
                      "agility", "power", "awareness", "hands", "kick_power", "kick_accuracy"]:
-            val = int(rng.gauss(68, 10))
-            stats[attr] = max(45, min(90, val))
+            val = int(rng.gauss(31, 20))
+            stats[attr] = max(10, min(75, val))
 
         age = rng.choice([21, 22, 22, 22, 23, 23])
         archetype = rng.choice(POSITION_ARCHETYPES.get(position, ["balanced"]))
@@ -153,7 +155,7 @@ def generate_synthetic_fa_pool(
             **stats,
         )
 
-        salary = max(1, min(5, card.overall // 20))
+        salary = max(1, min(5, int(current_to_legacy(card.overall)) // 20))
         pool.append(FreeAgent(
             player_card=card,
             asking_salary=salary,
@@ -306,7 +308,7 @@ def run_free_agency(
                     continue
 
                 # Attractiveness check: better players want better clubs
-                if fa.overall > 80 and attractiveness < 30:
+                if fa.overall > 55 and attractiveness < 30:  # old scale 80
                     if rng.random() > 0.15:  # 85% chance top player rejects weak club
                         continue
 

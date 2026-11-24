@@ -2377,16 +2377,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         except Exception:
             pass
 
-    # Inject fast_sim metrics as viperball_metrics so templates can find them
-    # (mirrors the fix in pro_league.get_box_score)
     fr = game_data.get("full_result")
-    if fr and fr.get("_fast_sim"):
-        fsm = fr.get("_fast_sim_metrics", {})
-        stats_data = fr.get("stats", {})
-        for side in ("home", "away"):
-            side_stats = stats_data.get(side)
-            if side_stats and side in fsm and "viperball_metrics" not in side_stats:
-                side_stats["viperball_metrics"] = fsm[side]
 
     # Normalize nested stat dicts so templates can compare them as scalars.
     # The game engine stores EPA as a dict with sub-keys; the template
@@ -2401,7 +2392,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
 
     # Generate game analysis text if full result is available
     analysis_text = None
-    if fr and not fr.get("_fast_sim"):
+    if fr:
         try:
             from analyze_game import analyze_game_data
             analysis_text = analyze_game_data(fr)
@@ -4609,7 +4600,7 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
     # Generate game analysis if full result available
     analysis_text = None
     fr = box.get("result") if isinstance(box, dict) else None
-    if fr and not (fr.get("_fast_sim") if isinstance(fr, dict) else False):
+    if isinstance(fr, dict) and fr:
         try:
             from analyze_game import analyze_game_data
             analysis_text = analyze_game_data(fr)
@@ -7458,4 +7449,170 @@ def my_team_finalize(request: Request):
         total_weeks=total_weeks,
         recent_games=recent_games[:10],
         session_id=sid or "",
+    ))
+
+
+# ═══════════════════════════════════════════════════════════════
+# HIGH SCHOOL LEAGUE
+# ═══════════════════════════════════════════════════════════════
+# The HS league feeds every dynasty's recruiting classes.  These pages show
+# its season: champions, state and conference standings, teams and their
+# players.  Regular season games use a quick model fitted to the engine;
+# state finals, regionals and national games are full engine games.
+
+def _get_hs_league():
+    """(league, dynasty, session_id) for the first dynasty with an HS league.
+    A dynasty loaded from a save gets its league rebuilt the way the API
+    builds it (same year seed)."""
+    try:
+        from api.main import sessions
+        for sid, sess in sessions.items():
+            dynasty = sess.get("dynasty")
+            if not dynasty:
+                continue
+            league = getattr(dynasty, "_hs_league", None)
+            if league is None:
+                import random as _rnd
+                from engine.hs_league import create_hs_league, simulate_hs_season
+                year = getattr(dynasty, "current_year", 2026)
+                rng = _rnd.Random(year)
+                league = simulate_hs_season(create_hs_league(year, rng=rng), rng=rng)
+                dynasty._hs_league = league
+            return league, dynasty, sid
+    except Exception:
+        import traceback
+        traceback.print_exc()
+    return None, None, None
+
+
+def _hs_player_row(p):
+    from engine.talent import stars_for_level
+    stars = stars_for_level(p.level) if getattr(p, "level", 0) else p.potential
+    return {
+        "name": p.name, "number": p.number, "position": p.position, "year": p.year,
+        "overall": p.overall, "stars": stars, "development": p.development,
+        "yards": p.season_yards, "tds": p.season_tds, "tackles": p.season_tackles,
+        "kicks": p.season_kicks_made, "games": p.season_games,
+    }
+
+
+def _hs_team_row(t):
+    return {
+        "key": f"{t.school_name}_{t.state}", "name": t.name, "mascot": t.mascot, "state": t.state, "conference": t.conference,
+        "wins": t.wins, "losses": t.losses,
+        "pf": round(t.points_for, 1), "pa": round(t.points_against, 1),
+        "conf_champ": t.conf_champ, "state_champ": t.state_champ,
+        "region_champ": t.region_champ, "national_champ": t.national_champ,
+        "seniors": len(t.seniors),
+    }
+
+
+def _hs_team_keys(league, prefer_state=""):
+    """School name to team key; a name used in two states resolves to the
+    given state's school."""
+    keys = {}
+    for key, t in league.teams.items():
+        if t.name not in keys or t.state == prefer_state:
+            keys[t.name] = key
+    return keys
+
+
+_HS_ROUND_LABELS = {
+    "conf_final": "Conference final", "state_semi": "State semifinal",
+    "state_final": "State final", "regional": "Regional",
+    "national_round": "National round", "national_semi": "National semifinal",
+    "national_final": "National final",
+}
+
+
+@router.get("/high-school/", response_class=HTMLResponse)
+def high_school_index(request: Request):
+    from engine.hs_league_data import STATES, REGIONS
+    league, dynasty, sid = _get_hs_league()
+    if league is None:
+        return templates.TemplateResponse("high_school/index.html", _ctx(request, section="high-school", league=None))
+    teams = list(league.teams.values())
+    ranked = sorted(teams, key=lambda t: (-t.wins, t.losses, -(t.points_for - t.points_against)))
+    nat_games = [g for g in league.schedule
+                 if g.playoff_round in ("national_round", "national_semi", "national_final")]
+    states = []
+    for code, data in sorted(STATES.items(), key=lambda kv: kv[1]["name"]):
+        st_teams = [t for t in teams if t.state == code]
+        if not st_teams:
+            continue
+        states.append({"code": code, "name": data["name"], "teams": len(st_teams),
+                       "champion": league.state_champions.get(code, "")})
+    seniors = sorted((p for t in teams for p in t.seniors), key=lambda p: -p.overall)[:25]
+    senior_rows = []
+    for p in seniors:
+        row = _hs_player_row(p)
+        row["school"] = p.high_school
+        row["state"] = p.state
+        senior_rows.append(row)
+    return templates.TemplateResponse("high_school/index.html", _ctx(
+        request, section="high-school", league=league,
+        national_champion=league.national_champion,
+        team_keys=_hs_team_keys(league),
+        national_games=[{"round": _HS_ROUND_LABELS.get(g.playoff_round, g.playoff_round),
+                         "home": g.home, "away": g.away, "home_score": g.home_score,
+                         "away_score": g.away_score, "winner": g.winner} for g in nat_games],
+        regions=[{"name": r, "champion": league.region_champions.get(r, ""),
+                  "states": REGIONS.get(r, [])} for r in REGIONS],
+        states=states, top_teams=[_hs_team_row(t) for t in ranked[:25]],
+        top_seniors=senior_rows, team_count=len(teams),
+        player_count=sum(len(t.players) for t in teams),
+        game_count=len(league.schedule),
+    ))
+
+
+@router.get("/high-school/state/{code}", response_class=HTMLResponse)
+def high_school_state(request: Request, code: str):
+    from engine.hs_league_data import STATES
+    league, dynasty, sid = _get_hs_league()
+    code = code.upper()
+    if league is None or code not in STATES:
+        raise HTTPException(404, "State not found")
+    teams = [t for t in league.teams.values() if t.state == code]
+    conferences = {}
+    for t in teams:
+        conferences.setdefault(t.conference, []).append(t)
+    conf_rows = []
+    for conf, members in sorted(conferences.items()):
+        members.sort(key=lambda t: (-t.wins, t.losses, -(t.points_for - t.points_against)))
+        conf_rows.append({"name": conf, "teams": [_hs_team_row(t) for t in members]})
+    names = {t.name for t in teams}
+    playoff = [g for g in league.schedule if g.playoff_round in ("conf_final", "state_semi", "state_final")
+               and (g.home in names or g.away in names)]
+    return templates.TemplateResponse("high_school/state.html", _ctx(
+        request, section="high-school", league=league, code=code, state_name=STATES[code]["name"],
+        champion=league.state_champions.get(code, ""), conferences=conf_rows,
+        team_keys=_hs_team_keys(league, prefer_state=code),
+        playoff_games=[{"round": _HS_ROUND_LABELS.get(g.playoff_round, g.playoff_round),
+                        "home": g.home, "away": g.away, "home_score": g.home_score,
+                        "away_score": g.away_score, "winner": g.winner} for g in playoff],
+    ))
+
+
+@router.get("/high-school/team/{key}", response_class=HTMLResponse)
+def high_school_team(request: Request, key: str):
+    from engine.hs_league_data import STATES
+    league, dynasty, sid = _get_hs_league()
+    team = league.teams.get(key) if league else None
+    if team is None:
+        raise HTTPException(404, "Team not found")
+    year_order = {"Senior": 0, "Junior": 1, "Sophomore": 2, "Freshman": 3}
+    players = sorted(team.players, key=lambda p: (year_order.get(p.year, 9), -p.overall))
+    games = [g for g in league.schedule if team.name in (g.home, g.away)]
+    game_rows = []
+    for g in games:
+        home = g.home == team.name
+        us, them = (g.home_score, g.away_score) if home else (g.away_score, g.home_score)
+        game_rows.append({"opponent": g.away if home else g.home, "home": home,
+                          "us": us, "them": them, "won": g.winner == team.name,
+                          "round": _HS_ROUND_LABELS.get(g.playoff_round, "")})
+    return templates.TemplateResponse("high_school/team.html", _ctx(
+        request, section="high-school", league=league, team=_hs_team_row(team),
+        state_name=STATES.get(team.state, {}).get("name", team.state),
+        players=[_hs_player_row(p) for p in players], games=game_rows,
+        team_keys=_hs_team_keys(league, prefer_state=team.state),
     ))

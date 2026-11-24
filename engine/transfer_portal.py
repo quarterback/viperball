@@ -621,20 +621,24 @@ def estimate_prestige_from_roster(roster: list) -> int:
         if isinstance(p, dict):
             # Raw team JSON player dict
             stats = p.get("stats", {})
-            avg_stat = sum(stats.values()) / max(1, len(stats)) if stats else 70
+            avg_stat = sum(stats.values()) / max(1, len(stats)) if stats else 35
             overalls.append(avg_stat)
             potentials.append(p.get("potential", 3))
         else:
             # PlayerCard or Player object
-            overalls.append(getattr(p, "overall", 70))
+            overalls.append(getattr(p, "overall", 35))
             potentials.append(getattr(p, "potential", 3))
 
     avg_ovr = sum(overalls) / len(overalls)
     avg_pot = sum(potentials) / len(potentials)
 
-    # Scale: OVR maps roughly linearly to prestige across the full 0-100 range.
+    # Same map as engine.game_engine._derive_prestige_from_roster on the
+    # current rating scale: team average overall runs about 18 (weakest),
+    # 35 (median) and 59 (strongest), so 35 -> 50 and each point is 1.9.
+    # The old map (0.9 x overall) predates the November 2026 rescale and
+    # put every program between 22 and 47.
     # Potential gives a small bonus (3.0 avg → 0, 5.0 avg → +10)
-    ovr_score = avg_ovr * 0.9
+    ovr_score = 50 + (avg_ovr - 35) * 1.9
     pot_bonus = max(0, (avg_pot - 3.0)) * 5.0
 
     return max(10, min(99, int(ovr_score + pot_bonus)))
@@ -988,35 +992,15 @@ def generate_quick_portal(
             k=1,
         )[0]
 
-        # Stat range: portal players start with modest base stats — in-game
-        # multipliers and development are what make them competitive
-        lo, hi = 28, 52
-        if year_class in ("Senior", "Graduate"):
-            lo, hi = 32, 56
-
-        def _stat():
-            return rng.randint(lo, hi)
-
-        # Position adjustments
-        speed = _stat()
-        stamina = _stat()
-        agility = _stat()
-        power = _stat()
-        awareness = _stat()
-        hands = _stat()
-        kicking = _stat()
-        kick_power = _stat()
-        kick_accuracy = _stat()
-        lateral_skill = _stat()
-        tackling = _stat()
-
-        if pos in ("Viper", "Halfback", "Wingback", "Slotback", "Zeroback"):
-            speed = min(85, speed + rng.randint(2, 5))
-            lateral_skill = min(85, lateral_skill + rng.randint(1, 4))
-        elif pos in ("Offensive Line", "Defensive Line"):
-            tackling = min(85, tackling + rng.randint(3, 6))
-            power = min(85, power + rng.randint(3, 6))
-            speed = max(55, speed - rng.randint(2, 4))
+        # Level from the league talent ladder, stats around it for her class.
+        # The old flat 28 to 52 roll gave every portal player the same middling
+        # rating and floored linemen at 55 speed.
+        from engine.talent import COLLEGE_YEAR_MOD, roll_level, roll_stats
+        _s = roll_stats(roll_level(rng), pos, rng, year_mod=COLLEGE_YEAR_MOD.get(year_class, 0))
+        speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
+        power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
+        kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
+        lateral_skill, tackling = _s["lateral_skill"], _s["tackling"]
 
         # Height / weight
         if pos in ("Offensive Line", "Defensive Line"):
@@ -1064,6 +1048,7 @@ def generate_quick_portal(
             kick_accuracy=kick_accuracy,
             lateral_skill=lateral_skill,
             tackling=tackling,
+            work_rate=_s["work_rate"],
             potential=potential,
             development=dev,
             current_team="",

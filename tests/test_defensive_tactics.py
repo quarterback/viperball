@@ -74,8 +74,12 @@ def test_correct_formation_read_moves_halfway_toward_neutral(
 def test_scheme_effect_has_expected_direction(offense, scheme, family):
     engine = make_engine(offense, scheme)
     multiplier = engine._defense_style_multiplier(family)
-    matrix = OFFENSE_VS_DEFENSE_MATCHUP[(offense, scheme)]
-    specific = DEFENSE_STYLES[scheme]["play_family_modifiers"][family.value]
+    from engine.game_engine import _defense_scheme_means
+    means = _defense_scheme_means()
+    # Scheme tables are measured against the league's average scheme.
+    matrix = OFFENSE_VS_DEFENSE_MATCHUP[(offense, scheme)] - (means["matchup"] - 1)
+    specific = (DEFENSE_STYLES[scheme]["play_family_modifiers"][family.value]
+                - (means["family"][family.value] - 1))
     expected = max(0.75, min(1.20, 1 + 0.5 * (matrix - 1) + 0.35 * (specific - 1)))
     assert multiplier == pytest.approx(expected)
     assert 0.75 <= multiplier <= 1.20
@@ -126,7 +130,7 @@ def test_explosive_defense_affects_breakaway_probability(monkeypatch):
     # Keep base chance deterministic: speed is rescaled in the real engine,
     # and the same player/matchup is evaluated against two schemes.
     team = SimpleNamespace(avg_speed=92)
-    monkeypatch.setattr(random, "random", lambda: 0.17)
+    monkeypatch.setattr(random, "random", lambda: 0.22)  # between the two centered breakaway chances
     monkeypatch.setattr(random, "randint", lambda low, high: low)
     lock_yards = engine._breakaway_check(6, team, family=PlayFamily.POWER)
     engine.away_team.defense_style = "blitz_pack"

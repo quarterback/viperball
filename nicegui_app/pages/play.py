@@ -1134,26 +1134,16 @@ async def _render_season_play(state: UserState, shared: dict):
             with ui.row().classes("gap-3 items-center"):
                 week_btn = ui.button(week_label, icon="play_arrow").props("color=primary")
                 rest_btn = ui.button("Sim Rest of Season", icon="fast_forward").props("color=secondary outlined")
-                engine_switch = ui.switch("Full Engine (Box Scores)", value=state.full_engine).props("dense").tooltip(
-                    "Generate detailed play-by-play & drive summaries for all games. Off = fast sim (stats only, no play-by-play)."
-                )
-
-                def _toggle_engine(e):
-                    state.full_engine = e.value
-
-                engine_switch.on_value_change(_toggle_engine)
 
             async def _sim_week():
-                use_fast = not state.full_engine
                 week_btn.disable()
                 rest_btn.disable()
                 week_btn.text = "Simulating..."
                 try:
-                    result = await run.io_bound(api_client.simulate_week, state.session_id, None, use_fast)
+                    result = await run.io_bound(api_client.simulate_week, state.session_id, None)
                     week = result.get("week", "?")
                     games_count = result.get("games_count", 0)
-                    engine_label = "full engine" if not use_fast else "fast sim"
-                    notify_success(f"Week {week} simulated — {games_count} games ({engine_label})")
+                    notify_success(f"Week {week} simulated — {games_count} games")
                     try:
                         _season_actions.refresh()
                     except RuntimeError:
@@ -1165,14 +1155,12 @@ async def _render_season_play(state: UserState, shared: dict):
                     week_btn.text = week_label
 
             async def _sim_rest():
-                use_fast = not state.full_engine
                 rest_btn.disable()
                 week_btn.disable()
                 rest_btn.text = "Simulating season..."
                 try:
-                    result = await run.io_bound(api_client.simulate_rest, state.session_id, use_fast)
-                    engine_label = "full engine" if not use_fast else "fast sim"
-                    notify_success(f"Regular season complete! ({engine_label})")
+                    result = await run.io_bound(api_client.simulate_rest, state.session_id)
+                    notify_success("Regular season complete!")
                     try:
                         _season_actions.refresh()
                     except RuntimeError:

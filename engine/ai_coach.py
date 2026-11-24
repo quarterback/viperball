@@ -44,8 +44,33 @@ IDENTITY_STYLE_TO_ST = {
 }
 
 
+# Team stats moved to the current rating scale in PRO-01.  The thresholds and
+# weights below were written for the old 60 to 100 team stats, so current
+# values are read through a fit of the old league spread against the new one
+# (quantile matched over the 197 program files), which keeps each program's
+# scheme odds where they were.
+_LEGACY_TEAM_STAT_FIT = {
+    "avg_speed": (36.58, 1.308),
+    "avg_stamina": (35.50, 1.299),
+    "kicking_strength": (27.49, 1.437),
+    "lateral_proficiency": (32.76, 1.366),
+    "defensive_strength": (33.04, 1.278),
+}
+
+
+def _legacy_team_stats(team_stats: Dict) -> Dict:
+    ts = dict(team_stats or {})
+    if ts.get("avg_speed", 99) >= 60:  # already on the old scale
+        return ts
+    for k, (a, b) in _LEGACY_TEAM_STAT_FIT.items():
+        if isinstance(ts.get(k), (int, float)):
+            ts[k] = a + b * ts[k]
+    return ts
+
+
 def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = None,
                      coaching_staff: Optional[Dict] = None) -> Dict[str, str]:
+    team_stats = _legacy_team_stats(team_stats)
     if seed is not None:
         rng = random.Random(seed)
     else:

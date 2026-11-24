@@ -133,12 +133,12 @@ class WVLMultiTierSeason:
         if self.tier_seasons:
             self.phase = "regular_season"
 
-    def sim_week_all_tiers(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def sim_week_all_tiers(self) -> Dict[int, dict]:
         """Simulate one week across all tiers. Returns tier_num → week results."""
         results = {}
         for tier_num, season in self.tier_seasons.items():
             if season.phase == "regular_season" and season.current_week < season.total_weeks:
-                week_result = season.sim_week(use_fast_sim=use_fast_sim)
+                week_result = season.sim_week()
                 results[tier_num] = week_result
 
                 # Annotate rivalry matches
@@ -159,13 +159,13 @@ class WVLMultiTierSeason:
 
         return results
 
-    def sim_all(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def sim_all(self) -> Dict[int, dict]:
         """Simulate entire regular season for all tiers."""
         all_results = {}
         for tier_num, season in self.tier_seasons.items():
             tier_results = []
             while season.phase == "regular_season" and season.current_week < season.total_weeks:
-                tier_results.append(season.sim_week(use_fast_sim=use_fast_sim))
+                tier_results.append(season.sim_week())
             all_results[tier_num] = {"weeks": tier_results}
 
         self.phase = "playoffs_pending"
@@ -198,9 +198,9 @@ class WVLMultiTierSeason:
 
         return results
 
-    def run_full_season(self, use_fast_sim: bool = True) -> Dict[int, dict]:
+    def run_full_season(self) -> Dict[int, dict]:
         """Sim entire season (regular + playoffs) for all tiers."""
-        self.sim_all(use_fast_sim=use_fast_sim)
+        self.sim_all()
         self.start_playoffs_all()
 
         playoff_results = {}

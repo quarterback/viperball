@@ -42,6 +42,7 @@ from engine.promotion_relegation import (
     PromotionRelegationResult, persist_tier_assignments,
 )
 from engine.development import apply_pro_development
+from engine.rating_scale import current_to_legacy
 from engine.player_card import PlayerCard, player_to_card
 from engine.bourse import next_bourse_rate, revenue_modifier, build_rate_record, macro_shock
 
@@ -172,8 +173,7 @@ class WVLDynasty:
         """Initialize a new season across all 4 tiers.
 
         Also injects per-team investment modifiers into Team objects so that
-        investment allocation has a marginal in-season effect on dice rolls
-        (via fast_sim._team_strength).
+        investment allocation lifts game day form a little in the engine.
         """
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
         self._inject_investment_modifiers(self._current_season)
@@ -537,7 +537,7 @@ class WVLDynasty:
         # Add cut players to the persistent FA pool
         self._ensure_fa_pool()
         for card in cut_cards:
-            salary = max(1, min(5, card.overall // 20))
+            salary = max(1, min(5, int(current_to_legacy(card.overall)) // 20))
             self._fa_pool_dicts.append({
                 "card_dict": card.to_dict(),
                 "asking_salary": salary,
@@ -784,7 +784,7 @@ class WVLDynasty:
             if card.full_name == player_name:
                 roster.pop(i)
                 card.pro_status = "free_agent"
-                salary = max(1, min(5, card.overall // 20))
+                salary = max(1, min(5, int(current_to_legacy(card.overall)) // 20))
                 self._fa_pool_dicts.insert(0, {
                     "card_dict": card.to_dict(),
                     "asking_salary": salary,
@@ -915,6 +915,7 @@ class WVLDynasty:
         """Serialize dynasty to a plain dict (JSON-safe)."""
         data = {
             "type": "wvl_dynasty",
+            "rating_scale": "current",
             "dynasty_name": self.dynasty_name,
             "current_year": self.current_year,
             "owner": self.owner.to_dict(),
@@ -1012,10 +1013,21 @@ class WVLDynasty:
 
         # Restore FA pool (includes cut players; regenerated from seed if missing)
         dynasty._fa_pool_dicts = list(data.get("fa_pool", []))
+        legacy = data.get("rating_scale") != "current"
+        if legacy:
+            # Saves from before PRO-01 hold pro and synthetic players on the
+            # old 60 to 100 scale; college exports were already current.
+            from engine.rating_scale import convert_card_dict
+            for entry in dynasty._fa_pool_dicts:
+                if entry.get("source") != "college_export" and isinstance(entry.get("card_dict"), dict):
+                    convert_card_dict(entry["card_dict"])
 
         # Restore owner's persisted roster (from draft or edits)
         for card_dict in data.get("owner_roster", []):
             try:
+                if legacy and card_dict.get("ratings", {}).get("speed", 0) > 0:
+                    from engine.rating_scale import convert_card_dict
+                    card_dict = convert_card_dict(dict(card_dict, ratings=dict(card_dict.get("ratings", {}))))
                 card = PlayerCard.from_dict(card_dict)
                 dynasty._team_rosters.setdefault(owner.club_key, []).append(card)
             except Exception:

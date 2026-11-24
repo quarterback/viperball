@@ -486,7 +486,7 @@ class TestWVLCommissionerDynasty:
         assert season is not None
         assert len(season.tier_seasons) == 4
 
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         # Should have champions
@@ -503,7 +503,7 @@ class TestWVLCommissionerDynasty:
     def test_offseason_advances_year(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         rng = random.Random(42)
@@ -513,7 +513,7 @@ class TestWVLCommissionerDynasty:
     def test_move_player(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         keys = list(d._team_rosters.keys())[:2]
@@ -530,7 +530,7 @@ class TestWVLCommissionerDynasty:
     def test_move_player_nonexistent(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         keys = list(d._team_rosters.keys())[:2]
@@ -540,7 +540,7 @@ class TestWVLCommissionerDynasty:
     def test_nominate_hall_of_fame(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         leaders = d.career_tracker.get_all_time_leaders("yards", limit=1)
@@ -562,7 +562,7 @@ class TestWVLCommissionerDynasty:
     def test_serialization_round_trip(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         data = d.to_dict()
@@ -576,7 +576,7 @@ class TestWVLCommissionerDynasty:
     def test_get_team_roster(self):
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         keys = list(d._team_rosters.keys())
@@ -596,7 +596,7 @@ class TestWVLCommissionerDynasty:
         """FIV cycle runs without crashing and records results."""
         d = create_commissioner_dynasty("Test", starting_year=2026)
         season = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(season)
 
         result = d.run_fiv_cycle(host="USA", rng=random.Random(42))
@@ -615,7 +615,7 @@ class TestWVLCommissionerDynasty:
 
         # Season 1
         s1 = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(s1)
         d.run_offseason(s1, rng=random.Random(1))
 
@@ -623,7 +623,7 @@ class TestWVLCommissionerDynasty:
 
         # Season 2
         s2 = d.start_season()
-        d.sim_full_season(use_fast_sim=True)
+        d.sim_full_season()
         d.advance_season(s2)
 
         assert d.current_year == 2027  # started 2026, offseason bumped to 2027, season 2 played but no offseason yet

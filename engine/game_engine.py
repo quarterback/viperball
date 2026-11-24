@@ -68,6 +68,9 @@ V2_ENGINE_CONFIG = {
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
+    # Measure scheme tables against the league's average scheme instead of
+    # against 1.0 (see _defense_scheme_means).
+    "defense_scheme_centered": True,
     # V2.4: Time-of-possession model — play clock varies by offensive style
     "top_model_enabled": True,
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
@@ -206,6 +209,14 @@ V2_ENGINE_CONFIG = {
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
     "play_clock_limit": 40,
+    # Penalty level.  1.0 gave about 14 accepted flags and 135 yards per team
+    # per game, more than twice the NCAA's 6 (Action Network, 2020 to 2024).
+    "penalty_rate_scale": 1.0,
+    # Share of the rush contest's pressure that ends in a sack (see the kick
+    # pass rush check).  Pressure itself is unchanged.
+    "sack_rate_scale": 0.55,
+    "penalty_bad_weather_scale": 1.2,
+    "penalty_heat_scale": 1.1,
 }
 
 
@@ -3836,6 +3847,28 @@ ST_SCHEME_MIGRATION = {
 }
 
 
+
+_DEFENSE_SCHEME_MEANS = None
+
+
+def _defense_scheme_means() -> dict:
+    """League means of the defensive scheme tables, used to center them."""
+    global _DEFENSE_SCHEME_MEANS
+    if _DEFENSE_SCHEME_MEANS is None:
+        schemes = list(DEFENSE_STYLES.values())
+        families = {}
+        for d in schemes:
+            for k, v in d.get("play_family_modifiers", {}).items():
+                families.setdefault(k, []).append(v)
+        _DEFENSE_SCHEME_MEANS = {
+            "matchup": sum(OFFENSE_VS_DEFENSE_MATCHUP.values()) / max(1, len(OFFENSE_VS_DEFENSE_MATCHUP)),
+            # A scheme without an entry plays the family at 1.0.
+            "family": {k: (sum(v) + (len(schemes) - len(v))) / len(schemes) for k, v in families.items()},
+            "explosive": sum(d.get("explosive_suppression", 1.0) for d in schemes) / len(schemes),
+            "coverage": sum(d.get("kick_pass_coverage", 0.0) for d in schemes) / len(schemes),
+        }
+    return _DEFENSE_SCHEME_MEANS
+
 class ViperballEngine:
 
     RIVALRY_UNDERDOG_BOOST = {
@@ -3874,7 +3907,8 @@ class ViperballEngine:
                  away_brick_wall: bool = False,
                  home_turnover_machine: bool = False,
                  away_turnover_machine: bool = False,
-                 referee_crew: Optional["RefereeCrew"] = None):
+                 referee_crew: Optional["RefereeCrew"] = None,
+                 officiating_level: str = "college"):
         # Seed before ALL pregame player/archetype/variance rolls, not only
         # after they have already consumed global RNG. Matched coach-only
         # benchmarks rely on the no-coach-tactics control being identical.
@@ -3909,6 +3943,10 @@ class ViperballEngine:
         else:
             _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
             self.referee_crew = assign_referee(_ref_rng)
+        # College, pro and high school crews differ in accuracy and spread
+        # (engine/officiating.py LEVELS).
+        from engine.officiating import apply_level as _apply_officiating_level
+        _apply_officiating_level(self.referee_crew, officiating_level)
         self.seed = seed
         # Credit assignment does not consume the physical contest RNG.
         self._rush_credit_rng = random.Random(
@@ -4938,6 +4976,12 @@ class ViperballEngine:
         self.game_form = {"home": 1.0, "away": 1.0}
         self.half_form = {"home": [1.0, 1.0], "away": [1.0, 1.0]}
         self.team_form = {"home": 1.0, "away": 1.0}
+        # WVL owner investment (0 to 8 team strength points, set by
+        # WVLDynasty) lifts the day's form.
+        inv_w = V2_ENGINE_CONFIG.get("investment_form_per_point", 0.006)
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            inv = getattr(team, "investment_modifier", 0.0) or 0.0
+            self.game_form[side] = self.team_form[side] = 1.0 + inv * inv_w
         if not sigma or sigma <= 0:
             return
         pivot = V2_ENGINE_CONFIG.get("form_star_pivot", 88.0)
@@ -4945,7 +4989,8 @@ class ViperballEngine:
         for side, team in (("home", self.home_team), ("away", self.away_team)):
             best = max((scale_rating(p.overall) for p in team.players), default=pivot)
             mean = 1.0 + (best - pivot) * w
-            self.game_form[side] = random.gauss(mean, sigma)
+            inv = getattr(team, "investment_modifier", 0.0) or 0.0
+            self.game_form[side] = random.gauss(mean + inv * inv_w, sigma)
 
     def _roll_half_form(self, half_index: int):
         """Hot or cold spell for a half, on top of the day's form."""
@@ -7664,14 +7709,19 @@ class ViperballEngine:
         else:
             snap_side = getattr(self, "_snap_possession", None) or self.state.possession
 
-        weather_penalty_boost = 0.0
+        # Catalog rates are relative; penalty_rate_scale sets the league level
+        # (about 8 accepted flags per team per game, the NCAA rate of about six
+        # per team scaled to Viperball's longer game).  Bad weather scales every
+        # foul up together.  The old weather rule added 0.003 to every one of
+        # the 19 to 34 fouls in a phase, which nearly doubled flags in rain.
+        rate_scale = V2_ENGINE_CONFIG.get("penalty_rate_scale", 1.0)
         if self.weather in ("rain", "snow", "sleet"):
-            weather_penalty_boost = 0.003
-        if self.weather == "heat":
-            weather_penalty_boost = 0.002
+            rate_scale *= V2_ENGINE_CONFIG.get("penalty_bad_weather_scale", 1.2)
+        elif self.weather == "heat":
+            rate_scale *= V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1)
 
         for pen_def in penalties:
-            prob = pen_def["prob"] + weather_penalty_boost
+            prob = pen_def["prob"] * rate_scale
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
 
@@ -7694,13 +7744,28 @@ class ViperballEngine:
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
-                # ── Referee: swallowed whistle ──
-                # Crew might miss a legitimate penalty call.
-                # The penalty simply doesn't get called — no one knows
-                # it happened except the post-game review.
-                if random.random() < self.referee_crew.swallowed_whistle_rate:
-                    self.referee_crew.blown_calls += 1
-                    self.referee_crew.blown_call_log.append({
+                # ── Officials: call, no call or missed call ──
+                # The catalog rate is how often the foul happens.  Whether a
+                # flag comes out depends on whether it affected the play,
+                # how visible the foul is and how tight the crew calls it
+                # (engine/officiating.py).
+                from engine.officiating import decide as _decide_call
+                crew = self.referee_crew
+                crew.infractions = getattr(crew, "infractions", 0) + 1
+                score_gap = abs(self.state.home_score - self.state.away_score)
+                late_close = (self.state.quarter >= 4 and self.state.time_remaining < 300
+                              and score_gap <= 9)
+                outcome, material = _decide_call(
+                    pen_def["name"], crew, late_close=late_close,
+                    playoff=getattr(self, "_is_playoff", False),
+                    against_home=(team_name == "home"))
+                if outcome == "no_call":
+                    crew.no_calls = getattr(crew, "no_calls", 0) + 1
+                    return None
+                if outcome == "missed":
+                    crew.missed_calls = getattr(crew, "missed_calls", 0) + 1
+                    crew.blown_calls += 1
+                    crew.blown_call_log.append({
                         "type": "swallowed_whistle",
                         "quarter": self.state.quarter,
                         "time_remaining": self.state.time_remaining,
@@ -7710,7 +7775,8 @@ class ViperballEngine:
                         "yards": pen_def["yards"],
                         "field_position": self.state.field_position,
                     })
-                    return None  # Ref missed the call
+                    return None
+                crew.flags_thrown = getattr(crew, "flags_thrown", 0) + 1
 
                 return Penalty(
                     name=pen_def["name"],
@@ -9342,8 +9408,27 @@ class ViperballEngine:
         defense = self._current_defense()
         matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((offense, defense_name), 1.0)
         family = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            # Measure each scheme against the league's schemes, not against
+            # 1.0.  Every scheme's table averages below 1.0 (0.84 to 0.97), so
+            # uncentered the effect cut about 4% from every play in the league.
+            means = _defense_scheme_means()
+            matchup -= means["matchup"] - 1.0
+            family -= means["family"].get(play_family.value, 1.0) - 1.0
         effect = 1.0 + 0.50 * (matchup - 1.0) + 0.35 * (family - 1.0)
         return max(0.75, min(1.20, effect))
+
+    def _scheme_explosive_suppression(self) -> float:
+        value = self._current_defense().get("explosive_suppression", 1.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            value /= _defense_scheme_means()["explosive"]
+        return value
+
+    def _scheme_kick_pass_coverage(self) -> float:
+        value = self._current_defense().get("kick_pass_coverage", 0.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            value -= _defense_scheme_means()["coverage"]
+        return value
 
     def _defense_read_yard_multiplier(self, family: PlayFamily) -> float:
         """A tactical read reduces gains without changing possession or down."""
@@ -10065,7 +10150,7 @@ class ViperballEngine:
             # An elite anti-explosive scheme reduces the COMPLETE breakaway
             # chance, including the bonus for a gain of 7+ or 10+ yards.
             if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
-                breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
+                breakaway_chance *= self._scheme_explosive_suppression()
             call = self._active_dc_call()
             if call.get("package_id"):
                 target = self._PACKAGE_EXPLOSIVE_DELTA.get(call["package_id"], 0.0)
@@ -12375,7 +12460,7 @@ class ViperballEngine:
         # not its travel distance. Apply one scheme effect per kick pass.
         if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
             completion_prob *= self._defense_style_multiplier(family)
-            coverage = self._current_defense().get("kick_pass_coverage", 0.0)
+            coverage = self._scheme_kick_pass_coverage()
             completion_prob -= coverage * 0.25
         completion_prob *= self._defense_read_yard_multiplier(family)
         # Coverage space is the cost of committing extra actual players.
@@ -12413,7 +12498,11 @@ class ViperballEngine:
         # One rush contest: sack, non-sack hurry, or clean release. The
         # hurry band shares the same protection/release probability as sacks.
         rush_roll = random.random()
+        # The contest decides pressure; sack_rate_scale decides how much of
+        # it ends in a sack.  Unscaled, 12.5% of kick passes were sacks (about
+        # twice the 6 to 7% of dropbacks in football) with pressure on 32%.
         hurry_threshold = min(0.75, sack_base_rate * 2.5)
+        sack_base_rate *= V2_ENGINE_CONFIG.get("sack_rate_scale", 1.0)
         for committed in rush_plan["rushers"]:
             self.drain_player_energy(committed, "lineman")
             if (self._active_dc_call().get("package_id") == "predator_exhaustion_press"):
@@ -16046,10 +16135,19 @@ class ViperballEngine:
             # ── Referee crew: name + challenge stats visible ──
             "referee": {
                 "name": self.referee_crew.name,
+                "level": getattr(self.referee_crew, "level", "college"),
                 "blown_calls": self.referee_crew.blown_calls,
                 "challenged_calls": self.referee_crew.challenged_calls,
                 "overturned_calls": self.referee_crew.overturned_calls,
                 "blown_call_log": list(self.referee_crew.blown_call_log),
+                # Fouls that happened, flags for them, fouls let go because
+                # they did not affect the play, and material fouls missed.
+                "infractions": getattr(self.referee_crew, "infractions", 0),
+                "flags_thrown": getattr(self.referee_crew, "flags_thrown", 0),
+                "no_calls": getattr(self.referee_crew, "no_calls", 0),
+                "missed_calls": getattr(self.referee_crew, "missed_calls", 0),
+                "phantom_flags": sum(1 for b in self.referee_crew.blown_call_log
+                                     if b.get("type") == "phantom_flag"),
                 "home_challenges_remaining": self.state.home_challenges,
                 "away_challenges_remaining": self.state.away_challenges,
             },
@@ -16475,6 +16573,7 @@ def load_team_from_json(filepath: str, fresh: bool = False,
                 hands=stats.get("hands", 75),
                 kick_power=stats.get("kick_power", 75),
                 kick_accuracy=stats.get("kick_accuracy", 75),
+                work_rate=stats.get("work_rate", 0),
                 archetype=p_data.get("archetype", "none"),
                 player_id=p_data.get("player_id", ""),
                 nationality=p_data.get("nationality", "American"),

@@ -321,7 +321,8 @@ class WVLCareerLeague:
             away = self.teams.get(away_key)
             if not home or not away:
                 continue
-            engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000))
+            engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000),
+                                     officiating_level="pro")
             result = engine.simulate_game()
             hs = int(result["final_score"]["home"]["score"])
             as_ = int(result["final_score"]["away"]["score"])
@@ -402,9 +403,10 @@ class WVLCareerLeague:
         """Mild physical decline past 30."""
         if card.age is None or card.age < 30:
             return
-        card.speed = max(40, card.speed - 1)
-        card.stamina = max(40, card.stamina - 1)
-        card.agility = max(40, card.agility - 1)
+        # Current scale: two points a year (one old 60 to 100 point).
+        card.speed = max(10, card.speed - 2)
+        card.stamina = max(10, card.stamina - 2)
+        card.agility = max(10, card.agility - 2)
 
     # ─────────────────────────────────────────────────────────────
     # VIEWS
@@ -552,6 +554,7 @@ class WVLCareerLeague:
             "league_id": self.league_id,
             "year": self.year,
             "club_keys": self.club_keys,
+            "rating_scale": "current",
             "cards": {pid: c.to_dict() for pid, c in self.cards.items()},
             "roster_cards": self.roster_cards,
             "consumed_pools": self.consumed_pools,
@@ -566,8 +569,16 @@ class WVLCareerLeague:
     def from_dict(cls, d: dict) -> "WVLCareerLeague":
         league = cls(d.get("league_id", ""), year=d.get("year", 2027))
         league.club_keys = d.get("club_keys", league.club_keys)
+        cards_raw = d.get("cards", {})
+        if d.get("rating_scale") != "current":
+            # Before PRO-01, synthetic graduates were made from old scale pro
+            # fillers; imported CVL graduates were already on the current scale.
+            from engine.rating_scale import convert_card_dict
+            for pid, cd in cards_raw.items():
+                if str(pid).startswith("synthgrad_"):
+                    convert_card_dict(cd)
         league.cards = {
-            pid: PlayerCard.from_dict(cd) for pid, cd in d.get("cards", {}).items()
+            pid: PlayerCard.from_dict(cd) for pid, cd in cards_raw.items()
         }
         league.roster_cards = {k: list(v) for k, v in d.get("roster_cards", {}).items()}
         league.consumed_pools = d.get("consumed_pools", [])

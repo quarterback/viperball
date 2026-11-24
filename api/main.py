@@ -32,7 +32,7 @@ from engine.season import (
     MAX_CONFERENCE_GAMES,
     auto_assign_rivalries,
     load_coaching_staffs_from_directory,
-    fast_generate_history,
+    generate_history,
 )
 from engine.dynasty import create_dynasty, Dynasty
 from engine.player_card import player_to_card
@@ -1355,7 +1355,7 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
     history_results = []
     history_years = max(0, min(100, req.history_years))
     if history_years > 0:
-        raw_history = fast_generate_history(
+        raw_history = generate_history(
             teams=teams,
             conferences=conferences,
             num_years=history_years,

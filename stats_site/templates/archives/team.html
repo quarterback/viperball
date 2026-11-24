@@ -126,7 +126,7 @@
     <td><a href="/stats/archives/{{ archive_key }}/team/{{ team_name | urlencode }}/player/{{ p.name | urlencode }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
     <td>{{ p.archetype }}</td>
-    <td class="num {% if p.overall >= 90 %}stat-elite{% elif p.overall >= 80 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 70 %}stat-elite{% elif p.overall >= 55 %}stat-good{% endif %}">{{ p.overall }}</td>
     <td class="num">{{ p.speed }}</td>
     <td class="num">{{ p.power }}</td>
   </tr>

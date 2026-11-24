@@ -21,7 +21,7 @@ from engine.wvl_owner import (
     OWNER_ARCHETYPES, PRESIDENT_ARCHETYPES,
     ClubOwner, TeamPresident, InvestmentAllocation,
     generate_president_pool, apply_investment_boosts,
-    compute_season_revenue, compute_season_expenses, compute_financials,
+    compute_broadcast_revenue, compute_financials,
 )
 from engine.wvl_free_agency import (
     generate_synthetic_fa_pool, run_free_agency,
@@ -129,10 +129,10 @@ class TestOwnerMode:
         assert abs(inv.total - 1.0) < 0.01
 
     def test_season_revenue(self):
-        rev = compute_season_revenue(tier=1, wins=25, losses=9)
+        rev = compute_broadcast_revenue(tier=1)
         assert rev > 0
         # Tier 1 should generate more than Tier 4
-        rev4 = compute_season_revenue(tier=4, wins=10, losses=14)
+        rev4 = compute_broadcast_revenue(tier=4)
         assert rev > rev4
 
 
@@ -147,7 +147,7 @@ class TestFreeAgency:
         for fa in pool:
             assert fa.player_card.age is not None
             assert fa.player_card.pro_status == "free_agent"
-            assert 40 <= fa.player_card.overall <= 99
+            assert 10 <= fa.player_card.overall <= 96  # current rating scale
 
     def test_fa_attractiveness(self):
         score_t1 = compute_fa_attractiveness(tier=1, recent_wins=20, total_games=34, prestige=90)

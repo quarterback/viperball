@@ -40,6 +40,9 @@ class HSPlayer:
     kick_accuracy: int = 30
     lateral_skill: int = 30
     tackling: int = 30
+    work_rate: int = 0
+    # Ladder level of the college freshman she projects to (0 = unknown)
+    level: int = 0
     # Hidden scouting fields
     potential: int = 3
     development: str = "normal"
@@ -159,34 +162,19 @@ def _generate_hs_player(
 
     region = STATE_TO_REGION.get(state, 'midwest')
     first, last = _generate_recruit_name(region, rng)
-    lo, hi = HS_STAT_RANGES[year]
-
-    def _stat():
-        return rng.randint(lo, hi)
-
-    speed, stamina, agility = _stat(), _stat(), _stat()
-    power, awareness, hands = _stat(), _stat(), _stat()
-    kicking, kick_power, kick_accuracy = _stat(), _stat(), _stat()
-    lateral_skill, tackling = _stat(), _stat()
-
-    # Position boosts
-    if position in ("Viper", "Halfback", "Wingback", "Slotback"):
-        speed = min(70, speed + rng.randint(2, 5))
-        lateral_skill = min(70, lateral_skill + rng.randint(1, 4))
-    elif position in ("Offensive Line", "Defensive Line"):
-        tackling = min(70, tackling + rng.randint(2, 6))
-        power = min(70, power + rng.randint(2, 6))
-    elif position == "Zeroback":
-        awareness = min(70, awareness + rng.randint(2, 5))
-        kicking = min(70, kicking + rng.randint(2, 5))
-    elif position == "Keeper":
-        tackling = min(70, tackling + rng.randint(2, 5))
-        awareness = min(70, awareness + rng.randint(2, 4))
+    # Level from the league talent ladder: the college freshman she will
+    # become.  Younger players sit further below it (talent.HS_YEAR_GAP).
+    from engine.talent import COLLEGE_YEAR_MOD, HS_YEAR_GAP, roll_level, roll_stats, stars_for_level
+    level = roll_level(rng)
+    _s = roll_stats(level, position, rng,
+                    year_mod=COLLEGE_YEAR_MOD["Freshman"] - HS_YEAR_GAP.get(year, 2))
+    speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
+    power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
+    kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
+    lateral_skill, tackling = _s["lateral_skill"], _s["tackling"]
 
     # Stars and dev trait
-    star_vals = list(_STAR_DISTRIBUTION.keys())
-    star_wts = list(_STAR_DISTRIBUTION.values())
-    stars = rng.choices(star_vals, weights=star_wts, k=1)[0]
+    stars = stars_for_level(level)
     potential = rng.randint(max(1, stars - 1), min(5, stars + 1))
     dev_options, dev_weights = zip(*_DEV_BY_STARS[stars])
     dev = rng.choices(dev_options, weights=dev_weights, k=1)[0]
@@ -200,6 +188,7 @@ def _generate_hs_player(
         power=power, awareness=awareness, hands=hands,
         kicking=kicking, kick_power=kick_power, kick_accuracy=kick_accuracy,
         lateral_skill=lateral_skill, tackling=tackling,
+        work_rate=_s["work_rate"], level=level,
         potential=potential, development=dev,
         hometown=f"{school_name.split()[0]}, {state}",
         high_school=school_name, region=region, state=state,
@@ -313,10 +302,13 @@ def _hs_fast_sim(
     home_wp = 1.0 / (1.0 + math.exp(-diff / 10.0))
     home_wp = max(0.08, min(0.92, home_wp))
 
-    # Generate scores
-    base_pts = 22.0  # HS games score lower than college
-    home_pts = max(0, base_pts + (home_str - 50) * 0.5 + rng.gauss(0, 8))
-    away_pts = max(0, base_pts + (away_str - 50) * 0.5 + rng.gauss(0, 8))
+    # Scores fitted to the full engine on HS rosters (240 games): 47 points a
+    # team, 0.19 points per point of strength edge, spread 15.  The old model
+    # (22 points, spread 8) gave 16 points a team while the engine title games
+    # gave 49.
+    base_pts = 47.0
+    home_pts = max(0, base_pts + (home_str - away_str) * 0.19 + rng.gauss(0, 15))
+    away_pts = max(0, base_pts + (away_str - home_str) * 0.19 + rng.gauss(0, 15))
 
     # Snap to viperball scoring increments
     home_score = max(0, round(home_pts * 2) / 2)
@@ -364,6 +356,88 @@ def _hs_fast_sim(
     )
 
 
+# Title games run on the full game engine; earlier rounds and the regular
+# season (about 7,000 games a year) use the quick model above, which would
+# take about 17 minutes a dynasty offseason on the full engine.
+HS_ENGINE_ROUNDS = {"state_final", "regional", "national_round", "national_semi", "national_final"}
+
+_HS_OFFENSE_TO_ENGINE = {"triple_option": "ground_pound", "smashmouth": "ground_pound",
+                         "tempo": "lateral_spread"}
+_HS_DEFENSE_TO_ENGINE = {"zone": "drift", "man_press": "lockdown", "blitz_heavy": "blitz_pack"}
+
+
+def _hs_engine_team(team: HSTeam):
+    from engine.game_engine import Player, Team
+    players = []
+    for p in team.players:
+        players.append(Player(
+            number=p.number, name=p.name, position=p.position,
+            speed=p.speed, stamina=p.stamina, kicking=p.kicking,
+            lateral_skill=p.lateral_skill, tackling=p.tackling,
+            agility=p.agility, power=p.power, awareness=p.awareness, hands=p.hands,
+            kick_power=p.kick_power, kick_accuracy=p.kick_accuracy,
+            year=p.year, potential=p.potential, development=p.development,
+            work_rate=getattr(p, "work_rate", 0) or 0,
+        ))
+    n = max(1, len(players))
+    avg = lambda attr: int(round(sum(getattr(p, attr) for p in players) / n))
+    return Team(
+        name=team.name, abbreviation=team.school_name[:4].upper(), mascot=team.mascot,
+        players=players, avg_speed=avg("speed"), avg_stamina=avg("stamina"),
+        kicking_strength=avg("kicking"), lateral_proficiency=avg("lateral_skill"),
+        defensive_strength=avg("tackling"),
+        offense_style=_HS_OFFENSE_TO_ENGINE.get(team.offense_style, team.offense_style),
+        defense_style=_HS_DEFENSE_TO_ENGINE.get(team.defense_style, team.defense_style),
+        state=team.state, prestige=team.prestige,
+    )
+
+
+def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
+                    week: int = 0, playoff_round: str = "") -> HSGameResult:
+    """A title game on the full engine, with the same bookkeeping as the quick model."""
+    from engine.game_engine import ViperballEngine
+    result = ViperballEngine(_hs_engine_team(home), _hs_engine_team(away),
+                             seed=rng.randint(1, 1_000_000), is_playoff=True,
+                             officiating_level="high_school").simulate_game()
+    home_score = result["final_score"]["home"]["score"]
+    away_score = result["final_score"]["away"]["score"]
+    if home_score == away_score:  # overtime cap reached: decide on a final kick
+        if rng.random() < 0.5:
+            home_score += 5
+        else:
+            away_score += 5
+    for team, side in ((home, "home"), (away, "away")):
+        by_name = {ps.get("name"): ps for ps in result.get("player_stats", {}).get(side, [])}
+        for p in team.players:
+            p.season_games += 1
+            ps = by_name.get(p.name)
+            if not ps:
+                continue
+            p.season_yards += int(ps.get("yards", 0) or 0)
+            p.season_tds += int(ps.get("tds", 0) or 0)
+            p.season_tackles += int(ps.get("tackles", 0) or 0)
+            p.season_kicks_made += int(ps.get("dk_made", 0) or 0) + int(ps.get("pk_made", 0) or 0)
+    if home_score > away_score:
+        home.wins += 1
+        away.losses += 1
+    else:
+        away.wins += 1
+        home.losses += 1
+    home.points_for += home_score
+    home.points_against += away_score
+    away.points_for += away_score
+    away.points_against += home_score
+    return HSGameResult(home=home.name, away=away.name, home_score=home_score,
+                        away_score=away_score, week=week, playoff_round=playoff_round)
+
+
+def _hs_game(home: HSTeam, away: HSTeam, rng: random.Random,
+             week: int = 0, playoff_round: str = "") -> HSGameResult:
+    if playoff_round in HS_ENGINE_ROUNDS:
+        return _hs_engine_game(home, away, rng, week=week, playoff_round=playoff_round)
+    return _hs_fast_sim(home, away, rng, week=week, playoff_round=playoff_round)
+
+
 # ──────────────────────────────────────────────
 # SCHEDULE + SEASON SIM
 # ──────────────────────────────────────────────
@@ -408,7 +482,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
 
         for i, (h, a) in enumerate(pairs):
             ht, at = team_lookup[h], team_lookup[a]
-            result = _hs_fast_sim(ht, at, rng, week=week + i // (len(names) // 2))
+            result = _hs_game(ht, at, rng, week=week + i // (len(names) // 2))
             league.schedule.append(result)
 
     # ── 2. Conference championships (top 2 teams by wins) ──
@@ -419,7 +493,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         conf_teams.sort(key=lambda t: (-t.wins, -t.points_for))
         if len(conf_teams) >= 2:
             t1, t2 = conf_teams[0], conf_teams[1]
-            result = _hs_fast_sim(t1, t2, rng, week=week, playoff_round="conf_final")
+            result = _hs_game(t1, t2, rng, week=week, playoff_round="conf_final")
             league.schedule.append(result)
             champ = team_lookup[result.winner]
             champ.conf_champ = True
@@ -435,14 +509,14 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         state_teams.sort(key=lambda t: (-t.wins, -t.points_for))
         bracket = state_teams[:min(4, len(state_teams))]
         if len(bracket) >= 4:
-            r1 = _hs_fast_sim(bracket[0], bracket[3], rng, week=week, playoff_round="state_semi")
-            r2 = _hs_fast_sim(bracket[1], bracket[2], rng, week=week, playoff_round="state_semi")
+            r1 = _hs_game(bracket[0], bracket[3], rng, week=week, playoff_round="state_semi")
+            r2 = _hs_game(bracket[1], bracket[2], rng, week=week, playoff_round="state_semi")
             league.schedule.extend([r1, r2])
             f1, f2 = team_lookup[r1.winner], team_lookup[r2.winner]
-            final = _hs_fast_sim(f1, f2, rng, week=week + 1, playoff_round="state_final")
+            final = _hs_game(f1, f2, rng, week=week + 1, playoff_round="state_final")
             league.schedule.append(final)
         elif len(bracket) >= 2:
-            final = _hs_fast_sim(bracket[0], bracket[1], rng, week=week + 1, playoff_round="state_final")
+            final = _hs_game(bracket[0], bracket[1], rng, week=week + 1, playoff_round="state_final")
             league.schedule.append(final)
         else:
             continue
@@ -473,7 +547,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             next_round = []
             for i in range(0, len(regional_contenders) - 1, 2):
                 t1, t2 = regional_contenders[i], regional_contenders[i + 1]
-                result = _hs_fast_sim(t1, t2, rng, week=week, playoff_round="regional")
+                result = _hs_game(t1, t2, rng, week=week, playoff_round="regional")
                 league.schedule.append(result)
                 next_round.append(team_lookup[result.winner])
             if len(regional_contenders) % 2 == 1:
@@ -498,8 +572,9 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             next_round = []
             for i in range(0, len(national_contenders) - 1, 2):
                 t1, t2 = national_contenders[i], national_contenders[i + 1]
-                rd = "national_semi" if len(national_contenders) > 2 else "national_final"
-                result = _hs_fast_sim(t1, t2, rng, week=week, playoff_round=rd)
+                rd = ("national_final" if len(national_contenders) == 2 else
+                      "national_semi" if len(national_contenders) <= 4 else "national_round")
+                result = _hs_game(t1, t2, rng, week=week, playoff_round=rd)
                 league.schedule.append(result)
                 next_round.append(team_lookup[result.winner])
             if len(national_contenders) % 2 == 1:
@@ -539,8 +614,11 @@ def graduating_class_to_recruits(league: HSLeague):
             if team.state_champ:
                 perf_bonus += 1
 
-            # Base stars from potential, boosted by performance
-            stars = min(5, max(1, p.potential + (1 if perf_bonus >= 2 else 0)))
+            # Stars from her ladder level (older leagues without one fall
+            # back on potential), boosted by a big senior season.
+            from engine.talent import stars_for_level
+            base_stars = stars_for_level(p.level) if p.level else p.potential
+            stars = min(5, max(1, base_stars + (1 if perf_bonus >= 2 else 0)))
 
             recruit = Recruit(
                 recruit_id=rid,
@@ -564,6 +642,7 @@ def graduating_class_to_recruits(league: HSLeague):
                 true_kick_accuracy=p.kick_accuracy,
                 true_lateral_skill=p.lateral_skill,
                 true_tackling=p.tackling,
+                true_work_rate=p.work_rate,
                 true_potential=p.potential,
                 true_development=p.development,
             )
@@ -650,24 +729,25 @@ def _apply_hs_player_development(player: HSPlayer, rng: random.Random):
     dev = player.development
     year = player.year
 
-    # Base gain range by dev trait
+    # Base gain range by dev trait.  A normal player gains about 2 a year,
+    # the gap between high school classes in talent.HS_YEAR_GAP.
     if dev == "quick":
-        lo, hi = 1, 4
+        lo, hi = 1, 5
     elif dev == "late_bloomer":
-        lo, hi = (0, 1) if year in ("Sophomore", "Junior") else (2, 5)
+        lo, hi = (0, 2) if year in ("Sophomore", "Junior") else (2, 6)
     elif dev == "bust":
-        lo, hi = -2, 0
+        lo, hi = -2, 1
     elif dev == "slow":
-        lo, hi = 0, 1
+        lo, hi = 0, 2
     else:  # normal
-        lo, hi = 0, 3
+        lo, hi = 0, 4
 
     for attr in ("speed", "stamina", "agility", "power", "awareness",
                  "hands", "kicking", "kick_power", "kick_accuracy",
                  "lateral_skill", "tackling"):
         delta = rng.randint(lo, hi)
         old = getattr(player, attr)
-        setattr(player, attr, max(10, min(75, old + delta)))
+        setattr(player, attr, max(10, min(96, old + delta)))
 
 
 # ──────────────────────────────────────────────

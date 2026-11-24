@@ -174,6 +174,10 @@ _GAINS_BY_PROFILE = {
     },
 }
 
+# Multiplier on the positive end of every gain range (see the draw in
+# apply_offseason_development).
+DEV_GAIN_SCALE = 2.1
+
 # Physical decline in Senior/Graduate year (slight negative adjustment)
 _SENIOR_DECLINE_ATTRS = ["speed", "stamina", "agility"]
 _DECLINE_RANGE = (-2, 0)   # -2 to 0 points
@@ -253,8 +257,14 @@ def apply_offseason_development(
 
     for attr in attrs_to_develop:
         lo, hi = gains[attr]
-        scaled_hi = max(lo, int(hi * potential_scale * boost_scale))
-        delta = rng.randint(lo, scaled_hi)
+        # Gains are drawn as a fraction and rounded at random, so a small
+        # range still adds up over a career.  Rounding the top of the range
+        # down (the old int()) cut a normal player's growth to about half a
+        # point a year.  DEV_GAIN_SCALE matches four college years of growth
+        # to the class gaps in generated rosters (freshman to senior).
+        scaled_hi = max(float(lo), hi * potential_scale * boost_scale * DEV_GAIN_SCALE)
+        raw = rng.uniform(lo, scaled_hi) if scaled_hi > lo else float(lo)
+        delta = int(raw // 1) + (1 if rng.random() < raw - (raw // 1) else 0)
 
         # Apply gain
         old_val = getattr(card, attr)
@@ -453,13 +463,15 @@ _MENTAL_ATTRS = ["awareness", "hands", "lateral_skill"]
 _KICKING_ATTRS = ["kicking", "kick_power", "kick_accuracy", "tackling"]
 
 # Age brackets: (min_age, max_age) → (physical_delta_range, mental_delta_range, kicking_delta_range)
+# On the current rating scale (one old 60 to 100 point is two current
+# points), so each range is twice the old one.
 _PRO_AGE_CURVES = {
-    (18, 22): {"physical": (1, 4), "mental": (1, 3), "kicking": (0, 2)},     # Growth
-    (23, 25): {"physical": (0, 2), "mental": (1, 3), "kicking": (0, 2)},     # Peak early
-    (26, 28): {"physical": (-1, 1), "mental": (0, 2), "kicking": (0, 1)},    # Peak plateau
-    (29, 31): {"physical": (-3, -1), "mental": (-1, 1), "kicking": (-1, 0)}, # Decline
-    (32, 33): {"physical": (-5, -2), "mental": (-2, 0), "kicking": (-2, -1)},# Steep decline
-    (34, 99): {"physical": (-7, -3), "mental": (-3, -1), "kicking": (-3, -1)},# Sharp decline
+    (18, 22): {"physical": (2, 8), "mental": (2, 6), "kicking": (0, 4)},      # Growth
+    (23, 25): {"physical": (0, 4), "mental": (2, 6), "kicking": (0, 4)},      # Peak early
+    (26, 28): {"physical": (-2, 2), "mental": (0, 4), "kicking": (0, 2)},     # Peak plateau
+    (29, 31): {"physical": (-6, -2), "mental": (-2, 2), "kicking": (-2, 0)},  # Decline
+    (32, 33): {"physical": (-10, -4), "mental": (-4, 0), "kicking": (-4, -2)},# Steep decline
+    (34, 99): {"physical": (-14, -6), "mental": (-6, -2), "kicking": (-6, -2)},# Sharp decline
 }
 
 
@@ -493,7 +505,7 @@ def apply_pro_development(
         lo, hi = curve["physical"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(10, min(99, old_val + delta))
+        new_val = max(10, min(96, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val
@@ -502,7 +514,7 @@ def apply_pro_development(
         lo, hi = curve["mental"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(10, min(99, old_val + delta))
+        new_val = max(10, min(96, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val
@@ -511,7 +523,7 @@ def apply_pro_development(
         lo, hi = curve["kicking"]
         delta = rng.randint(lo, hi)
         old_val = getattr(card, attr)
-        new_val = max(10, min(99, old_val + delta))
+        new_val = max(10, min(96, old_val + delta))
         if new_val != old_val:
             setattr(card, attr, new_val)
             changes[attr] = new_val - old_val
@@ -520,10 +532,10 @@ def apply_pro_development(
         return None
 
     total_delta = sum(changes.values())
-    if total_delta >= 5:
+    if total_delta >= 10:
         event_type = "breakout"
         desc = f"Age {card.age}: strong growth ({total_delta:+d} total)"
-    elif total_delta <= -5:
+    elif total_delta <= -10:
         event_type = "decline"
         desc = f"Age {card.age}: significant decline ({total_delta:+d} total)"
     else:
@@ -547,14 +559,15 @@ def should_retire(card: PlayerCard, rng: Optional[random.Random] = None) -> bool
 
     if card.age >= 38:
         return True
-    if card.age >= 35 and card.overall < 55:
+    # Rating cuts on the current scale (old 55, 50 and 60).
+    if card.age >= 35 and card.overall < 10:
         return True
-    if card.age >= 34 and card.overall < 50:
+    if card.age >= 34 and card.overall < 5:
         return True
     # Chance-based retirement for older players
     if card.age >= 32:
         retire_chance = (card.age - 31) * 0.10  # 10% at 32, 20% at 33, etc.
-        if card.overall < 60:
+        if card.overall < 15:
             retire_chance += 0.15
         return rng.random() < retire_chance
     return False

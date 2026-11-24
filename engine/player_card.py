@@ -529,6 +529,7 @@ class PlayerCard:
     transfer_count: int = 0          # how many times this player has transferred
     loyalty: float = 0.5             # 0.0 = will transfer at any excuse, 1.0 = ride-or-die
     original_stars: int = 0          # star rating at recruitment (for bust/gem detection)
+    work_rate: int = 0               # 0 = derive from stamina (older saves)
 
     # ── Computed ──
     @property
@@ -639,6 +640,7 @@ class PlayerCard:
                 "kick_accuracy": self.kick_accuracy,
                 "lateral_skill": self.lateral_skill,
                 "tackling": self.tackling,
+                "work_rate": self.work_rate,
             },
             "potential": self.potential,
             "star_rating": self.star_rating,
@@ -702,6 +704,7 @@ class PlayerCard:
             kick_accuracy=ratings.get("kick_accuracy", 75),
             lateral_skill=ratings.get("lateral_skill", 75),
             tackling=ratings.get("tackling", 75),
+            work_rate=ratings.get("work_rate", 0),
             potential=d.get("potential", 3),
             development=d.get("development", "normal"),
             redshirt=d.get("redshirt", False),
@@ -777,6 +780,7 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
         gpa=getattr(player, "gpa", 3.0),
         sat_score=getattr(player, "sat_score", 1050),
         academic_risk=getattr(player, "academic_risk", "clear"),
+        work_rate=getattr(player, "work_rate", 0) or 0,
     )
 
 
@@ -812,6 +816,7 @@ def card_to_player(card: PlayerCard) -> "Player":
         redshirt=card.redshirt,
         redshirt_used=card.redshirt_used,
         archetype=card.archetype,
+        work_rate=getattr(card, "work_rate", 0) or 0,
     )
 
 

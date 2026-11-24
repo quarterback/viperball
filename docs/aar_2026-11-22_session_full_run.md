@@ -79,6 +79,32 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     human team. Trial merge with CCH-03 (#332) passes 168 tests.
     → `aar_2026-11-23_cch04_team_installation.md` on that branch.
 
+20. **Status check and next steps** (November 24). Rebased onto main after #334 to #360
+    landed from other agents. Fixed the stale work queue, the four broken root test scripts
+    and the transfer portal prestige map, which was never moved to the new rating scale and
+    put every program between 22 and 47. Measured touchdowns per team across ten merge
+    points: 3.32 after #323, about 2.6 now. → `aar_2026-11-24_status_and_next.md`
+
+21. **Rules, drift, sacks, ladder, fast sim** (November 24). RULES.md v2.0 checked against the
+    engine; defensive scheme tables centered (touchdowns back to about 3); rain penalty
+    doubling fixed; sacks 7% of kick passes; recruits, HS and portal players on the talent
+    ladder with development fixed; pro leagues, WVL and HS title games on the full engine.
+    → `aar_2026-11-24_rules_drift_sacks_ladder_fastsim.md`
+
+22. **Calls, no calls and missed calls; one rating scale** (November 24). Fouls can now be
+    called, let go or missed by class, crew and situation: accepted flags per team 14.4 to
+    8.4, about 3 missed calls a game. Every team file and pro system moved to the current
+    rating scale; the per game conversion is gone. → `aar_2026-11-24_officiating_and_rating_scale.md`
+
+23. **Fast sim removed, scoring floats, officiating levels** (November 24). The fast sim and
+    its options are gone (back history now plays real engine games); scoring targets
+    removed from the benchmark and README; college crews less accurate and more spread out
+    than pro crews. → `aar_2026-11-24_fast_sim_removed_scoring_floats_ref_levels.md`
+
+24. **High School section** (November 24). The HS league now has its own menu entry with
+    champions, the national bracket, state standings, team schedules and rosters.
+    → `aar_2026-11-24_high_school_section.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -123,12 +149,16 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 
 ## Open work
 
-1. Merge PR #323 and redeploy; click through college season, dynasty and stats site.
-2. Recruiting, development and the high school league still generate players the old way
-   (around one number); move them to the talent ladder.
-3. Pro leagues, WVL and the high school league still use the fast sim.
-4. The even program count rule is now met automatically (step 19 retires Coast Guard or
-   Merchant Marine); the scheduler itself still does not need an even count.
-5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.
-6. `test_season.py` loads a team file that no longer exists.
-7. The design work from step 1.
+Updated November 24 after step 23.
+
+1. A live Fly deploy and a click through of the stats site are still unverified.
+2. Done: recruiting, development, HS and portal players use the talent ladder.
+3. Done: the fast sim is deleted and back history plays engine games. The HS regular
+   season still uses a quick model.
+4. Done: odd program counts retire Coast Guard or Merchant Marine.
+5. Done: rulebooks rewritten and checked by tests.
+6. Done: the root test scripts run again.
+7. Done: scoring is no longer measured against targets.
+8. Done: sack rate about 7%.
+9. Done: accepted flags about 8 per team with no calls and missed calls (PEN-02).
+10. Done: every league on the current rating scale (PRO-01).

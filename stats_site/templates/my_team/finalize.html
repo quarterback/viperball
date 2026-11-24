@@ -110,7 +110,7 @@
   <tr>
     <td>{{ p.name }}</td>
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
-    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% elif p.overall < 50 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% elif p.overall < 20 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
     <td style="font-size:11px;">{{ p.year }}{% if p.year in ("Senior", "Graduate") %} <span style="color:var(--fg-dim);font-size:9px;">(grad)</span>{% endif %}</td>
     <td class="num {% if p.speed >= 85 %}stat-elite{% elif p.speed >= 70 %}stat-good{% elif p.speed < 50 %}stat-bad{% endif %}">{{ p.speed }}</td>

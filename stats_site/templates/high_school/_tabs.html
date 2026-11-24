@@ -1,0 +1,6 @@
+<div class="tabs">
+  <a href="/stats/high-school/" {% if tab == 'overview' %}class="active"{% endif %}>Overview</a>
+  {% if state_tab %}<a href="/stats/high-school/state/{{ state_tab.code }}" {% if tab == 'state' %}class="active"{% endif %}>{{ state_tab.name }}</a>{% endif %}
+  <a href="/stats/recruiting/hs-rankings">HS Rankings</a>
+  <a href="/stats/recruiting/">Recruiting</a>
+</div>
