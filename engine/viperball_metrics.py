@@ -223,23 +223,26 @@ def calculate_explosive_plays(plays: List[Dict], team: str) -> int:
 
 
 def calculate_to_margin(plays: List[Dict], team: str) -> int:
-    """Turnover Margin (TO+/-).
+    """Turnovers forced minus lost, attributed to the team at the snap.
 
-    Turnovers forced minus turnovers lost. Every fan knows this.
-    A fan says: "They were plus-3 in turnovers."
+    Kick-pass and lateral interceptions, including pick-sixes, count once.
+    Safeties are points, not turnovers in this measure.
     """
-    turnovers_lost = sum(
-        1 for p in plays
-        if p.get("possession") == team and p.get("result") in ["fumble", "turnover_on_downs"]
-    )
-
-    opponent_plays = [p for p in plays if p.get("possession") != team]
-    turnovers_forced = sum(
-        1 for p in opponent_plays
-        if p.get("result") in ["fumble", "turnover_on_downs", "safety"]
-    )
-
-    return turnovers_forced - turnovers_lost
+    results = {
+        "fumble", "turnover_on_downs", "kick_pass_intercepted",
+        "lateral_intercepted", "int_return_td",
+    }
+    lost = 0
+    forced = 0
+    for play in plays:
+        if play.get("result") not in results:
+            continue
+        offense = play.get("snap_possession") or play.get("possession")
+        if offense == team:
+            lost += 1
+        elif offense in ("home", "away"):
+            forced += 1
+    return forced - lost
 
 
 def calculate_avg_start(plays: List[Dict], team: str) -> float:
@@ -496,14 +499,17 @@ def calculate_defensive_impact(plays: List[Dict], drives: List[Dict],
         bonus_yards = game_stats.get("bonus_possession_yards", bonus_yards)
         bonus_conv_rate = round(bonus_scores / max(1, bonus_count) * 100, 1) if bonus_count else 0.0
 
-    bonus_pts = bonus_scores * 7  # rough estimate
+    # There is no independently scored 7-point bonus. Actual points are
+    # already credited to the TD, place-kick or snap-kick scoring event.
+    bonus_pts = 0
 
     # Turnovers forced (opponent plays that resulted in turnovers)
-    opponent_plays = [p for p in plays if p.get("possession") != team]
+    opponent_plays = [p for p in plays
+                      if (p.get("snap_possession") or p.get("possession")) != team]
     fumbles_forced = sum(1 for p in opponent_plays if p.get("result") == "fumble")
     tod_forced = sum(1 for p in opponent_plays if p.get("result") == "turnover_on_downs")
     ints_forced = sum(1 for p in opponent_plays
-                      if p.get("result") in ("kick_pass_intercepted", "lateral_intercepted"))
+                      if p.get("result") in ("kick_pass_intercepted", "lateral_intercepted", "int_return_td"))
     total_turnovers_forced = fumbles_forced + tod_forced + ints_forced
 
     # Defensive stops: opponent drives that did NOT score
