@@ -1,20 +1,45 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="bloomberg">
+<html lang="en" data-theme="viperball">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0a0a0a">
+<meta name="theme-color" content="#15171c">
 <title>{% block title %}Viperball Stats{% endblock %}</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap">
 <style>
-/* Bloomberg (default dark) */
-:root, [data-theme="bloomberg"] {
+/* Viperball (default, light). The dark Bloomberg look is kept as a theme. */
+:root, [data-theme="viperball"] {
+  --bg: #f4f5f7;
+  --bg-alt: #ffffff;
+  --fg: #262a31;
+  --fg-dim: #5c636e;
+  --fg-bright: #0f1115;
+  --accent: #c74400;
+  --accent-dim: #a33800;
+  --green: #12803a;
+  --red: #c42b2b;
+  --yellow: #8a6a00;
+  --blue: #1d5fd1;
+  --cyan: #0b7782;
+  --border: #dcdfe5;
+  --row-hover: #e9ebef;
+  --link: #0f1115;
+  --zebra: rgba(15, 17, 21, 0.035);
+  --bar-bg: #15171c;
+  --bar-fg: #e9eaee;
+  --bar-dim: #a3a8b2;
+  --brand: #ff6a00;
+}
+/* Bloomberg (the original dark look) */
+[data-theme="bloomberg"] {
   --bg: #0a0a0a;
   --bg-alt: #111;
   --fg: #c8c8c8;
-  --fg-dim: #666;
+  --fg-dim: #8f8f8f;
   --fg-bright: #eee;
   --accent: #ff6600;
   --accent-dim: #cc5200;
@@ -357,7 +382,7 @@ a:hover { text-decoration: underline; color: var(--fg-bright); }
   height: 100%;
   object-fit: cover;
   image-rendering: pixelated;
-  opacity: 0.07;
+  opacity: 0.05;
   filter: blur(1px);
 }
 .stadium-bg::after {
@@ -956,7 +981,7 @@ tbody tr.kb-highlight { background: var(--row-hover); outline: 1px solid var(--a
 .footer .kb-hint:hover { color: var(--accent); }
 
 /* Form elements — ensure visibility across all themes */
-select, input[type="text"], input[type="search"], textarea {
+select, input[type="text"], input[type="search"], input[type="number"], textarea {
   background: var(--bg-alt);
   color: var(--fg);
   border: 1px solid var(--border);
@@ -974,6 +999,17 @@ select option {
   background: var(--bg);
   color: var(--fg);
 }
+/* Run controls (season advance bar, setup forms) */
+.run-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.run-phase { color: var(--fg-bright); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin-right: 6px; }
+.btn-run { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; font-weight: bold; }
+.btn-run:hover { filter: brightness(1.1); }
+.setup-form { display: grid; gap: 18px; max-width: 760px; }
+.setup-form label { display: block; font-size: 11px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.setup-form .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.setup-form input[type="number"] { width: 100%; }
+.setup-form .hint { font-size: 11px; color: var(--fg-dim); margin-top: 4px; }
+.setup-form .choices { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; }
 button, input[type="submit"] {
   background: var(--bg-alt);
   color: var(--fg);
@@ -989,6 +1025,21 @@ button:hover, input[type="submit"]:hover {
   color: var(--fg-bright);
   border-color: var(--accent);
 }
+/* Pixel icons (stats_site/pixel_icons.py) */
+.px-icon { display: inline-block; vertical-align: -3px; flex: none; image-rendering: pixelated; }
+#main-nav a { display: inline-flex; align-items: center; gap: 7px; }
+#main-nav a .px-icon { vertical-align: 0; }
+button .px-icon, summary .px-icon, .btn-icon .px-icon { margin-right: 7px; }
+.empty-art { display: block; margin: 0 auto 10px; color: var(--fg-dim); }
+td .face { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; margin-right: 8px; }
+/* A <summary> that opens a small form looks like a button */
+summary.btn-run, summary.btn-small {
+  list-style: none; display: inline-block; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 2px;
+  padding: 6px 14px; font-family: var(--font-ui); font-size: 14px;
+}
+summary.btn-small { padding: 2px 10px; background: var(--bg-alt); }
+summary.btn-run::-webkit-details-marker, summary.btn-small::-webkit-details-marker { display: none; }
 
 /* Copy Table button */
 .copy-table-btn {
@@ -1084,6 +1135,76 @@ button:hover, input[type="submit"]:hover {
   /* Footer - minimal */
   .footer { border-top: 1px solid #ccc !important; color: #999 !important; }
 }
+
+/* ── 2026 type and layout layer ─────────────────────────────────────────
+   Proportional type for reading, a fixed-width face only for numbers, the
+   pixel face only for the wordmark and page titles. Applies to every theme. */
+@font-face { font-family: "Geist"; font-weight: 400; font-display: swap; src: url("/stats/static/fonts/geist-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 500; font-display: swap; src: url("/stats/static/fonts/geist-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 600; font-display: swap; src: url("/stats/static/fonts/geist-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 700; font-display: swap; src: url("/stats/static/fonts/geist-sans-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 400; font-display: swap; src: url("/stats/static/fonts/geist-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 500; font-display: swap; src: url("/stats/static/fonts/geist-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Departure Mono"; font-weight: 400; font-display: swap; src: url("/stats/static/fonts/DepartureMono-Regular.woff2") format("woff2"); }
+:root {
+  --font-ui: "General Sans", "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "Geist Mono", "SF Mono", ui-monospace, monospace;
+  --font-pixel: "Departure Mono", "Geist Mono", monospace;
+}
+body { font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+a { color: var(--link, var(--accent)); }
+a:hover { color: var(--accent); }
+td.num, .metric .value, .metric-card .metric-value { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+th.num { font-family: var(--font-ui); }
+.metric .label.stat-tip { display: inline; }
+
+/* Top bar: a dark strip in every theme, carrying the pixel wordmark */
+.topbar { background: var(--bar-bg, var(--bg-alt)); border-bottom: 0; padding: 10px 0; }
+.topbar .brand { font-family: var(--font-pixel); font-weight: 400; font-size: 22px; letter-spacing: 0; color: var(--brand, var(--accent)); }
+.topbar nav a { font-size: 14px; text-transform: none; letter-spacing: 0; padding: 4px 10px; color: var(--bar-dim, var(--fg-dim)); }
+.topbar nav a:hover { color: var(--bar-fg, var(--fg-bright)); background: transparent; }
+.topbar nav a.active { color: var(--bar-fg, var(--fg-bright)); background: transparent; box-shadow: inset 0 -3px 0 var(--brand, var(--accent)); }
+
+/* Headings: a real hierarchy, sentence case as written */
+.breadcrumb { border-bottom: 0; font-size: 13px; padding: 14px 0 0; }
+.page-header { border-bottom: 0; padding: 14px 0 8px; margin-bottom: 20px; }
+.page-header h1 { font-family: var(--font-pixel); font-weight: 400; font-size: 33px; line-height: 1.1; letter-spacing: 0; }
+.page-header .subtitle { font-size: 14px; margin-top: 6px; }
+h2 { font-size: 19px; font-weight: 600; text-transform: none; letter-spacing: 0; border-bottom: 0; padding: 0; margin: 32px 0 12px; }
+h3 { font-size: 15px; font-weight: 600; }
+
+/* Tables: zebra rows, no grid */
+table { font-size: 13px; }
+thead th { font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg-dim); border-bottom: 0; padding: 6px 10px; background: transparent; }
+tbody td { border-bottom: 0; padding: 7px 10px; }
+tbody tr:nth-child(even) { background: var(--zebra, transparent); }
+tbody tr:hover { background: var(--row-hover); }
+
+/* Tabs */
+.tabs { border-bottom: 0; gap: 4px; flex-wrap: wrap; margin-bottom: 20px; }
+.tabs a { font-size: 14px; text-transform: none; letter-spacing: 0; padding: 8px 10px; color: var(--fg-dim); border-bottom: 3px solid transparent; }
+.tabs a.active { color: var(--fg-bright); border-bottom-color: var(--accent); }
+
+/* Stat tiles become open figures */
+.metric, .metric-card { border: 0; background: transparent; padding: 4px 0; }
+.metric .label, .metric-card .metric-label { font-size: 13px; text-transform: none; letter-spacing: 0; }
+.metric .value, .metric-card .metric-value { font-size: 24px; font-weight: 500; }
+
+/* Controls */
+button, input[type="submit"] { font-family: var(--font-ui); font-size: 14px; }
+[data-theme="viperball"] .btn-run { color: #fff !important; }
+.run-phase { font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--fg-dim); }
+.setup-form label { font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--fg); font-weight: 500; }
+select, input[type="text"], input[type="search"], input[type="number"], textarea { font-family: var(--font-ui); font-size: 14px; }
+.tag { font-family: var(--font-ui); font-size: 11px; }
+.flash { margin: 14px 0 0; padding: 10px 14px; font-size: 14px; border-left: 4px solid; background: var(--bg-alt); }
+.flash-err { border-color: var(--red); color: var(--fg-bright); }
+.flash-ok { border-color: var(--green); color: var(--fg-bright); }
+.inline-form { display: inline; }
+.btn-small { font-size: 12px !important; padding: 2px 10px; }
+.control-panel { margin: 8px 0 24px; display: grid; gap: 12px; }
+.control-panel details > summary { cursor: pointer; font-weight: 600; font-size: 15px; color: var(--fg-bright); }
+.control-panel details[open] > summary { margin-bottom: 10px; }
 </style>
 <script>
 (function(){
@@ -1104,20 +1225,23 @@ button:hover, input[type="submit"]:hover {
     <a class="brand" href="/stats/">VIPERBALL</a>
     <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
     <nav id="main-nav">
-      <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
-      <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
-      <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
-      <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>WVL</a>
-      <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>International</a>
-      <a href="/stats/recruiting/" {% if section == 'recruiting' %}class="active"{% endif %}>Recruiting</a>
-      <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>Archives</a>
-      <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>Search</a>
-      <a href="/stats/my-team/" {% if section == 'my-team' %}class="active"{% endif %} style="color:var(--green);font-weight:bold;">My Team</a>
+      <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>{{ icon("home") }}<span>Home</span></a>
+      <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>{{ icon("ball") }}<span>College</span></a>
+      <a href="/stats/dynasty/" {% if section == 'dynasty' %}class="active"{% endif %}>{{ icon("crown") }}<span>Dynasty</span></a>
+      <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>{{ icon("trophy") }}<span>Pro</span></a>
+      <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>{{ icon("planet") }}<span>WVL</span></a>
+      <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>{{ icon("globe") }}<span>International</span></a>
+      <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>{{ icon("box") }}<span>Archives</span></a>
+      <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>{{ icon("search") }}<span>Search</span></a>
+      <a href="/stats/saves" {% if section == 'saves' %}class="active"{% endif %}>{{ icon("floppy") }}<span>Saves</span></a>
+      <a href="/stats/game-sim" {% if section == 'tools' %}class="active"{% endif %}>{{ icon("wrench") }}<span>Tools</span></a>
+      <a href="/stats/my-team/" {% if section == 'my-team' %}class="active"{% endif %} style="color:var(--green);font-weight:bold;">{{ icon("shield") }}<span>My Team</span></a>
     </nav>
     <div class="theme-switcher">
       <button class="theme-btn" onclick="document.querySelector('.theme-menu').classList.toggle('open')" aria-label="Change theme">Theme</button>
       <div class="theme-menu" id="theme-menu">
-        <button data-theme="bloomberg"><span class="theme-swatch" style="background:#ff6600"></span>Bloomberg</button>
+        <button data-theme="viperball"><span class="theme-swatch" style="background:#c74400"></span>Viperball</button>
+        <button data-theme="bloomberg"><span class="theme-swatch" style="background:#ff6600"></span>Bloomberg dark</button>
         <button data-theme="light"><span class="theme-swatch" style="background:#b45309"></span>Light</button>
         <button data-theme="jmbi"><span class="theme-swatch" style="background:#f9d25b"></span>jmbi</button>
         <button data-theme="navy-ivory"><span class="theme-swatch" style="background:#44b5b1"></span>Navy & Ivory</button>
@@ -1140,6 +1264,8 @@ button:hover, input[type="submit"]:hover {
 {% block breadcrumb %}{% endblock %}
 
 <div class="container wide">
+{% if request and request.query_params.get('err') %}<div class="flash flash-err" role="alert">{{ request.query_params.get('err') }}</div>{% endif %}
+{% if request and request.query_params.get('ok') %}<div class="flash flash-ok" role="status">{{ request.query_params.get('ok') }}</div>{% endif %}
 {% block content %}{% endblock %}
 </div>
 

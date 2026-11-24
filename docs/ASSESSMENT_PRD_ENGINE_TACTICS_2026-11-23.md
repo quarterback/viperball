@@ -6,6 +6,10 @@
 **Current implementation follow-up:** [CCH-03 #332](https://github.com/quarterback/viperball/pull/332) and [CCH-04 integrated #334](https://github.com/quarterback/viperball/pull/334) are **DONE/MERGED**. Original CCH-04 PR #333 was closed as superseded; prototype #329 closed unmerged. [Combined AAR](aar_2026-11-23_cch03_cch04_reconciliation.md), [174 tests + React build + benchmarks](https://github.com/quarterback/viperball/actions/runs/45284723882).
 **Reviewed implementation:** [PR #323](https://github.com/quarterback/viperball/pull/323) at head 3aedd95d59f5c44291d473e4fd30c7b50e69151b in the original assessment; it was unmerged **at the time**, and has since merged. See [stack reconciliation and VAL-02 AAR](aar_2026-11-23_merge_stack_and_val02.md) for the actual merge order.
 
+## UI surface change — November 24, 2026
+
+The React workbench at `/app` is retired ([PR #336](https://github.com/quarterback/viperball/pull/336)); `web/` is deleted and `/app/*` redirects to `/stats`. Every UI task in this queue (UI-01, DEL-03 and any "React" wording below) now targets the stats site: `stats_site/router.py` and `stats_site/templates/`. The CCH-04 installation panel moved to the stats team page. Engine work keeps the same contract: add result fields, and the stats templates read them from `full_result`.
+
 ## Active engine follow-up — November 23, 2026
 
 **Owner:** ChatGPT engine workstream, branch [engine/defensive-packages-pressure-events](https://github.com/quarterback/viperball/tree/engine/defensive-packages-pressure-events). Other agent owns the UI revamp (UI-01); coordinate through additive result fields and do not edit React layouts here. Tasks remain together unless the user delegates one.

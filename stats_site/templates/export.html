@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_controls.html" import action %}
+{% block title %}Export — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Export
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Export</h1>
+  <div class="subtitle">Standings and archives as JSON</div>
+{% set tool = "export" %}
+<div class="tabs">
+  <a href="/stats/game-sim" {% if tool == 'sim' %}class="active"{% endif %}>Game Sim</a>
+  <a href="/stats/compare" {% if tool == 'compare' %}class="active"{% endif %}>Compare Runs</a>
+  <a href="/stats/export" {% if tool == 'export' %}class="active"{% endif %}>Export</a>
+</div>
+</div>
+
+<h2>Running seasons</h2>
+{% if sessions %}
+<table>
+  <thead><tr><th>Season</th><th class="num">Games</th><th></th></tr></thead>
+  <tbody>
+  {% for s in sessions %}
+  <tr><td><a href="/stats/college/{{ s.session_id }}/">{{ s.name }}</a></td>
+    <td class="num">{{ s.games_played }}/{{ s.total_games }}</td>
+    <td style="text-align:right">
+      <a href="/stats/export/college/{{ s.session_id }}/standings.json" download>Standings JSON</a>
+      &nbsp;{{ action('/archives/college/' ~ s.session_id, 'Archive', '/stats/export', ok='Season archived') }}
+    </td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No seasons running.</div>
+{% endif %}
+
+<h2>Archives</h2>
+{% if archives %}
+<table>
+  <thead><tr><th>Archive</th><th class="num">Size</th><th></th></tr></thead>
+  <tbody>
+  {% for a in archives %}
+  <tr><td><a href="/stats/archives/{{ a.key }}/">{{ a.label }}</a></td>
+    <td class="num">{% if a.size %}{{ (a.size / 1024) | round | int }} KB{% endif %}</td>
+    <td style="text-align:right"><a href="/archives/{{ a.key | urlencode }}" download="{{ a.key }}.json">JSON</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No archives yet.</div>
+{% endif %}
+{% endblock %}

@@ -550,4 +550,49 @@
 
 </div>
 </div>
+
+{# Edit controls (replace the /app workbench's player editor) #}
+{% set po = player_obj %}
+<h2>Edit player</h2>
+<div class="control-panel">
+  <details>
+    <summary>Name, position and ratings</summary>
+    <form class="setup-form" method="post" action="/stats/do" style="max-width:900px">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/player/{{ team_name|urlencode }}/{{ po.name|urlencode }}">
+      <input type="hidden" name="_method" value="PATCH">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/player/{{ team_name|urlencode }}/{{ po.name|urlencode }}">
+      <input type="hidden" name="_next" value="/stats/college/{{ session_id }}/player/{{ team_name|urlencode }}/{fields_name}">
+      <input type="hidden" name="_ok" value="Player updated">
+      <div class="row">
+        <div><label>Name</label><input type="text" name="fields.name" value="{{ po.name }}"></div>
+        <div><label>Number</label><input type="number" name="fields.number:int" value="{{ po.number }}" min="0" max="99"></div>
+        <div><label>Position</label><select name="fields.position">{% for p in ['Viper','Zeroback','Halfback','Wingback','Slotback','Keeper','Offensive Line','Defensive Line'] %}<option {% if po.position == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+        <div><label>Class</label><select name="fields.year">{% for y in ['Freshman','Sophomore','Junior','Senior','Graduate'] %}<option {% if po.year == y %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+        <div><label>Potential</label><input type="number" name="fields.potential:int" value="{{ po.potential }}" min="1" max="5"></div>
+      </div>
+      <div class="row">
+        {% for k, lab in [('speed','Speed'),('power','Power'),('agility','Agility'),('hands','Hands'),('awareness','Awareness'),('stamina','Stamina'),('tackling','Tackling'),('kicking','Kicking'),('kick_power','Kick power'),('kick_accuracy','Kick accuracy'),('lateral_skill','Lateral')] %}<div><label>{{ lab }}</label><input type="number" name="fields.{{ k }}:int" value="{{ po[k] if po[k] is defined else '' }}" min="1" max="99"></div>{% endfor %}
+      </div>
+      <div class="row">
+        <div><label>Height</label><input type="text" name="fields.height" value="{{ po.height or '' }}"></div>
+        <div><label>Weight</label><input type="number" name="fields.weight:int" value="{{ po.weight or '' }}"></div>
+        <div><label>Hometown</label><input type="text" name="fields.hometown_city" value="{{ po.hometown_city or '' }}"></div>
+        <div><label>State</label><input type="text" name="fields.hometown_state" value="{{ po.hometown_state or '' }}"></div>
+      </div>
+      <div><button class="btn-run" type="submit">Save player</button></div>
+    </form>
+  </details>
+  <details>
+    <summary>Move to another team</summary>
+    <form method="post" action="/stats/do" style="margin-top:8px">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/player/move">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_ok" value="Moved {{ po.name }}">
+      <input type="hidden" name="player_name" value="{{ po.name }}">
+      <input type="hidden" name="from_team" value="{{ team_name }}">
+      <select name="to_team" aria-label="Destination team">{% for t in all_teams if t != team_name %}<option>{{ t }}</option>{% endfor %}</select>
+      <button class="btn-small" type="submit">Move</button>
+    </form>
+  </details>
+</div>
 {% endblock %}

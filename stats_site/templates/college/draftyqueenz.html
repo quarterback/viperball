@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_controls.html" import action %}
 {% block title %}DraftyQueenz — {{ season_name }} — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
@@ -34,6 +35,106 @@
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 
+{% set b = board %}
+{% set base = '/sessions/' ~ session_id ~ '/dq' %}
+{% set here = '/stats/college/' ~ session_id ~ '/draftyqueenz' %}
+<div class="run-bar">
+  <span class="run-phase">Bankroll DQ${{ '{:,.0f}'.format(b.bankroll) }}</span>
+  {% for w in b.to_settle %}{{ action(base ~ '/resolve/' ~ w, 'Settle week ' ~ w, here, ok='Week ' ~ w ~ ' settled', cls='btn-run') }}{% endfor %}
+  {% if b.week and not b.started %}{{ action(base ~ '/start-week/' ~ b.week, 'Open betting for week ' ~ b.week, here, cls='btn-run') }}{% endif %}
+  {% if not b.week %}<span>The season is over.</span>{% endif %}
+</div>
+
+{% if b.started %}
+<h2>Week {{ b.week }} board</h2>
+{% if b.contest.picks or b.contest.parlays %}
+<div class="table-scroll"><table>
+  <thead><tr><th>Your bet</th><th>Matchup</th><th class="num">Stake</th><th>Result</th></tr></thead>
+  <tbody>
+  {% set kinds = {'winner': 'Moneyline', 'spread': 'Spread', 'over_under': 'Total'} %}
+  {% for p in b.contest.picks %}<tr><td>{{ kinds.get(p.pick_type, p.pick_type) }}: {{ p.selection | capitalize if p.pick_type == 'over_under' else p.selection }}</td><td>{{ p.matchup }}</td><td class="num">{{ p.amount }}</td><td>{{ p.result or 'pending' }}</td></tr>{% endfor %}
+  {% for p in b.contest.parlays %}<tr><td>{{ p.legs | length }} leg parlay</td><td>{% for l in p.legs %}{{ l.selection }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td class="num">{{ p.amount }}</td><td>{{ p.result or 'pending' }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+{% if not b.resolved %}
+<form method="post" action="/stats/college/{{ session_id }}/dq/slip">
+  <input type="hidden" name="week" value="{{ b.week }}">
+  <div class="run-bar">
+    <label for="stake" class="run-phase">Stake</label>
+    <input type="number" id="stake" name="stake" value="500" min="1" style="width:110px">
+    <button class="btn-run" name="as" value="singles" type="submit">{{ icon("coin") }}Place as single bets</button>
+    <button class="btn-small" name="as" value="parlay" type="submit">{{ icon("card") }}Place as one parlay</button>
+  </div>
+  <div class="table-scroll" style="margin-top:10px"><table>
+    <thead><tr><th>Away</th><th class="num">ML</th><th>Home</th><th class="num">ML</th><th class="num">Home line</th><th class="num">Total</th><th>Bet</th></tr></thead>
+    <tbody>
+    {% for o in b.odds %}
+    {% set hs = o.spread %}
+    <tr>
+      <td>{% if o.away_ctx.rank %}<span style="color:var(--fg-dim)">{{ o.away_ctx.rank }}</span> {% endif %}{{ o.away_team }} <span style="color:var(--fg-dim)">{{ o.away_ctx.record }}</span></td>
+      <td class="num">{{ o.away_ml_display }}</td>
+      <td>{% if o.home_ctx.rank %}<span style="color:var(--fg-dim)">{{ o.home_ctx.rank }}</span> {% endif %}{{ o.home_team }} <span style="color:var(--fg-dim)">{{ o.home_ctx.record }}</span></td>
+      <td class="num">{{ o.home_ml_display }}</td>
+      <td class="num">{{ '%+.1f' | format(hs) }}</td>
+      <td class="num">{{ '%.1f' | format(o.over_under) }}</td>
+      <td><select style="width:100%;min-width:210px" name="bet_{{ o.game_idx }}" aria-label="Bet on {{ o.away_team }} at {{ o.home_team }}">
+        <option value="">No bet</option>
+        <option value="winner|{{ o.game_idx }}|{{ o.away_team }}">{{ o.away_team }} to win</option>
+        <option value="winner|{{ o.game_idx }}|{{ o.home_team }}">{{ o.home_team }} to win</option>
+        <option value="spread|{{ o.game_idx }}|{{ o.away_team }}">{{ o.away_team }} {{ '%+.1f' | format(-hs) }}</option>
+        <option value="spread|{{ o.game_idx }}|{{ o.home_team }}">{{ o.home_team }} {{ '%+.1f' | format(hs) }}</option>
+        <option value="over_under|{{ o.game_idx }}|over">Over {{ '%.1f' | format(o.over_under) }}</option>
+        <option value="over_under|{{ o.game_idx }}|under">Under {{ '%.1f' | format(o.over_under) }}</option>
+      </select></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</form>
+{% endif %}
+
+<h2>Week {{ b.week }} fantasy</h2>
+{% if not b.fantasy.entered %}
+<div class="run-bar">{{ action(base ~ '/fantasy/enter/' ~ b.week, 'Enter the fantasy contest (DQ$2,500)', here, cls='btn-run') }}</div>
+{% else %}
+{% set r = b.fantasy.roster %}
+<p>Salary used {{ '{:,}'.format(r.total_salary) }}, {{ '{:,}'.format(b.fantasy.salary_remaining) }} left{% if r.total_points %}, {{ r.total_points }} points{% endif %}.</p>
+<table>
+  <thead><tr><th>Slot</th><th>Player</th><th>Team</th><th class="num">Salary</th><th></th></tr></thead>
+  <tbody>
+  {% for slot, label in b.slots %}{% set e = r.entries.get(slot) %}
+  <tr><td>{{ label }}</td>
+    <td>{{ e.name if e else '' }}</td><td>{{ e.team if e else '' }}</td><td class="num">{{ '{:,}'.format(e.salary) if e else '' }}</td>
+    <td style="text-align:right">{% if e %}{{ action(base ~ '/fantasy/clear-slot/' ~ b.week ~ '/' ~ slot, 'Clear', here, method='DELETE') }}{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h3 style="margin-top:18px">Player pool</h3>
+<div class="tabs">
+  <a href="{{ here }}" {% if not b.pos %}class="active"{% endif %}>All</a>
+  {% for code, name in b.positions %}<a href="{{ here }}?pos={{ code }}" {% if b.pos == code %}class="active"{% endif %}>{{ name }}</a>{% endfor %}
+</div>
+<div class="table-scroll"><table>
+  <thead><tr><th>Player</th><th>Pos</th><th>Team</th><th>Depth</th><th class="num">OVR</th><th class="num">Salary</th><th class="num">Proj</th><th></th></tr></thead>
+  <tbody>
+  {% for p in b.pool %}
+  <tr><td>{{ p.name }}</td><td>{{ p.position }}</td><td>{{ p.team }}</td><td>{{ p.depth }}</td><td class="num">{{ p.overall }}</td><td class="num">{{ '{:,}'.format(p.salary) }}</td><td class="num">{{ p.projected }}</td>
+    <td><form class="inline-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="{{ base }}/fantasy/set-slot/{{ b.week }}">
+      <input type="hidden" name="_back" value="{{ here }}{% if b.pos %}?pos={{ b.pos }}{% endif %}">
+      <input type="hidden" name="player_tag" value="{{ p.tag }}">
+      <input type="hidden" name="team_name" value="{{ p.team }}">
+      <select name="slot" aria-label="Slot for {{ p.name }}">{% for slot, label in b.slots %}<option value="{{ slot }}">{{ label }}</option>{% endfor %}</select>
+      <button class="btn-small" type="submit">Add</button></form></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endif %}
+
+<h2>Season results</h2>
 <!-- Summary Cards -->
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:20px;margin-bottom:20px;">
   <div class="stat-card" style="min-width:140px;">

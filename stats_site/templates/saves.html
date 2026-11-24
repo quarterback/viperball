@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Saves — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Saves
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Saves</h1>
+  <div class="subtitle">{{ saves|length }} saved runs across every mode</div>
+  <div class="run-bar">
+    <a href="/stats/college/new"><button class="btn-run" type="button">{{ icon("ball") }}New season</button></a>
+    <a href="/stats/dynasty/new"><button type="button">{{ icon("crown") }}New dynasty</button></a>
+  </div>
+</div>
+
+{% if saves %}
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Name</th><th>Mode</th><th>Teams</th><th>Progress</th><th class="num">Seed</th><th>Tags</th><th>Last simmed</th><th></th></tr></thead>
+  <tbody>
+  {% for sv in saves %}
+  <tr>
+    <td style="white-space:normal">
+      <details>
+        <summary style="cursor:pointer;font-weight:600">{{ sv.name }}</summary>
+        <form method="post" action="/stats/do" style="display:grid;gap:6px;margin:8px 0;max-width:420px">
+          <input type="hidden" name="_path" value="/api/saves/{{ sv.id }}">
+          <input type="hidden" name="_method" value="PATCH">
+          <input type="hidden" name="_back" value="/stats/saves">
+          <input type="hidden" name="_ok" value="Saved">
+          <input type="text" name="name" value="{{ sv.name }}" aria-label="Name">
+          <input type="text" name="tags:csv" value="{{ sv.tags|join(', ') }}" placeholder="Tags, separated by commas" aria-label="Tags">
+          <textarea name="notes" rows="2" placeholder="Notes" aria-label="Notes">{{ sv.notes }}</textarea>
+          <div><button class="btn-small" type="submit">Save</button></div>
+        </form>
+      </details>
+      {% if sv.notes %}<div style="color:var(--fg-dim);font-size:13px">{{ sv.notes }}</div>{% endif %}
+    </td>
+    <td>{{ sv.mode|capitalize }}</td>
+    <td>{{ sv.teams }}</td>
+    <td>{{ sv.progress }}</td>
+    <td class="num">{{ sv.seed if sv.seed is not none else '' }}</td>
+    <td>{% for t in sv.tags %}<span class="tag">{{ t }}</span> {% endfor %}</td>
+    <td>{{ sv.lastSimmedAt[:16]|replace('T', ' ') }}</td>
+    <td style="white-space:nowrap">
+      {% if sv.type == 'season_archive' %}
+        <a href="/stats/archives/{{ sv.key }}/">Open</a>
+      {% elif sv.type == 'dynasty' %}
+        <form class="inline-form" method="post" action="/stats/do">
+          <input type="hidden" name="_pre" value="/sessions">
+          <input type="hidden" name="_path" value="/sessions/{session_id}/dynasty/load?save_key={{ sv.key|urlencode }}">
+          <input type="hidden" name="_next" value="/stats/dynasty/{session_id}/">
+          <input type="hidden" name="_back" value="/stats/saves">
+          <button class="btn-small" type="submit">Open</button>
+        </form>
+      {% elif sv.type == 'pro_league' %}
+        <a href="/stats/pro/">Open</a>
+      {% elif sv.type == 'wvl' %}
+        <a href="/stats/wvl/">Open</a>
+      {% else %}
+        <a href="/stats/college/">Open</a>
+      {% endif %}
+      <form class="inline-form" method="post" action="/stats/do">
+        <input type="hidden" name="_path" value="/api/saves/{{ sv.id }}/fork">
+        <input type="hidden" name="_back" value="/stats/saves">
+        <input type="hidden" name="_ok" value="Forked {{ sv.name }}">
+        <button class="btn-small" type="submit">Fork</button>
+      </form>
+      <form class="inline-form" method="post" action="/stats/do" onsubmit="return confirm('Delete {{ sv.name|e }}? This cannot be undone.')">
+        <input type="hidden" name="_path" value="/api/saves/{{ sv.id }}">
+        <input type="hidden" name="_method" value="DELETE">
+        <input type="hidden" name="_back" value="/stats/saves">
+        <input type="hidden" name="_ok" value="Deleted">
+        <button class="btn-small" type="submit">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p style="color:var(--fg-dim)">No saves yet. Start a season or a dynasty.</p>
+{% endif %}
+{% endblock %}

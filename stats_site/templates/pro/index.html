@@ -13,6 +13,15 @@
   <div class="subtitle">NVL, Eurasian League, AfroLeague, Pacific League, LigaAmerica</div>
 </div>
 
+<form class="run-bar" method="post" action="/stats/do">
+  <input type="hidden" name="_path" value="/api/pro/{league}/new">
+  <input type="hidden" name="_back" value="/stats/pro/">
+  <input type="hidden" name="_next" value="/stats/pro/{league}/{session_id}/">
+  <label for="league" class="run-phase">New league</label>
+  <select id="league" name="league">{% for k, name in leagues %}<option value="{{ k }}">{{ name }}</option>{% endfor %}</select>
+  <button class="btn-run" type="submit">Start</button>
+</form>
+
 {% if sessions %}
 <table>
   <thead>
@@ -28,7 +37,7 @@
     <td>{{ s.status.get('phase', '?') | replace('_', ' ') | title }}</td>
     <td class="num">{{ s.status.get('current_week', '?') }}</td>
     <td class="num">{{ s.status.get('team_count', '?') }}</td>
-    <td>{% if s.status.get('champion') %}<span class="stat-elite">{{ s.status.champion }}</span>{% else %}&mdash;{% endif %}</td>
+    <td>{% if s.status.get('champion') %}<span class="stat-elite">{{ s.status.champion_name or s.status.champion }}</span>{% else %}&mdash;{% endif %}</td>
     <td>
       <a href="/stats/pro/{{ league_id }}/{{ sess_id }}/">Standings</a> &middot;
       <a href="/stats/pro/{{ league_id }}/{{ sess_id }}/schedule">Schedule</a> &middot;
@@ -40,6 +49,6 @@
   </tbody>
 </table>
 {% else %}
-<div class="empty">No active pro leagues. Start one from the main app.</div>
+<div class="empty">{{ icon("trophy", 64, cls="empty-art") }}No pro leagues yet.</div>
 {% endif %}
 {% endblock %}

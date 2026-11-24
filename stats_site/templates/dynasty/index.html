@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dynasty — Viperball Stats{% endblock %}
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide"><a href="/stats/">Home</a><span class="sep">/</span>Dynasty</div></div>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dynasty</h1>
+  <div class="subtitle">Multi-year careers: play a season, run the offseason, advance a year</div>
+  <div class="run-bar"><a href="/stats/dynasty/new"><button class="btn-run" type="button">{{ icon("crown") }}New dynasty</button></a></div>
+</div>
+
+{% if active %}
+<h2>Open now</h2>
+<table>
+  <thead><tr><th>Dynasty</th><th>Team</th><th class="num">Year</th><th>Phase</th></tr></thead>
+  <tbody>
+  {% for d in active %}
+  <tr><td><a href="/stats/dynasty/{{ d.session_id }}/">{{ d.name }}</a></td><td>{{ d.team }}</td><td class="num">{{ d.year }}</td><td>{{ (d.phase or '')|replace('_', ' ') }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Saved</h2>
+{% if saved %}
+<table>
+  <thead><tr><th>Dynasty</th><th>Coach</th><th>Team</th><th class="num">Year</th><th class="num">Seasons</th><th></th></tr></thead>
+  <tbody>
+  {% for d in saved %}
+  <tr>
+    <td>{{ d.dynasty_name }}</td><td>{{ d.coach_name }}</td><td>{{ d.coach_team }}</td>
+    <td class="num">{{ d.current_year }}</td><td class="num">{{ d.seasons_played }}</td>
+    <td>
+      <form class="inline-form" method="post" action="/stats/do">
+        <input type="hidden" name="_pre" value="/sessions">
+        <input type="hidden" name="_path" value="/sessions/{session_id}/dynasty/load?save_key={{ d.save_key|urlencode }}">
+        <input type="hidden" name="_next" value="/stats/dynasty/{session_id}/">
+        <input type="hidden" name="_back" value="/stats/dynasty/">
+        <button class="btn-small" type="submit">Open</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:var(--fg-dim)">No saved dynasties yet.</p>
+{% endif %}
+{% endblock %}

@@ -15,14 +15,14 @@ router = APIRouter()
 # ─── Deprecated: /stats recruiting hub ───────────────────────────
 # This recruiting flow was only meant to be an editor but ended up recreating
 # a parallel, disconnected recruiting pool (changes here never landed on rosters
-# in the running game). Recruiting editing/assignment now lives in the app
-# (viperball.fly.dev/app — Dynasty → offseason), operating on the live session.
+# in the running game). Recruiting editing and assignment live on the dynasty
+# hub (/stats/dynasty/{sid}/), operating on the live session.
 # Registered before the routes below so it shadows the whole /recruiting/* tree.
 @router.api_route("/recruiting", methods=["GET", "POST"], include_in_schema=False)
 @router.api_route("/recruiting/", methods=["GET", "POST"], include_in_schema=False)
 @router.api_route("/recruiting/{rest:path}", methods=["GET", "POST"], include_in_schema=False)
 def _recruiting_deprecated(rest: str = ""):
-    return RedirectResponse("/app/dynasty", status_code=307)
+    return RedirectResponse("/stats/dynasty/", status_code=307)
 
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -125,6 +125,8 @@ def _flag_emoji(code: str) -> str:
     return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in iso2)
 
 templates.env.filters["flag"] = _flag_emoji
+from stats_site.pixel_icons import icon as _px_icon
+templates.env.globals["icon"] = _px_icon
 
 # ── Pixel-art face pool ──
 _FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
@@ -827,6 +829,450 @@ async def college_import_dynasty(request: Request):
     )
 
 
+# ── Generic action route ─────────────────────────────────────────────────
+# Every control that used to live in the /app React workbench posts here.
+# The form names the API endpoint it wants (_path, optional _method) and the
+# page to return to (_back). The body is built from the other fields:
+#   name            -> string
+#   name:int / :float / :bool / :json  -> typed value; name:csv -> list
+#   name[]          -> list (repeat the field)
+#   a.b             -> nested object {"a": {"b": ...}}
+# Blank typed fields are left out, so the API's own defaults apply.
+# _pre names an endpoint to POST first (e.g. "/sessions"); its JSON reply is
+# used to fill {placeholders} in _path and _next. The API stays the only place
+# any game rule lives; this route only translates a form into a request.
+
+_ACTION_PREFIXES = ("/sessions", "/api/", "/archives/")
+
+
+def _form_to_body(form):
+    import json as _json
+    body = {}
+    for key, raw in form.multi_items():
+        if key.startswith("_"):
+            continue
+        name, _, typ = key.partition(":")
+        is_list = name.endswith("[]")
+        if is_list:
+            name = name[:-2]
+        val = raw
+        if typ:
+            if raw == "":
+                continue
+            if typ == "int":
+                val = int(raw)
+            elif typ == "float":
+                val = float(raw)
+            elif typ == "bool":
+                val = str(raw).lower() in ("1", "true", "on", "yes")
+            elif typ == "json":
+                val = _json.loads(raw)
+            elif typ == "csv":
+                val = [x.strip() for x in raw.split(",") if x.strip()]
+        parts = name.split(".")
+        node = body
+        for part in parts[:-1]:
+            node = node.setdefault(part, {})
+        leaf = parts[-1]
+        if is_list:
+            if val != "":
+                node.setdefault(leaf, []).append(val)
+        else:
+            node[leaf] = val
+    return body
+
+
+async def _api_call(method, path, body=None):
+    import httpx
+    from api.main import app as api_app
+    transport = httpx.ASGITransport(app=api_app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://internal", timeout=None) as c:
+        kw = {"json": body} if (body is not None and method != "GET") else {}
+        r = await c.request(method, path, **kw)
+    try:
+        data = r.json()
+    except Exception:
+        data = {}
+    return r.status_code, data
+
+
+@router.post("/do")
+async def stats_do(request: Request):
+    from starlette.responses import RedirectResponse
+    from urllib.parse import quote
+    form = await request.form()
+    back = form.get("_back") or "/stats/"
+    method = (form.get("_method") or "POST").upper()
+    # Form values are available to _next as {field_name} (dots and type tags dropped).
+    fill = {k.split(':')[0].replace('.', '_'): v for k, v in form.items() if not k.startswith('_') and isinstance(v, str)}
+    pre = form.get("_pre")
+    if pre:
+        code, data = await _api_call("POST", pre, {})
+        if code >= 400:
+            msg = data.get("detail") if isinstance(data, dict) else None
+            return RedirectResponse(f"{back}{'&' if '?' in back else '?'}err={quote(str(msg or code))}", status_code=303)
+        if isinstance(data, dict):
+            fill.update({k: v for k, v in data.items() if isinstance(v, (str, int, float))})
+    path = (form.get("_path") or "").format(**fill)
+    if not path.startswith(_ACTION_PREFIXES):
+        raise HTTPException(400, "Unknown action")
+    body = _form_to_body(form)
+    code, data = await _api_call(method, path, body if body or method in ("POST", "PATCH", "PUT") else None)
+    if isinstance(data, dict):
+        fill.update({k: v for k, v in data.items() if isinstance(v, (str, int, float))})
+    if code >= 400:
+        msg = data.get("detail") if isinstance(data, dict) else None
+        if isinstance(msg, list):
+            msg = "; ".join(str(m.get("msg", m)) for m in msg)
+        target = back
+        return RedirectResponse(f"{target}{'&' if '?' in target else '?'}err={quote(str(msg or f'Error {code}'))}", status_code=303)
+    nxt = form.get("_next")
+    target = nxt.format(**{k: quote(str(v), safe='') for k, v in fill.items()}) if nxt else back
+    ok = form.get("_ok")
+    if ok:
+        target = f"{target}{'&' if '?' in target else '?'}ok={quote(ok)}"
+    return RedirectResponse(target, status_code=303)
+
+
+# ── Saves (replaces the workbench's Saves & Experiments page) ──────────────
+
+@router.get("/saves", response_class=HTMLResponse)
+def saves_page(request: Request):
+    from api.saves_api import list_all_saves
+    rows = []
+    for sv in list_all_saves():
+        d = sv.model_dump() if hasattr(sv, "model_dump") else dict(sv)
+        sep = d["id"].find("::")
+        d["type"], d["key"] = d["id"][:sep], d["id"][sep + 2:]
+        rows.append(d)
+    return templates.TemplateResponse("saves.html", _ctx(request, section="saves", saves=rows))
+
+
+# ── College season controls (replace the /app workbench's League hub) ──
+# These forms call the same API functions the React workbench called, then
+# send the browser back to the page it came from. No second implementation:
+# every rule about phases and request shapes stays in api/main.py.
+
+def _setup_data():
+    """Defaults every setup form needs: conference alignment, styles, archetypes."""
+    from api.main import conference_defaults, list_styles, program_archetypes
+    confs = conference_defaults()["conferences"]
+    teams = sorted({t for members in confs.values() for t in members})
+    return {
+        "conferences": confs,
+        "teams": teams,
+        "styles": list_styles(),
+        "archetypes": program_archetypes()["archetypes"],
+    }
+
+
+def _form_conferences(form):
+    """conf__<team> fields -> {conference: [teams]} (None if the form had none)."""
+    out = {}
+    for key, val in form.multi_items():
+        if key.startswith("conf__") and val:
+            out.setdefault(val, []).append(key[len("conf__"):])
+    return out or None
+
+
+def _form_int(form, key, default):
+    try:
+        return int(form.get(key) or default)
+    except (TypeError, ValueError):
+        return default
+
+
+@router.get("/college/new", response_class=HTMLResponse)
+def college_new_form(request: Request):
+    return templates.TemplateResponse("college/new.html", _ctx(
+        request, section="college", playoff_sizes=[4, 8, 12, 16, 24, 32], **_setup_data(),
+    ))
+
+
+@router.post("/college/new")
+async def college_new_submit(request: Request):
+    from starlette.responses import RedirectResponse
+    from urllib.parse import quote
+    from api.main import create_session, create_season_endpoint, CreateSeasonRequest
+    form = await request.form()
+    human, configs = [], {}
+    for i in range(4):
+        team = form.get(f"human_{i}")
+        if team and team not in human:
+            human.append(team)
+            configs[team] = {
+                "offense_style": form.get(f"h{i}_offense_style") or "balanced",
+                "defense_style": form.get(f"h{i}_defense_style") or "swarm",
+                "st_scheme": form.get(f"h{i}_st_scheme") or "aces",
+            }
+    confs = _form_conferences(form)
+    req = CreateSeasonRequest(
+        name=(form.get("name") or "2026 CVL Season").strip(),
+        playoff_size=_form_int(form, "playoff_size", 8),
+        bowl_count=_form_int(form, "bowl_count", 0),
+        ai_seed=_form_int(form, "ai_seed", 0),
+        history_years=_form_int(form, "history_years", 0),
+        human_teams=human,
+        human_configs=configs,
+        conferences=confs,
+        num_conferences=len(confs) if confs else 10,
+    )
+    sid = create_session()["session_id"]
+    try:
+        create_season_endpoint(sid, req)
+    except HTTPException as e:
+        return RedirectResponse(f"/stats/college/new?err={quote(str(e.detail))}", status_code=303)
+    return RedirectResponse(f"/stats/college/{sid}/", status_code=303)
+
+
+# ─── One-off game simulator, run comparison, export ──────────────────────────
+
+_ONEOFF_GAMES: dict = {}
+
+
+@router.get("/game-sim", response_class=HTMLResponse)
+def game_sim_page(request: Request):
+    from api.main import get_available_teams, WEATHER_CONDITIONS
+    teams = sorted(get_available_teams(), key=lambda t: t.get("name", ""))
+    weather = [(k, v.get("label", k)) for k, v in WEATHER_CONDITIONS.items()]
+    recent = [
+        {"id": gid, "home": g["home_team"], "away": g["away_team"],
+         "home_score": g["home_score"], "away_score": g["away_score"]}
+        for gid, g in reversed(list(_ONEOFF_GAMES.items()))
+    ]
+    return templates.TemplateResponse("game_sim.html", _ctx(
+        request, section="tools", teams=teams, weather=weather, recent=recent,
+    ))
+
+
+@router.post("/game-sim")
+async def game_sim_run(request: Request):
+    import uuid
+    from urllib.parse import quote
+    from starlette.responses import RedirectResponse
+    from api.main import simulate, SimulateRequest
+    form = await request.form()
+    home, away = form.get("home"), form.get("away")
+    if not home or not away or home == away:
+        return RedirectResponse("/stats/game-sim?err=" + quote("Pick two different teams"), status_code=303)
+    seed = _form_int(form, "seed", 0)
+    try:
+        res = await simulate(SimulateRequest(home=home, away=away, seed=seed or None,
+                                             weather=form.get("weather") or "clear"))
+    except HTTPException as e:
+        return RedirectResponse("/stats/game-sim?err=" + quote(str(e.detail)), status_code=303)
+    fs = res.get("final_score", {})
+    gid = uuid.uuid4().hex[:8]
+    _ONEOFF_GAMES[gid] = {
+        "week": 0, "completed": True,
+        "home_team": fs.get("home", {}).get("team", home),
+        "away_team": fs.get("away", {}).get("team", away),
+        "home_score": fs.get("home", {}).get("score"),
+        "away_score": fs.get("away", {}).get("score"),
+        "has_full_result": True, "full_result": res,
+    }
+    while len(_ONEOFF_GAMES) > 25:
+        _ONEOFF_GAMES.pop(next(iter(_ONEOFF_GAMES)))
+    return RedirectResponse(f"/stats/game-sim/{gid}", status_code=303)
+
+
+@router.get("/game-sim/{game_id}", response_class=HTMLResponse)
+def game_sim_result(request: Request, game_id: str):
+    game = _ONEOFF_GAMES.get(game_id)
+    if not game:
+        raise HTTPException(404, "That game is gone. Sim another one.")
+    fr = game["full_result"]
+    _normalize_box_score_stats(fr)
+    analysis_text = None
+    try:
+        from analyze_game import analyze_game_data
+        analysis_text = analyze_game_data(fr)
+    except Exception:
+        pass
+    return templates.TemplateResponse("college/game.html", _ctx(
+        request, section="tools", session_id="", oneoff=True,
+        game=game, week=0, game_idx=0, bowl_name=None, is_playoff=False,
+        analysis_text=analysis_text,
+        stadium_url=_stadium_url_for(game["home_team"]),
+        benchmarks=None,
+    ))
+
+
+@router.get("/compare", response_class=HTMLResponse)
+def compare_runs(request: Request):
+    api = _get_api()
+    sessions = _find_all_sessions()
+    picked = [sid for sid in request.query_params.getlist("run") if sid in api["sessions"]]
+    runs, rows = [], {}
+    for sid in picked:
+        season = api["require_season"](api["get_session"](sid))
+        runs.append({"sid": sid, "name": getattr(season, "name", sid[:6])})
+        for st in api["serialize_standings"](season):
+            team = st.get("team_name")
+            row = rows.setdefault(team, {"team": team, "conference": st.get("conference", ""), "runs": {}})
+            row["runs"][sid] = (st.get("wins", 0), st.get("losses", 0))
+    table = []
+    for row in rows.values():
+        wins = [w for w, _ in row["runs"].values()]
+        row["spread"] = (max(wins) - min(wins)) if len(wins) > 1 else 0
+        table.append(row)
+    table.sort(key=lambda r: (-r["spread"], r["team"]))
+    return templates.TemplateResponse("compare.html", _ctx(
+        request, section="tools", sessions=sessions, picked=picked, runs=runs, rows=table,
+    ))
+
+
+def _archive_rows():
+    list_fn, _ = _get_archives()
+    try:
+        return [{"key": r["save_key"], "label": r.get("label") or r["save_key"],
+                 "size": r.get("data_size")} for r in (list_fn() if list_fn else [])]
+    except Exception:
+        return []
+
+
+@router.get("/export", response_class=HTMLResponse)
+def export_page(request: Request):
+    return templates.TemplateResponse("export.html", _ctx(
+        request, section="tools", sessions=_find_all_sessions(), archives=_archive_rows(),
+    ))
+
+
+def _installation_for(season, team_name):
+    try:
+        from api.main import _team_installation_summary
+        return _team_installation_summary(season, team_name) or None
+    except Exception:
+        return None
+
+
+def _season_portal(session_id):
+    from api.main import season_portal_get
+    try:
+        data = season_portal_get(session_id)
+    except HTTPException:
+        return None
+    data["entries"] = sorted(data.get("entries", []), key=lambda e: -(e.get("overall") or 0))
+    return data
+
+
+# ── Dynasty (replaces the workbench's Dynasty pages) ───────────────────────
+
+@router.get("/dynasty/", response_class=HTMLResponse)
+async def dynasty_index(request: Request):
+    api = _get_api()
+    _, saved = await _api_call("GET", "/dynasties")
+    active = []
+    for sid, sess in api["sessions"].items():
+        d = sess.get("dynasty")
+        if d is not None:
+            active.append({"session_id": sid, "name": d.dynasty_name, "team": d.coach.team_name,
+                           "year": d.current_year, "phase": sess.get("phase")})
+    return templates.TemplateResponse("dynasty/index.html", _ctx(
+        request, section="dynasty", saved=(saved or {}).get("dynasties", []), active=active,
+    ))
+
+
+@router.get("/dynasty/new", response_class=HTMLResponse)
+def dynasty_new_form(request: Request):
+    return templates.TemplateResponse("dynasty/new.html", _ctx(
+        request, section="dynasty", playoff_sizes=[4, 8, 12, 16, 24, 32], **_setup_data(),
+    ))
+
+
+@router.post("/dynasty/new")
+async def dynasty_new_submit(request: Request):
+    from starlette.responses import RedirectResponse
+    from urllib.parse import quote
+    from api.main import create_session
+    form = await request.form()
+    confs = _form_conferences(form)
+    body = {
+        "dynasty_name": (form.get("dynasty_name") or "My Viperball Dynasty").strip(),
+        "coach_name": (form.get("coach_name") or "Coach").strip(),
+        "coach_team": form.get("coach_team"),
+        "starting_year": _form_int(form, "starting_year", 2026),
+        "program_archetype": form.get("program_archetype") or None,
+        "history_years": _form_int(form, "history_years", 0),
+        "games_per_team": _form_int(form, "games_per_team", 12),
+        "playoff_size": _form_int(form, "playoff_size", 8),
+        "bowl_count": _form_int(form, "bowl_count", 4),
+        "num_conferences": len(confs) if confs else 10,
+        "conferences": confs,
+    }
+    sid = create_session()["session_id"]
+    code, data = await _api_call("POST", f"/sessions/{sid}/dynasty", body)
+    if code >= 400:
+        return RedirectResponse(f"/stats/dynasty/new?err={quote(str(data.get('detail', code)))}", status_code=303)
+    return RedirectResponse(f"/stats/dynasty/{sid}/", status_code=303)
+
+
+@router.get("/dynasty/{session_id}/", response_class=HTMLResponse)
+async def dynasty_hub(request: Request, session_id: str):
+    code, status = await _api_call("GET", f"/sessions/{session_id}/dynasty/status")
+    if code >= 400:
+        raise HTTPException(404, "No dynasty in this session")
+    api = _get_api()
+    sess = api["sessions"].get(session_id, {})
+    ctx = {"session_id": session_id, "status": status, "phase": sess.get("phase")}
+    oc, off = await _api_call("GET", f"/sessions/{session_id}/offseason/status")
+    ctx["offseason"] = off if oc < 400 else None
+    season = sess.get("season")
+    if season is not None and not ctx["offseason"]:
+        ctx["season"] = {
+            "name": season.name,
+            "games_played": sum(1 for g in season.schedule if g.completed),
+            "total_games": len(season.schedule),
+            "champion": season.champion,
+        }
+    if ctx["offseason"]:
+        ph = ctx["offseason"]["phase"]
+        if ph == "nil":
+            _, ctx["nil"] = await _api_call("GET", f"/sessions/{session_id}/offseason/nil")
+        elif ph == "portal":
+            _, ctx["portal"] = await _api_call("GET", f"/sessions/{session_id}/offseason/portal")
+            if isinstance(ctx["portal"], dict):
+                ctx["portal"]["entries"] = sorted(ctx["portal"].get("entries", []),
+                                                  key=lambda e: -(e.get("overall") or 0))
+        elif ph == "recruiting":
+            _, ctx["recruiting"] = await _api_call("GET", f"/sessions/{session_id}/offseason/recruiting")
+    _, progs = await _api_call("GET", f"/sessions/{session_id}/dynasty/programs")
+    _, hist = await _api_call("GET", f"/sessions/{session_id}/dynasty/team-histories")
+    _, awards = await _api_call("GET", f"/sessions/{session_id}/dynasty/awards")
+    _, records = await _api_call("GET", f"/sessions/{session_id}/dynasty/record-book")
+    ctx["programs"] = progs or {}
+    ctx["histories"] = sorted((hist or {}).get("team_histories", {}).values(),
+                              key=lambda h: (-h.get("total_championships", 0), -h.get("win_percentage", 0)))
+    ctx["awards"] = sorted(((int(y), a) for y, a in (awards or {}).get("awards_history", {}).items()), reverse=True)
+    ctx["records"] = (records or {}).get("record_book", {})
+    from api.main import list_styles, program_archetypes
+    ctx["styles"] = list_styles()
+    ctx["archetypes"] = program_archetypes()["archetypes"]
+    ctx["view"] = request.query_params.get("view", "command")
+    return templates.TemplateResponse("dynasty/hub.html", _ctx(request, section="dynasty", **ctx))
+
+
+@router.post("/college/{session_id}/advance")
+async def college_advance(request: Request, session_id: str):
+    """One button, the right action for the phase: sim a week, sim the rest,
+    run the playoffs, run the bowls."""
+    from starlette.responses import RedirectResponse
+    import api.main as A
+    form = await request.form()
+    what = form.get("what", "week")
+    if what == "week":
+        await A.simulate_week(session_id, A.SimulateWeekRequest())
+    elif what == "rest":
+        await A.simulate_rest(session_id, A.SimulateRestRequest())
+    elif what == "playoffs":
+        await A.run_playoffs(session_id)
+    elif what == "bowls":
+        await A.run_bowls(session_id)
+    elif what == "skip_portal":
+        A.season_portal_skip(session_id)
+    return RedirectResponse(form.get("back") or f"/stats/college/{session_id}/", status_code=303)
+
+
 @router.get("/college/{session_id}/", response_class=HTMLResponse)
 def college_season(request: Request, session_id: str):
     api = _get_api()
@@ -884,6 +1330,8 @@ def college_season(request: Request, session_id: str):
         champion=season.champion,
         recent_games=recent_games,
         last_updated=last_updated,
+        phase=sess.get("phase"),
+        season_portal=_season_portal(session_id) if sess.get("phase") == "portal" else None,
     ))
 
 
@@ -1367,9 +1815,12 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
     # Build merged roster: player info + season stats, then sort
     sorted_roster = []
+    _pids = {p.name: getattr(p, "player_id", "") for p in team.players}
     for p_ser in players:
         ps = player_season_stats.get(p_ser["name"], {})
         entry = {**p_ser, **ps}
+        _pid = _pids.get(p_ser["name"])
+        entry["face_src"] = _face_url_for(_pid) if _pid else None
         entry.setdefault("games_played", 0)
         entry.setdefault("yards", 0)
         entry.setdefault("touches", 0)
@@ -1719,6 +2170,8 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         season_history=season_history,
         academics=academics,
         team_chemistry=team_chemistry,
+        installation=_installation_for(season, team_name),
+        phase=sess.get("phase"),
     ))
 
 
@@ -2336,6 +2789,7 @@ def college_player(request: Request, session_id: str, team_name: str, player_nam
         player_awards=player_awards, face_src=_face_src,
         stadium_url=_stadium_url_for(team_name),
         intl_data=intl_data,
+        player_obj=player, all_teams=sorted(season.teams.keys()),
     ))
 
 
@@ -3581,6 +4035,67 @@ def college_awards(request: Request, session_id: str):
 
 # ── DRAFTYQUEENZ ─────────────────────────────────────────────────────────
 
+_DQ_SLOTS = [("VP", "Viper"), ("BALL1", "Ball carrier 1"), ("BALL2", "Ball carrier 2"), ("KP", "Keeper"), ("FLEX", "Flex")]
+
+
+def _dq_board(session_id, sess, season, pos):
+    """This week's betting board and fantasy contest for the DQ page."""
+    from api.main import dq_get_odds, dq_get_roster, dq_fantasy_pool
+    mgr = sess.get("dq_manager")
+    open_weeks = sorted({g.week for g in season.schedule if not g.completed})
+    week = open_weeks[0] if open_weeks else None
+    contest = mgr.weekly_contests.get(week) if (mgr and week) else None
+    board = {"week": week, "started": contest is not None, "bankroll": mgr.bankroll.balance if mgr else 0,
+             "slots": _DQ_SLOTS, "pos": pos,
+             "to_settle": sorted(w for w, c in mgr.weekly_contests.items()
+                                 if not c.resolved and (week is None or w < week)) if mgr else []}
+    if contest is not None:
+        board["odds"] = dq_get_odds(session_id, week)["odds"]
+        board["contest"] = contest.to_dict()
+        board["resolved"] = contest.resolved
+        roster = dq_get_roster(session_id, week)
+        board["fantasy"] = roster
+        if roster.get("entered"):
+            pool = dq_fantasy_pool(session_id, week)
+            full = pool.get("pool", [])
+            board["positions"] = sorted({(p["position"], p["position_name"]) for p in full})
+            board["pool"] = sorted((p for p in full if not pos or p["position"] == pos),
+                                   key=lambda p: -(p.get("projected") or 0))[:80]
+            board["salary_cap"] = pool.get("salary_cap")
+    return board
+
+
+@router.post("/college/{session_id}/dq/slip")
+async def dq_slip(request: Request, session_id: str):
+    """Place every bet picked on the board, either as singles or as one parlay."""
+    from urllib.parse import quote
+    from starlette.responses import RedirectResponse
+    from api.main import dq_place_pick, dq_place_parlay, DQPickRequest, DQParlayRequest, DQParlayLeg
+    form = await request.form()
+    back = f"/stats/college/{session_id}/draftyqueenz"
+    week = _form_int(form, "week", 0)
+    stake = _form_int(form, "stake", 0)
+    picks = []
+    for k, v in form.multi_items():
+        if k.startswith("bet_") and v:
+            typ, idx, sel = v.split("|", 2)
+            picks.append((typ, int(idx), sel))
+    if not picks:
+        return RedirectResponse(back + "?err=" + quote("Pick at least one bet"), status_code=303)
+    try:
+        if form.get("as") == "parlay":
+            dq_place_parlay(session_id, week, DQParlayRequest(
+                legs=[DQParlayLeg(pick_type=t, game_idx=i, selection=s) for t, i, s in picks], amount=stake))
+            msg = f"{len(picks)} leg parlay placed"
+        else:
+            for t, i, sel in picks:
+                dq_place_pick(session_id, week, DQPickRequest(pick_type=t, game_idx=i, selection=sel, amount=stake))
+            msg = f"{len(picks)} bet{'s' if len(picks) != 1 else ''} placed"
+    except HTTPException as e:
+        return RedirectResponse(back + "?err=" + quote(str(e.detail)), status_code=303)
+    return RedirectResponse(back + "?ok=" + quote(msg), status_code=303)
+
+
 @router.get("/college/{session_id}/draftyqueenz", response_class=HTMLResponse)
 def college_draftyqueenz(request: Request, session_id: str):
     api = _get_api()
@@ -3620,6 +4135,7 @@ def college_draftyqueenz(request: Request, session_id: str):
                 total_lost += parlay.amount
 
     season = api["require_season"](sess)
+    board = _dq_board(session_id, sess, season, request.query_params.get("pos") or "")
 
     return templates.TemplateResponse("college/draftyqueenz.html", _ctx(
         request, section="college", session_id=session_id,
@@ -3630,6 +4146,7 @@ def college_draftyqueenz(request: Request, session_id: str):
         net=total_won - total_lost,
         has_dq=True,
         season_name=getattr(season, "name", "Season"),
+        board=board,
     ))
 
 
@@ -3733,8 +4250,10 @@ async def college_data_upload(request: Request, session_id: str):
 @router.get("/pro/", response_class=HTMLResponse)
 def pro_index(request: Request):
     sessions = _find_all_pro_sessions()
+    from engine.pro_league import ALL_LEAGUE_CONFIGS
+    leagues = [(k, c.league_name) for k, c in ALL_LEAGUE_CONFIGS.items()]
     return templates.TemplateResponse("pro/index.html", _ctx(
-        request, section="pro", sessions=sessions,
+        request, section="pro", sessions=sessions, leagues=leagues,
     ))
 
 
@@ -4123,6 +4642,7 @@ def pro_playoffs(request: Request, league: str, session_id: str):
         request, section="pro", league=league, session_id=session_id,
         bracket=bracket,
         champion=season.champion,
+        champion_name=season.teams[season.champion].name if season.champion in season.teams else None,
         phase=season.phase,
         league_name=season.config.league_name,
     ))
@@ -4396,9 +4916,14 @@ def intl_index(request: Request):
     if fiv_rankings:
         rankings_list = fiv_rankings.get_ranked_list()
 
+    try:
+        from engine.fiv import _load_all_nations
+        nations = sorted(((n.code, n.name) for n in _load_all_nations().values()), key=lambda x: x[1])
+    except Exception:
+        nations = []
     return templates.TemplateResponse("international/index.html", _ctx(
         request, section="international",
-        fiv_data=fiv_data, rankings=rankings_list,
+        fiv_data=fiv_data, rankings=rankings_list, nations=nations,
     ))
 
 

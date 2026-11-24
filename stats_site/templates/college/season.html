@@ -14,43 +14,65 @@
     {{ standings|length }} teams &middot; {{ games_played }}/{{ total_games }} games played &middot; Week {{ current_week }}/{{ total_weeks }}
     {% if champion %} &middot; <span class="stat-elite">Champion: {{ champion }}</span>{% endif %}
   </div>
-  {% if last_updated %}
-  <div style="font-size:11px;color:var(--fg-dim);margin-top:4px;">{{ last_updated }}</div>
+  {# Run controls: these replace the /app workbench's Sim Week / Sim Rest /
+     postseason buttons. One form, the action rides on the button pressed. #}
+  {% if dynasty and phase == 'complete' %}
+  <div class="run-bar"><a href="/stats/dynasty/{{ session_id }}/"><button class="btn-run" type="button">{{ icon("crown") }}Back to the dynasty</button></a></div>
+  {% endif %}
+  {% if phase and phase != 'complete' %}
+  <form class="run-bar" method="post" action="/stats/college/{{ session_id }}/advance">
+    <span class="run-phase">
+      {% if phase == 'regular' %}Week {{ current_week + 1 }} of {{ total_weeks }} next
+      {% elif phase == 'portal' %}Transfer portal is open
+      {% elif phase == 'bowls_pending' %}Regular season done. Bowls next
+      {% elif phase == 'playoffs_pending' %}Playoffs next
+      {% else %}{{ phase|replace('_', ' ') }}{% endif %}
+    </span>
+    {% if phase == 'regular' %}
+      <button class="btn-run" name="what" value="week">{{ icon("play") }}Sim week</button>
+      <button name="what" value="rest">{{ icon("forward") }}Sim rest of season</button>
+      {% if dynasty %}<a href="/stats/dynasty/{{ session_id }}/" style="margin-left:8px">Dynasty</a>{% endif %}
+    {% elif phase == 'portal' %}
+      <button class="btn-run" name="what" value="skip_portal">{{ icon("flag") }}Start the season</button>
+    {% elif phase == 'bowls_pending' %}
+      <button class="btn-run" name="what" value="bowls">{{ icon("bowl") }}Play bowls</button>
+    {% elif phase == 'playoffs_pending' %}
+      <button class="btn-run" name="what" value="playoffs">{{ icon("bracket") }}Play playoffs</button>
+    {% endif %}
+  </form>
+  {% endif %}
+  {% if season_portal %}
+  <div style="margin-top:16px">
+    <p>{{ season_portal.human_team }} can add {{ season_portal.transfers_remaining }} of {{ season_portal.transfer_cap }} transfers. {{ season_portal.available_count }} players available.</p>
+    {% if season_portal.committed %}<p>Signed: {% for e in season_portal.committed %}{{ e.player_name }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    <details>
+      <summary style="cursor:pointer;font-weight:600">Browse the portal</summary>
+      <div class="table-scroll" style="margin-top:8px"><table>
+        <thead><tr><th>Player</th><th>Pos</th><th class="num">OVR</th><th class="num">Pot</th><th>Year</th><th>From</th><th></th></tr></thead>
+        <tbody>
+        {% for e in season_portal.entries %}
+        <tr><td>{{ e.player_name }}</td><td>{{ e.position }}</td><td class="num">{{ e.overall }}</td><td class="num">{{ e.potential }}</td><td>{{ e.year }}</td><td>{{ e.origin_team }}</td>
+          <td><form class="inline-form" method="post" action="/stats/do">
+            <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/portal/commit">
+            <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/">
+            <input type="hidden" name="_ok" value="Signed {{ e.player_name }}">
+            <input type="hidden" name="team_name" value="{{ season_portal.human_team }}">
+            <input type="hidden" name="entry_index:int" value="{{ e.global_index }}">
+            <button class="btn-small" type="submit">Sign</button></form></td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </details>
+  </div>
   {% endif %}
   {% if champion %}
-  <div style="margin-top: 8px;">
-    <button onclick="archiveSeason()" id="archive-btn" style="background: var(--accent); color: var(--bg); border: 1px solid var(--accent); padding: 6px 16px; font-family: inherit; font-size: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Archive This Season</button>
-    <span id="archive-status" style="margin-left: 8px; font-size: 11px; color: var(--fg-dim);"></span>
-  </div>
-  <script>
-  async function archiveSeason() {
-    const btn = document.getElementById('archive-btn');
-    const status = document.getElementById('archive-status');
-    btn.disabled = true;
-    status.textContent = 'Archiving...';
-    try {
-      const resp = await fetch('/archives/college/{{ session_id }}', { method: 'POST' });
-      const data = await resp.json();
-      if (resp.ok) {
-        status.style.color = 'var(--green)';
-        status.textContent = 'Archived! View in Archives tab.';
-        btn.textContent = 'Archived';
-      } else {
-        status.style.color = 'var(--red)';
-        status.textContent = data.detail || 'Archive failed';
-        btn.disabled = false;
-      }
-    } catch (e) {
-      status.style.color = 'var(--red)';
-      status.textContent = 'Network error';
-      btn.disabled = false;
-    }
-  }
-  </script>
-  {% else %}
-  <div style="margin-top: 4px; font-size: 11px; color: var(--fg-dim);">
-    Complete the season (bowls &amp; championship) to unlock the archive button on this page.
-  </div>
+  <form method="post" action="/stats/do" style="margin-top:8px">
+    <input type="hidden" name="_path" value="/archives/college/{{ session_id }}">
+    <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/">
+    <input type="hidden" name="_next" value="/stats/archives/{archive_key}/">
+    <input type="hidden" name="_ok" value="Season archived">
+    <button class="btn-small" type="submit">{{ icon("box") }}Archive this season</button>
+  </form>
   {% endif %}
 </div>
 

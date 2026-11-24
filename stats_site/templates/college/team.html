@@ -440,6 +440,35 @@
 </div>
 {% endif %}
 
+{# ── Installation: what the program has learned of its coordinators' systems ── #}
+{% if installation and (installation.offense or installation.defense) %}
+{% macro inst_bar(label, v) %}
+<div class="inst-bar"><span>{{ label }}</span><span class="inst-track"><span style="width:{{ ((v or 0) * 100) | round | int }}%"></span></span><span class="inst-pct">{{ ((v or 0) * 100) | round | int }}%</span></div>
+{% endmacro %}
+<style>
+.inst-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 28px; }
+.inst-bar { display: grid; grid-template-columns: 1fr 140px 44px; gap: 10px; align-items: center; font-size: 14px; margin: 6px 0; }
+.inst-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.inst-track span { display: block; height: 100%; background: var(--accent); }
+.inst-pct { text-align: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.inst-note { font-size: 13px; color: var(--fg-dim); margin: 8px 0 12px; }
+</style>
+<h2>Installation</h2>
+<div class="inst-grid">
+{% for side, title in [('offense', 'Offense'), ('defense', 'Defense')] %}{% set u = installation[side] %}
+{% if u %}
+<div>
+  <h3>{{ title }}: {{ (u.family or '') | replace('_', ' ') | title }}{% if u.signature %}, {{ u.signature | replace('_', ' ') | title }}{% endif %}</h3>
+  {{ inst_bar("Knows the coordinator's system", u.familiarity) }}
+  {{ inst_bar("Knows the base book", u.family_familiarity) }}
+  <p class="inst-note">{{ u.seasons_together }} season{{ '' if u.seasons_together == 1 else 's' }} together. The coordinator's tendencies show at {{ ((u.execution_factor or 0) * 100) | round | int }}% strength.{% if u.vestigial %} Old habits: {% for v in u.vestigial %}{{ v.signature | replace('_', ' ') | title }} ({{ ((v.weight or 0) * 100) | round | int }}%){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}</p>
+  {% if u.packages %}{% for pk in u.packages %}{{ inst_bar(pk.name, pk.familiarity) }}{% endfor %}{% else %}<p class="inst-note">No packages installed.</p>{% endif %}
+</div>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+
 {# ── Academic Profile ── #}
 {% if academics and academics.median_gpa %}
 <div>
@@ -679,7 +708,7 @@
   {% for p in sorted_roster %}
   <tr>
     <td class="num">{{ p.number }}</td>
-    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td>{% if p.face_src %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
     <td>{{ p.year_abbr }}</td>
     <td class="num">{{ p.games_played }}</td>
@@ -711,4 +740,53 @@
 </table>
 </div>
 
+
+{# Edit controls (replace the /app workbench's team editing) #}
+<h2>Edit team</h2>
+<div class="control-panel">
+  <details>
+    <summary>Name and details</summary>
+    <form method="post" action="/stats/do" style="margin:8px 0">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/team/{{ team_name|urlencode }}/rename">
+      <input type="hidden" name="_method" value="PATCH">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_next" value="/stats/college/{{ session_id }}/team/{new_name}">
+      <label for="new_name" style="display:block;font-size:13px;font-weight:500;margin-bottom:4px">Name</label>
+      <input type="text" id="new_name" name="new_name" value="{{ team_name }}">
+      <button class="btn-small" type="submit">Rename</button>
+    </form>
+    <form class="setup-form" method="post" action="/stats/do">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/team/{{ team_name|urlencode }}/meta">
+      <input type="hidden" name="_method" value="PATCH">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_ok" value="Team updated">
+      <div class="row">
+        <div><label>City</label><input type="text" name="city" value="{{ team.city if team.city is defined and team.city else '' }}"></div>
+        <div><label>State</label><input type="text" name="state" value="{{ team.state if team.state is defined and team.state else '' }}"></div>
+        <div><label>Mascot</label><input type="text" name="mascot" value="{{ team.mascot if team.mascot is defined and team.mascot else '' }}"></div>
+        <div><label>Prestige</label><input type="number" name="prestige:int" value="{{ prestige or (team.prestige if team.prestige is defined else '') }}" min="1" max="99"></div>
+      </div>
+      <div><button class="btn-small" type="submit">Save details</button></div>
+    </form>
+  </details>
+  <details>
+    <summary>Add a player</summary>
+    <form class="setup-form" method="post" action="/stats/do" style="max-width:900px;margin-top:8px">
+      <input type="hidden" name="_path" value="/sessions/{{ session_id }}/season/player/add">
+      <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/team/{{ team_name|urlencode }}">
+      <input type="hidden" name="_ok" value="Player added">
+      <input type="hidden" name="team" value="{{ team_name }}">
+      <div class="row">
+        <div><label>Name</label><input type="text" name="name" required></div>
+        <div><label>Position</label><select name="position">{% for p in ['Viper','Zeroback','Halfback','Wingback','Slotback','Keeper','Offensive Line','Defensive Line'] %}<option>{{ p }}</option>{% endfor %}</select></div>
+        <div><label>Number</label><input type="number" name="attributes.number:int" min="0" max="99" placeholder="Next free"></div>
+        <div><label>Class</label><select name="attributes.year">{% for y in ['Freshman','Sophomore','Junior','Senior','Graduate'] %}<option>{{ y }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row">
+        {% for k, lab in [('speed','Speed'),('power','Power'),('agility','Agility'),('hands','Hands'),('awareness','Awareness'),('stamina','Stamina'),('tackling','Tackling'),('kicking','Kicking'),('kick_power','Kick power'),('kick_accuracy','Kick accuracy'),('lateral_skill','Lateral')] %}<div><label>{{ lab }}</label><input type="number" name="attributes.{{ k }}:int" value="70" min="1" max="99"></div>{% endfor %}
+      </div>
+      <div><button class="btn-run" type="submit">Add player</button></div>
+    </form>
+  </details>
+</div>
 {% endblock %}

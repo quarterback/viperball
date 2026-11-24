@@ -11,6 +11,7 @@
 <div class="page-header">
   <h1>COLLEGE VIPERBALL (CVL)</h1>
   <div class="subtitle">Active college seasons and dynasty modes</div>
+  <div class="run-bar"><a href="/stats/college/new"><button class="btn-run" type="button">{{ icon("ball") }}New season</button></a></div>
 </div>
 
 {% if sessions %}
@@ -46,7 +47,7 @@
   </tbody>
 </table>
 {% else %}
-<div class="empty">No active college seasons. Start one from the main app or import a dynasty save below.</div>
+<div class="empty">{{ icon("ball", 64, cls="empty-art") }}No seasons yet. Start one above or import a dynasty save below.</div>
 {% endif %}
 
 <div class="card" style="padding: 20px; margin-top: 24px;">

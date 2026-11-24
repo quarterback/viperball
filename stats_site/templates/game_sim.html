@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Game Sim — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Game Sim
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Game Sim</h1>
+  <div class="subtitle">One game between any two teams, each on its default styles</div>
+{% set tool = "sim" %}
+<div class="tabs">
+  <a href="/stats/game-sim" {% if tool == 'sim' %}class="active"{% endif %}>Game Sim</a>
+  <a href="/stats/compare" {% if tool == 'compare' %}class="active"{% endif %}>Compare Runs</a>
+  <a href="/stats/export" {% if tool == 'export' %}class="active"{% endif %}>Export</a>
+</div>
+</div>
+
+<form class="setup-form" method="post" action="/stats/game-sim" style="max-width:760px">
+  <div class="row">
+    <div><label for="away">Away</label>
+      <select id="away" name="away" required><option value="">Pick a team</option>{% for t in teams %}<option value="{{ t.key }}">{{ t.name }}</option>{% endfor %}</select></div>
+    <div><label for="home">Home</label>
+      <select id="home" name="home" required><option value="">Pick a team</option>{% for t in teams %}<option value="{{ t.key }}">{{ t.name }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="row">
+    <div><label for="weather">Weather</label>
+      <select id="weather" name="weather">{% for k, label in weather %}<option value="{{ k }}" {% if k == 'clear' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div><label for="seed">Seed</label>
+      <input type="number" id="seed" name="seed" min="0" placeholder="Random"></div>
+  </div>
+  <div><button class="btn-run" type="submit">{{ icon("dice") }}Play the game</button></div>
+</form>
+
+{% if recent %}
+<h2>Recent games</h2>
+<table>
+  <thead><tr><th>Away</th><th class="num">Score</th><th>Home</th><th class="num">Score</th><th></th></tr></thead>
+  <tbody>
+  {% for g in recent %}
+  <tr><td>{{ g.away }}</td><td class="num">{{ g.away_score }}</td><td>{{ g.home }}</td><td class="num">{{ g.home_score }}</td>
+    <td><a href="/stats/game-sim/{{ g.id }}">Box score</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

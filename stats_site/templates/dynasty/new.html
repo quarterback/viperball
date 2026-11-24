@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_controls.html" import conference_editor %}
+{% block title %}New dynasty — Viperball Stats{% endblock %}
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide"><a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/dynasty/">Dynasty</a><span class="sep">/</span>New</div></div>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>New dynasty</h1>
+  <div class="subtitle">{{ teams|length }} programs in {{ conferences|length }} conferences</div>
+</div>
+<form class="setup-form" style="max-width:1100px" method="post" action="/stats/dynasty/new">
+  <div class="row">
+    <div><label for="dynasty_name">Dynasty name</label><input type="text" id="dynasty_name" name="dynasty_name" value="My Viperball Dynasty" style="width:100%"></div>
+    <div><label for="coach_name">Coach name</label><input type="text" id="coach_name" name="coach_name" value="Coach" style="width:100%"></div>
+  </div>
+  <div class="row">
+    <div>
+      <label for="coach_team">Your program</label>
+      <select id="coach_team" name="coach_team" required style="width:100%">
+        <option value="">Pick a program</option>
+        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div><label for="starting_year">Starting year</label><input type="number" id="starting_year" name="starting_year" value="2026"></div>
+  </div>
+  <div>
+    <label>Program archetype</label>
+    <div style="display:grid;gap:6px">
+      {% for k, a in archetypes.items() %}
+      <label style="display:flex;gap:8px;align-items:baseline;text-transform:none;font-size:14px;color:var(--fg);font-weight:400">
+        <input type="radio" name="program_archetype" value="{{ k }}" {% if k == 'regional_power' or (loop.first and 'regional_power' not in archetypes) %}checked{% endif %}>
+        <span><strong>{{ a.label }}</strong> <span style="color:var(--fg-dim)">{{ a.description }}</span></span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="row">
+    <div><label for="games_per_team">Games per team</label><input type="number" id="games_per_team" name="games_per_team" value="12" min="4" max="20"></div>
+    <div>
+      <label for="playoff_size">Playoff teams</label>
+      <select id="playoff_size" name="playoff_size">{% for n in playoff_sizes %}<option value="{{ n }}" {% if n == 8 %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+    </div>
+    <div><label for="bowl_count">Bowl games</label><input type="number" id="bowl_count" name="bowl_count" value="4" min="0" max="16"></div>
+    <div><label for="history_years">Years of history</label><input type="number" id="history_years" name="history_years" value="0" min="0" max="100"></div>
+  </div>
+  {{ conference_editor(conferences) }}
+  <div><button class="btn-run" type="submit">Create dynasty</button></div>
+</form>
+{% endblock %}
