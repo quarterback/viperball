@@ -30,12 +30,7 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -q '^scripts/benchmark_rare_tactics.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: integrated-defense
-          path: reports/integrated-defense/
-; then
+          if [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq scripts/benchmark_rare_tactics.py; then
             python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense
           else
             python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense
