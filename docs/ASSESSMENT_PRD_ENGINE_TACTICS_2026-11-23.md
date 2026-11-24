@@ -12,15 +12,17 @@ The React workbench at `/app` is retired ([PR #336](https://github.com/quarterba
 
 ## Active engine follow-up — November 23, 2026
 
-**Owner:** ChatGPT engine workstream, branch [engine/defensive-packages-pressure-events](https://github.com/quarterback/viperball/tree/engine/defensive-packages-pressure-events). Other agent owns the UI revamp (UI-01); coordinate through additive result fields and do not edit React layouts here. Tasks remain together unless the user delegates one.
+**Owner:** ChatGPT engine workstream, branch [engine/defensive-packages-pressure-events](https://github.com/quarterback/viperball/tree/engine/defensive-packages-pressure-events). UI migration #336 and engine integration #337 are merged. Remaining presentation work targets the stats site and consumes additive game-result fields. Tasks remain together unless the user delegates one.
 
 | Sequence | Task | Status | Acceptance evidence |
 |---|---|---|---|
-| 1 | CCH-05: defensive package execution | ACTIVE | Existing eligible installed packages influence the single pre-snap DC call; familiarity and roster fit limit effects; matched games show call frequency, benefits and costs by situation. |
-| 2 | DEF-07: pressure/hurry instrumentation | QUEUED | Record resolved pressure separately from blitz calls and sacks; measure rates by tactic, roster and scheme. |
-| 3 | CCH-06: situational events | QUEUED | Record first snap of drive, preceding turnover/score and relevant fatigue; verify eligible package activation in actual games. |
-| 4 | Combined calibration | QUEUED | Matched games and dynasty seasons quantify tactical differentiation, balance, turnover and persistence. |
+| 1 | CCH-05: defensive package execution | MERGED; calibration open | Existing eligible installed packages influence the single pre-snap DC call; familiarity and roster fit limit effects; matched games show call frequency, benefits and costs by situation. |
+| 2 | DEF-07: pressure/hurry instrumentation | MERGED; physical rusher count open | Record resolved pressure separately from blitz calls and sacks; measure rates by tactic, roster and scheme. |
+| 3 | CCH-06: situational events | MERGED | Record first snap of drive, preceding turnover/score and relevant fatigue; verify eligible package activation in actual games. |
+| 4 | Combined calibration | FIRST 400-GAME STUDY COMPLETE; dynasty and wider matchup study open | Matched games and dynasty seasons quantify tactical differentiation, balance, turnover and persistence. |
 | 5 | Deployment/dynasty smoke | NONBLOCKING | Verify deployed game and staff turnover; can run alongside calibration. |
+
+**Integration evidence:** [PR #336](https://github.com/quarterback/viperball/pull/336) merged before [PR #337](https://github.com/quarterback/viperball/pull/337). Existing 174-test suite and corrected 400-game study passed. See [integrated AAR](aar_2026-11-23_defensive_packages_pressure_events.md). Package triggers work, but the first matched study does not establish tactical effectiveness. Do not mark calibration, full dynasty smoke or live deployment verified.
 
 **Validation policy for this workstream (user decision):** Use existing smoke paths and focused outcome benchmarks. Do not create a new unit-test suite or CI workflow for each PR. Add regression tests only for actual bugs or critical invariants. Run the full existing suite at integration milestones. Report seeds, sample sizes, denominators, effects and limitations in one evolving AAR. Prefer intermediate commits on one branch over separate PRs. No claims of implemented mechanics or validation until observed.
 
@@ -74,7 +76,7 @@ The parallel implementation specification is
 | DEF-04 | P1 | PARTIAL (merged #323) | Eleven-player defensive roles/rotations implemented in part; snap and mechanism audit still open |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
 | DEF-06 | P1 | DONE ([merged #326](https://github.com/quarterback/viperball/pull/326)) | 2,048 full-matrix and 1,024 weather games; [conditional results](aar_2026-11-23_def06_full_defense_matrix.md), no blanket balance target |
-| DEF-07 | P1 | OPEN | Measure defensive rush/pressure events, not just sacks, especially Blitz Pack |
+| DEF-07 | P1 | PARTIAL / MERGED | Pressure, hurry and sack outcomes recorded; physical rusher counts and wider calibration remain |
 | WEA-01 | P2 | INVESTIGATE | Isolate rain-related turnovers, fatigue and explosive gains; no scoring increase established |
 | DEL-01 | P1 | OPEN | Counterfactual Delta Yards analysis, including comeback impact |
 | DEL-02 | P1 | OPEN | Consolidate conflicting delta, kill, and points-per-drive definitions |
@@ -82,7 +84,7 @@ The parallel implementation specification is
 | ROST-01 | P1 | PARTIAL (merged #323) | Continue talent/work-rate ladder through recruiting, transfers and HS careers |
 | ROST-02 | P1 | PARTIAL (merged #328) | Game roles now assigned after final scheme overrides; remaining style-specific role scoring and scheme/roster consistency audit open |
 | FAT-01 | P1 | PARTIAL (merged #323) | Work rate and line rotations landed; coach-sensitive depth/season validation still open |
-| UI-01 | P1 | OPEN | Complete React game report and team tactical statistics |
+| UI-01 | P1 | PARTIAL | Stats-site migration merged; expose remaining game report and team tactical statistics |
 | SIM-01 | P1 | OPEN | Audit fast-sim dependencies beyond college mode |
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
 | VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
@@ -145,7 +147,7 @@ P0 means correctness/integrity; P1 means core game consequence; P2 means present
 
 **Accept when:** the scheme's claimed strengths and concessions show up in the relevant *conditional* data (for example, Lockdown should limit a suitable kick-pass attack while paying a run-defense cost). Avoid choosing victory rate alone as the success measure.
 
-### DEF-07 — Record actual defensive pressure and its tradeoffs (P1, OPEN)
+### DEF-07 — Record actual defensive pressure and its tradeoffs (P1, PARTIAL / MERGED)
 
 **Evidence:** The full [DEF-06 assessment](aar_2026-11-23_def06_full_defense_matrix.md)
 measured no reliably greater sack count for Blitz Pack compared with Swarm
@@ -234,7 +236,7 @@ rosters, without an imposed target scoring level.
 
 **Accept when:** coaches with different rotation profiles make different choices under the same game conditions; good bench depth matters; unit snap/energy totals reconcile; season persistence and save/load pass tests.
 
-### UI-01 — Restore the actual game's information in React (P1, OPEN)
+### UI-01 — Restore the actual game's information on the stats site (P1, PARTIAL)
 
 **Evidence:** web/src/pages/league/GameBoxScore.tsx at the reviewed PR #323 head shows a final score, four basic team-stat rows (total yards, touchdowns, turnovers, fumbles lost), and a basic player table. It does not expose full play-by-play, drive summaries, defensive scheme impact, scores by channel, Delta Yards, bonus possessions, bells, or halftime adjustments, despite much of that existing in engine result payloads and stats_site templates. The other agent's Nov 22 session AAR records further UI debt: stock Mantine appearance, unused team colors, thin Compare Runs, weak command-palette search and mobile navigation. Those were findings, **not implemented UI features**.
 
