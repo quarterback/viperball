@@ -131,11 +131,16 @@ PYTHONHASHSEED=0 python -m pytest tests/ -q
 PYTHONHASHSEED=0 python scripts/benchmark_boxscore_reconciliation.py --games 8 --seed 20261124
 ```
 
-The targeted scoring/box-score gate is **PASSED**. The broader
-coaching/defense matched-game workflows remain independently tracked
-by GitHub Actions; they must complete before final merge. No
-post-merge deployment or backfill of the historical UALR/Lehigh
-event log has been verified.
+The targeted scoring/box-score gate is **PASSED**. All five
+existing workflows passed on the corrected engine commit
+[`3943c72`](https://github.com/quarterback/viperball/commit/3943c72ea576ff6f109de5627d5656cb7d30c034):
+CCH-03/CCH-04 integration, CCH-02 coach decisions, CCH-03
+defensive decisions, defensive tactics regression, and integrated
+engine calibration. **Merged into `main` via
+[PR #351](https://github.com/quarterback/viperball/pull/351),
+merge commit [`b00257e`](https://github.com/quarterback/viperball/commit/b00257e706150c22e7164999b2563bc1a84406fb).**
+No live deployment or historical UALR/Lehigh event-log backfill has
+been verified.
 
 ## Outside this PR
 
