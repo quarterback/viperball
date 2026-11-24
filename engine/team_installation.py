@@ -326,15 +326,21 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
     if not staff:
         return None
     rec = ensure_installation(installations.get(team_name), team_name)
+    # Reassess eligibility when the actual roster crosses a personnel threshold.
+    # Keep learned packages that still fit; do not reset the coordinator.
+    from engine.playbook_catalog import roster_tags
+    current_fit = sorted(roster_tags(team_stats)) if team_stats else None
     team_stats = team_stats or {}
     if rec is None:
         rec = new_installation(team_name, staff, offense_family, defense_family, year)
         for side, key in (("offense", "oc"), ("defense", "dc")):
             rec[side]["mentors"] = sorted(_mentors(staff.get(key)))
             _choose_packages(side, rec[side], staff.get(key), team_stats, year)
+        rec["roster_fit_tags"] = current_fit
         installations[team_name] = rec
         return rec
 
+    fit_changed = current_fit is not None and current_fit != rec.get("roster_fit_tags")
     prev_ids = list(rec.get("staff_ids", []))
     for side, key, family in (("offense", "oc", offense_family), ("defense", "dc", defense_family)):
         unit = rec[side]
@@ -366,8 +372,10 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
                 unit["bias"] = _offense_bias(card)
                 unit["vestigial"] = [v for v in unit.get("vestigial", []) if v.get("coach_id") != new_id]
             changed = True
-        if changed or not unit.get("packages"):
+        if changed or fit_changed or not unit.get("packages"):
             _choose_packages(side, unit, card, team_stats, year)
+    if current_fit is not None:
+        rec["roster_fit_tags"] = current_fit
     rec["staff_ids"] = sorted(_coach_id(c) for c in staff.values() if _coach_id(c))
     return rec
 
