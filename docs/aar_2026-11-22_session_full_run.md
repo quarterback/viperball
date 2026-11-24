@@ -105,6 +105,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     champions, the national bracket, state standings, team schedules and rosters.
     → `aar_2026-11-24_high_school_section.md`
 
+25. **Merged the open PRs** (November 24). #367, #363, #364, #365, #366, #368, #369, #370 and
+    #361 merged into main; #362 closed because #367 already carried it.
+    → `aar_2026-11-24_merge_open_prs.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
