@@ -989,6 +989,12 @@ class Dynasty:
                     for player in team.players:
                         card = card_map.get(player.name)
                         if card:
+                            # The app rebuilds its offseason cards from these players.
+                            # Copy developed ratings back before that round trip.
+                            for attr in ("speed", "stamina", "agility", "power",
+                                         "awareness", "hands", "kicking", "kick_power",
+                                         "kick_accuracy", "lateral_skill", "tackling"):
+                                setattr(player, attr, getattr(card, attr))
                             player.year = card.year
                             player.redshirt = card.redshirt
                             player.redshirt_used = card.redshirt_used
