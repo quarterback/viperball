@@ -10,6 +10,8 @@
 
 The React workbench at `/app` is retired ([PR #336](https://github.com/quarterback/viperball/pull/336)); `web/` is deleted and `/app/*` redirects to `/stats`. Every UI task in this queue (UI-01, DEL-03 and any "React" wording below) now targets the stats site: `stats_site/router.py` and `stats_site/templates/`. The CCH-04 installation panel moved to the stats team page. Engine work keeps the same contract: add result fields, and the stats templates read them from `full_result`.
 
+**Stats-site finding for the engine workstream (Nov 24):** in a fresh three-week season the pass rush credits nearly every lead hurry and sack to one player per team (Alabama DL26: 28 hurries, 27 sacks, all other rushers zero). The lead `rusher` on each rush event appears to always be the best rusher. See AAR_2026-11-24_game_plans_report.md.
+
 ## Active engine follow-up — November 23, 2026
 
 **Owner:** ChatGPT engine workstream, branch [engine/defensive-packages-pressure-events](https://github.com/quarterback/viperball/tree/engine/defensive-packages-pressure-events). UI migration #336 and engine integration #337 are merged. Remaining presentation work targets the stats site and consumes additive game-result fields. Tasks remain together unless the user delegates one.
@@ -86,7 +88,7 @@ The parallel implementation specification is
 | ROST-01 | P1 | PARTIAL (merged #323) | Continue talent/work-rate ladder through recruiting, transfers and HS careers |
 | ROST-02 | P1 | PARTIAL (merged #328) | Game roles now assigned after final scheme overrides; remaining style-specific role scoring and scheme/roster consistency audit open |
 | FAT-01 | P1 | PARTIAL (merged #323) | Work rate and line rotations landed; coach-sensitive depth/season validation still open |
-| UI-01 | P1 | PARTIAL | Stats-site migration merged; expose remaining game report and team tactical statistics |
+| UI-01 | P1 | PARTIAL | Stats-site migration merged; box score Game Plans and team Tactics sections shipped (see AAR_2026-11-24_game_plans_report.md); score by channel/period, kick attempts by kind, bells and halftime adjustments remain |
 | SIM-01 | P1 | OPEN | Audit fast-sim dependencies beyond college mode |
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
 | VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
