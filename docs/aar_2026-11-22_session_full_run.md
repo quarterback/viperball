@@ -109,6 +109,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     #361 merged into main; #362 closed because #367 already carried it.
     → `aar_2026-11-24_merge_open_prs.md`
 
+26. **Weather model task** (November 24). Audited the weather code and wrote WEA-02, a fuller
+    weather model, into the queue; logged SCALE-01 for raw rating checks still on the old
+    scale. → `WEA-02_weather_model.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
