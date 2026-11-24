@@ -14,9 +14,6 @@
     {{ standings|length }} teams &middot; {{ games_played }}/{{ total_games }} games played &middot; Week {{ current_week }}/{{ total_weeks }}
     {% if champion %} &middot; <span class="stat-elite">Champion: {{ champion }}</span>{% endif %}
   </div>
-  {% if last_updated %}
-  <div style="font-size:11px;color:var(--fg-dim);margin-top:4px;">{{ last_updated }}</div>
-  {% endif %}
   {# Run controls: these replace the /app workbench's Sim Week / Sim Rest /
      postseason buttons. One form, the action rides on the button pressed. #}
   {% if phase and phase != 'complete' %}

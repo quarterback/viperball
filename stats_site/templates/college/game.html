@@ -159,7 +159,7 @@
   {% set tip = desc ~ (' League median: ' ~ b.med ~ ', top 25%: ' ~ b.p75 ~ ', top 10%: ' ~ b.p90 if b else '') %}
   <div class="metric">
     <div class="label stat-tip" data-tip="{{ tip }}">{{ label }}</div>
-    <div class="value" style="font-size:11px;">
+    <div class="value" style="font-size:17px;">
       {% if src == 'ts' %}
         {% set av = as_.get(key) %}
         {% set hv = hs.get(key) %}
@@ -184,7 +184,7 @@
   ] %}
   <div class="metric">
     <div class="label stat-tip" data-tip="{{ desc }}">{{ label }}</div>
-    <div class="value" style="font-size:11px;">
+    <div class="value" style="font-size:17px;">
       {% set av = am.get(key) %}
       {% set hv = hm.get(key) %}
       <span class="{% if av is not none and key == 'to_margin' and av > 0 %}stat-good{% elif av is not none and key == 'to_margin' and av < 0 %}stat-bad{% endif %}">{{ (fmt|format(av) ~ suffix) if av is not none else '—' }}</span>
