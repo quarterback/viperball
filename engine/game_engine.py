@@ -15615,7 +15615,7 @@ class ViperballEngine:
                         "touchdowns": 0, "touchdown_rate": 0.0,
                         "kicks": 0, "kick_rate": 0.0,
                         "drop_kicks": 0, "place_kicks": 0,
-                        "points_vs_start_ep": 0.0,
+                        "points_vs_start_ep": 0.0, "starting_ep_per_drive": 0.0,
                     }
                 total_yards = sum(d.get("yards", 0) for d in drives)
                 # Score incidence, kick incidence and point value are
@@ -15651,6 +15651,7 @@ class ViperballEngine:
                     # Compared with the existing fixed starting-position
                     # EP table. It is not an empirical replacement baseline.
                     "points_vs_start_ep": round(points - ep_baseline, 2),
+                    "starting_ep_per_drive": round(ep_baseline / count, 2),
                 }
 
             pk_stats = _bucket_stats(pk_drives)
