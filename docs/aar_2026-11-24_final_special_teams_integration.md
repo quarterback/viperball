@@ -1,7 +1,7 @@
 # AAR: Final special-teams integration, ST-01/ST-02 and STI-VAL
 
 **Date:** November 24, 2026
-**Status:** Final reconciliation in review.
+**Status:** MERGED — [PR #356](https://github.com/quarterback/viperball/pull/356), merge `95556facc1f0b432f8e05dc1c587c46c0712d69b`.
 **Primary implementation:** [PR #354](https://github.com/quarterback/viperball/pull/354), merged after PEN-01, INJ-01, spot errors, return fouls and BOX-01/Delta accounting.
 **Earlier competing implementation:** [PR #349](https://github.com/quarterback/viperball/pull/349), superseded by #354 plus this reconciliation; do not merge its old engine wholesale.
 
@@ -40,7 +40,25 @@ The #354 AAR reports 400 independent games with roughly stable punt calls (2.24 
 
 ### Current milestone
 
-Await the CI result for the final integration branch, capture exact seed, game counts, counts of blocked-kick bells and errors, and append verified outcomes. Do not merge if a scoreboard, possession, kick attempt or player-credit invariant fails.
+Complete: final integration and CI passed; merged via #356.
+
+## Final integration results
+
+The final regression run [45471108920](https://github.com/quarterback/viperball/actions/runs/45471108920) completed successfully on the final branch head `8e2ee7d`, including 181 Python tests, the existing BOX-01 reconciliation, matched rush/Delta checks, a 205-team full national-season simulation, and the STI-VAL 600-game benchmark. All five triggered workflows were green.
+
+STI-VAL used seed `20261124`: 5 schemes × 2 weather conditions × 3 coordinator profiles × 20 games = **600 full games, 30 study cells, zero failed accounting invariants**. All scored-event ledgers and tested kick/return player-vs-team totals reconciled.
+
+Across 200 games for each coordinator profile (five schemes, clear and rain):
+
+| Coordinator | Home punts | Home snap kicks | Home kick blocks | Home fakes | Punt returns / yards credited to home | Mean home points |
+|---|---:|---:|---:|---:|---:|---:|
+| Neutral | 324 | 1,108 | 54 | 4 | 160 / 1,769 | 71.790 |
+| Territory | 329 | 1,088 | 54 | 4 | 164 / 1,568 | 70.648 |
+| Attack | 309 | 1,108 | 56 | 8 | 170 / 2,250 | 70.865 |
+
+The attack profile increased return yards and fake attempts, and territory yielded somewhat more punts and fewer snap kicks. Return touchdowns and fakes remain rare; these results do not justify a balance retune. The benchmark includes scoreboard parity and named blocker totals, with penalty-nullified events excluded from official kick attempts. A complete national-season simulation was run again on this integrated special-teams branch, not merely inherited from earlier calibration.
+
+The duplicate #349 was **closed without merge**. Its distinct blocked-kick accounting and restarts were reconciled in #356; #354 remains the retained special-teams coordinator/event implementation. The sport's score-dependent **Delta Yards** rule was not changed.
 
 ## Remaining operational boundary
 
@@ -50,5 +68,5 @@ The live Fly.io instance is not confirmed running. Existing deployment code now 
 
 - ST-01: coordinators and five ST schemes exercised by game decisions, retained in #354.
 - ST-02: eligible kick and return participants, return direction/yardage, blocked kick stats, recovery scoring, correct pindown spot.
-- STI-VAL: final acceptance depends on full combined CI benchmark and regression results.
+- STI-VAL: accepted; 600 full games, zero parity failures, and green combined CI.
 - PEN-01 and INJ-01: already merged; deliberately not reimplemented.
