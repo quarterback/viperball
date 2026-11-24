@@ -85,6 +85,12 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     put every program between 22 and 47. Measured touchdowns per team across ten merge
     points: 3.32 after #323, about 2.6 now. → `aar_2026-11-24_status_and_next.md`
 
+21. **Rules, drift, sacks, ladder, fast sim** (November 24). RULES.md v2.0 checked against the
+    engine; defensive scheme tables centered (touchdowns back to about 3); rain penalty
+    doubling fixed; sacks 7% of kick passes; recruits, HS and portal players on the talent
+    ladder with development fixed; pro leagues, WVL and HS title games on the full engine.
+    → `aar_2026-11-24_rules_drift_sacks_ladder_fastsim.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -129,17 +135,16 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 
 ## Open work
 
-Updated November 24. Items 1 to 6 below are the original list with their current state.
+Updated November 24 after step 21.
 
-1. #323 merged long ago. A live Fly deploy and a click through of the stats site are still
-   unverified; the deploy check now compares the running build SHA.
-2. Recruiting, development and the high school league still generate players the old way
-   (around one number); move them to the talent ladder (ROST-01).
-3. WVL and the high school league still use the fast sim (SIM-01).
+1. A live Fly deploy and a click through of the stats site are still unverified.
+2. Done: recruiting, development, HS and portal players use the talent ladder.
+3. Done for pro leagues, WVL and HS title games; HS regular season and dynasty back history
+   still use quick models.
 4. Done: odd program counts retire Coast Guard or Merchant Marine.
-5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current
-   (RULE-01).
+5. Done: rulebooks rewritten and checked by tests.
 6. Done: the root test scripts run again.
-7. Touchdowns have fallen to about 2.6 per team per game, the bottom of the 2.5 to 4.0
-   target, and turnovers rose from 2.4 to 2.8. See `aar_2026-11-24_status_and_next.md`.
-8. Physical sack rate is 13.1% of rush attempts, about twice real football.
+7. Done: touchdowns about 3 per team again; the turnover rise was a counting fix.
+8. Done: sack rate about 7%.
+9. Penalty level is about twice the NCAA's (PEN-02).
+10. Pro systems still use the old rating scale (PRO-01).

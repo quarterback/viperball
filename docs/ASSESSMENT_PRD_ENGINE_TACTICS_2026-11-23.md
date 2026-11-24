@@ -93,7 +93,7 @@ The parallel implementation specification is
 | ID | Priority | Status on 2026-11-23 | Work item / dependency |
 |---|---|---|---|
 | DEF-01 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Canonical defensive reads are active; targeted tests and full benchmark passed |
-| DEF-02 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Scheme/matchup, coverage and explosive effects active and benchmarked |
+| DEF-02 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)); centered Nov 24 | Scheme/matchup, coverage and explosive effects active. Tables are now measured against the league's average scheme (`defense_scheme_centered`): uncentered they cut 4.4% from every play and touchdowns fell from 3.3 to 2.5 per team |
 | DEF-03 | P0 | DONE ([merged #325](https://github.com/quarterback/viperball/pull/325)) | Formation-read direction corrected and tested |
 | DEF-04 | P1 | PARTIAL (merged #323) | Eleven-player defensive roles/rotations implemented in part; snap and mechanism audit still open |
 | DEF-05 | P1 | INVESTIGATE | Resolve legacy five-style defensive call vs eight current schemes |
@@ -103,17 +103,19 @@ The parallel implementation specification is
 | DEL-01 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | Matched on/off restart study; one national seed, 40 matches per condition; Delta Yards stays as is |
 | DEL-02 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | One Delta Yards definition across engine, metrics, DYE and DTW; points per drive from real scores |
 | DEL-03 | P2 | OPEN (DEL-02 done; box score Delta rows in [#360](https://github.com/quarterback/viperball/pull/360)) | Make Delta Yards legible in game and season reporting |
-| DEF-08 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | Lead rusher chosen among committed rushers; median leader share 54.6%. Physical sack rate still 13.1% of rush attempts |
+| DEF-08 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)); sack rate Nov 24 | Lead rusher chosen among committed rushers; median leader share 54.6%. `sack_rate_scale` 0.55: sacks 6.9% of kick passes (was 12.9%), pressure unchanged at 32% |
 | BOX-01 | P1 | DONE ([#351](https://github.com/quarterback/viperball/pull/351)) | Scoring ledger and team/player box score totals reconcile |
 | AN-01, DTW-01, EPA-01 | P1 | DONE ([#360](https://github.com/quarterback/viperball/pull/360)) | Scoring value by Delta bucket, 55 to 45 DTW band, EPA scope; outcome conditioned EP model still research |
-| ROST-01 | P1 | PARTIAL (merged #323) | Continue talent/work-rate ladder through recruiting, transfers and HS careers |
+| PEN-02 | P2 | OPEN | About 14 accepted flags and 135 yards per team per game, more than twice the NCAA's 6. `penalty_rate_scale` exists (1.0); at 0.55 flags match the NCAA rate but points fall from 52 to 49, since defensive flags help offenses. Rain doubling fixed Nov 24 |
+| PRO-01 | P2 | OPEN | Pro and WVL rosters, development and free agency use the old 60 to 100 scale; games convert per game (`engine/pro_scale.py`). Moving pro systems to the current scale would remove the conversion |
+| ROST-01 | P1 | DONE (Nov 24, branch claude/rules-drift-sacks-ladder-fastsim) | `engine/talent.py`: recruits, HS players and quick portal players on the roster ladder, stars from level, work rate carried on cards; development rounding fixed and matched to roster class gaps. Four offline offseasons hold league shape (old code: team best player median 73 to 49) |
 | ROST-02 | P1 | PARTIAL (merged #328) | Game roles now assigned after final scheme overrides; remaining style-specific role scoring and scheme/roster consistency audit open |
 | FAT-01 | P1 | PARTIAL (merged #323) | Work rate and line rotations landed; coach-sensitive depth/season validation still open |
 | UI-01 | P1 | PARTIAL | Stats-site migration merged; box score Game Plans and team Tactics sections shipped, including rushers called against sent and per-package call detail (see AAR_2026-11-24_game_plans_report.md and AAR_2026-11-24_rush_intent_report.md); score by channel/period, kick attempts by kind, bells and halftime adjustments remain |
-| SIM-01 | P1 | OPEN | Audit fast-sim dependencies beyond college mode |
+| SIM-01 | P1 | DONE (Nov 24, branch claude/rules-drift-sacks-ladder-fastsim) | Pro leagues, WVL (season, playoffs, promotion, career mode) on the full engine with `engine/pro_scale.py` converting old scale pro rosters per game; HS title games on the engine, other HS games on a quick model refitted to it. Dynasty back history (`fast_sim_season`) still fast |
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
 | VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
-| RULE-01 | P2 | OPEN | Rulebook/version/terminology reconciliation |
+| RULE-01 | P2 | DONE (Nov 24, branch claude/rules-drift-sacks-ladder-fastsim) | RULES.md v2.0 matches engine and README; penalty table built from the catalog; docs/RULES.md points to both; COLLEGE_RULES.md rewritten; `tests/test_rules_doc.py` checks them |
 | OPS-01 | P2 | PARTIAL (November 24 queue status PR) | Root scripts test_season.py, test_dynasty.py, test_recruiting.py and test_wvl.py run again; live Fly deploy and build SHA still unverified |
 | CCH-03 | P1 | DONE ([merged #332](https://github.com/quarterback/viperball/pull/332)) | DC pre-snap alignment/blitz and read-focus decisions; [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md), paired 320-game control, integrated in #334 | 
 | CCH-04 | P1 | DONE ([merged #334](https://github.com/quarterback/viperball/pull/334)) | Team package familiarity, OC situational choices, coordinator turnover and dynasty continuity; DC familiarity scaling; [joint AAR](aar_2026-11-23_cch03_cch04_reconciliation.md) and 174 passing tests. Original #333 superseded; #329 archived |
