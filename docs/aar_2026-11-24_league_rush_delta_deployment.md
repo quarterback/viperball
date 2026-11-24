@@ -41,9 +41,58 @@ Each actual rush still commits the same 1–6 eligible defenders. The same physi
 
 ## Deployment: verified boundary
 
-The checked-in `fly.toml` targets the `viperball` Fly.io app, with `performance-2x`, 4 GB RAM, and a persistent `/data` volume. Importantly, it has `auto_start_machines=false` and `auto_stop_machines='off'`; the machine may be manually stopped. The repository's deploy workflow validates the Docker build, deploys on pushes to `main` using the `FLY_API_TOKEN` secret, and then polls `https://viperball.fly.dev/api/health` for HTTP 200.
+The checked-in `fly.toml` targets the `viperball` Fly.io app, with `performance-2x`, 4 GB RAM, and a persistent `/data` volume. Importantly, it has `auto_start_machines=false` and `auto_stop_machines='off'`; the machine may be manually stopped. The repository's deploy workflow validates the Docker build, deploys on
+pushes to `main` using the `FLY_API_TOKEN` secret, and then polls
+`https://viperball.fly.dev/api/health` for HTTP 200. This branch adds
+`VIPERBALL_BUILD_SHA` as a Docker build argument, exposes it in the
+read-only health response and changes deployment validation to compare
+the exact live SHA to the GitHub commit being deployed. A 200 response
+from an older version will no longer count as successful verification.
 
 An external request to `https://viperball.fly.dev/api/health` and `/stats` was not accessible through the available browser tool. **This does not establish that the deployment failed**: the Fly machine might be stopped or the network tool might not reach it. The current branch has not been deployed; no live build SHA or database persistence verification has been observed. Verify the deploy workflow run and Fly machine state after merging; do not start a billable machine as an implicit side effect of the calibration PR.
+
+## Initial observed CI results
+
+[Run 45451097215](https://github.com/quarterback/viperball/actions/runs/45451097215),
+seed `20261124`, was a successful milestone run after correcting the
+benchmark's distinction between physically resolved rushes and official
+sacks/hurries erased by accepted penalties. The full Python suite,
+BOX-01 accounting smoke, 8 matched games per condition and the actual
+national first-week sample passed.
+
+In eight matched games per condition (16 team-game accounts):
+- Historical highest-rusher credit produced a mean leading-player share
+  of **77.7%** with Delta starts. Weighted eligible-rusher credit
+  produced **49.3%** under the same conditions.
+- With neutral starts, the shares were **76.2% vs 52.2%**.
+- The Delta restart rule changed the final score in **8/8** matched
+  games for each credit model; mean absolute home-score difference
+  was **27.375** points with historical credit and **21.062** with
+  weighted credit. These are small, matched descriptive samples, not
+  proof of a universal causal effect or a target to tune toward.
+- Physical rush and official player credits reconciled after excluding
+  penalty-nullified sacks and hurries. No new sack probability was set.
+
+The actual national first-week API season contained **205 programs**,
+**90 completed full-engine games**, **5,192** kick-pass rush attempts,
+**1,685 pressures**, **639 sacks**, and **1,046 hurries**. Team-game
+mean points were **52.372**, mean accepted penalties **19.772**,
+and the median leading-rusher share was **54.36%** across 178
+team-game accounts with any lead pressure credit. A single week
+cannot support long-term trends or a national full-season conclusion.
+
+The schedule audit revealed **203 programs assigned 12 regular games
+and two assigned 13**, or 1,231 rather than the requested 1,230
+games. The original audit erroneously described all 203 correctly
+scheduled programs as `under_scheduled` by comparing against 13.
+That report was corrected to compare against the requested quota,
+and the scheduler now includes a narrow repair for the two excess
+slots that does not remove pinned or rivalry games.
+
+A final milestone now runs **40 matched games per rush/Delta condition
+and a complete national season** to establish whether the schedule
+repair works and whether first-week effects persist. Results are
+pending; do not claim they passed.
 
 ## Validation and next decisions
 
@@ -54,4 +103,6 @@ Expected milestones:
 4. An eventual full national season across multiple seeds to examine schedule shortfalls, rare package adoption, point distribution and roster attrition.
 5. Final live Fly deployment health and actual SHA check when the service is intentionally running.
 
-**Status:** Implementation committed; runtime figures and CI conclusions must be appended from the actual GitHub runs. No deployment claim until separately verified.
+**Status:** Initial CI study complete; complete-season run and updated
+Docker/Fly build-SHA verification are pending. No deployment claim until
+a running Fly instance returns the new commit SHA.
