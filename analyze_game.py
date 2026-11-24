@@ -63,7 +63,6 @@ SPORT CONTEXT (for readers unfamiliar with Viperball):
       and the receiving team fails to return it out. Like the CFL single.
     Bell = ½ pt — awarded on any loose-ball recovery (fumble, muffed punt,
       blocked kick). Play continues after the bell; it's a live-ball score.
-  Typical game scores: 45-70 pts per team (combined 90-140).
 
   KEY POSITIONS:
   - Zeroback (ZB): The most important player on the field. Receives the

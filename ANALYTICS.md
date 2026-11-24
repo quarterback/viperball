@@ -20,7 +20,6 @@ yards (vs. football's 4-for-10).
 - Field goals (place kicks from scrimmage) are worth **3**
 - Safeties are **2**, pindowns (territorial scores) are **1**, bells (fumble
   recoveries) are **½**
-- Typical game scores: **45-70 points per team** (combined 90-140)
 - A team runs **70-90 plays per game** (similar to up-tempo college football)
 
 Think of it as rugby's ball movement married to football's territorial

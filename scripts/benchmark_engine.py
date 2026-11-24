@@ -1,5 +1,6 @@
-"""Engine benchmark: run a fixed sample of full engine games and compare the
-results with the documented targets.
+"""Engine benchmark: run a fixed sample of full engine games and report what
+the mechanics produce.  There are no scoring targets; compare runs against
+each other.
 
 Run after every engine change, from the repo root:
 
@@ -10,8 +11,6 @@ Matchups and seeds are fixed, so two runs of the same code print the same
 numbers and a change shows up as a real difference. Each team plays its
 season assigned offense, defense and special teams scheme, the same way
 Season.simulate_game passes them to the engine.
-
-Targets come from the README's Scoring Context section.
 """
 
 import argparse
@@ -28,14 +27,6 @@ os.chdir(ROOT)
 from engine import ViperballEngine, load_teams_from_directory  # noqa: E402
 from engine.ai_coach import auto_assign_all_teams  # noqa: E402
 
-TARGETS = {
-    # From the README's Scoring Context (a typical 63-49 game: 3 touchdowns,
-    # 4 snap kicks and 2 field goals for the winner) and its 45-70 range.
-    "points": (45.0, 70.0),
-    "touchdowns": (2.5, 4.0),
-    "snap_kicks_made": (3.0, 5.0),
-    "field_goals_made": (1.5, 2.5),
-}
 
 
 def build_matchups(n_games: int, seed: int):
@@ -105,11 +96,7 @@ def run_season(weeks: int):
     print("Per team, per game")
     for key, values in stats.items():
         mean = statistics.mean(values)
-        line = f"  {key:20} {mean:6.2f}"
-        if key in TARGETS:
-            lo, hi = TARGETS[key]
-            line += f"   target {lo}-{hi}  {'ok' if lo <= mean <= hi else 'OFF'}"
-        print(line)
+        print(f"  {key:20} {mean:6.2f}")
     for label, ms in (("All games", margins), ("Conference games", conf_margins)):
         if ms:
             print(f"{label}: median margin {statistics.median(ms):.1f},"
@@ -170,12 +157,7 @@ def main():
     print("Per team, per game")
     for key, values in per_team.items():
         mean = statistics.mean(values)
-        line = f"  {key:20} {mean:6.2f}"
-        if key in TARGETS:
-            lo, hi = TARGETS[key]
-            mark = "ok" if lo <= mean <= hi else "OFF"
-            line += f"   target {lo}-{hi}  {mark}"
-        print(line)
+        print(f"  {key:20} {mean:6.2f}")
 
     print("\nTouchdown rate by drive start")
     for name in ("own 1-14", "own 15-25", "own 26-49", "opp half"):

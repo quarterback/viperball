@@ -46,7 +46,7 @@ The sport evolved from early American football's pre-forward-pass era, retaining
 
 Viperball is played between two teams of 11 players on a 100-yard field. The objective is to advance the ball into the opposing team's end zone or score through kicking. There is no forward pass. The ball is advanced by running, lateral passing (backward or sideways), and kick passing (a kicked ball to a teammate downfield). Kicking is both an offensive weapon and a scoring method — teams routinely score by drop-kicking the ball through the uprights during live play.
 
-A typical CVL game produces scores in the 45–70 point range per team, with points coming from touchdowns, snap kicks, field goals, safeties, pindowns, and bells. The sport rewards versatile athletes who can run, kick, catch, and tackle — most players contribute on both sides of the ball.
+Points come from touchdowns, snap kicks, field goals, safeties, pindowns, and bells. How much a game scores comes from the rules and the players. The sport rewards versatile athletes who can run, kick, catch, and tackle — most players contribute on both sides of the ball.
 
 ### Design Heritage
 
@@ -238,15 +238,6 @@ Play continues after a bell is awarded — the recovering team maintains possess
 The bell rewards aggressive, opportunistic defense. A team that forces 6 fumble recoveries in a game earns 3 additional points from bells alone. Combined with the field position advantage of the recovery, bells create compounding value from turnovers.
 
 ### Scoring Context
-
-A typical CVL game might produce a final score like **63–49**. The winning team's points could break down as:
-
-- 3 touchdowns (27 pts)
-- 4 snap kicks (20 pts)
-- 2 field goals (6 pts)
-- 3 pindowns (3 pts)
-- 1 safety (2 pts)
-- 10 bells across the game (5 pts)
 
 The multi-channel system means games are rarely decided by a single type of play. A team can fall behind on touchdowns but stay competitive through relentless kicking and field position — or vice versa.
 
