@@ -24,7 +24,7 @@ No Viperball scoring, six-down, or score-dependent Delta Yards rule has been rep
 
 ## Integration and verification
 
-`scripts/benchmark_special_teams_integrated.py` records actual per-event ST data (not description-string searches). It compares **five ST schemes × three saved STC profiles (neutral, territory, attack) × clear/rain × 20 seeded full games = 600 games**. The neutral profile keeps coaching staff present in the baseline, eliminating a design error in the previous #349 study. The home side is the controlled ST implementation; the away side is a fixed Aces opponent. Each cell varies weather and games but keeps the seeds/rosters matched across coordinator profiles.
+`scripts/benchmark_special_teams_integrated.py` records actual per-event ST data (not description-string searches). It compares **five ST schemes × three saved STC profiles (neutral, territory, attack) × clear/rain × N seeded full games**. The default is 100 games per cell, 3,000 games in all; CI runs 40 per cell (1,200 games). The neutral profile keeps coaching staff present in the baseline, eliminating a design error in the previous #349 study. The home side is the controlled ST implementation; the away side plays the Aces scheme. Every game in the study has its own seed and its own matchup drawn from all 205 program files, so no game repeats in another cell. The first version used 20 games per cell and alternated two home rosters against one away roster, which left rare events (return touchdowns, fakes, blocks) at one or two per cell. Within a cell the three coordinator profiles share each seed and matchup, so the profile comparison stays paired. The output adds a `summary` that pools each profile over all ten cells and reports rates.
 
 The study requires exact team-vs-player parity for:
 - snap-kick attempts;
@@ -68,5 +68,27 @@ The live Fly.io instance is not confirmed running. Existing deployment code now 
 
 - ST-01: coordinators and five ST schemes exercised by game decisions, retained in #354.
 - ST-02: eligible kick and return participants, return direction/yardage, blocked kick stats, recovery scoring, correct pindown spot.
-- STI-VAL: accepted; 600 full games, zero parity failures, and green combined CI.
+- STI-VAL: accepted; 600 full games, zero parity failures, and green combined CI. A wider 3,000 game run after the merge found one blocked kick attribution bug, described below and fixed in PR #358.
 - PEN-01 and INJ-01: already merged; deliberately not reimplemented.
+
+## Expanded run: 3,000 games, distinct seeds
+
+The 20 game version reused three rosters, so a bug that needs an unusual game state never appeared. With a distinct seed and matchup for every game, the first 3,000 game run found 24 discrepancies, all in place kick attempts. When a place kick was the last play of a half and was blocked, the team stats charged the attempt to the team that recovered it. The kicker's own line was correct. That last play skips `simulate_play`, so it never recorded who snapped it, and the blocked kick had already switched possession. The end of half path now records the snapping side. The rerun had zero discrepancies.
+
+Pooled over all ten scheme and weather cells, 1,000 games per profile, home side:
+
+| | Neutral | Territory (+0.5, −0.5) | Attack (−0.5, +0.5) |
+|---|---|---|---|
+| Points per game | 73.28 | 73.32 | 73.21 |
+| Punts per game | 1.615 | 1.666 | 1.647 |
+| Snap kicks per game | 5.39 | 5.31 | 5.37 |
+| Fake punts | 13 | 4 | 18 |
+| Kick block rate | 4.08% | 3.90% | 4.06% |
+| Punts received | 1,146 | 1,150 | 1,164 |
+| Muff rate | 8.1% | 7.0% | 8.9% |
+| Return TD rate | 4.0% (46) | 3.8% (44) | 4.6% (54) |
+| Yards per return | 12.0 | 10.4 | 13.7 |
+
+A coordinator who favors field position punts a little more, kicks a few fewer snap kicks, rarely fakes, muffs less and gives up about 1.6 yards a return. An aggressive returner gains about 1.7 yards a return and scores a little more often, at the cost of more muffs. Scoring does not move.
+
+Validation: existing suite 181 passed. CI now runs 40 games per cell (1,200 games), and the regression job's time limit went from 20 to 30 minutes to fit it.

@@ -19,7 +19,7 @@ on:
 jobs:
   regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONHASHSEED: "0"
     steps:
@@ -42,7 +42,7 @@ jobs:
       - name: VAL-03 national scheduled-league first-week audit
         run: python scripts/benchmark_national_engine.py --full-season --seed 20261124 --out reports/national-integrated.json
       - name: STI-VAL five-scheme integrated full-game special-teams study
-        run: python scripts/benchmark_special_teams_integrated.py --games 20 --seed 20261124 --out reports/st-integrated.json
+        run: python scripts/benchmark_special_teams_integrated.py --games 40 --seed 20261124 --out reports/st-integrated.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

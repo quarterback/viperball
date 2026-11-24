@@ -6848,6 +6848,11 @@ class ViperballEngine:
             # Give the team one last play with 1 second on the clock
             self.state.time_remaining = 1
             self.drive_play_count += 1
+            # This last play skips simulate_play, so record who snapped it
+            # here; a blocked kick changes possession before the Play exists
+            # and the box score charges attempts to the side at the snap.
+            final_snap_side = self.state.possession
+            self._snap_possession = final_snap_side
 
             final_fg_dist = (100 - fp) + 10
             team_final = self.get_offensive_team()
@@ -6886,6 +6891,7 @@ class ViperballEngine:
                 # not wasting the play on a futile field goal)
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
+            final_play.snap_possession = final_snap_side
             self._finish_st_event(final_play)
             final_play.home_score_after = self.state.home_score
             final_play.away_score_after = self.state.away_score
