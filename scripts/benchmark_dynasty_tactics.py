@@ -171,6 +171,27 @@ def run(seasons, nteams, seed, out):
             dyn, season=sess["dynasty"],sess["season"]
             if dyn.current_year!=year or len(season.teams)!=nteams:
                 raise RuntimeError("Wrong season or program count")
+            # A completed generated schedule is not evidence that the
+            # requested schedule was fulfilled.
+            scheduled_counts = Counter()
+            scheduled_pairs = set()
+            weekly_slots = set()
+            for game in season.schedule:
+                pair = tuple(sorted((game.home_team, game.away_team)))
+                if pair[0] == pair[1] or pair in scheduled_pairs:
+                    raise RuntimeError(f"Invalid or duplicate matchup: {pair}")
+                scheduled_pairs.add(pair)
+                for team in pair:
+                    slot = (game.week, team)
+                    if slot in weekly_slots:
+                        raise RuntimeError(f"Double-booked program: {slot}")
+                    weekly_slots.add(slot)
+                    scheduled_counts[team] += 1
+            expected_games = min(12, nteams - 1)
+            wrong = {t: scheduled_counts[t] for t in names
+                     if scheduled_counts[t] != expected_games}
+            if wrong:
+                raise RuntimeError(f"Schedule quota mismatch (expected {expected_games}): {wrong}")
             start=snapshot(season.teams)
             if expected_rosters is not None:
                 actual={t:sorted(p["name"] for p in rows.values()) for t,rows in start.items()}
