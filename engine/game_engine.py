@@ -61,6 +61,8 @@ V2_ENGINE_CONFIG = {
     "team_installation_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
+    # DEL-01: counterfactual neutral-field restarts for paired calibration.
+    "delta_restarts_enabled": True,
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -3906,6 +3908,9 @@ class ViperballEngine:
             _ref_rng = random.Random(seed if seed is not None else random.randint(0, 2**31))
             self.referee_crew = assign_referee(_ref_rng)
         self.seed = seed
+        # Credit assignment does not consume the physical contest RNG.
+        self._rush_credit_rng = random.Random(
+            f"rush-credit:{seed}" if seed is not None else None)
         self.drive_play_count = 0
         self._drive_chain_positive = 0
         self._drive_yards = 0  # Track drive yards for timeout decisions
@@ -6207,7 +6212,9 @@ class ViperballEngine:
         point_differential = their_score - opp_score  # positive = leading
         # Cap at opponent's 20 (field position 80) — even in a blowout,
         # the trailing team never starts past the opp 20.
-        start_position = max(1, min(80, int(baseline - point_differential)))
+        start_position = (max(1, min(80, int(baseline - point_differential)))
+                          if V2_ENGINE_CONFIG.get("delta_restarts_enabled", True)
+                          else max(1, min(80, int(baseline))))
 
         # Track delta yards — field position cost of the score-differential kickoff system
         # Leading teams start drives further back; delta yards = yards lost to this mechanic
@@ -10381,7 +10388,15 @@ class ViperballEngine:
                            "on_field": all_on,
                            "rush_skill": sum(score(p) for p in rushers) / len(rushers) if rushers else 0.0,
                            "protection_skill": sum(protection(p) for p in blockers) / len(blockers) if blockers else 30.0,
-                           "lead_rusher": max(rushers, key=score) if rushers else None}
+                           # Any committed rusher can win the individual
+                           # contest. Stronger/fresher players are favored,
+                           # but the highest-rated player is not guaranteed
+                           # every sack and hurry on every snap.
+                           "lead_rusher": (
+                               self._rush_credit_rng.choices(
+                                   rushers,
+                                   weights=[max(1.0, score(p)) ** 2 for p in rushers],
+                                   k=1)[0] if rushers else None)}
         return self._rush_plan
 
     def compute_sack_probability(self, team, def_team, subfamily, formation=None):
@@ -12322,6 +12337,12 @@ class ViperballEngine:
                 completed=False)
         if rush_outcome == "hurry":
             completion_prob = max(0.08, completion_prob * 0.85)
+            # One hurry outcome, one credit, to a player actually rushing.
+            # The old late-incompletion roll could create phantom hurries
+            # unrelated to the single resolved pressure contest.
+            if rusher is not None:
+                rusher.game_hurries += 1
+                rusher.game_plays_involved += 1
         if self._rush_event is not None:
             self._rush_event["completion_after"] = completion_prob
         if rush_outcome == "sack":
@@ -12826,25 +12847,8 @@ class ViperballEngine:
         # Reset rhythm_escalation chain on incompletion
         self._drive_consecutive_completions = 0
 
-        # ── Hurry credit ──
-        # On incomplete passes, there's a chance a defender pressured
-        # the kicker (hurry = affected the throw without getting a sack).
-        # DL preferred but Keepers eligible (blitzing linebackers).
-        if random.random() < 0.35:
-            hurry_def_team = self.get_defensive_team()
-            hurry_eligible = [p for p in hurry_def_team.players
-                              if p.position in ("Defensive Line", "Keeper")
-                              and p.name not in self._unavailable_in_game(hurry_def_team)]
-            if hurry_eligible:
-                hurry_weights = []
-                for hp in hurry_eligible:
-                    hw = hp.tackling * 0.4 + hp.power * 0.3 + hp.speed * 0.3
-                    if hp.position == "Defensive Line":
-                        hw *= 2.0
-                    hurry_weights.append(hw)
-                hurrier = random.choices(hurry_eligible, weights=hurry_weights, k=1)[0]
-                hurrier.game_hurries += 1
-                hurrier.game_plays_involved += 1
+        # A hurry is credited above only when the physical rush contest
+        # actually resolves as a hurry. No second incompletion-based roll.
 
         # ── Interception: H2H-driven per sub-family ──
         # Each sub-family has a different base INT rate driven by the matched
