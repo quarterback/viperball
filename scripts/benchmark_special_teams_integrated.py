@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """STI-VAL integrated full-game special-teams benchmark.
 
-Run: PYTHONHASHSEED=0 python scripts/benchmark_special_teams_integrated.py --games 20
-Five ST schemes x three saved STC profiles x clear/rain x 20 games = 600.
+Run: PYTHONHASHSEED=0 python scripts/benchmark_special_teams_integrated.py --games 100
+Five ST schemes x three saved STC profiles x clear/rain x N games.  The
+default of 100 is 3,000 games.
+
+Every game in the study has its own seed and its own matchup drawn from
+all program files, so rare events (return touchdowns, fakes, blocks) are
+not the same few random draws repeated cell after cell.  Within a cell the
+three coordinator profiles share the seed and the matchup, so they are a
+paired comparison.
+
 Neutral STC, not no-staff, is the matched control. The ST scheme and
 coordinator affect only the home team. All events are attributed using the
 recorded special_teams_event.kicking_side and the post-snap scoreboard.
@@ -32,12 +40,11 @@ def staff(name, territory, aggression):
     return {"stc":c}
 
 
-def run(games=20,seed=20261124):
+def run(games=100,seed=20261124):
     paths=sorted((ROOT/"data"/"teams").glob("*.json"))
-    if len(paths)<3:
-        raise RuntimeError("Three roster files required")
-    teams=[load_team_from_json(str(p),fresh=False) for p in
-           (paths[0],paths[len(paths)//2],paths[-1])]
+    if len(paths)<2:
+        raise RuntimeError("Two roster files required")
+    teams=[load_team_from_json(str(p),fresh=False) for p in paths]
     profiles={"neutral":(0.,0.),"territory":(.5,-.5),"attack":(-.5,.5)}
     output={}
     failures=[]
@@ -48,11 +55,14 @@ def run(games=20,seed=20261124):
                 scores=[]
                 for n in range(games):
                     # Same roster + seed across coordinator profiles, different
-                    # schedules per scheme/weather to avoid repeating rare draws.
-                    match_seed=seed+scheme_idx*20000+weather_idx*10000+n
+                    # seeds and matchups in every scheme/weather cell, so no
+                    # game repeats anywhere else in the study.
+                    match_seed=seed+(scheme_idx*2+weather_idx)*1_000_003+n
+                    pick=random.Random(match_seed)
+                    home_i,away_i=pick.sample(range(len(teams)),2)
                     random.seed(match_seed)
-                    home=deepcopy(teams[n%2])
-                    away=deepcopy(teams[2])
+                    home=deepcopy(teams[home_i])
+                    away=deepcopy(teams[away_i])
                     home.st_scheme=scheme
                     away.st_scheme="aces"
                     result=ViperballEngine(
@@ -93,6 +103,7 @@ def run(games=20,seed=20261124):
                             if event.get("nullified"):
                                 counts["home_nullified"]+=1
                         if kicker_side=="away" and kind=="punt":
+                            counts["home_punts_received"]+=1
                             counts["home_punt_return_td"]+=int(event.get("result")=="punt_return_td")
                             counts["home_muffs"]+=int(event.get("result")=="muffed_punt")
                             counts["home_return_yards"]+=int(event.get("return_yards") or 0)
@@ -106,13 +117,45 @@ def run(games=20,seed=20261124):
                 output[key]={"games":games,"mean_home_points":round(sum(scores)/len(scores),3),
                              "events":dict(counts)}
     return {"seed":seed,"games_per_case":games,"cases":len(output),
+            "summary":summarize(output),
             "full_games":len(output)*games,"results":output,
             "failures":failures[:50],"failure_count":len(failures)}
 
 
+def summarize(output):
+    """Per profile, pooled over every scheme and weather cell, as rates."""
+    pooled={}
+    for key,cell in output.items():
+        profile=key.split("/")[2]
+        agg=pooled.setdefault(profile,{"games":0,"points":0.0,"events":Counter()})
+        agg["games"]+=cell["games"]
+        agg["points"]+=cell["mean_home_points"]*cell["games"]
+        agg["events"].update(cell["events"])
+    summary={}
+    for profile,agg in pooled.items():
+        e=agg["events"]
+        punts_received=e["home_punts_received"]
+        kicks=e["home_drop_kick"]+e["home_place_kick"]
+        rate=lambda num,den:round(num/den,4) if den else None
+        summary[profile]={
+            "games":agg["games"],
+            "home_points_per_game":round(agg["points"]/agg["games"],2),
+            "home_punts_per_game":round(e["home_punt"]/agg["games"],3),
+            "home_snap_kicks_per_game":round(e["home_drop_kick"]/agg["games"],3),
+            "home_fakes":e["home_fakes"],
+            "home_kick_block_rate":rate(e["home_blocked_kicks"],kicks),
+            "punts_received":punts_received,
+            "muff_rate":rate(e["home_muffs"],punts_received),
+            "return_td_rate":rate(e["home_punt_return_td"],punts_received),
+            "return_tds":e["home_punt_return_td"],
+            "yards_per_return":rate(e["home_return_yards"],e["home_return_punts"]),
+        }
+    return summary
+
+
 def main():
     p=argparse.ArgumentParser()
-    p.add_argument("--games",type=int,default=20)
+    p.add_argument("--games",type=int,default=100)
     p.add_argument("--seed",type=int,default=20261124)
     p.add_argument("--out",default=None)
     args=p.parse_args()
