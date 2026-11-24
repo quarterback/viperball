@@ -12551,6 +12551,8 @@ class ViperballEngine:
         )
 
     def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
+        # No returner from a previous punt may survive into a new event.
+        self._punt_event_returner = None
         team = self.get_offensive_team()
         punter = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(punter)
@@ -12576,9 +12578,12 @@ class ViperballEngine:
             self.apply_stamina_drain(3)
             self.drain_player_energy(playmaker, "carrier")
             if success_roll < 0.45:
-                # Fake works! Gain 8-22 yards
+                # Fake works; advancing less than the line to gain is not
+                # an automatic first down.
+                original_to_go = self.state.yards_to_go
+                original_down = self.state.down
                 fake_gain = random.randint(8, 22)
-                self.state.field_position = min(99, self.state.field_position + fake_gain)
+                self.state.field_position = min(100, self.state.field_position + fake_gain)
                 playmaker.game_touches += 1
                 playmaker.game_yards += fake_gain
                 playmaker.game_rushing_yards += fake_gain
@@ -12600,18 +12605,24 @@ class ViperballEngine:
                         description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — TOUCHDOWN! +9",
                         fatigue=round(stamina, 1),
                     )
-                self.state.down = 1
-                self.state.yards_to_go = 20
+                converted = fake_gain >= original_to_go
+                self.state.down = 1 if converted else original_down + 1
+                self.state.yards_to_go = 20 if converted else original_to_go - fake_gain
+                if self.state.down > 6:
+                    self.change_possession()
+                    self.state.field_position = 100 - self.state.field_position
+                    self.state.down, self.state.yards_to_go = 1, 20
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
+                outcome = "first_down" if converted else ("turnover_on_downs" if original_down == 6 else "gain")
                 return Play(
                     play_number=self.state.play_number, quarter=self.state.quarter,
                     time=self.state.time_remaining, possession=self.state.possession,
-                    field_position=self.state.field_position, down=1, yards_to_go=20,
+                    field_position=self.state.field_position, down=self.state.down, yards_to_go=self.state.yards_to_go,
                     play_type="fake_punt", play_family=family.value,
                     players_involved=[player_label(punter), player_label(playmaker)],
                     yards_gained=fake_gain,
-                    result="first_down",
-                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — FIRST DOWN!",
+                    result=outcome,
+                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — {outcome.replace('_', ' ').upper()}!",
                     fatigue=round(stamina, 1),
                 )
             else:
@@ -12651,12 +12662,13 @@ class ViperballEngine:
             st_blocker = self._st_blocker(self.get_defensive_team())
             kicking_team = self.state.possession
             block_distance = random.randint(-8, -2)  # Negative = loss
+            block_spot = max(1, min(99, self.state.field_position + block_distance))
 
             # 60% dead at spot, 40% live ball
             if random.random() < 0.60:
                 # Dead at spot - defense takes over
                 self.change_possession()
-                self.state.field_position = max(1, min(99, self.state.field_position + block_distance))
+                self.state.field_position = 100 - block_spot
                 self.state.down = 1
                 self.state.yards_to_go = 20
                 self.apply_stamina_drain(2)
@@ -12683,7 +12695,7 @@ class ViperballEngine:
                     # Defense recovers + bell
                     self.change_possession()
                     self.add_score(0.5)  # Bell for recovery
-                    self.state.field_position = max(1, min(99, self.state.field_position + block_distance + random.randint(0, 5)))
+                    self.state.field_position = 100 - max(1, min(99, block_spot + random.randint(0, 5)))
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.apply_stamina_drain(2)
@@ -13026,7 +13038,8 @@ class ViperballEngine:
             tackler.game_coverage_snaps += 1
         # Additional coverage snap for another unit member
         punt_cov_eligible = [p for p in punt_coverage_team.players
-                             if p.position in ("Keeper", "Defensive Line") and p != tackler]
+                             if p.position in ("Keeper", "Defensive Line") and p != tackler
+                             and p.name not in self._unavailable_in_game(punt_coverage_team)]
         if punt_cov_eligible:
             cov1 = random.choice(punt_cov_eligible)
             cov1.game_coverage_snaps += 1
