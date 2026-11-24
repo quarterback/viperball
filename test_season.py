@@ -33,12 +33,12 @@ def main():
     teams = {
         "Gonzaga": load_team_from_json("data/teams/gonzaga.json"),
         "Villanova": load_team_from_json("data/teams/villanova.json"),
-        "Xavier": load_team_from_json("data/teams/xavier.json"),
+        "Georgetown": load_team_from_json("data/teams/georgetown.json"),
         "Marquette": load_team_from_json("data/teams/marquette.json"),
         "Butler": load_team_from_json("data/teams/butler.json"),
         "Creighton": load_team_from_json("data/teams/creighton.json"),
         "Providence": load_team_from_json("data/teams/providence.json"),
-        "St. John's": load_team_from_json("data/teams/st_johns.json"),
+        "Johns Hopkins": load_team_from_json("data/teams/johns_hopkins.json"),
     }
 
     # Configure diverse styles for strategic matchups
@@ -51,7 +51,7 @@ def main():
             "offense_style": "lateral_spread",
             "defense_style": "contain_defense"
         },
-        "Xavier": {
+        "Georgetown": {
             "offense_style": "balanced",
             "defense_style": "pressure_defense"
         },
@@ -71,7 +71,7 @@ def main():
             "offense_style": "chain_gang",
             "defense_style": "pressure_defense"
         },
-        "St. John's": {
+        "Johns Hopkins": {
             "offense_style": "slick_n_slide",
             "defense_style": "contain_defense"
         },

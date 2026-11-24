@@ -79,6 +79,12 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     human team. Trial merge with CCH-03 (#332) passes 168 tests.
     → `aar_2026-11-23_cch04_team_installation.md` on that branch.
 
+20. **Status check and next steps** (November 24). Rebased onto main after #334 to #360
+    landed from other agents. Fixed the stale work queue, the four broken root test scripts
+    and the transfer portal prestige map, which was never moved to the new rating scale and
+    put every program between 22 and 47. Measured touchdowns per team across ten merge
+    points: 3.32 after #323, about 2.6 now. → `aar_2026-11-24_status_and_next.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
@@ -123,12 +129,17 @@ the `tests/` suite, the benchmark, and replaying API calls locally with FastAPI'
 
 ## Open work
 
-1. Merge PR #323 and redeploy; click through college season, dynasty and stats site.
+Updated November 24. Items 1 to 6 below are the original list with their current state.
+
+1. #323 merged long ago. A live Fly deploy and a click through of the stats site are still
+   unverified; the deploy check now compares the running build SHA.
 2. Recruiting, development and the high school league still generate players the old way
-   (around one number); move them to the talent ladder.
-3. Pro leagues, WVL and the high school league still use the fast sim.
-4. The even program count rule is now met automatically (step 19 retires Coast Guard or
-   Merchant Marine); the scheduler itself still does not need an even count.
-5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current.
-6. `test_season.py` loads a team file that no longer exists.
-7. The design work from step 1.
+   (around one number); move them to the talent ladder (ROST-01).
+3. WVL and the high school league still use the fast sim (SIM-01).
+4. Done: odd program counts retire Coast Guard or Merchant Marine.
+5. `RULES.md` and `docs/RULES.md` still describe the old rules; the README is current
+   (RULE-01).
+6. Done: the root test scripts run again.
+7. Touchdowns have fallen to about 2.6 per team per game, the bottom of the 2.5 to 4.0
+   target, and turnovers rose from 2.4 to 2.8. See `aar_2026-11-24_status_and_next.md`.
+8. Physical sack rate is 13.1% of rush attempts, about twice real football.
