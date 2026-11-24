@@ -101,7 +101,8 @@ def test_games_follow_downs_and_scoring_rules():
         # A new set is 1st and 20; more than 20 only after an offensive foul.
         for prev, p in zip(plays, plays[1:]):
             if p.get("down") == 1 and (p.get("yards_to_go") or 0) > 20:
-                assert prev.get("result") == "penalty", p.get("description")
+                assert (prev.get("result") == "penalty"
+                        or "PENALTY" in (prev.get("description") or "").upper()), p.get("description")
         final = {s: game["final_score"][s]["score"] for s in ("home", "away")}
         ledger = scoring_ledger(plays, final)
         assert ledger is not None

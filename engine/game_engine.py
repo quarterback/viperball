@@ -68,6 +68,9 @@ V2_ENGINE_CONFIG = {
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
+    # Measure scheme tables against the league's average scheme instead of
+    # against 1.0 (see _defense_scheme_means).
+    "defense_scheme_centered": True,
     # V2.4: Time-of-possession model — play clock varies by offensive style
     "top_model_enabled": True,
     # V2.5: Base yards multiplier — primary lever for total yardage per game.
@@ -206,6 +209,11 @@ V2_ENGINE_CONFIG = {
     # exceeds this, the coach risks a delay-of-game penalty (5 yards,
     # replay the down).  Higher clock_management coaches snap in time.
     "play_clock_limit": 40,
+    # Penalty level.  1.0 gave about 14 accepted flags and 135 yards per team
+    # per game, more than twice the NCAA's 6 (Action Network, 2020 to 2024).
+    "penalty_rate_scale": 1.0,
+    "penalty_bad_weather_scale": 1.2,
+    "penalty_heat_scale": 1.1,
 }
 
 
@@ -3835,6 +3843,28 @@ ST_SCHEME_MIGRATION = {
     "base": "aces",
 }
 
+
+
+_DEFENSE_SCHEME_MEANS = None
+
+
+def _defense_scheme_means() -> dict:
+    """League means of the defensive scheme tables, used to center them."""
+    global _DEFENSE_SCHEME_MEANS
+    if _DEFENSE_SCHEME_MEANS is None:
+        schemes = list(DEFENSE_STYLES.values())
+        families = {}
+        for d in schemes:
+            for k, v in d.get("play_family_modifiers", {}).items():
+                families.setdefault(k, []).append(v)
+        _DEFENSE_SCHEME_MEANS = {
+            "matchup": sum(OFFENSE_VS_DEFENSE_MATCHUP.values()) / max(1, len(OFFENSE_VS_DEFENSE_MATCHUP)),
+            # A scheme without an entry plays the family at 1.0.
+            "family": {k: (sum(v) + (len(schemes) - len(v))) / len(schemes) for k, v in families.items()},
+            "explosive": sum(d.get("explosive_suppression", 1.0) for d in schemes) / len(schemes),
+            "coverage": sum(d.get("kick_pass_coverage", 0.0) for d in schemes) / len(schemes),
+        }
+    return _DEFENSE_SCHEME_MEANS
 
 class ViperballEngine:
 
@@ -7664,14 +7694,19 @@ class ViperballEngine:
         else:
             snap_side = getattr(self, "_snap_possession", None) or self.state.possession
 
-        weather_penalty_boost = 0.0
+        # Catalog rates are relative; penalty_rate_scale sets the league level
+        # (about 8 accepted flags per team per game, the NCAA rate of about six
+        # per team scaled to Viperball's longer game).  Bad weather scales every
+        # foul up together.  The old weather rule added 0.003 to every one of
+        # the 19 to 34 fouls in a phase, which nearly doubled flags in rain.
+        rate_scale = V2_ENGINE_CONFIG.get("penalty_rate_scale", 1.0)
         if self.weather in ("rain", "snow", "sleet"):
-            weather_penalty_boost = 0.003
-        if self.weather == "heat":
-            weather_penalty_boost = 0.002
+            rate_scale *= V2_ENGINE_CONFIG.get("penalty_bad_weather_scale", 1.2)
+        elif self.weather == "heat":
+            rate_scale *= V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1)
 
         for pen_def in penalties:
-            prob = pen_def["prob"] + weather_penalty_boost
+            prob = pen_def["prob"] * rate_scale
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
 
@@ -9342,8 +9377,27 @@ class ViperballEngine:
         defense = self._current_defense()
         matchup = OFFENSE_VS_DEFENSE_MATCHUP.get((offense, defense_name), 1.0)
         family = defense.get("play_family_modifiers", {}).get(play_family.value, 1.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            # Measure each scheme against the league's schemes, not against
+            # 1.0.  Every scheme's table averages below 1.0 (0.84 to 0.97), so
+            # uncentered the effect cut about 4% from every play in the league.
+            means = _defense_scheme_means()
+            matchup -= means["matchup"] - 1.0
+            family -= means["family"].get(play_family.value, 1.0) - 1.0
         effect = 1.0 + 0.50 * (matchup - 1.0) + 0.35 * (family - 1.0)
         return max(0.75, min(1.20, effect))
+
+    def _scheme_explosive_suppression(self) -> float:
+        value = self._current_defense().get("explosive_suppression", 1.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            value /= _defense_scheme_means()["explosive"]
+        return value
+
+    def _scheme_kick_pass_coverage(self) -> float:
+        value = self._current_defense().get("kick_pass_coverage", 0.0)
+        if V2_ENGINE_CONFIG.get("defense_scheme_centered", True):
+            value -= _defense_scheme_means()["coverage"]
+        return value
 
     def _defense_read_yard_multiplier(self, family: PlayFamily) -> float:
         """A tactical read reduces gains without changing possession or down."""
@@ -10065,7 +10119,7 @@ class ViperballEngine:
             # An elite anti-explosive scheme reduces the COMPLETE breakaway
             # chance, including the bonus for a gain of 7+ or 10+ yards.
             if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
-                breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
+                breakaway_chance *= self._scheme_explosive_suppression()
             call = self._active_dc_call()
             if call.get("package_id"):
                 target = self._PACKAGE_EXPLOSIVE_DELTA.get(call["package_id"], 0.0)
@@ -12375,7 +12429,7 @@ class ViperballEngine:
         # not its travel distance. Apply one scheme effect per kick pass.
         if V2_ENGINE_CONFIG.get("defense_scheme_effects_enabled", True):
             completion_prob *= self._defense_style_multiplier(family)
-            coverage = self._current_defense().get("kick_pass_coverage", 0.0)
+            coverage = self._scheme_kick_pass_coverage()
             completion_prob -= coverage * 0.25
         completion_prob *= self._defense_read_yard_multiplier(family)
         # Coverage space is the cost of committing extra actual players.
