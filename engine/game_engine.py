@@ -15068,8 +15068,12 @@ class ViperballEngine:
         return impacts.get(self.viper_position, 1.0)
 
     def generate_game_summary(self) -> Dict:
-        home_plays = [p for p in self.play_log if p.possession == "home"]
-        away_plays = [p for p in self.play_log if p.possession == "away"]
+        # Attribute the action to the team at the snap. Some return and
+        # interception paths change possession before constructing Play.
+        home_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "home"]
+        away_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "away"]
 
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
@@ -15099,7 +15103,14 @@ class ViperballEngine:
             stats["kick_passes_attempted"] = sum(p.game_kick_passes_thrown for p in team.players)
             stats["kick_passes_completed"] = sum(p.game_kick_passes_completed for p in team.players)
             stats["kick_pass_interceptions"] = sum(p.game_kick_pass_interceptions for p in team.players)
-            stats["kick_pass_tds"] = sum(p.game_kick_pass_tds for p in team.players)
+            # Both kicker and target receive a personal KP TD credit;
+            # team touchdowns must count the scoring event only once.
+            stats["kick_pass_tds"] = sum(
+                1 for play in self.play_log
+                if (getattr(play, "snap_possession", None) or play.possession)
+                   == ("home" if team is self.home_team else "away")
+                and play.play_type == "kick_pass" and play.result == "touchdown"
+            )
 
         _reconcile_yards(home_stats, self.home_team)
         _reconcile_yards(away_stats, self.away_team)
