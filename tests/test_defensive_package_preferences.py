@@ -26,8 +26,6 @@ def coordinator(cid, focus, reads=(), pressure=0.0, support=0.0):
 def test_same_pressure_different_coverage_preferences():
     deep = coordinator("deep", "deep", ["kick_pass"])
     intermediate = coordinator("intermediate", "intermediate", ["kick_pass"])
-    deep_score = ti._package_preference_score("defense", "shadow", deep)
-    mid_score = ti._package_preference_score("defense", "shadow", intermediate)
     # Prevent and Robber address different coverage depths. Use the same
     # non-native family for both when testing the focus itself.
     deep_score = ti._package_preference_score("defense", "swarm", deep)
@@ -87,7 +85,10 @@ def test_exact_ties_are_stable_and_do_not_override_score():
     coach = coordinator("coach-a", "short")
     key = lambda pid: ti._package_rank_key("defense", coach, score, pid)
     assert sorted(candidates, key=key) == sorted(reversed(candidates), key=key)
-    assert key(candidates[0]) == key(candidates[0])
+    orders = {tuple(sorted(candidates, key=lambda pid: ti._package_rank_key(
+        "defense", coordinator(f"coach-{i}", "short"), score, pid)))
+        for i in range(64)}
+    assert len(orders) == 2
     higher = lambda pid: .101 if pid == candidates[1] else .1
     assert sorted(candidates, key=lambda pid: ti._package_rank_key(
         "defense", coach, higher, pid))[0] == candidates[1]
