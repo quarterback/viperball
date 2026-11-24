@@ -4500,6 +4500,34 @@ class ViperballEngine:
             return call
         return {}
 
+    def _rush_summary(self, side: str) -> Dict:
+        """Game totals from resolved kick-pass attempts, not all called blitzes."""
+        out = {"attempts": 0, "pressures": 0, "hurries": 0, "sacks": 0,
+               "rushers_committed": 0, "by_count": {}, "by_player": {}}
+        for play in self.play_log:
+            event = getattr(play, "rush_event", None)
+            if not event or event["defending_side"] != side or "outcome" not in event:
+                continue
+            out["attempts"] += 1
+            out["pressures"] += int(event["pressure"])
+            out["hurries"] += int(event["outcome"] == "hurry")
+            out["sacks"] += int(event["outcome"] == "sack")
+            out["rushers_committed"] += event["rusher_count"]
+            bucket = out["by_count"].setdefault(str(event["rusher_count"]),
+                {"attempts": 0, "pressures": 0, "hurries": 0, "sacks": 0, "completions": 0})
+            bucket["attempts"] += 1
+            bucket["pressures"] += int(event["pressure"])
+            bucket["hurries"] += int(event["outcome"] == "hurry")
+            bucket["sacks"] += int(event["outcome"] == "sack")
+            bucket["completions"] += int(event["completed"])
+            for label in event["rushers"]:
+                player = out["by_player"].setdefault(label, {"rush_snaps": 0, "lead_hurries": 0, "sacks": 0})
+                player["rush_snaps"] += 1
+                if label == event["rusher"]:
+                    player["lead_hurries"] += int(event["outcome"] == "hurry")
+                    player["sacks"] += int(event["outcome"] == "sack")
+        return out
+
     def _dc_tactics_summary(self, side: str) -> Dict:
         tactics = (getattr(self, "home_dc_tactics", {}) if side == "home"
                    else getattr(self, "away_dc_tactics", {}))
@@ -9729,7 +9757,7 @@ class ViperballEngine:
         Returns (defender, pool_label).
         """
         groups = self._get_defenders_by_group(def_team)
-        plan = self._rush_plan
+        plan = getattr(self, "_rush_plan", None)
         eligible = plan["coverage"] if plan and plan["coverage"] else groups["all"]
 
         style_weights = self._get_personnel_surface_weights("kick_pass_cov")
@@ -9817,7 +9845,7 @@ class ViperballEngine:
 
     def compute_sack_probability(self, team, def_team, subfamily, formation=None):
         """Resolve the existing rush/protection contest from committed personnel."""
-        plan = self._rush_plan or self._plan_kick_pass_rush(team, def_team)
+        plan = getattr(self, "_rush_plan", None) or self._plan_kick_pass_rush(team, def_team)
         rushers, blockers = plan["rushers"], plan["blockers"]
         rush_skill, block_skill = plan["rush_skill"], plan["protection_skill"]
         rusher = plan["lead_rusher"]
@@ -15147,6 +15175,7 @@ class ViperballEngine:
                 "away": self.state.away_delta_yards,
             },
             "defensive_reads": self._defense_read_counts,
+            "defensive_rush": {side: self._rush_summary(side) for side in ("home", "away")},
             "weather": self.weather,
             "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
             "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
