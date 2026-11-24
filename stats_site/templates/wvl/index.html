@@ -13,6 +13,15 @@
   <div class="subtitle">Galactic Premiership &mdash; where CVL graduates continue their careers</div>
 </div>
 
+<form class="run-bar" method="post" action="/stats/do">
+  <input type="hidden" name="_path" value="/api/wvl/new?year={year}">
+  <input type="hidden" name="_back" value="/stats/wvl/">
+  <input type="hidden" name="_next" value="/stats/wvl/{league_id}/">
+  <label for="wvl-year" class="run-phase">New career league, first year</label>
+  <input type="number" id="wvl-year" name="year" value="2027" min="2000" max="2200" style="width:90px">
+  <button class="btn-run" type="submit">Create</button>
+</form>
+
 {% if leagues %}
 <table>
   <thead>
@@ -47,6 +56,6 @@
   </tbody>
 </table>
 {% else %}
-<div class="empty">No WVL career leagues yet. Create one in the app under WVL, then graduate a CVL class to fill it with real players.</div>
+<div class="empty">No career leagues yet. Graduate a CVL class from a dynasty to fill one with real players.</div>
 {% endif %}
 {% endblock %}

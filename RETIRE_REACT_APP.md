@@ -35,7 +35,7 @@ below is checked.
 - [x] Start a league, sim week, sim all
 
 ### WVL
-- [ ] Create, sim week, sim all, advance season, import graduates
+- [x] Create, sim week, sim all, advance season, import graduates
 
 ### International (FIV)
 - [ ] New cycle, sim stage, continental sim all
