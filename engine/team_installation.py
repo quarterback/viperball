@@ -257,37 +257,78 @@ def _carryover(side: str, unit: dict, new_card: Any, staff: dict, previous_staff
     return min(CARRYOVER_CAP, fam)
 
 
+# Installation preferences, not execution modifiers. Existing pressure,
+# run support and native-book preference remain; focus and read affinity
+# distinguish packages with different tactical jobs.
+_DEFENSE_PACKAGE_FOCUS = {
+    "fortress_goal_line_stand": ("short", None),
+    "fortress_short_yardage_wall": ("short", None),
+    "lockdown_kick_range_shell": ("deep", "intermediate"),
+    "lockdown_long_yardage_bracket": ("deep", "intermediate"),
+    "drift_prevent": ("deep", None),
+    "blitz_short_yardage_pressure": ("short", "opportunistic"),
+    "rugby_rush_line": ("perimeter", "short"),
+    "afl_kick_in_press": ("intermediate", "opportunistic"),
+    "lax_ride": ("opportunistic", "perimeter"),
+    "swarm_containment": ("perimeter", None),
+    "shadow_robber": ("intermediate", "opportunistic"),
+    "chaos_lateral_trap": ("opportunistic", "perimeter"),
+    "predator_exhaustion_press": ("perimeter", "intermediate"),
+}
+
+
+def _defensive_preference_components(pkg: dict, family: str, defense: dict) -> dict:
+    """Explain an install preference using the coach's saved tactical interests."""
+    from engine.defensive_commitments import PRESS_PACKAGES, COVER_PACKAGES, WALL_PACKAGES
+    pid = pkg["package_id"]
+    pressure = float(defense.get("pressure_bias", 0.0))
+    support = float(defense.get("run_support_bias", 0.0))
+    category = (pressure if pid in PRESS_PACKAGES else -pressure if pid in COVER_PACKAGES
+                else support if pid in WALL_PACKAGES else 0.0)
+    focus = defense.get("coverage_focus")
+    primary, adjacent = _DEFENSE_PACKAGE_FOCUS.get(pid, (None, None))
+    focus_match = .08 if focus and focus == primary else .04 if focus and focus == adjacent else 0.0
+    families = set(pkg.get("play_family_tags", ()))
+    targets = set()
+    if families & {"power", "dive_option", "counter", "draw", "sweep_option", "speed_option", "viper_jet"}:
+        targets.add("run")
+    if "lateral_spread" in families or "kick_lateral" in pkg.get("kick_pass_tags", ()):
+        targets.add("lateral")
+    if "kick_pass" in families:
+        targets.add("kick_pass")
+    reads = set(defense.get("read_focus") or ())
+    read_match = .025 * len(targets & reads) / len(targets) if targets else 0.0
+    return {"category": category, "focus_match": focus_match,
+            "read_match": read_match, "native_book": .07 if pkg["origin_family"] == family else 0.0}
+
+
 def _package_preference_score(side: str, family: str, card: Any):
     """Use the same preference calculation for selection and diagnostics."""
     from engine import playbook_catalog as pc
     bias = _offense_bias(card) if side == "offense" else {}
+    defense = _profile(card).get("defense", {}) if side == "defense" else {}
 
     def score(pid):
         pkg = pc.get_package(pid)
+        if side == "defense":
+            return sum(_defensive_preference_components(pkg, family, defense).values())
         s = 0.0
         for key, tag_field in _PACKAGE_TAGS.items():
             s += sum(bias.get(key, {}).get(t, 0.0) for t in pkg.get(tag_field, []))
-        if side == "defense":
-            from engine.defensive_commitments import PRESS_PACKAGES, COVER_PACKAGES, WALL_PACKAGES
-            defense = _profile(card).get("defense", {})
-            pressure = float(defense.get("pressure_bias", 0.0))
-            support = float(defense.get("run_support_bias", 0.0))
-            focus = defense.get("coverage_focus", "")
-            if pid in PRESS_PACKAGES:
-                s += pressure
-            elif pid in COVER_PACKAGES:
-                s -= pressure
-                s += .04 if focus in ("deep", "intermediate", "perimeter") else 0.0
-            elif pid in WALL_PACKAGES:
-                s += support
-            # Keep the program's native book a meaningful consideration.
-            if pkg["origin_family"] == family:
-                s += .06
         if pkg["origin_family"] == family:
-            s += 0.01   # tie break toward the home book's own packages
+            s += 0.01
         return s
 
     return score
+
+
+def _package_rank_key(side: str, card: Any, score, pid: str):
+    """Stable coach-specific ordering only when preference scores tie."""
+    if side == "defense" and _coach_id(card):
+        from engine.stable_hash import stable_hash
+        return (-round(score(pid), 9),
+                stable_hash(f"def11:{_coach_id(card)}:{pid}"), pid)
+    return (-score(pid), pid)
 
 
 def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
@@ -312,7 +353,7 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
     if coach_id and already_by_coach < PACKAGES_PER_COORDINATOR:
         score = _package_preference_score(side, family, card)
 
-        ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: (-score(pid), pid))
+        ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: _package_rank_key(side, card, score, pid))
         if side == "offense":
             ranked = [pid for pid in ranked if score(pid) > 0] or ranked
         for pid in ranked[:PACKAGES_PER_COORDINATOR - already_by_coach]:
@@ -339,6 +380,7 @@ def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict
         "defense", family, team_stats)}
     score = _package_preference_score("defense", family, card)
     callable_now = evaluable_situations()
+    defense = _profile(card).get("defense", {})
     rows = {}
     for pid in all_ids:
         fit = fits.get(pid)
@@ -352,6 +394,8 @@ def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict
             "missing_personnel": fit["missing_personnel"] if fit else [],
             "callable": callable_tag,
             "preference_score": round(score(pid), 6) if compatible else None,
+            "preference_components": _defensive_preference_components(
+                pc.get_package(pid), family, defense) if compatible else None,
             "installed": record is not None,
             "familiarity": record.get("familiarity") if record else None,
             "installed_by_current_dc": bool(record and
@@ -359,7 +403,7 @@ def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict
         }
     eligible = sorted((pid for pid, row in rows.items()
                        if row["personnel_ok"] and row["callable"]),
-                      key=lambda pid: (-score(pid), pid))
+                      key=lambda pid: _package_rank_key("defense", card, score, pid))
     for rank, pid in enumerate(eligible, 1):
         rows[pid]["preference_rank"] = rank
     return {
