@@ -1368,6 +1368,11 @@ def serialize_dynasty(dynasty) -> dict:
     # Preserve learned coordinator and package familiarity in real app saves.
     data["team_installations"] = dict(getattr(dynasty, "_team_installations", {}) or {})
 
+    # Preserve prospective recruits and their development across reloads.
+    pipeline = getattr(dynasty, "_hs_pipeline", None)
+    if pipeline is not None:
+        data["hs_pipeline_state"] = pipeline.save_state()
+
     # Next-season rosters (persisted by offseason_complete for roster continuity)
     next_rosters = getattr(dynasty, '_next_season_rosters', None)
     if next_rosters:
@@ -1464,6 +1469,10 @@ def deserialize_dynasty(data: dict):
         name: ensure_installation(rec, name)
         for name, rec in (data.get("team_installations") or {}).items() if rec
     }
+
+    if data.get("hs_pipeline_state") is not None:
+        from engine.recruiting import HSRecruitingPipeline
+        dynasty._hs_pipeline = HSRecruitingPipeline.from_save_state(data["hs_pipeline_state"])
 
     # Next-season rosters (roster continuity across seasons)
     next_rosters = data.get("next_season_rosters")
