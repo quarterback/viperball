@@ -254,6 +254,14 @@ def populate_coaching_portal(
                     # Non-HC: 50% chance they re-sign, 50% hit portal
                     if rng.random() < 0.50:
                         reason = "contract_expired"
+                    else:
+                        # An extension must actually renew the contract.
+                        years = rng.randint(2, 4) if role != "stc" else rng.randint(1, 3)
+                        salary = calculate_coach_salary(card, rng=rng)
+                        card.contract_years_remaining = years
+                        card.contract_salary = salary
+                        card.contract_buyout = int(salary * years * 0.5)
+                        card.year_signed = portal.year
 
             if reason is not None:
                 # Determine what roles they'll accept.
@@ -322,6 +330,7 @@ def populate_coaching_portal(
     pool_target = max(15, total_vacancies * 2)
     current_count = len(portal.entries)
     to_generate = max(0, pool_target - current_count)
+    occupied = {c.coach_id for staff in coaching_staffs.values() for c in staff.values()}
 
     for _ in range(to_generate):
         role = rng.choice(["head_coach", "oc", "dc", "stc"])
@@ -332,6 +341,10 @@ def populate_coaching_portal(
             year=portal.year,
             rng=rng,
         )
+        while card.coach_id in occupied:
+            card = generate_coach_card(role=role, team_name="",
+                prestige=rng.randint(20, 70), year=portal.year, rng=rng)
+        occupied.add(card.coach_id)
         # Free agents will consider any compatible role (roles are fluid)
         seeking = get_acceptable_roles(card)
 
