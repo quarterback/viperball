@@ -73,11 +73,11 @@ class WVLCommissionerDynasty:
 
         return self._current_season
 
-    def sim_full_season(self, use_fast_sim: bool = False) -> Dict[int, dict]:
+    def sim_full_season(self) -> Dict[int, dict]:
         """Simulate entire regular season + playoffs for all tiers."""
         if not self._current_season:
             self.start_season()
-        return self._current_season.run_full_season(use_fast_sim=use_fast_sim)
+        return self._current_season.run_full_season()
 
     def advance_season(self, season: WVLMultiTierSeason):
         """Record completed season results into history."""

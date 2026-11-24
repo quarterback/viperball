@@ -2377,16 +2377,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         except Exception:
             pass
 
-    # Inject fast_sim metrics as viperball_metrics so templates can find them
-    # (mirrors the fix in pro_league.get_box_score)
     fr = game_data.get("full_result")
-    if fr and fr.get("_fast_sim"):
-        fsm = fr.get("_fast_sim_metrics", {})
-        stats_data = fr.get("stats", {})
-        for side in ("home", "away"):
-            side_stats = stats_data.get(side)
-            if side_stats and side in fsm and "viperball_metrics" not in side_stats:
-                side_stats["viperball_metrics"] = fsm[side]
 
     # Normalize nested stat dicts so templates can compare them as scalars.
     # The game engine stores EPA as a dict with sub-keys; the template
@@ -2401,7 +2392,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
 
     # Generate game analysis text if full result is available
     analysis_text = None
-    if fr and not fr.get("_fast_sim"):
+    if fr:
         try:
             from analyze_game import analyze_game_data
             analysis_text = analyze_game_data(fr)
@@ -4609,7 +4600,7 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
     # Generate game analysis if full result available
     analysis_text = None
     fr = box.get("result") if isinstance(box, dict) else None
-    if fr and not (fr.get("_fast_sim") if isinstance(fr, dict) else False):
+    if isinstance(fr, dict) and fr:
         try:
             from analyze_game import analyze_game_data
             analysis_text = analyze_game_data(fr)

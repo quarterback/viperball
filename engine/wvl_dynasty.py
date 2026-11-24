@@ -173,8 +173,7 @@ class WVLDynasty:
         """Initialize a new season across all 4 tiers.
 
         Also injects per-team investment modifiers into Team objects so that
-        investment allocation has a marginal in-season effect on dice rolls
-        (via fast_sim._team_strength).
+        investment allocation lifts game day form a little in the engine.
         """
         self._current_season = WVLMultiTierSeason(self.tier_assignments)
         self._inject_investment_modifiers(self._current_season)

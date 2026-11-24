@@ -794,17 +794,15 @@ def _render_advance(state, next_week: int, refresh_fn):
         ).classes("text-sm mt-1").style(f"color: {TEXT_SECONDARY};")
 
         async def _advance():
-            use_fast = not state.full_engine
             advance_btn.disable()
             advance_btn.text = f"Simulating Week {next_week}..."
 
             try:
-                result = await run.io_bound(api_client.dq_advance_week, state.session_id, use_fast)
+                result = await run.io_bound(api_client.dq_advance_week, state.session_id)
                 wk = result.get("week", next_week)
                 games = result.get("games_count", 0)
                 state.dq_current_week = wk
-                engine_label = "full engine" if not use_fast else "fast sim"
-                notify_success(f"Week {wk} done — {games} games simulated! ({engine_label})")
+                notify_success(f"Week {wk} done — {games} games simulated!")
                 try:
                     refresh_fn.refresh()
                 except RuntimeError:
@@ -818,11 +816,3 @@ def _render_advance(state, next_week: int, refresh_fn):
             advance_btn = ui.button(
                 f"Simulate Week {next_week}", on_click=_advance, icon="fast_forward",
             ).props("color=amber text-color=black size=lg").classes("flex-grow font-bold")
-            engine_switch = ui.switch("Full Engine (Box Scores)", value=state.full_engine).props("dense").tooltip(
-                "Generate detailed play-by-play & drive summaries for all games. Off = fast sim (stats only, no play-by-play)."
-            )
-
-            def _toggle_engine(e):
-                state.full_engine = e.value
-
-            engine_switch.on_value_change(_toggle_engine)

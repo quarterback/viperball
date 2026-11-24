@@ -4972,7 +4972,7 @@ class ViperballEngine:
         self.half_form = {"home": [1.0, 1.0], "away": [1.0, 1.0]}
         self.team_form = {"home": 1.0, "away": 1.0}
         # WVL owner investment (0 to 8 team strength points, set by
-        # WVLDynasty) lifts the day's form, as it lifted fast sim strength.
+        # WVLDynasty) lifts the day's form.
         inv_w = V2_ENGINE_CONFIG.get("investment_form_per_point", 0.006)
         for side, team in (("home", self.home_team), ("away", self.away_team)):
             inv = getattr(team, "investment_modifier", 0.0) or 0.0

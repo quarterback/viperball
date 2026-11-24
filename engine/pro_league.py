@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from engine.game_engine import load_team_from_json, Team, ViperballEngine
-from engine.fast_sim import fast_sim_game
 from engine.weather import generate_game_weather, describe_conditions
 from engine.viperball_metrics import calculate_viperball_metrics
 from engine.stable_hash import stable_hash
@@ -626,7 +625,7 @@ class ProLeagueSeason:
         self.schedule = matchups_by_week
         self.total_weeks = len(matchups_by_week)
 
-    def sim_week(self, use_fast_sim: bool = False) -> dict:
+    def sim_week(self) -> dict:
         if self.phase != "regular_season":
             return {"error": "Season is not in regular season phase"}
         if self.current_week >= self.total_weeks:
@@ -665,27 +664,16 @@ class ProLeagueSeason:
             weather_label = weather_key.replace("_", " ").title() if weather_key else "Clear"
             weather_desc = weather_label
 
-            if use_fast_sim:
-                result = fast_sim_game(
-                    home_team=home,
-                    away_team=away,
-                    weather=weather_key,
-                    weather_label=weather_label,
-                    weather_description=weather_desc,
-                    unavailable_home=unavail_home,
-                    unavailable_away=unavail_away,
-                )
-            else:
-                engine = ViperballEngine(
-                    home, away,
-                    seed=random.randint(1, 1_000_000),
-                    weather=weather_key,
-                    injury_tracker=self.injury_tracker,
-                    game_week=week_num,
-                    unavailable_home=unavail_home,
-                    unavailable_away=unavail_away,
-                )
-                result = engine.simulate_game()
+            engine = ViperballEngine(
+                home, away,
+                seed=random.randint(1, 1_000_000),
+                weather=weather_key,
+                injury_tracker=self.injury_tracker,
+                game_week=week_num,
+                unavailable_home=unavail_home,
+                unavailable_away=unavail_away,
+            )
+            result = engine.simulate_game()
 
             home_score = result["final_score"]["home"]["score"]
             away_score = result["final_score"]["away"]["score"]
@@ -745,10 +733,10 @@ class ProLeagueSeason:
             } for g in week_results],
         }
 
-    def sim_all(self, use_fast_sim: bool = False) -> dict:
+    def sim_all(self) -> dict:
         results = []
         while self.current_week < self.total_weeks:
-            week_result = self.sim_week(use_fast_sim=use_fast_sim)
+            week_result = self.sim_week()
             results.append(week_result)
         return {"weeks_simulated": len(results), "results": results}
 
@@ -799,13 +787,6 @@ class ProLeagueSeason:
 
         stats_data = result.get("stats", {})
         player_stats_data = result.get("player_stats", {})
-
-        # Inject fast_sim metrics as viperball_metrics so templates can find them
-        fsm = result.get("_fast_sim_metrics", {})
-        for side in ("home", "away"):
-            side_stats = stats_data.get(side)
-            if side_stats and side in fsm and "viperball_metrics" not in side_stats:
-                side_stats["viperball_metrics"] = fsm[side]
 
         box = {
             "league": self.config.league_name,
@@ -904,27 +885,27 @@ class ProLeagueSeason:
                 }
             acc = self.player_season_stats[team_key][pid]
             acc["games"] += 1
-            # rushing_yards: fast_sim="rushing_yards", full engine="game_rushing_yards"/"yards"
+            # rushing yards (older saves used other key names)
             acc["rushing_yards"] += ps.get("rushing_yards", ps.get("game_rushing_yards", ps.get("yards", 0)))
             # carries: rush_carries + lateral_receptions (any ball touch on a run is a carry)
             rush_car = ps.get("rush_carries", ps.get("carries", ps.get("game_carries", 0)))
             lat_rec = ps.get("lateral_receptions", 0)
             acc["rushing_carries"] += rush_car + lat_rec
-            # touchdowns: fast_sim="tds", full engine="touchdowns"/"game_touchdowns"
+            # touchdowns
             acc["touchdowns"] += ps.get("tds", ps.get("touchdowns", ps.get("game_touchdowns", 0)))
             # kick pass yards: both use "kick_pass_yards"
             acc["kick_pass_yards"] += ps.get("kick_pass_yards", ps.get("game_kick_pass_yards", 0))
-            # kick pass completions: fast_sim="kick_passes_completed", full engine="kick_pass_completions"
+            # kick pass completions
             acc["kick_pass_completions"] += ps.get("kick_passes_completed", ps.get("kick_pass_completions", ps.get("game_kick_pass_completions", 0)))
-            # kick pass attempts: fast_sim="kick_passes_thrown", full engine="kick_pass_attempts"
+            # kick pass attempts
             acc["kick_pass_attempts"] += ps.get("kick_passes_thrown", ps.get("kick_pass_attempts", ps.get("game_kick_pass_attempts", 0)))
             acc["kick_pass_tds"] += ps.get("kick_pass_tds", ps.get("game_kick_pass_tds", 0))
             acc["kick_pass_receptions"] += ps.get("kick_pass_receptions", ps.get("game_kick_pass_receptions", 0))
             # lateral yards: both use "lateral_yards"
             acc["lateral_yards"] += ps.get("lateral_yards", ps.get("game_lateral_yards", 0))
-            # laterals: fast_sim uses "laterals_thrown"+"lateral_receptions", full engine uses "laterals"/"lateral_chains"
-            fast_lat = ps.get("laterals_thrown", 0) + ps.get("lateral_receptions", 0)
-            acc["laterals"] += fast_lat if fast_lat else ps.get("laterals", ps.get("lateral_chains", 0))
+            # laterals thrown plus lateral receptions
+            lat = ps.get("laterals_thrown", 0) + ps.get("lateral_receptions", 0)
+            acc["laterals"] += lat if lat else ps.get("laterals", ps.get("lateral_chains", 0))
             acc["fumbles"] += ps.get("fumbles", ps.get("game_fumbles", 0))
             acc["tackles"] += ps.get("tackles", ps.get("game_tackles", 0))
             acc["dk_made"] += ps.get("dk_made", ps.get("game_dk_made", 0))

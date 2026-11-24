@@ -221,7 +221,7 @@ def _render_wvl_tab(dynasty: WVLCommissionerDynasty):
                 s = _commish_cache.get("season")
                 if not d or not s:
                     return
-                s.sim_week_all_tiers(use_fast_sim=True)
+                s.sim_week_all_tiers()
 
                 all_done = all(
                     t.current_week >= t.total_weeks or t.phase != "regular_season"
@@ -246,7 +246,7 @@ def _render_wvl_tab(dynasty: WVLCommissionerDynasty):
                     t.phase == "regular_season" and t.current_week < t.total_weeks
                     for t in s.tier_seasons.values()
                 ):
-                    s.sim_week_all_tiers(use_fast_sim=True)
+                    s.sim_week_all_tiers()
 
                 s.start_playoffs_all()
                 safety = 0

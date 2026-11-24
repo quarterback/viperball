@@ -25,7 +25,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from engine.fast_sim import fast_sim_game
 from engine.game_engine import load_team_from_json
 
 

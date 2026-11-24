@@ -186,14 +186,6 @@ class UserState:
     def wvl_session_id(self, value: Optional[str]):
         self._store["wvl_session_id"] = value
 
-    @property
-    def full_engine(self) -> bool:
-        """When True, use full game engine instead of fast sim for CPU games."""
-        return self._store.get("full_engine", True)
-
-    @full_engine.setter
-    def full_engine(self, value: bool):
-        self._store["full_engine"] = value
 
     def clear_session(self):
         """Reset CVL session state without touching WVL state.

@@ -19,7 +19,7 @@ from collections import defaultdict
 
 from engine.season import (
     Season, TeamRecord, Game, load_teams_from_directory, create_season,
-    is_buy_game, BUY_GAME_NIL_BONUS, fast_sim_season,
+    is_buy_game, BUY_GAME_NIL_BONUS, history_season,
 )
 from engine.awards import SeasonHonors, compute_season_awards
 from engine.injuries import InjuryTracker
@@ -2123,11 +2123,10 @@ class Dynasty:
         progress_callback=None,
     ):
         """
-        Simulate N years of league history using fast rating-based simulation.
+        Simulate N years of league history on the full game engine.
 
-        Uses team overall ratings to probabilistically determine game outcomes
-        instead of running the full game engine. This makes even 100 years of
-        history generate in seconds instead of hours.
+        Every game is a real engine game (about three minutes a history year
+        for the 205 team league); only records and titles are kept.
 
         Populates team histories with win/loss records, championship years,
         and best/worst seasons. The coach does NOT accumulate stats.
@@ -2148,7 +2147,7 @@ class Dynasty:
         rng = random.Random(stable_hash(f"history_{self.dynasty_name}") % 999999)
 
         for i, year in enumerate(range(history_start, original_year)):
-            result = fast_sim_season(
+            result = history_season(
                 teams=all_teams,
                 conferences=conf_dict,
                 games_per_team=games_per_team,

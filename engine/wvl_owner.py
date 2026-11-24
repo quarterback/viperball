@@ -696,7 +696,7 @@ def compute_financials(
 def compute_investment_modifier(allocation: InvestmentAllocation, budget: float) -> float:
     """Return an additive team-strength bonus (0–8 points on 0–100 scale).
 
-    Used to inject in-season effects from investment spending into fast_sim
+    Lifts game day form in the engine (game_engine._roll_game_form)
     without requiring attribute changes.  Specifically:
       - training  → offensive output (speed/agility)
       - coaching  → overall consistency

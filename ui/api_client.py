@@ -208,21 +208,20 @@ def create_season(session_id: str, name: str = "2026 CVL Season",
     return _post(f"/sessions/{session_id}/season", json=body)
 
 
-def simulate_week(session_id: str, week: Optional[int] = None, fast_sim: bool = True) -> dict:
+def simulate_week(session_id: str, week: Optional[int] = None) -> dict:
     body = {}
     if week is not None:
         body["week"] = week
-    body["fast_sim"] = fast_sim
     return _post(f"/sessions/{session_id}/season/simulate-week", json=body)
 
 
-def simulate_through_week(session_id: str, target_week: int, fast_sim: bool = True) -> dict:
+def simulate_through_week(session_id: str, target_week: int) -> dict:
     return _post(f"/sessions/{session_id}/season/simulate-through",
-                 json={"target_week": target_week, "fast_sim": fast_sim})
+                 json={"target_week": target_week})
 
 
-def simulate_rest(session_id: str, fast_sim: bool = True) -> dict:
-    return _post(f"/sessions/{session_id}/season/simulate-rest", json={"fast_sim": fast_sim})
+def simulate_rest(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/season/simulate-rest", json={})
 
 
 def run_playoffs(session_id: str) -> dict:
@@ -715,8 +714,8 @@ def dq_create_season(session_id: str, name: str = "DQ Fantasy Season",
     })
 
 
-def dq_advance_week(session_id: str, fast_sim: bool = True) -> dict:
-    return _post(f"/sessions/{session_id}/dq/advance-week", json={"fast_sim": fast_sim})
+def dq_advance_week(session_id: str) -> dict:
+    return _post(f"/sessions/{session_id}/dq/advance-week", json={})
 
 
 def pro_league_new(league: str) -> dict:

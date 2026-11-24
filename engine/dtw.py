@@ -155,52 +155,50 @@ def _extract_traditional(game_result: Dict, side: str,
                          metrics: Optional[Dict]) -> Dict[str, float]:
     """Extract traditional + Viperball-specific efficiency signals."""
     stats = game_result.get("stats", {}).get(side, {})
-    fs_metrics = game_result.get("_fast_sim_metrics", {}).get(side, {})
     m = metrics or {}
 
-    team_rating = m.get("team_rating", m.get("opi",
-                  fs_metrics.get("territory_rating", 50.0)))
+    team_rating = m.get("team_rating", m.get("opi", 50.0))
 
     # ── EPA sub-signals ──
-    raw_epa = stats.get("epa", fs_metrics.get("epa", 0.0))
+    raw_epa = stats.get("epa", 0.0)
     if isinstance(raw_epa, dict):
         success_rate = raw_epa.get("success_rate", 45.0)
         explosiveness = raw_epa.get("explosiveness", 1.0)
         epa_per_play = raw_epa.get("epa_per_play", 0.0)
     else:
-        success_rate = fs_metrics.get("success_rate", 45.0)
-        explosiveness = fs_metrics.get("explosiveness", 1.0)
-        epa_per_play = fs_metrics.get("epa_per_play", 0.0)
+        success_rate = 45.0
+        explosiveness = 1.0
+        epa_per_play = 0.0
 
     conversion_pct = m.get("conversion_pct",
-                    fs_metrics.get("conversion_pct", 40.0))
-    to_margin = m.get("to_margin", fs_metrics.get("to_margin", 0.0))
+                    40.0)
+    to_margin = m.get("to_margin", 0.0)
 
     # ── Viperball-specific skill signals ──
 
     # Lateral chain completion % (the signature Viperball skill)
-    lateral_pct = m.get("lateral_pct", fs_metrics.get("lateral_pct", 0.0))
+    lateral_pct = m.get("lateral_pct", 0.0)
 
     # Kick pass completion %
-    kp_att = stats.get("kick_passes_attempted", fs_metrics.get("kick_pass_att", 0))
-    kp_comp = stats.get("kick_passes_completed", fs_metrics.get("kick_pass_comp", 0))
+    kp_att = stats.get("kick_passes_attempted", 0)
+    kp_comp = stats.get("kick_passes_completed", 0)
     kick_pass_pct = (kp_comp / kp_att * 100) if kp_att > 0 else 50.0
 
     # Combined DK + PK success rate
     kick_stats = m.get("kick_stats", {})
     dk_att = kick_stats.get("dk_attempts", stats.get("drop_kicks_attempted",
-             fs_metrics.get("dk_attempts", 0)))
+             0))
     dk_made = kick_stats.get("dk_made", stats.get("drop_kicks_made",
-              fs_metrics.get("dk_made", 0)))
+              0))
     pk_att = kick_stats.get("pk_attempts", stats.get("place_kicks_attempted",
-             fs_metrics.get("pk_attempts", 0)))
+             0))
     pk_made = kick_stats.get("pk_made", stats.get("place_kicks_made",
-              fs_metrics.get("pk_made", 0)))
+              0))
     total_kick_att = dk_att + pk_att
     kicking_eff = ((dk_made + pk_made) / total_kick_att * 100) if total_kick_att > 0 else 50.0
 
     # Defensive stop rate (% of opponent drives held without scoring)
-    def_impact = m.get("defensive_impact", fs_metrics.get("defensive_impact", {}))
+    def_impact = m.get("defensive_impact", {})
     stop_rate = def_impact.get("stop_rate", 0.0)
     if not stop_rate:
         d_stops = def_impact.get("defensive_stops", 0)
@@ -208,8 +206,8 @@ def _extract_traditional(game_result: Dict, side: str,
         stop_rate = (d_stops / opp_drives * 100) if opp_drives > 0 else 50.0
 
     # Bonus possession conversion rate (turnover capitalization)
-    bonus_poss = stats.get("bonus_possessions", fs_metrics.get("bonus_possessions", 0))
-    bonus_scores = stats.get("bonus_possession_scores", fs_metrics.get("bonus_scores", 0))
+    bonus_poss = stats.get("bonus_possessions", 0)
+    bonus_scores = stats.get("bonus_possession_scores", 0)
     bonus_conv = (bonus_scores / bonus_poss * 100) if bonus_poss > 0 else 50.0
 
     # Quarter set efficiency — tennis-style: did you win the quarters?

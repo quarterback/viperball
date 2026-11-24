@@ -1256,7 +1256,7 @@ class Season:
     # Injury tracker — when set, injuries affect game simulation
     injury_tracker: Optional[object] = None
 
-    # Human-controlled teams — fast-sim skips these games
+    # Human-controlled teams
     human_teams: List[str] = field(default_factory=list)
 
     # Live prestige — updated after every game via adjust_prestige_postgame.
@@ -3866,30 +3866,22 @@ def auto_assign_rivalries(
     return rivalries
 
 
-# ── Fast History Simulation ──────────────────────────────────────────
-# Generates lightweight season results (standings + champion) using
-# team-rating-based win probability instead of full game simulation.
-# ~1000x faster than running the game engine for every game.
+# ── History Seasons ──────────────────────────────────────────────────
+# Back history for a new season or dynasty.  Every game runs on the full
+# engine (about three minutes a history year for the 205 team league); only
+# records, champions and the final four are kept.
 
-def _team_avg_overall(team: Team) -> float:
-    """Average player overall rating for a team."""
-    if not team.players:
-        return 60.0
-    return sum(p.overall for p in team.players) / len(team.players)
-
-
-def fast_sim_season(
+def history_season(
     teams: Dict[str, Team],
     conferences: Dict[str, List[str]],
     games_per_team: int,
     rng: random.Random,
     playoff_size: int = 8,
 ) -> dict:
-    """Simulate an entire season using rating-based outcomes (no game engine).
+    """Play an entire history season on the full engine (records only are kept).
 
     Returns dict with keys: champion, runner_up, final_four, standings (list of dicts).
     """
-    ratings = {name: _team_avg_overall(t) for name, t in teams.items()}
     team_names = list(teams.keys())
 
     records: Dict[str, dict] = {
@@ -3903,10 +3895,10 @@ def fast_sim_season(
         for m in members:
             team_conf[m] = conf
 
-    schedule = _fast_build_schedule(team_names, conferences, games_per_team, rng)
+    schedule = _history_schedule(team_names, conferences, games_per_team, rng)
 
     for home, away, is_conf in schedule:
-        winner, h_score, a_score = _fast_sim_game(home, away, ratings, rng)
+        winner, h_score, a_score = _history_game(home, away, teams, rng)
         records[home]["pf"] += h_score
         records[home]["pa"] += a_score
         records[away]["pf"] += a_score
@@ -3948,7 +3940,7 @@ def fast_sim_season(
         playoff_pool.add(name)
     playoff_list = sorted(playoff_pool, key=lambda n: ranked.index(n))[:playoff_size]
 
-    champion, runner_up, final_four = _fast_sim_bracket(playoff_list, ratings, rng)
+    champion, runner_up, final_four = _history_bracket(playoff_list, teams, rng)
 
     return {
         "champion": champion,
@@ -3960,7 +3952,7 @@ def fast_sim_season(
     }
 
 
-def _fast_build_schedule(
+def _history_schedule(
     team_names: list,
     conferences: Dict[str, List[str]],
     games_per_team: int,
@@ -3969,7 +3961,7 @@ def _fast_build_schedule(
     """Build a simplified schedule: (home, away, is_conference_game).
 
     Uses round-robin within conferences (capped) + random non-conf fill.
-    Much faster than the full scheduler — no balancing needed for history.
+    A simple round robin plus random fill; no balancing needed for history.
     """
     games = []
     team_game_counts: Dict[str, int] = {n: 0 for n in team_names}
@@ -4022,41 +4014,30 @@ def _fast_build_schedule(
     return games
 
 
-def _fast_sim_game(
+def _history_game(
     home: str, away: str,
-    ratings: Dict[str, float],
+    teams: Dict[str, Team],
     rng: random.Random,
+    is_playoff: bool = False,
 ) -> tuple:
-    """Determine winner and approximate scores from team ratings.
+    """Play one history game on the full engine.
 
     Returns (winner_name, home_score, away_score).
     """
-    h_rat = ratings.get(home, 65.0)
-    a_rat = ratings.get(away, 65.0)
-
-    diff = h_rat - a_rat + rng.gauss(0, 8)
-    home_advantage = 2.5
-    diff += home_advantage
-
-    base_score = 28 + rng.gauss(0, 8)
-    h_score = max(0, base_score + diff * 0.6 + rng.gauss(0, 5))
-    a_score = max(0, base_score - diff * 0.6 + rng.gauss(0, 5))
-
-    h_score = round(h_score)
-    a_score = round(a_score)
+    result = ViperballEngine(teams[home], teams[away], seed=rng.randint(1, 1_000_000),
+                             neutral_site=is_playoff, is_playoff=is_playoff).simulate_game()
+    h_score = result["final_score"]["home"]["score"]
+    a_score = result["final_score"]["away"]["score"]
     if h_score == a_score:
-        if diff >= 0:
-            h_score += rng.choice([2, 3, 5])
-        else:
-            a_score += rng.choice([2, 3, 5])
-
-    winner = home if h_score > a_score else away
+        winner = home if rng.random() < 0.5 else away
+    else:
+        winner = home if h_score > a_score else away
     return winner, h_score, a_score
 
 
-def _fast_sim_bracket(
-    teams: list,
-    ratings: Dict[str, float],
+def _history_bracket(
+    bracket_teams: list,
+    teams: Dict[str, Team],
     rng: random.Random,
 ) -> tuple:
     """Single-elimination bracket simulation.
@@ -4064,11 +4045,11 @@ def _fast_sim_bracket(
     Returns (champion, runner_up, final_four) tuple.
     final_four is ordered: [champion, runner_up, semi1_loser, semi2_loser].
     """
-    if not teams:
+    if not bracket_teams:
         return "N/A", "N/A", []
-    if len(teams) == 1:
-        return teams[0], "N/A", [teams[0]]
-    bracket = list(teams)
+    if len(bracket_teams) == 1:
+        return bracket_teams[0], "N/A", [bracket_teams[0]]
+    bracket = list(bracket_teams)
     semifinalists = []
     runner_up = "N/A"
     while len(bracket) > 1:
@@ -4078,7 +4059,7 @@ def _fast_sim_bracket(
         if len(bracket) == 4:
             semifinalists = list(bracket)
         for i in range(0, len(bracket) - 1, 2):
-            winner, _, _ = _fast_sim_game(bracket[i], bracket[i + 1], ratings, rng)
+            winner, _, _ = _history_game(bracket[i], bracket[i + 1], teams, rng, is_playoff=True)
             loser = bracket[i + 1] if winner == bracket[i] else bracket[i]
             next_round.append(winner)
             losers.append(loser)
@@ -4099,7 +4080,7 @@ def _fast_sim_bracket(
     return champion, runner_up, final_four
 
 
-def fast_generate_history(
+def generate_history(
     teams: Dict[str, Team],
     conferences: Dict[str, List[str]],
     num_years: int,
@@ -4107,7 +4088,7 @@ def fast_generate_history(
     playoff_size: int = 8,
     base_seed: int = 42,
 ) -> list:
-    """Generate num_years of fast-simulated history.
+    """Generate num_years of history, every game on the full engine.
 
     Returns list of dicts: [{year, champion, runner_up, final_four}, ...]
     """
@@ -4115,7 +4096,7 @@ def fast_generate_history(
     results = []
     for y in range(num_years):
         year = 2026 - num_years + y
-        year_result = fast_sim_season(
+        year_result = history_season(
             teams, conferences, games_per_team, rng, playoff_size,
         )
         year_result["year"] = year
