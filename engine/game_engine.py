@@ -4340,9 +4340,15 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go)
         rng = (self._away_dc_tactics_rng if def_side == "away"
                else self._home_dc_tactics_rng)
-        from .team_installation import active_situations
-        diff = self.state.home_score - self.state.away_score
-        situations = active_situations(self._package_context(diff if def_side == "home" else -diff))
+        # Only installed packages need eligibility evaluated. Evaluate even
+        # when package execution is disabled, for matched benchmark controls.
+        team = self.home_team if def_side == "home" else self.away_team
+        unit = (getattr(team, "installation", None) or {}).get("defense", {})
+        situations = set()
+        if unit.get("packages"):
+            from .team_installation import active_situations
+            diff = self.state.home_score - self.state.away_score
+            situations = active_situations(self._package_context(diff if def_side == "home" else -diff))
         package = self._choose_defensive_package(def_side, tactics, situations)
         if package:
             # Blend toward an existing posture; never add a second contest.
