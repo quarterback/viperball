@@ -10171,6 +10171,12 @@ class ViperballEngine:
         if play_family is not None:
             formation_yard_adj = self._formation_yard_modifier(play_family.value)
             center += formation_yard_adj
+            # The pre-snap DC alignment must affect the actual run contest.
+            # A stacked front denies interior runs but concedes the edge.
+            call = self._active_dc_call()
+            if call:
+                alignment_delta = ALIGNMENT_VS_PLAY.get((call["alignment"], play_family.value), 0.0)
+                center *= 1.0 + alignment_delta
             # Formation × Defense matchup multiplier
             center *= self._formation_defense_multiplier()
             # Style matchup and one tactical read. These are separate from
