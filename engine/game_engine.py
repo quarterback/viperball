@@ -58,6 +58,8 @@ V2_ENGINE_CONFIG = {
     "defensive_coach_tactics_enabled": True,
     # CCH-04: team familiarity and installed package decisions.
     "team_installation_enabled": True,
+    # CCH-05: installed defensive package calls, independently ablatable.
+    "defensive_packages_enabled": True,
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -4100,6 +4102,16 @@ class ViperballEngine:
             for side in ("home", "away")
         }
         self._active_defensive_call = None
+        self._rush_event = None
+        self._next_drive_origin = "opening"
+        self._drive_origin = "opening"
+        self._possession_snap_count = 0
+        self._defensive_package_usage = {side: {"eligible": {}, "selected": {}}
+                                         for side in ("home", "away")}
+        self._defensive_package_rng = {
+            side: random.Random(f"defensive-packages:{seed}:{side}")
+            for side in ("home", "away")
+        }
         self._home_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:home")
         self._away_dc_tactics_rng = random.Random(f"defense-tactics:{seed}:away")
 
@@ -4263,11 +4275,22 @@ class ViperballEngine:
         from .team_installation import situational_bias
         st = self.state
         diff = (st.home_score - st.away_score) if st.possession == "home" else (st.away_score - st.home_score)
-        context = {"down": st.down, "yards_to_go": st.yards_to_go,
-                   "field_position": st.field_position, "quarter": st.quarter,
-                   "time_remaining": st.time_remaining, "score_diff": diff}
+        context = self._package_context(diff)
         return situational_bias(tactics, key, context,
                                 self._coach_tactics_usage[st.possession])
+
+    def _package_context(self, score_diff):
+        st = self.state
+        team = self.get_defensive_team()
+        on_field = self._on_field(team, self._unavailable_in_game(team), "defense")
+        energy = (sum(p.game_energy for p in on_field) / len(on_field)
+                  if on_field else None)
+        self._snap_defense_energy = energy
+        return {"down": st.down, "yards_to_go": st.yards_to_go,
+                "field_position": st.field_position, "quarter": st.quarter,
+                "time_remaining": st.time_remaining, "score_diff": score_diff,
+                "drive_play_index": self._possession_snap_count,
+                "drive_start": self._drive_origin, "defense_energy": energy}
 
     def _record_oc_choice(self, category: str, value: str):
         """Track choices by offensive side, independent of resulting turnovers."""
@@ -4316,17 +4339,97 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go)
         rng = (self._away_dc_tactics_rng if def_side == "away"
                else self._home_dc_tactics_rng)
+        package = self._choose_defensive_package(def_side, tactics)
+        if package:
+            # Blend toward an existing posture; never add a second contest.
+            strength = package["familiarity"]
+            target = package["alignment"]
+            total = sum(weights.values())
+            weights = {a: w * (1.0 - 0.50 * strength) for a, w in weights.items()}
+            weights[target] += total * 0.50 * strength
         alignment = rng.choices(list(weights), weights=list(weights.values()), k=1)[0]
         blitz_chance = defensive_blitz_probability(
             STYLE_BLITZ_CHANCE.get(self._current_defense_name(), 0.10),
             tactics, alignment)
+        if package:
+            blitz_chance = max(0.02, min(0.65, blitz_chance +
+                package["blitz_shift"] * package["familiarity"]))
         blitz = rng.random() < blitz_chance
         call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz}
+        if package:
+            call["package_id"] = package["package_id"]
+            call["package_familiarity"] = package["familiarity"]
+            call["package_focus"] = package["focus"]
         self._active_defensive_call = call
         counters = self._dc_tactics_usage[def_side]
         counters["calls"] += 1
         counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
         counters["blitz_calls"] += int(blitz)
+
+    def _choose_defensive_package(self, side: str, tactics: Dict):
+        """Choose at most one installed package before the play family is known."""
+        if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
+                and V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)):
+            return None
+        team = self.home_team if side == "home" else self.away_team
+        unit = (getattr(team, "installation", None) or {}).get("defense", {})
+        if unit.get("coach_id") != tactics.get("coach_id") or unit.get("family") != team.defense_style:
+            return None
+        from .team_installation import active_situations
+        from .playbook_catalog import get_package
+        # The installation record was roster-filtered by sync_installation using
+        # league-normalized personnel profiles. Do not compare raw fresh ratings
+        # with the catalog's file-scale thresholds here.
+        st = self.state
+        diff = st.home_score - st.away_score
+        context = self._package_context(diff if side == "home" else -diff)
+        situations = active_situations(context)
+        # Existing alignments have real run-direction costs. The focus is a
+        # finite read allocation, not a universal defense multiplier.
+        effects = {
+            "fortress_goal_line_stand": ("stacked", -0.04, ["dive_option", "power"]),
+            "fortress_short_yardage_wall": ("stacked", -0.04, ["dive_option", "power"]),
+            "lockdown_kick_range_shell": ("spread", -0.06, ["kick_pass"]),
+            "lockdown_long_yardage_bracket": ("spread", -0.06, ["kick_pass"]),
+            "drift_prevent": ("spread", -0.08, ["kick_pass", "lateral_spread"]),
+            "blitz_short_yardage_pressure": ("aggressive", 0.10, ["dive_option", "power", "sweep_option"]),
+            "rugby_rush_line": ("aggressive", 0.06, ["sweep_option", "speed_option", "lateral_spread"]),
+            "afl_kick_in_press": ("aggressive", 0.06, ["kick_pass"]),
+            "lax_ride": ("aggressive", 0.08, ["speed_option", "viper_jet", "kick_pass"]),
+        }
+        # Drive-specific packages require both their opening snap and origin/field conditions.
+        choices = []
+        counts = self._defensive_package_usage[side]
+        for installed in sorted(unit.get("packages", []), key=lambda p: p.get("package_id", "")):
+            pid = installed.get("package_id")
+            if pid not in effects:
+                continue
+            pkg = get_package(pid)
+            if not situations.intersection(pkg["situation_tags"]) or team.defense_style not in pkg["compatible_families"]:
+                continue
+            if pid == "afl_kick_in_press" and not {"backed_up", "first_play_of_drive"} <= situations:
+                continue
+            if pid == "lax_ride" and not {"after_takeaway", "first_play_of_drive"} <= situations:
+                continue
+            familiarity = max(0.0, min(1.0, float(installed.get("familiarity", 0.0))))
+            familiarity *= tactics.get("installation_execution_factor", 1.0)
+            if familiarity <= 0:
+                continue
+            counts["eligible"][pid] = counts["eligible"].get(pid, 0) + 1
+            alignment, shift, focus = effects[pid]
+            choices.append({"package_id": pid, "familiarity": familiarity,
+                            "alignment": alignment, "blitz_shift": shift, "focus": focus})
+        if not choices:
+            return None
+        rng = self._defensive_package_rng[side]
+        # Keep the base call available even at full installation. Competition
+        # between packages does not inflate the overall activation probability.
+        if rng.random() >= 0.65 * max(p["familiarity"] for p in choices):
+            return None
+        selected = rng.choices(choices, weights=[p["familiarity"] for p in choices], k=1)[0]
+        pid = selected["package_id"]
+        counts["selected"][pid] = counts["selected"].get(pid, 0) + 1
+        return selected
 
     def _active_dc_call(self) -> Dict:
         """Do not apply a past snap's call after a change of possession."""
@@ -4350,6 +4453,7 @@ class ViperballEngine:
             "read_focus": list(tactics["read_focus"]), "calls": used["calls"],
             "alignments": dict(used["alignments"]),
             "blitz_calls": used["blitz_calls"],
+            "packages": self._defensive_package_usage[side],
             "read_attempts": dict(used["read_attempts"]),
             "read_successes": dict(used["read_successes"]),
         }
@@ -5916,6 +6020,7 @@ class ViperballEngine:
         Down 14 → start at baseline+14. Up 21 → start at 1. Tied → start at baseline.
         """
         self.state.possession = receiving_team
+        self._next_drive_origin = "score_restart" if self.play_log else "opening"
         baseline = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
 
         # Calculate score differential from receiving team's perspective
@@ -5953,6 +6058,12 @@ class ViperballEngine:
 
     def simulate_drive(self, is_bonus_drive: bool = False):
         self._is_bonus_drive = is_bonus_drive
+        # Quarter boundaries can split a drive without a new possession.
+        origin = "bonus_possession" if is_bonus_drive else self._next_drive_origin
+        if origin is not None:
+            self._drive_origin = origin
+            self._possession_snap_count = 0
+        self._next_drive_origin = None
         style = self._current_style()
         tempo = style["tempo"]
         # Chase mode tempo override — faster pace when trailing big
@@ -6488,6 +6599,12 @@ class ViperballEngine:
                     self.state.field_position = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
                     self.state.down = 1
                     self.state.yards_to_go = 20
+                if play.result in LIVE_TURNOVER_RESULTS and self.state.possession != drive_team:
+                    self._next_drive_origin = "turnover"
+                elif play.result in ("turnover_on_downs", "punt", "pindown", "missed_kick", "missed_dk_returned", "safety") and self._next_drive_origin is None:
+                    self._next_drive_origin = "other_restart"
+                elif self._next_drive_origin is None and self.state.possession != drive_team:
+                    self._next_drive_origin = "other_restart"
                 break
 
         # ── V2.5: Clock-management final play ──
@@ -6570,6 +6687,7 @@ class ViperballEngine:
                         self.state.field_position = max(1, 100 - fp)
                     self.state.down = 1
                     self.state.yards_to_go = 20
+                    self._next_drive_origin = "other_restart"
 
         # Track compelled efficiency: did a delta-penalized drive end in a score?
         is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td")
@@ -6586,6 +6704,7 @@ class ViperballEngine:
             "team": drive_team,
             "quarter": drive_quarter,
             "start_yard_line": drive_start,
+            "possession_origin": self._drive_origin,
             "plays": drive_plays,
             "yards": drive_yards,
             "result": drive_result,
@@ -7798,6 +7917,9 @@ class ViperballEngine:
         self._lineup_cache = {}
         # Do not leak a prior defensive call onto a kick or penalty snap.
         self._active_defensive_call = None
+        self._rush_event = None
+        self._snap_defense_energy = None
+        self._possession_snap_count += 1
 
         # Save pre-play state.  Every Play in the log should show the
         # starting situation (down, distance, field position) rather than
@@ -7811,6 +7933,10 @@ class ViperballEngine:
         self._pre_play_ytg = self.state.yards_to_go
 
         play = self._simulate_play_core()
+        play.defense_energy = getattr(self, "_snap_defense_energy", None)
+        play.possession_origin = self._drive_origin
+        play.possession_snap_index = self._possession_snap_count
+        play.rush_event = self._rush_event
         # Copy the actual pre-snap call, even when the resulting play changes
         # possession. No additional RNG or defensive ratings are involved.
         dc_call = getattr(self, "_active_defensive_call", None)
@@ -9036,6 +9162,11 @@ class ViperballEngine:
         if call and category:
             from .coach_tactics import defensive_read_allocation
             total_read_rate += defensive_read_allocation(self._current_dc_tactics(), category)
+            if call.get("package_id"):
+                # Replace part of the generic focus with package-specific attention.
+                # Favor the rehearsed families at the expense of other families.
+                total_read_rate += 0.035 * call["package_familiarity"] * (
+                    1 if play_family.value in call["package_focus"] else -1)
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         read = random.random() < total_read_rate
@@ -9646,6 +9777,7 @@ class ViperballEngine:
                 blitz_skill = self._personnel_weighted_score(blitz_rusher, rush_surface)
                 if blitz_skill > rush_skill:
                     rusher = blitz_rusher
+                    rush_skill = blitz_skill
 
         # ── Sub-family release time modifier ──
         sf_sack_mod = {
@@ -9669,6 +9801,14 @@ class ViperballEngine:
             sack_base *= 1.0 + (dc_instincts - 0.7) * 0.15  # Up to +4.5% at max instincts
 
         sack_base = max(0.02, min(0.25, sack_base))
+        self._rush_event = {
+            "defending_side": "away" if self.state.possession == "home" else "home",
+            "blitz": bool(blitz), "rush_skill": round(rush_skill, 2),
+            "protection_skill": round(block_skill, 2),
+            "rusher": player_label(rusher) if rusher else None,
+            "blocker": player_label(blocker) if blocker else None,
+            "subfamily": subfamily.value, "formation": formation,
+        }
         return sack_base, rusher, blocker
 
     def compute_lateral_pursuit_quality(self, def_team) -> float:
@@ -10031,6 +10171,12 @@ class ViperballEngine:
         if play_family is not None:
             formation_yard_adj = self._formation_yard_modifier(play_family.value)
             center += formation_yard_adj
+            # The pre-snap DC alignment must affect the actual run contest.
+            # A stacked front denies interior runs but concedes the edge.
+            call = self._active_dc_call()
+            if call:
+                alignment_delta = ALIGNMENT_VS_PLAY.get((call["alignment"], play_family.value), 0.0)
+                center *= 1.0 + alignment_delta
             # Formation × Defense matchup multiplier
             center *= self._formation_defense_multiplier()
             # Style matchup and one tactical read. These are separate from
@@ -11516,7 +11662,21 @@ class ViperballEngine:
             sack_base_rate += sack_vuln
         sack_base_rate = max(0.02, min(0.25, sack_base_rate))
 
-        if random.random() < sack_base_rate:
+        # One rush contest: sack, non-sack hurry, or clean release. The
+        # hurry band shares the same protection/release probability as sacks.
+        rush_roll = random.random()
+        hurry_threshold = min(0.65, sack_base_rate * 2.5)
+        rush_outcome = ("sack" if rush_roll < sack_base_rate else
+                        "hurry" if rush_roll < hurry_threshold else "clean")
+        if self._rush_event is not None:
+            self._rush_event.update(outcome=rush_outcome,
+                pressure=rush_outcome != "clean", sack_probability=sack_base_rate,
+                completion_before=completion_prob)
+        if rush_outcome == "hurry":
+            completion_prob = max(0.08, completion_prob * 0.85)
+        if self._rush_event is not None:
+            self._rush_event["completion_after"] = completion_prob
+        if rush_outcome == "sack":
             sack_yards = random.randint(3, 8)
             # The rusher we already matched in the H2H gets the sack credit
             sacker = rusher if rusher else sack_def_team.players[0]
@@ -15241,6 +15401,10 @@ class ViperballEngine:
             "play_type": play.play_type,
             "play_family": play.play_family,
             "defensive_call": getattr(play, "defensive_call", None),
+            "rush_event": getattr(play, "rush_event", None),
+            "defense_energy": getattr(play, "defense_energy", None),
+            "possession_origin": getattr(play, "possession_origin", None),
+            "possession_snap_index": getattr(play, "possession_snap_index", None),
             "formation": getattr(play, "formation", "") or "",
             "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,

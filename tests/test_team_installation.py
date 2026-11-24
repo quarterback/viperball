@@ -55,12 +55,13 @@ def test_new_record_is_established_and_installs_fitting_packages():
     fit = {r["package_id"] for r in pc.packages_for_roster("offense", "boot_raid", STATS) if r["meets_personnel"]}
     assert all(p["package_id"] in fit for p in off["packages"])
     assert rec["defense"]["packages"]
-    # Packages whose situations the engine cannot check yet are not installed.
+    # Installed packages must have a supported trigger, including live events.
     live = ti.evaluable_situations()
     for side in ("offense", "defense"):
         for p in rec[side]["packages"]:
             assert set(pc.get_package(p["package_id"])["situation_tags"]) & live
-    assert "first_play_of_drive" not in live and "short_yardage" in live
+    assert {"first_play_of_drive", "short_yardage", "after_takeaway",
+            "after_score_restart", "tired_defense"} <= live
 
 
 def test_sync_is_a_no_op_when_nothing_changed():
