@@ -12219,7 +12219,9 @@ class ViperballEngine:
                         raw_fp = max(1, 100 - int_spot)
                         int_return = max(0, int(random.gauss(35, 18)))
                         new_fp = min(100, raw_fp + int_return)
-                        kicker.game_kick_pass_interceptions += 1
+                        # This turnover comes on the lateral AFTER a
+                        # completed kick pass. Do not also charge a
+                        # kick-pass interception to the Zeroback.
 
                         if new_fp >= 100:
                             self.state.field_position = 25
@@ -15729,7 +15731,7 @@ class ViperballEngine:
         kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
         kick_pass_ints = [p for p in kick_passes if p.result in ("kick_pass_intercepted", "int_return_td")]
         kick_pass_yards = sum(p.yards_gained for p in kick_pass_completions)
-        lateral_ints = [p for p in laterals if p.result == "lateral_intercepted"]
+        lateral_ints = [p for p in plays if p.result == "lateral_intercepted"]
 
         kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
         kick_percentage = round(len(kick_plays) / max(1, total_plays) * 100, 1)
