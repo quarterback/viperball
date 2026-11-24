@@ -4289,12 +4289,18 @@ class ViperballEngine:
         energy = (sum(p.game_energy for p in on_field) / len(on_field)
                   if on_field else None)
         self._snap_defense_energy = energy
+        offense = self.get_offensive_team()
+        offense_on = self._on_field(offense, self._unavailable_in_game(offense), "offense")
+        offense_energy = sum(p.game_energy for p in offense_on)/len(offense_on) if offense_on else None
         side = "away" if st.possession == "home" else "home"
         recent = self._recent_defensive_plays[side]
         n = max(8, len(recent))  # do not overreact to one early play
         return {"recent_kick_rate": sum(x[0] for x in recent)/n,
                 "recent_deep_rate": sum(x[1] for x in recent)/n,
                 "recent_explosive_rate": sum(x[2] for x in recent)/n,
+                "recent_perimeter_rate": sum(x[3] for x in recent)/n,
+                "recent_lateral_rate": sum(x[4] for x in recent)/n,
+                "offense_energy": offense_energy,
                 "down": st.down, "yards_to_go": st.yards_to_go,
                 "field_position": st.field_position, "quarter": st.quarter,
                 "time_remaining": st.time_remaining, "score_diff": score_diff,
@@ -4429,6 +4435,10 @@ class ViperballEngine:
             "rugby_rush_line": ("aggressive", 0.06, ["sweep_option", "speed_option", "lateral_spread"]),
             "afl_kick_in_press": ("aggressive", 0.06, ["kick_pass"]),
             "lax_ride": ("aggressive", 0.08, ["speed_option", "viper_jet", "kick_pass"]),
+            "swarm_containment": ("spread", -.06, ["sweep_option", "speed_option", "viper_jet"]),
+            "shadow_robber": ("spread", -.05, ["kick_pass"]),
+            "chaos_lateral_trap": ("spread", -.04, ["lateral_spread"]),
+            "predator_exhaustion_press": ("aggressive", .14, ["kick_pass", "speed_option"]),
         }
         # Drive-specific packages have primary and lower-frequency secondary triggers.
         choices = []
@@ -4480,6 +4490,10 @@ class ViperballEngine:
         "rugby_rush_line": {"sweep_option": -.32, "speed_option": -.32, "lateral_spread": -.35, "counter": .26},
         "afl_kick_in_press": {"counter": .26, "draw": .24},
         "lax_ride": {"speed_option": -.26, "viper_jet": -.26, "counter": .30, "draw": .30},
+        "swarm_containment": {"sweep_option": -.35, "speed_option": -.30, "viper_jet": -.30, "power": .25, "dive_option": .25},
+        "shadow_robber": {"power": .22, "dive_option": .20},
+        "chaos_lateral_trap": {"lateral_spread": -.15, "power": .25, "dive_option": .24},
+        "predator_exhaustion_press": {"speed_option": -.22, "power": .24, "dive_option": .20, "draw": .32},
     }
     _PACKAGE_KICK_DELTAS = {
         "fortress_goal_line_stand": {"quick_kick": .12, "kick_lateral": .10},
@@ -4491,9 +4505,13 @@ class ViperballEngine:
         "rugby_rush_line": {"quick_kick": .14, "kick_lateral": .08},
         "afl_kick_in_press": {"quick_kick": -.14, "territory": -.10, "bomb": .16},
         "lax_ride": {"quick_kick": -.08, "territory": -.05, "bomb": .14},
+        "shadow_robber": {"territory": -.18, "quick_kick": -.05, "bomb": .16},
+        "chaos_lateral_trap": {"quick_kick": .13, "kick_lateral": .06},
+        "predator_exhaustion_press": {"quick_kick": -.12, "territory": -.09, "bomb": .18},
     }
     _PACKAGE_EXPLOSIVE_DELTA = {"drift_prevent": -.45, "lockdown_long_yardage_bracket": -.15,
-        "blitz_short_yardage_pressure": .28, "afl_kick_in_press": .24, "lax_ride": .20}
+        "blitz_short_yardage_pressure": .28, "afl_kick_in_press": .24, "lax_ride": .20,
+        "predator_exhaustion_press": .30}
 
     def _called_run_delta(self, family):
         call = self._active_dc_call()
@@ -8086,7 +8104,9 @@ class ViperballEngine:
             history = self._recent_defensive_plays[dc_call["defending_side"]]
             history.append((play.play_family == "kick_pass",
                             getattr(play, "kick_pass_subfamily", "") in ("bomb", "territory"),
-                            play.yards_gained >= 20))
+                            play.yards_gained >= 20,
+                            play.play_family in ("sweep_option", "speed_option", "viper_jet"),
+                            play.play_family == "lateral_spread"))
             del history[:-16]
 
         return play
@@ -9481,7 +9501,10 @@ class ViperballEngine:
                 breakaway_chance *= self._current_defense().get("explosive_suppression", 1.0)
             call = self._active_dc_call()
             if call.get("package_id"):
-                delta = self._PACKAGE_EXPLOSIVE_DELTA.get(call["package_id"], 0.0) * call.get("package_strength", 0.0)
+                target = self._PACKAGE_EXPLOSIVE_DELTA.get(call["package_id"], 0.0)
+                if call["package_id"] == "swarm_containment" and family and family.value in ("sweep_option","speed_option","viper_jet"):
+                    target = -.35
+                delta = target * call.get("package_strength", 0.0)
                 breakaway_chance *= 1.0 + delta
                 call["explosive_tactical_delta"] = delta
             breakaway_chance = max(0.0, min(0.85, breakaway_chance))
@@ -11342,7 +11365,11 @@ class ViperballEngine:
             int_chance *= _gm_int_red
             # V4: Pursuit quality scales INT/fumble chance
             int_chance *= _lat_pursuit_mod
-            int_chance = max(0.025, min(0.10, int_chance))
+            trap = self._active_dc_call()
+            if trap.get("package_id") == "chaos_lateral_trap":
+                strength = trap.get("package_strength", 0.0)
+                int_chance *= 1 + strength * (-.30 if lat_idx == 0 else .70)
+            int_chance = max(0.025, min(0.15 if trap.get("package_id") == "chaos_lateral_trap" else 0.10, int_chance))
             if random.random() < int_chance:
                 # Lateral intercepted — turnover at the interception spot
                 int_spot = self.state.field_position + random.randint(0, 3)
@@ -11807,6 +11834,8 @@ class ViperballEngine:
         hurry_threshold = min(0.75, sack_base_rate * 2.5)
         for committed in rush_plan["rushers"]:
             self.drain_player_energy(committed, "lineman")
+            if (self._active_dc_call().get("package_id") == "predator_exhaustion_press"):
+                self.drain_player_energy(committed, "lineman")
         rush_outcome = ("sack" if rush_roll < sack_base_rate else
                         "hurry" if rush_roll < hurry_threshold else "clean")
         if self._rush_event is not None:
