@@ -34,7 +34,10 @@ def run(seed=20261124,weeks=2,full=False):
         response=client.post("/sessions",json={})
         response.raise_for_status()
         sid=response.json()["session_id"]
-        response=client.post(f"/sessions/{sid}/season",json={"name":"National audit"})
+        target_games = 12
+        response=client.post(f"/sessions/{sid}/season",
+                             json={"name":"National audit",
+                                   "games_per_team": target_games})
         response.raise_for_status()
         season=api.sessions[sid]["season"]
         all_teams=set(season.teams)
@@ -45,10 +48,14 @@ def run(seed=20261124,weeks=2,full=False):
             if game.home_team in all_teams:scheduled[game.home_team]+=1
             if game.away_team in all_teams:scheduled[game.away_team]+=1
         initial_schedule={
-            "teams":len(all_teams),"scheduled_regular_games":sum(scheduled.values())//2,
+            "teams":len(all_teams),"requested_per_team":target_games,
+            "scheduled_regular_games":sum(scheduled.values())//2,
+            "expected_regular_games":len(all_teams)*target_games//2,
             "per_team":dict(sorted(Counter(scheduled.values()).items())),
             "under_scheduled":sorted([n for n in all_teams
-                                      if scheduled[n]<max(scheduled.values(),default=0)]),
+                                      if scheduled[n]<target_games]),
+            "over_scheduled":sorted([n for n in all_teams
+                                     if scheduled[n]>target_games]),
         }
         rounds=0
         while (not season.is_regular_season_complete()
