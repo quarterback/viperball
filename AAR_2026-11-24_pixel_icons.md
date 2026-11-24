@@ -32,8 +32,16 @@ the nav, the season run bar, the roster with faces, the home and college empty
 states, and a narrow window. The first ball and planet drawings read poorly at
 16 px and were redrawn.
 
+## Follow up (same day)
+- Pixel faces now show in the season player stats table and in every player
+  row of the college box score, through one cached name to face map per season.
+  One off Game Sim games have no player ids, so they show no faces.
+- Between 769 and 1240 px wide the nav shows icons only, keeps the active
+  section's name, and puts each label in the link title. Below 769 px the
+  existing menu button opens the full list with labels.
+- Found while checking: older templates used an undefined `--bg-card` color,
+  so the player stats filters rendered as dark boxes with dark text on the
+  light theme. `--bg-card` now points at the theme's panel color.
+
 ## Not done
-- Faces appear on the team roster only. Leaders tables and box score player
-  rows could use them next.
 - Page titles have no icons; the pixel title face already carries them.
-- The nav wraps onto a second line under about 1,150 px wide.

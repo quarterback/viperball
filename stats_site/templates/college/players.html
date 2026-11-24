@@ -112,7 +112,7 @@
 {# ══════ Helper macro for player link ══════ #}
 {% macro player_row_start(p, rank) %}
     <td class="num rank">{{ rank }}</td>
-    <td><a href="/stats/college/{{ session_id }}/player/{{ p.team }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td>{% if p.face_src %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ p.team }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><a href="/stats/college/{{ session_id }}/team/{{ p.team }}">{{ p.team[:20] }}</a></td>
     <td><span class="tag tag-pos">{{ p.tag }}</span></td>
     <td class="num">{{ p.games_played }}</td>
