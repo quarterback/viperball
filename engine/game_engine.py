@@ -10538,6 +10538,10 @@ class ViperballEngine:
             "coverage_count": len(plan["coverage"]),
             "coverage_players": [player_label(p) for p in plan["coverage"]],
             "defenders_on_field": [player_label(p) for p in plan["on_field"]],
+            # Measured before the rush energy charge. Keep actual assignment
+            # energy separate from whole-XI energy in the tactical context.
+            "rusher_energy": round(sum(p.game_energy for p in rushers) / len(rushers), 3) if rushers else None,
+            "blocker_energy": round(sum(p.game_energy for p in blockers) / len(blockers), 3) if blockers else None,
             "protection_skill": round(block_skill, 2),
             "rusher": player_label(rusher) if rusher else None,
             "blocker": player_label(blocker) if blocker else None,
