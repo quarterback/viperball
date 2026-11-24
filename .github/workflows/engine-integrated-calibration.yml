@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - name: Combined engine smoke and calibration
-        run: python scripts/benchmark_defensive_packages.py --games 40 --out reports/integrated-defense
+        run: python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense
       - uses: actions/upload-artifact@v4
         with:
           name: integrated-defense

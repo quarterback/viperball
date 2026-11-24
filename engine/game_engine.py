@@ -4103,6 +4103,7 @@ class ViperballEngine:
         }
         self._active_defensive_call = None
         self._rush_event = None
+        self._rush_plan = None
         self._next_drive_origin = "opening"
         self._drive_origin = "opening"
         self._possession_snap_count = 0
@@ -4339,7 +4340,16 @@ class ViperballEngine:
             yards_to_go=self.state.yards_to_go)
         rng = (self._away_dc_tactics_rng if def_side == "away"
                else self._home_dc_tactics_rng)
-        package = self._choose_defensive_package(def_side, tactics)
+        # Only installed packages need eligibility evaluated. Evaluate even
+        # when package execution is disabled, for matched benchmark controls.
+        team = self.home_team if def_side == "home" else self.away_team
+        unit = (getattr(team, "installation", None) or {}).get("defense", {})
+        situations = set()
+        if unit.get("packages"):
+            from .team_installation import active_situations
+            diff = self.state.home_score - self.state.away_score
+            situations = active_situations(self._package_context(diff if def_side == "home" else -diff))
+        package = self._choose_defensive_package(def_side, tactics, situations)
         if package:
             # Blend toward an existing posture; never add a second contest.
             strength = package["familiarity"]
@@ -4355,7 +4365,8 @@ class ViperballEngine:
             blitz_chance = max(0.02, min(0.65, blitz_chance +
                 package["blitz_shift"] * package["familiarity"]))
         blitz = rng.random() < blitz_chance
-        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz}
+        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz,
+                "situations": sorted(situations)}
         if package:
             call["package_id"] = package["package_id"]
             call["package_familiarity"] = package["familiarity"]
@@ -4366,7 +4377,7 @@ class ViperballEngine:
         counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
         counters["blitz_calls"] += int(blitz)
 
-    def _choose_defensive_package(self, side: str, tactics: Dict):
+    def _choose_defensive_package(self, side: str, tactics: Dict, situations=None):
         """Choose at most one installed package before the play family is known."""
         if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
                 and V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)):
@@ -4380,10 +4391,11 @@ class ViperballEngine:
         # The installation record was roster-filtered by sync_installation using
         # league-normalized personnel profiles. Do not compare raw fresh ratings
         # with the catalog's file-scale thresholds here.
-        st = self.state
-        diff = st.home_score - st.away_score
-        context = self._package_context(diff if side == "home" else -diff)
-        situations = active_situations(context)
+        if situations is None:
+            st = self.state
+            diff = st.home_score - st.away_score
+            context = self._package_context(diff if side == "home" else -diff)
+            situations = active_situations(context)
         # Existing alignments have real run-direction costs. The focus is a
         # finite read allocation, not a universal defense multiplier.
         effects = {
@@ -4431,6 +4443,66 @@ class ViperballEngine:
         counts["selected"][pid] = counts["selected"].get(pid, 0) + 1
         return selected
 
+    # Package effects redistribute existing contest strength. Positive run
+    # deltas concede yards; positive kick deltas concede completion chance.
+    # The trade-off is explicit even if the opponent avoids the favored play.
+    _PACKAGE_RUN_DELTAS = {
+        "fortress_goal_line_stand": {"dive_option": -0.26, "power": -0.24,
+            "sweep_option": 0.20, "speed_option": 0.18, "lateral_spread": 0.20},
+        "fortress_short_yardage_wall": {"dive_option": -0.25, "power": -0.23,
+            "sweep_option": 0.18, "speed_option": 0.15, "counter": 0.16,
+            "lateral_spread": 0.18},
+        "lockdown_kick_range_shell": {"dive_option": 0.14, "power": 0.16},
+        "lockdown_long_yardage_bracket": {"dive_option": 0.14, "power": 0.16,
+            "draw": 0.12},
+        "drift_prevent": {"dive_option": 0.12, "power": 0.12, "draw": 0.10,
+            "lateral_spread": -0.10},
+        "blitz_short_yardage_pressure": {"dive_option": -0.22, "power": -0.20,
+            "sweep_option": -0.10, "counter": 0.24, "draw": 0.28},
+        "rugby_rush_line": {"sweep_option": -0.18, "speed_option": -0.18,
+            "lateral_spread": -0.20, "counter": 0.15},
+        "afl_kick_in_press": {"counter": 0.15, "draw": 0.12},
+        "lax_ride": {"speed_option": -0.15, "viper_jet": -0.15,
+            "counter": 0.18, "draw": 0.18},
+    }
+    _PACKAGE_KICK_DELTAS = {
+        "fortress_goal_line_stand": {"quick_kick": 0.07, "kick_lateral": 0.05},
+        "fortress_short_yardage_wall": {"quick_kick": 0.05, "kick_lateral": 0.04},
+        "lockdown_kick_range_shell": {"territory": -0.09, "bomb": -0.09,
+            "quick_kick": 0.025},
+        "lockdown_long_yardage_bracket": {"territory": -0.07, "bomb": -0.10,
+            "quick_kick": -0.025},
+        "drift_prevent": {"bomb": -0.12, "territory": -0.045, "quick_kick": 0.06,
+            "kick_lateral": 0.04},
+        "blitz_short_yardage_pressure": {"quick_kick": 0.05, "bomb": 0.07},
+        "rugby_rush_line": {"quick_kick": 0.08, "kick_lateral": 0.04},
+        "afl_kick_in_press": {"quick_kick": -0.08, "territory": -0.05, "bomb": 0.09},
+        "lax_ride": {"quick_kick": -0.04, "territory": -0.025, "bomb": 0.08},
+    }
+
+    def _called_run_delta(self, family):
+        call = self._active_dc_call()
+        if not call:
+            return 0.0
+        baseline = ALIGNMENT_VS_PLAY.get((call["alignment"], family.value), 0.0)
+        if call.get("package_id"):
+            target = self._PACKAGE_RUN_DELTAS.get(call["package_id"], {}).get(family.value, baseline)
+            familiarity = call["package_familiarity"]
+            delta = baseline + familiarity * (target - baseline)
+            call["run_alignment_delta"] = baseline
+            call["run_tactical_delta"] = delta
+            return delta
+        return baseline
+
+    def _called_kick_delta(self, subfamily):
+        call = self._active_dc_call()
+        if not call or not call.get("package_id"):
+            return 0.0
+        delta = self._PACKAGE_KICK_DELTAS.get(call["package_id"], {}).get(subfamily.value, 0.0)
+        delta *= call["package_familiarity"]
+        call["kick_tactical_delta"] = delta
+        return delta
+
     def _active_dc_call(self) -> Dict:
         """Do not apply a past snap's call after a change of possession."""
         call = getattr(self, "_active_defensive_call", None)
@@ -4438,6 +4510,34 @@ class ViperballEngine:
         if call and call.get("defending_side") == expected:
             return call
         return {}
+
+    def _rush_summary(self, side: str) -> Dict:
+        """Game totals from resolved kick-pass attempts, not all called blitzes."""
+        out = {"attempts": 0, "pressures": 0, "hurries": 0, "sacks": 0,
+               "rushers_committed": 0, "by_count": {}, "by_player": {}}
+        for play in self.play_log:
+            event = getattr(play, "rush_event", None)
+            if not event or event["defending_side"] != side or "outcome" not in event:
+                continue
+            out["attempts"] += 1
+            out["pressures"] += int(event["pressure"])
+            out["hurries"] += int(event["outcome"] == "hurry")
+            out["sacks"] += int(event["outcome"] == "sack")
+            out["rushers_committed"] += event["rusher_count"]
+            bucket = out["by_count"].setdefault(str(event["rusher_count"]),
+                {"attempts": 0, "pressures": 0, "hurries": 0, "sacks": 0, "completions": 0})
+            bucket["attempts"] += 1
+            bucket["pressures"] += int(event["pressure"])
+            bucket["hurries"] += int(event["outcome"] == "hurry")
+            bucket["sacks"] += int(event["outcome"] == "sack")
+            bucket["completions"] += int(event["completed"])
+            for label in event["rushers"]:
+                player = out["by_player"].setdefault(label, {"rush_snaps": 0, "lead_hurries": 0, "sacks": 0})
+                player["rush_snaps"] += 1
+                if label == event["rusher"]:
+                    player["lead_hurries"] += int(event["outcome"] == "hurry")
+                    player["sacks"] += int(event["outcome"] == "sack")
+        return out
 
     def _dc_tactics_summary(self, side: str) -> Dict:
         tactics = (getattr(self, "home_dc_tactics", {}) if side == "home"
@@ -7918,6 +8018,7 @@ class ViperballEngine:
         # Do not leak a prior defensive call onto a kick or penalty snap.
         self._active_defensive_call = None
         self._rush_event = None
+        self._rush_plan = None
         self._snap_defense_energy = None
         self._possession_snap_count += 1
 
@@ -9162,11 +9263,8 @@ class ViperballEngine:
         if call and category:
             from .coach_tactics import defensive_read_allocation
             total_read_rate += defensive_read_allocation(self._current_dc_tactics(), category)
-            if call.get("package_id"):
-                # Replace part of the generic focus with package-specific attention.
-                # Favor the rehearsed families at the expense of other families.
-                total_read_rate += 0.035 * call["package_familiarity"] * (
-                    1 if play_family.value in call["package_focus"] else -1)
+            # Package-specific advantages now enter the resolved contest,
+            # rather than stacking another scouting-read bonus.
         total_read_rate = max(0.10, min(0.65, total_read_rate))
 
         read = random.random() < total_read_rate
@@ -9670,7 +9768,8 @@ class ViperballEngine:
         Returns (defender, pool_label).
         """
         groups = self._get_defenders_by_group(def_team)
-        eligible = groups["all"]
+        plan = getattr(self, "_rush_plan", None)
+        eligible = plan["coverage"] if plan and plan["coverage"] else groups["all"]
 
         style_weights = self._get_personnel_surface_weights("kick_pass_cov")
 
@@ -9715,69 +9814,66 @@ class ViperballEngine:
         defender = random.choices(eligible, weights=weights, k=1)[0]
         return defender, pool_label
 
-    def compute_sack_probability(self, team, def_team, subfamily, formation=None):
-        """Style-aware sack probability model.
+    def _plan_kick_pass_rush(self, team, def_team):
+        """Assign distinct on-field players to rush and coverage.
 
-        Replaces the simple rush_skill/block_skill ratio with a model
-        that accounts for: rush count (style blitz chance), protection
-        quality (OL + formation), release time (sub-family), and
-        defensive style category.
-
-        Returns (sack_prob, rusher, blocker) where rusher/blocker are
-        the matched players.
+        Five defensive line slots do not mean five automatic rushers.
+        Base pressure sends two; a blitz sends an additional defender,
+        or two for Blitz Pack. Remaining defenders cover the release.
         """
-        # ── Get rusher pool with style weights ──
-        groups = self._get_defenders_by_group(def_team)
-        rush_surface = self._get_personnel_surface_weights("sack_rush")
-
-        dl_players = groups["dl"]
-        if dl_players:
-            # Score each DL player and pick the best
-            dl_scores = [(p, self._personnel_weighted_score(p, rush_surface))
-                         for p in dl_players]
-            rusher = max(dl_scores, key=lambda x: x[1])[0]
-            rush_skill = dl_scores[dl_scores.index((rusher, max(s for _, s in dl_scores)))][1]
-        else:
-            rusher = def_team.players[0] if def_team.players else None
-            rush_skill = 60.0
-
-        # ── Get blocker ──
-        ol_players = [p for p in team.players if p.position == "Offensive Line"
-                      and p.name not in self._unavailable_in_game(team)]
-        if ol_players:
-            blocker = max(ol_players,
-                          key=lambda p: p.power * 0.50 + getattr(p, 'awareness', 70) * 0.30
-                          + getattr(p, 'agility', 75) * 0.20)
-            block_skill = (blocker.power * 0.50
-                           + getattr(blocker, 'awareness', 70) * 0.30
-                           + getattr(blocker, 'agility', 75) * 0.20)
-        else:
-            blocker = None
-            block_skill = 55.0
-
-        # ── Base sack rate from rush/protection contest ──
-        sack_base = max(0.03, min(0.20, 0.12 * (rush_skill / max(30.0, block_skill))))
-
-        # ── Rush count: style-driven blitz chance adds extra pressure ──
-        def_name = self._current_defense_name()
-        blitz_chance = STYLE_BLITZ_CHANCE.get(def_name, 0.10)
+        defenders = self._lineup(def_team, self._unavailable_in_game(def_team), "defense")
+        attackers = self._lineup(team, self._unavailable_in_game(team), "offense")
         call = self._active_dc_call()
-        # On a coordinator-led snap the blitz was chosen BEFORE the
-        # offense's play family or kick-pass subtype became known.
-        # Otherwise preserve the original scheme-blitz draw unchanged.
-        blitz = call["blitz"] if call else random.random() < blitz_chance
+        scheme = self._current_defense_name()
+        blitz = call["blitz"] if call else random.random() < STYLE_BLITZ_CHANCE.get(scheme, 0.10)
+        surface = self._get_personnel_surface_weights("sack_rush")
+        def score(p):
+            return sum(getattr(p, attr, 75) * weight for attr, weight in surface.items()) * self.player_fatigue_modifier(p)
+        # Preserve the first on-field role for each player if a depleted
+        # depth chart returned a duplicate emergency assignment.
+        unique = {}
+        for p, role in defenders:
+            unique.setdefault(p.name, (p, role))
+        line = sorted((p for p, role in unique.values() if role == "Defensive Line"), key=score, reverse=True)
+        others = sorted((p for p, role in unique.values() if role != "Defensive Line"), key=score, reverse=True)
+        all_on = [p for p, role in unique.values()]
+        base_count = min(2, max(0, len(all_on) - 1))
+        rushers = (line + others)[:base_count]
         if blitz:
-            # Extra rusher — boost sack probability
-            sack_base *= 1.25
-            # But Keepers also rush, adding to pool
-            if groups["keeper"]:
-                blitz_rusher = max(groups["keeper"],
-                                   key=lambda p: p.speed * 0.5 + p.tackling * 0.3 + getattr(p, 'power', 75) * 0.2)
-                # If blitz rusher is better, swap
-                blitz_skill = self._personnel_weighted_score(blitz_rusher, rush_surface)
-                if blitz_skill > rush_skill:
-                    rusher = blitz_rusher
-                    rush_skill = blitz_skill
+            # The extra assignment can be a midfielder or keeper, but
+            # cannot also appear in the coverage contest.
+            extras = sorted((p for p in all_on if p not in rushers), key=score, reverse=True)
+            rushers += extras[:min(2 if scheme == "blitz_pack" else 1,
+                                   max(0, len(all_on) - len(rushers) - 1))]
+        cover = [p for p in all_on if p not in rushers]
+        blockers = [p for p, role in attackers if role == "Offensive Line"]
+        def protection(p):
+            return (p.power * 0.50 + getattr(p, "awareness", 70) * 0.30
+                    + getattr(p, "agility", 75) * 0.20) * self.player_fatigue_modifier(p)
+        blockers.sort(key=protection, reverse=True)
+        self._rush_plan = {"rushers": rushers, "coverage": cover, "blockers": blockers,
+                           "blitz": bool(blitz), "base_count": base_count,
+                           "on_field": all_on,
+                           "rush_skill": sum(score(p) for p in rushers) / len(rushers) if rushers else 0.0,
+                           "protection_skill": sum(protection(p) for p in blockers) / len(blockers) if blockers else 30.0,
+                           "lead_rusher": max(rushers, key=score) if rushers else None}
+        return self._rush_plan
+
+    def compute_sack_probability(self, team, def_team, subfamily, formation=None):
+        """Resolve the existing rush/protection contest from committed personnel."""
+        plan = getattr(self, "_rush_plan", None) or self._plan_kick_pass_rush(team, def_team)
+        rushers, blockers = plan["rushers"], plan["blockers"]
+        rush_skill, block_skill = plan["rush_skill"], plan["protection_skill"]
+        rusher = plan["lead_rusher"]
+        blocker = blockers[0] if blockers else None
+        # Numbers and protection quality matter, with diminishing returns.
+        # Sending more players sacrifices coverage below, not a free bonus.
+        count_factor = (len(rushers) / max(1, plan["base_count"])) ** 0.65
+        protection_factor = (5 / max(1, len(blockers))) ** 0.30
+        sack_base = (0.12 * rush_skill / max(30.0, block_skill)
+                     * count_factor * protection_factor)
+        sack_base = max(0.02, min(0.23, sack_base)) if rushers else 0.0
+        blitz = plan["blitz"]
 
         # ── Sub-family release time modifier ──
         sf_sack_mod = {
@@ -9800,10 +9896,15 @@ class ViperballEngine:
         if dc_instincts > 0.7:
             sack_base *= 1.0 + (dc_instincts - 0.7) * 0.15  # Up to +4.5% at max instincts
 
-        sack_base = max(0.02, min(0.25, sack_base))
+        sack_base = max(0.02, min(0.25, sack_base)) if rushers else 0.0
         self._rush_event = {
             "defending_side": "away" if self.state.possession == "home" else "home",
             "blitz": bool(blitz), "rush_skill": round(rush_skill, 2),
+            "rusher_count": len(rushers), "rushers": [player_label(p) for p in rushers],
+            "blocker_count": len(blockers), "blockers": [player_label(p) for p in blockers],
+            "coverage_count": len(plan["coverage"]),
+            "coverage_players": [player_label(p) for p in plan["coverage"]],
+            "defenders_on_field": [player_label(p) for p in plan["on_field"]],
             "protection_skill": round(block_skill, 2),
             "rusher": player_label(rusher) if rusher else None,
             "blocker": player_label(blocker) if blocker else None,
@@ -10173,10 +10274,7 @@ class ViperballEngine:
             center += formation_yard_adj
             # The pre-snap DC alignment must affect the actual run contest.
             # A stacked front denies interior runs but concedes the edge.
-            call = self._active_dc_call()
-            if call:
-                alignment_delta = ALIGNMENT_VS_PLAY.get((call["alignment"], play_family.value), 0.0)
-                center *= 1.0 + alignment_delta
+            center *= 1.0 + self._called_run_delta(play_family)
             # Formation × Defense matchup multiplier
             center *= self._formation_defense_multiplier()
             # Style matchup and one tactical read. These are separate from
@@ -11430,7 +11528,8 @@ class ViperballEngine:
         # factors here instead of double-counting a run-family roll.
         if yards_gained > 0:
             yards_gained = max(0, round(yards_gained * self._defense_style_multiplier(family)
-                                         * self._defense_read_yard_multiplier(family)))
+                                         * self._defense_read_yard_multiplier(family)
+                                         * (1.0 + self._called_run_delta(family))))
 
         if yards_gained <= 0:
             lat_tackler.game_tfl += 1
@@ -11593,6 +11692,7 @@ class ViperballEngine:
 
         # ── H2H contest-based completion probability ──
         def_team = self.get_defensive_team()
+        rush_plan = self._plan_kick_pass_rush(team, def_team)
         contest_prob, matched_defender = self._contest_kick_pass_prob(
             kicker, receiver, def_team, subfamily=subfamily)
         # Distance penalty: longer kicks are harder to complete
@@ -11634,7 +11734,10 @@ class ViperballEngine:
             coverage = self._current_defense().get("kick_pass_coverage", 0.0)
             completion_prob -= coverage * 0.25
         completion_prob *= self._defense_read_yard_multiplier(family)
-        completion_prob = max(0.08, min(0.92, completion_prob))
+        # Coverage space is the cost of committing extra actual players.
+        coverage_cost = 0.035 * max(0, len(rush_plan["rushers"]) - rush_plan["base_count"])
+        package_delta = self._called_kick_delta(subfamily)
+        completion_prob = max(0.08, min(0.92, completion_prob + coverage_cost + package_delta))
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
@@ -11660,7 +11763,7 @@ class ViperballEngine:
         if style_name == "shock_and_awe":
             sack_vuln = style.get("sack_vulnerability", 0.0)
             sack_base_rate += sack_vuln
-        sack_base_rate = max(0.02, min(0.25, sack_base_rate))
+        sack_base_rate = max(0.02, min(0.25, sack_base_rate)) if rush_plan["rushers"] else 0.0
 
         # One rush contest: sack, non-sack hurry, or clean release. The
         # hurry band shares the same protection/release probability as sacks.
@@ -11671,7 +11774,10 @@ class ViperballEngine:
         if self._rush_event is not None:
             self._rush_event.update(outcome=rush_outcome,
                 pressure=rush_outcome != "clean", sack_probability=sack_base_rate,
-                completion_before=completion_prob)
+                completion_before=completion_prob, coverage_cost=coverage_cost,
+                package_coverage_delta=package_delta,
+                matched_coverage_defender=player_label(matched_defender) if matched_defender else None,
+                completed=False)
         if rush_outcome == "hurry":
             completion_prob = max(0.08, completion_prob * 0.85)
         if self._rush_event is not None:
@@ -11740,6 +11846,8 @@ class ViperballEngine:
             self._credit_ol_blocks(team, 3)
 
         roll = random.random()
+        if self._rush_event is not None:
+            self._rush_event["completed"] = roll < completion_prob
         if roll < completion_prob:
             # Hot streak: kicker completed → streak continues
             self._update_player_streak(kicker, True)
@@ -15083,6 +15191,7 @@ class ViperballEngine:
                 "away": self.state.away_delta_yards,
             },
             "defensive_reads": self._defense_read_counts,
+            "defensive_rush": {side: self._rush_summary(side) for side in ("home", "away")},
             "weather": self.weather,
             "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
             "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
