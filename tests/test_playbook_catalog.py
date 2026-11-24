@@ -98,8 +98,9 @@ def test_malformed_catalog_is_rejected(breakage, expect):
 
 
 def test_roster_check_reports_what_is_missing():
-    slow = {"avg_speed": 70, "kicking_strength": 70, "avg_weight": 180}
-    fast = {"avg_speed": 90, "kicking_strength": 85, "avg_weight": 190, "avg_stamina": 88}
+    # Team stats on the current rating scale (a median team is about 35).
+    slow = {"avg_speed": 25, "kicking_strength": 25, "avg_weight": 180}
+    fast = {"avg_speed": 45, "kicking_strength": 42, "avg_weight": 190, "avg_stamina": 44}
     assert pc.roster_tags(slow) == set()
     assert {"team_speed", "elite_speed", "strong_kicker", "elite_kicker", "physical_roster", "deep_conditioning"} <= pc.roster_tags(fast)
     rows = {r["package_id"]: r for r in pc.packages_for_roster("offense", "east_coast", slow)}

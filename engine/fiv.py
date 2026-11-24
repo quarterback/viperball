@@ -65,11 +65,13 @@ def _load_config() -> dict:
 
 ROSTER_SIZE = 36
 
+# Player attributes on the current rating scale (old 70 to 95 for elite
+# nations is 35 to 85).  Ratings are team strength on the 0 to 99 prestige scale.
 TIER_ATTRIBUTES = {
-    "elite":       {"attr_lo": 70, "attr_hi": 95, "rating_lo": 85, "rating_hi": 95},
-    "strong":      {"attr_lo": 60, "attr_hi": 88, "rating_lo": 72, "rating_hi": 84},
-    "competitive": {"attr_lo": 50, "attr_hi": 80, "rating_lo": 58, "rating_hi": 71},
-    "developing":  {"attr_lo": 40, "attr_hi": 72, "rating_lo": 40, "rating_hi": 57},
+    "elite": {"attr_lo": 35, "attr_hi": 85, "rating_lo": 85, "rating_hi": 95},
+    "strong": {"attr_lo": 15, "attr_hi": 71, "rating_lo": 72, "rating_hi": 84},
+    "competitive": {"attr_lo": 10, "attr_hi": 55, "rating_lo": 58, "rating_hi": 71},
+    "developing": {"attr_lo": 10, "attr_hi": 39, "rating_lo": 40, "rating_hi": 57},
 }
 
 STARTING_ELO = {
@@ -808,8 +810,10 @@ def _compute_team_rating(roster: List[NationalTeamPlayer]) -> int:
     overalls = sorted([ntp.player.overall for ntp in roster], reverse=True)
     top_20 = overalls[:min(20, len(overalls))]
     avg = sum(top_20) / len(top_20)
-    # Scale from ~40-95 attribute range to 0-99 rating
-    return max(0, min(99, int(avg)))
+    # Overall is on the current scale; the team rating is on the 0 to 99
+    # prestige scale the tier ratings use (current 60 is about 82).
+    from engine.rating_scale import current_to_legacy
+    return max(0, min(99, int(current_to_legacy(avg))))
 
 
 # ── Public helpers for Quick Game international mode ──

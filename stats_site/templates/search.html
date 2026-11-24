@@ -68,7 +68,7 @@
     <td><a href="/stats/college/{{ p.session_id }}/team/{{ p.team_name }}">{{ p.team_name[:25] }}</a></td>
     <td><span class="tag tag-pos">{{ p.position[:10] }}</span></td>
     <td>{{ p.year }}</td>
-    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% endif %}">{{ p.overall }}</td>
     <td style="color:var(--fg-dim)">{{ p.session_label }}</td>
   </tr>
   {% endfor %}
@@ -141,7 +141,7 @@
     <td>{{ p.name }}</td>
     <td><a href="/stats/wvl/{{ p.session_id }}/team/{{ p.team_key }}">{{ p.team_name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position[:10] }}</span></td>
-    <td class="num {% if p.overall >= 85 %}stat-elite{% elif p.overall >= 70 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% endif %}">{{ p.overall }}</td>
     <td>Tier {{ p.tier }}</td>
     <td style="color:var(--fg-dim)">{{ p.session_label }}</td>
   </tr>

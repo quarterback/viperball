@@ -33,18 +33,18 @@
     "narrative_tag": ""
   },
   "team_stats": {
-    "avg_speed": 87,
-    "avg_stamina": 87,
-    "kicking_strength": 88,
-    "lateral_proficiency": 87,
-    "defensive_strength": 88
+    "avg_speed": 69,
+    "avg_stamina": 69,
+    "kicking_strength": 71,
+    "lateral_proficiency": 69,
+    "defensive_strength": 71
   },
   "roster": {
     "size": 36,
     "players": [
       {
         "number": 82,
-        "name": "María Torres",
+        "name": "Mar\u00eda Torres",
         "position": "Viper",
         "height": "5-4",
         "weight": 168,
@@ -66,22 +66,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 95,
-          "stamina": 98,
-          "kicking": 80,
-          "lateral_skill": 98,
-          "tackling": 88,
-          "agility": 92,
-          "power": 78,
-          "awareness": 99,
-          "hands": 79,
-          "kick_power": 95,
-          "kick_accuracy": 97
+          "speed": 85,
+          "stamina": 91,
+          "kicking": 55,
+          "lateral_skill": 91,
+          "tackling": 71,
+          "agility": 79,
+          "power": 51,
+          "awareness": 93,
+          "hands": 53,
+          "kick_power": 85,
+          "kick_accuracy": 89
         }
       },
       {
         "number": 73,
-        "name": "Laura Martínez",
+        "name": "Laura Mart\u00ednez",
         "position": "Viper",
         "height": "6-0",
         "weight": 192,
@@ -103,17 +103,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 99,
-          "stamina": 90,
-          "kicking": 88,
-          "lateral_skill": 83,
-          "tackling": 88,
-          "agility": 89,
-          "power": 71,
-          "awareness": 95,
-          "hands": 92,
-          "kick_power": 86,
-          "kick_accuracy": 75
+          "speed": 93,
+          "stamina": 75,
+          "kicking": 71,
+          "lateral_skill": 61,
+          "tackling": 71,
+          "agility": 73,
+          "power": 37,
+          "awareness": 85,
+          "hands": 79,
+          "kick_power": 67,
+          "kick_accuracy": 45
         }
       },
       {
@@ -140,22 +140,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 82,
-          "stamina": 82,
-          "kicking": 82,
-          "lateral_skill": 98,
-          "tackling": 99,
-          "agility": 96,
-          "power": 99,
-          "awareness": 80,
-          "hands": 97,
-          "kick_power": 82,
-          "kick_accuracy": 74
+          "speed": 59,
+          "stamina": 59,
+          "kicking": 59,
+          "lateral_skill": 91,
+          "tackling": 93,
+          "agility": 87,
+          "power": 93,
+          "awareness": 55,
+          "hands": 89,
+          "kick_power": 59,
+          "kick_accuracy": 43
         }
       },
       {
         "number": 9,
-        "name": "Irene Ramírez",
+        "name": "Irene Ram\u00edrez",
         "position": "Zeroback",
         "height": "6-2",
         "weight": 216,
@@ -177,22 +177,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 78,
-          "stamina": 82,
-          "kicking": 74,
-          "lateral_skill": 96,
-          "tackling": 78,
-          "agility": 76,
-          "power": 76,
-          "awareness": 98,
-          "hands": 98,
-          "kick_power": 92,
-          "kick_accuracy": 99
+          "speed": 51,
+          "stamina": 59,
+          "kicking": 43,
+          "lateral_skill": 87,
+          "tackling": 51,
+          "agility": 47,
+          "power": 47,
+          "awareness": 91,
+          "hands": 91,
+          "kick_power": 79,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 18,
-        "name": "Cristina Ramírez",
+        "name": "Cristina Ram\u00edrez",
         "position": "Zeroback",
         "height": "5-9",
         "weight": 143,
@@ -214,22 +214,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 99,
-          "stamina": 78,
-          "kicking": 83,
-          "lateral_skill": 81,
-          "tackling": 91,
-          "agility": 77,
-          "power": 78,
-          "awareness": 93,
-          "hands": 71,
-          "kick_power": 91,
-          "kick_accuracy": 95
+          "speed": 93,
+          "stamina": 51,
+          "kicking": 61,
+          "lateral_skill": 57,
+          "tackling": 77,
+          "agility": 49,
+          "power": 51,
+          "awareness": 81,
+          "hands": 37,
+          "kick_power": 77,
+          "kick_accuracy": 85
         }
       },
       {
         "number": 53,
-        "name": "Alba López",
+        "name": "Alba L\u00f3pez",
         "position": "Zeroback",
         "height": "5-8",
         "weight": 197,
@@ -251,22 +251,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 91,
-          "stamina": 97,
-          "kicking": 75,
-          "lateral_skill": 83,
-          "tackling": 81,
-          "agility": 90,
-          "power": 81,
-          "awareness": 90,
-          "hands": 88,
-          "kick_power": 89,
-          "kick_accuracy": 95
+          "speed": 77,
+          "stamina": 89,
+          "kicking": 45,
+          "lateral_skill": 61,
+          "tackling": 57,
+          "agility": 75,
+          "power": 57,
+          "awareness": 75,
+          "hands": 71,
+          "kick_power": 73,
+          "kick_accuracy": 85
         }
       },
       {
         "number": 45,
-        "name": "Nuria Muñoz",
+        "name": "Nuria Mu\u00f1oz",
         "position": "Halfback",
         "height": "6-3",
         "weight": 146,
@@ -288,22 +288,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 87,
-          "stamina": 81,
-          "kicking": 95,
-          "lateral_skill": 99,
-          "tackling": 94,
-          "agility": 78,
-          "power": 91,
-          "awareness": 99,
-          "hands": 74,
-          "kick_power": 90,
-          "kick_accuracy": 90
+          "speed": 69,
+          "stamina": 57,
+          "kicking": 85,
+          "lateral_skill": 93,
+          "tackling": 83,
+          "agility": 51,
+          "power": 77,
+          "awareness": 93,
+          "hands": 43,
+          "kick_power": 75,
+          "kick_accuracy": 75
         }
       },
       {
         "number": 41,
-        "name": "Laura López",
+        "name": "Laura L\u00f3pez",
         "position": "Halfback",
         "height": "5-6",
         "weight": 179,
@@ -325,22 +325,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 93,
-          "stamina": 91,
-          "kicking": 85,
-          "lateral_skill": 99,
-          "tackling": 89,
-          "agility": 77,
-          "power": 95,
-          "awareness": 92,
-          "hands": 93,
-          "kick_power": 90,
-          "kick_accuracy": 71
+          "speed": 81,
+          "stamina": 77,
+          "kicking": 65,
+          "lateral_skill": 93,
+          "tackling": 73,
+          "agility": 49,
+          "power": 85,
+          "awareness": 79,
+          "hands": 81,
+          "kick_power": 75,
+          "kick_accuracy": 37
         }
       },
       {
         "number": 2,
-        "name": "Elena Hernández",
+        "name": "Elena Hern\u00e1ndez",
         "position": "Halfback",
         "height": "5-9",
         "weight": 217,
@@ -362,22 +362,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 91,
-          "stamina": 96,
-          "kicking": 95,
-          "lateral_skill": 90,
-          "tackling": 78,
-          "agility": 81,
-          "power": 84,
-          "awareness": 94,
-          "hands": 94,
-          "kick_power": 80,
-          "kick_accuracy": 95
+          "speed": 77,
+          "stamina": 87,
+          "kicking": 85,
+          "lateral_skill": 75,
+          "tackling": 51,
+          "agility": 57,
+          "power": 63,
+          "awareness": 83,
+          "hands": 83,
+          "kick_power": 55,
+          "kick_accuracy": 85
         }
       },
       {
         "number": 29,
-        "name": "Raquel López",
+        "name": "Raquel L\u00f3pez",
         "position": "Halfback",
         "height": "5-8",
         "weight": 208,
@@ -399,22 +399,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 82,
-          "stamina": 90,
-          "kicking": 95,
-          "lateral_skill": 86,
-          "tackling": 81,
-          "agility": 87,
-          "power": 80,
-          "awareness": 88,
-          "hands": 96,
-          "kick_power": 82,
-          "kick_accuracy": 90
+          "speed": 59,
+          "stamina": 75,
+          "kicking": 85,
+          "lateral_skill": 67,
+          "tackling": 57,
+          "agility": 69,
+          "power": 55,
+          "awareness": 71,
+          "hands": 87,
+          "kick_power": 59,
+          "kick_accuracy": 75
         }
       },
       {
         "number": 87,
-        "name": "Laura Martínez",
+        "name": "Laura Mart\u00ednez",
         "position": "Wingback",
         "height": "5-11",
         "weight": 191,
@@ -436,22 +436,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 87,
-          "stamina": 73,
-          "kicking": 93,
-          "lateral_skill": 89,
-          "tackling": 83,
-          "agility": 85,
-          "power": 83,
-          "awareness": 84,
-          "hands": 80,
-          "kick_power": 96,
-          "kick_accuracy": 97
+          "speed": 69,
+          "stamina": 41,
+          "kicking": 81,
+          "lateral_skill": 73,
+          "tackling": 61,
+          "agility": 65,
+          "power": 61,
+          "awareness": 63,
+          "hands": 55,
+          "kick_power": 87,
+          "kick_accuracy": 89
         }
       },
       {
         "number": 97,
-        "name": "Marta Sánchez",
+        "name": "Marta S\u00e1nchez",
         "position": "Wingback",
         "height": "5-9",
         "weight": 212,
@@ -473,17 +473,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 83,
-          "stamina": 99,
-          "kicking": 80,
-          "lateral_skill": 83,
-          "tackling": 85,
-          "agility": 84,
-          "power": 95,
-          "awareness": 78,
-          "hands": 82,
-          "kick_power": 75,
-          "kick_accuracy": 91
+          "speed": 61,
+          "stamina": 93,
+          "kicking": 55,
+          "lateral_skill": 61,
+          "tackling": 65,
+          "agility": 63,
+          "power": 85,
+          "awareness": 51,
+          "hands": 59,
+          "kick_power": 45,
+          "kick_accuracy": 77
         }
       },
       {
@@ -510,22 +510,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 87,
-          "stamina": 75,
-          "kicking": 91,
-          "lateral_skill": 84,
-          "tackling": 99,
-          "agility": 91,
-          "power": 75,
-          "awareness": 78,
-          "hands": 86,
-          "kick_power": 99,
-          "kick_accuracy": 99
+          "speed": 69,
+          "stamina": 45,
+          "kicking": 77,
+          "lateral_skill": 63,
+          "tackling": 93,
+          "agility": 77,
+          "power": 45,
+          "awareness": 51,
+          "hands": 67,
+          "kick_power": 93,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 79,
-        "name": "Silvia Domínguez",
+        "name": "Silvia Dom\u00ednguez",
         "position": "Wingback",
         "height": "5-3",
         "weight": 182,
@@ -547,17 +547,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 80,
-          "stamina": 70,
-          "kicking": 99,
-          "lateral_skill": 85,
-          "tackling": 94,
-          "agility": 84,
-          "power": 89,
-          "awareness": 88,
-          "hands": 85,
-          "kick_power": 79,
-          "kick_accuracy": 98
+          "speed": 55,
+          "stamina": 35,
+          "kicking": 93,
+          "lateral_skill": 65,
+          "tackling": 83,
+          "agility": 63,
+          "power": 73,
+          "awareness": 71,
+          "hands": 65,
+          "kick_power": 53,
+          "kick_accuracy": 91
         }
       },
       {
@@ -584,22 +584,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 99,
-          "stamina": 96,
-          "kicking": 80,
-          "lateral_skill": 93,
-          "tackling": 95,
-          "agility": 95,
-          "power": 75,
-          "awareness": 99,
-          "hands": 86,
-          "kick_power": 96,
-          "kick_accuracy": 99
+          "speed": 93,
+          "stamina": 87,
+          "kicking": 55,
+          "lateral_skill": 81,
+          "tackling": 85,
+          "agility": 85,
+          "power": 45,
+          "awareness": 93,
+          "hands": 67,
+          "kick_power": 87,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 25,
-        "name": "Sofía Díaz",
+        "name": "Sof\u00eda D\u00edaz",
         "position": "Slotback",
         "height": "5-2",
         "weight": 192,
@@ -621,17 +621,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 98,
-          "stamina": 94,
-          "kicking": 91,
-          "lateral_skill": 75,
-          "tackling": 95,
-          "agility": 93,
-          "power": 89,
-          "awareness": 72,
-          "hands": 88,
-          "kick_power": 77,
-          "kick_accuracy": 78
+          "speed": 91,
+          "stamina": 83,
+          "kicking": 77,
+          "lateral_skill": 45,
+          "tackling": 85,
+          "agility": 81,
+          "power": 73,
+          "awareness": 39,
+          "hands": 71,
+          "kick_power": 49,
+          "kick_accuracy": 51
         }
       },
       {
@@ -658,22 +658,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 98,
-          "stamina": 88,
-          "kicking": 79,
-          "lateral_skill": 94,
-          "tackling": 99,
-          "agility": 96,
-          "power": 86,
-          "awareness": 87,
-          "hands": 82,
-          "kick_power": 99,
-          "kick_accuracy": 81
+          "speed": 91,
+          "stamina": 71,
+          "kicking": 53,
+          "lateral_skill": 83,
+          "tackling": 93,
+          "agility": 87,
+          "power": 67,
+          "awareness": 69,
+          "hands": 59,
+          "kick_power": 93,
+          "kick_accuracy": 57
         }
       },
       {
         "number": 93,
-        "name": "Raquel López",
+        "name": "Raquel L\u00f3pez",
         "position": "Slotback",
         "height": "6-2",
         "weight": 158,
@@ -695,17 +695,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 81,
-          "stamina": 76,
-          "kicking": 88,
-          "lateral_skill": 79,
-          "tackling": 80,
-          "agility": 97,
-          "power": 75,
-          "awareness": 90,
-          "hands": 82,
-          "kick_power": 89,
-          "kick_accuracy": 74
+          "speed": 57,
+          "stamina": 47,
+          "kicking": 71,
+          "lateral_skill": 53,
+          "tackling": 55,
+          "agility": 89,
+          "power": 45,
+          "awareness": 75,
+          "hands": 59,
+          "kick_power": 73,
+          "kick_accuracy": 43
         }
       },
       {
@@ -732,22 +732,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 83,
-          "stamina": 70,
-          "kicking": 82,
-          "lateral_skill": 99,
-          "tackling": 92,
-          "agility": 83,
-          "power": 81,
-          "awareness": 88,
-          "hands": 95,
-          "kick_power": 74,
-          "kick_accuracy": 99
+          "speed": 61,
+          "stamina": 35,
+          "kicking": 59,
+          "lateral_skill": 93,
+          "tackling": 79,
+          "agility": 61,
+          "power": 57,
+          "awareness": 71,
+          "hands": 85,
+          "kick_power": 43,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 80,
-        "name": "Laura Sánchez",
+        "name": "Laura S\u00e1nchez",
         "position": "Keeper",
         "height": "6-2",
         "weight": 214,
@@ -769,22 +769,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 90,
-          "stamina": 89,
-          "kicking": 94,
-          "lateral_skill": 88,
-          "tackling": 92,
-          "agility": 99,
-          "power": 86,
-          "awareness": 97,
-          "hands": 86,
-          "kick_power": 82,
-          "kick_accuracy": 73
+          "speed": 75,
+          "stamina": 73,
+          "kicking": 83,
+          "lateral_skill": 71,
+          "tackling": 79,
+          "agility": 93,
+          "power": 67,
+          "awareness": 89,
+          "hands": 67,
+          "kick_power": 59,
+          "kick_accuracy": 41
         }
       },
       {
         "number": 19,
-        "name": "María Moreno",
+        "name": "Mar\u00eda Moreno",
         "position": "Keeper",
         "height": "6-2",
         "weight": 164,
@@ -806,22 +806,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 89,
-          "stamina": 99,
-          "kicking": 95,
-          "lateral_skill": 81,
-          "tackling": 95,
-          "agility": 97,
-          "power": 99,
-          "awareness": 80,
-          "hands": 77,
-          "kick_power": 78,
-          "kick_accuracy": 74
+          "speed": 73,
+          "stamina": 93,
+          "kicking": 85,
+          "lateral_skill": 57,
+          "tackling": 85,
+          "agility": 89,
+          "power": 93,
+          "awareness": 55,
+          "hands": 49,
+          "kick_power": 51,
+          "kick_accuracy": 43
         }
       },
       {
         "number": 85,
-        "name": "Marta Ramírez",
+        "name": "Marta Ram\u00edrez",
         "position": "Offensive Line",
         "height": "5-3",
         "weight": 181,
@@ -843,22 +843,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 76,
-          "stamina": 95,
-          "kicking": 99,
-          "lateral_skill": 90,
-          "tackling": 77,
-          "agility": 88,
-          "power": 96,
-          "awareness": 90,
-          "hands": 88,
-          "kick_power": 67,
-          "kick_accuracy": 83
+          "speed": 47,
+          "stamina": 85,
+          "kicking": 93,
+          "lateral_skill": 75,
+          "tackling": 49,
+          "agility": 71,
+          "power": 87,
+          "awareness": 75,
+          "hands": 71,
+          "kick_power": 29,
+          "kick_accuracy": 61
         }
       },
       {
         "number": 59,
-        "name": "Julia Álvarez",
+        "name": "Julia \u00c1lvarez",
         "position": "Offensive Line",
         "height": "5-3",
         "weight": 170,
@@ -880,17 +880,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 78,
-          "stamina": 72,
-          "kicking": 99,
-          "lateral_skill": 85,
-          "tackling": 79,
-          "agility": 71,
-          "power": 75,
-          "awareness": 87,
-          "hands": 99,
-          "kick_power": 72,
-          "kick_accuracy": 81
+          "speed": 51,
+          "stamina": 39,
+          "kicking": 93,
+          "lateral_skill": 65,
+          "tackling": 53,
+          "agility": 37,
+          "power": 45,
+          "awareness": 69,
+          "hands": 93,
+          "kick_power": 39,
+          "kick_accuracy": 57
         }
       },
       {
@@ -917,22 +917,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 95,
-          "kicking": 88,
-          "lateral_skill": 84,
-          "tackling": 78,
-          "agility": 88,
-          "power": 84,
-          "awareness": 82,
-          "hands": 79,
-          "kick_power": 82,
-          "kick_accuracy": 76
+          "speed": 37,
+          "stamina": 85,
+          "kicking": 71,
+          "lateral_skill": 63,
+          "tackling": 51,
+          "agility": 71,
+          "power": 63,
+          "awareness": 59,
+          "hands": 53,
+          "kick_power": 59,
+          "kick_accuracy": 47
         }
       },
       {
         "number": 27,
-        "name": "Ana Hernández",
+        "name": "Ana Hern\u00e1ndez",
         "position": "Offensive Line",
         "height": "6-2",
         "weight": 203,
@@ -954,17 +954,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 99,
-          "stamina": 97,
-          "kicking": 93,
-          "lateral_skill": 99,
-          "tackling": 82,
-          "agility": 87,
-          "power": 90,
-          "awareness": 81,
-          "hands": 95,
-          "kick_power": 74,
-          "kick_accuracy": 98
+          "speed": 93,
+          "stamina": 89,
+          "kicking": 81,
+          "lateral_skill": 93,
+          "tackling": 59,
+          "agility": 69,
+          "power": 75,
+          "awareness": 57,
+          "hands": 85,
+          "kick_power": 43,
+          "kick_accuracy": 91
         }
       },
       {
@@ -991,22 +991,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 99,
-          "stamina": 95,
-          "kicking": 81,
-          "lateral_skill": 79,
-          "tackling": 92,
-          "agility": 87,
-          "power": 94,
-          "awareness": 78,
-          "hands": 78,
-          "kick_power": 84,
-          "kick_accuracy": 79
+          "speed": 93,
+          "stamina": 85,
+          "kicking": 57,
+          "lateral_skill": 53,
+          "tackling": 79,
+          "agility": 69,
+          "power": 83,
+          "awareness": 51,
+          "hands": 51,
+          "kick_power": 63,
+          "kick_accuracy": 53
         }
       },
       {
         "number": 21,
-        "name": "Rosa González",
+        "name": "Rosa Gonz\u00e1lez",
         "position": "Offensive Line",
         "height": "6-3",
         "weight": 143,
@@ -1028,22 +1028,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 77,
-          "stamina": 89,
-          "kicking": 95,
-          "lateral_skill": 78,
-          "tackling": 77,
-          "agility": 75,
-          "power": 93,
-          "awareness": 94,
-          "hands": 97,
-          "kick_power": 84,
-          "kick_accuracy": 76
+          "speed": 49,
+          "stamina": 73,
+          "kicking": 85,
+          "lateral_skill": 51,
+          "tackling": 49,
+          "agility": 45,
+          "power": 81,
+          "awareness": 83,
+          "hands": 89,
+          "kick_power": 63,
+          "kick_accuracy": 47
         }
       },
       {
         "number": 35,
-        "name": "Sofía Ortega",
+        "name": "Sof\u00eda Ortega",
         "position": "Offensive Line",
         "height": "6-1",
         "weight": 184,
@@ -1065,22 +1065,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 83,
-          "stamina": 91,
-          "kicking": 91,
-          "lateral_skill": 89,
-          "tackling": 96,
-          "agility": 83,
-          "power": 79,
-          "awareness": 89,
-          "hands": 88,
-          "kick_power": 85,
-          "kick_accuracy": 93
+          "speed": 61,
+          "stamina": 77,
+          "kicking": 77,
+          "lateral_skill": 73,
+          "tackling": 87,
+          "agility": 61,
+          "power": 53,
+          "awareness": 73,
+          "hands": 71,
+          "kick_power": 65,
+          "kick_accuracy": 81
         }
       },
       {
         "number": 99,
-        "name": "Laura Domínguez",
+        "name": "Laura Dom\u00ednguez",
         "position": "Offensive Line",
         "height": "5-9",
         "weight": 142,
@@ -1102,22 +1102,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 93,
-          "stamina": 78,
-          "kicking": 80,
-          "lateral_skill": 76,
-          "tackling": 89,
-          "agility": 85,
-          "power": 87,
-          "awareness": 98,
-          "hands": 88,
-          "kick_power": 78,
-          "kick_accuracy": 99
+          "speed": 81,
+          "stamina": 51,
+          "kicking": 55,
+          "lateral_skill": 47,
+          "tackling": 73,
+          "agility": 65,
+          "power": 69,
+          "awareness": 91,
+          "hands": 71,
+          "kick_power": 51,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 66,
-        "name": "Nuria Sánchez",
+        "name": "Nuria S\u00e1nchez",
         "position": "Defensive Line",
         "height": "5-3",
         "weight": 189,
@@ -1139,17 +1139,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 88,
-          "stamina": 91,
-          "kicking": 90,
-          "lateral_skill": 96,
-          "tackling": 86,
-          "agility": 77,
-          "power": 86,
-          "awareness": 82,
-          "hands": 95,
-          "kick_power": 84,
-          "kick_accuracy": 94
+          "speed": 71,
+          "stamina": 77,
+          "kicking": 75,
+          "lateral_skill": 87,
+          "tackling": 67,
+          "agility": 49,
+          "power": 67,
+          "awareness": 59,
+          "hands": 85,
+          "kick_power": 63,
+          "kick_accuracy": 83
         }
       },
       {
@@ -1176,17 +1176,17 @@
           "salary": 4
         },
         "stats": {
-          "speed": 78,
-          "stamina": 86,
-          "kicking": 99,
-          "lateral_skill": 85,
-          "tackling": 99,
-          "agility": 89,
-          "power": 91,
-          "awareness": 96,
-          "hands": 85,
-          "kick_power": 75,
-          "kick_accuracy": 94
+          "speed": 51,
+          "stamina": 67,
+          "kicking": 93,
+          "lateral_skill": 65,
+          "tackling": 93,
+          "agility": 73,
+          "power": 77,
+          "awareness": 87,
+          "hands": 65,
+          "kick_power": 45,
+          "kick_accuracy": 83
         }
       },
       {
@@ -1213,22 +1213,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 95,
-          "stamina": 90,
-          "kicking": 90,
-          "lateral_skill": 80,
-          "tackling": 85,
-          "agility": 84,
-          "power": 91,
-          "awareness": 97,
-          "hands": 95,
-          "kick_power": 99,
-          "kick_accuracy": 80
+          "speed": 85,
+          "stamina": 75,
+          "kicking": 75,
+          "lateral_skill": 55,
+          "tackling": 65,
+          "agility": 63,
+          "power": 77,
+          "awareness": 89,
+          "hands": 85,
+          "kick_power": 93,
+          "kick_accuracy": 55
         }
       },
       {
         "number": 50,
-        "name": "Isabel Sánchez",
+        "name": "Isabel S\u00e1nchez",
         "position": "Defensive Line",
         "height": "5-10",
         "weight": 185,
@@ -1250,22 +1250,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 78,
-          "kicking": 71,
-          "lateral_skill": 88,
-          "tackling": 97,
-          "agility": 96,
-          "power": 92,
-          "awareness": 71,
-          "hands": 97,
-          "kick_power": 86,
-          "kick_accuracy": 92
+          "speed": 37,
+          "stamina": 51,
+          "kicking": 37,
+          "lateral_skill": 71,
+          "tackling": 89,
+          "agility": 87,
+          "power": 79,
+          "awareness": 37,
+          "hands": 89,
+          "kick_power": 67,
+          "kick_accuracy": 79
         }
       },
       {
         "number": 63,
-        "name": "Sofía Sánchez",
+        "name": "Sof\u00eda S\u00e1nchez",
         "position": "Defensive Line",
         "height": "5-2",
         "weight": 176,
@@ -1287,22 +1287,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 82,
-          "stamina": 89,
-          "kicking": 90,
-          "lateral_skill": 98,
-          "tackling": 98,
-          "agility": 88,
-          "power": 99,
-          "awareness": 97,
-          "hands": 97,
-          "kick_power": 85,
-          "kick_accuracy": 99
+          "speed": 59,
+          "stamina": 73,
+          "kicking": 75,
+          "lateral_skill": 91,
+          "tackling": 91,
+          "agility": 71,
+          "power": 93,
+          "awareness": 89,
+          "hands": 89,
+          "kick_power": 65,
+          "kick_accuracy": 93
         }
       },
       {
         "number": 46,
-        "name": "Nuria Ramírez",
+        "name": "Nuria Ram\u00edrez",
         "position": "Defensive Line",
         "height": "5-8",
         "weight": 200,
@@ -1324,22 +1324,22 @@
           "salary": 4
         },
         "stats": {
-          "speed": 95,
-          "stamina": 91,
-          "kicking": 86,
-          "lateral_skill": 76,
-          "tackling": 74,
-          "agility": 78,
-          "power": 73,
-          "awareness": 91,
-          "hands": 84,
-          "kick_power": 97,
-          "kick_accuracy": 93
+          "speed": 85,
+          "stamina": 77,
+          "kicking": 67,
+          "lateral_skill": 47,
+          "tackling": 43,
+          "agility": 51,
+          "power": 41,
+          "awareness": 77,
+          "hands": 63,
+          "kick_power": 89,
+          "kick_accuracy": 81
         }
       },
       {
         "number": 98,
-        "name": "Rosa Díaz",
+        "name": "Rosa D\u00edaz",
         "position": "Defensive Line",
         "height": "5-6",
         "weight": 212,
@@ -1361,19 +1361,20 @@
           "salary": 4
         },
         "stats": {
-          "speed": 86,
-          "stamina": 99,
-          "kicking": 96,
-          "lateral_skill": 93,
-          "tackling": 99,
-          "agility": 77,
-          "power": 99,
-          "awareness": 80,
-          "hands": 99,
-          "kick_power": 86,
-          "kick_accuracy": 95
+          "speed": 67,
+          "stamina": 93,
+          "kicking": 87,
+          "lateral_skill": 81,
+          "tackling": 93,
+          "agility": 49,
+          "power": 93,
+          "awareness": 55,
+          "hands": 93,
+          "kick_power": 67,
+          "kick_accuracy": 85
         }
       }
     ]
-  }
+  },
+  "rating_scale": "current"
 }

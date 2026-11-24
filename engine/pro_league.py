@@ -37,7 +37,7 @@ class ProLeagueConfig:
     bye_count: int = 4
     calendar_start: str = "September"
     calendar_end: str = "February"
-    attribute_range: Tuple[int, int] = (65, 95)
+    attribute_range: Tuple[int, int] = (25, 85)  # current rating scale
     franchise_rating_range: Tuple[int, int] = (60, 95)
     name_pool: str = "male_english"
 
@@ -57,7 +57,7 @@ NVL_CONFIG = ProLeagueConfig(
     bye_count=4,
     calendar_start="September",
     calendar_end="February",
-    attribute_range=(65, 95),
+    attribute_range=(25, 85),
     franchise_rating_range=(60, 95),
     name_pool="male_english",
 )
@@ -76,7 +76,7 @@ EL_CONFIG = ProLeagueConfig(
     bye_count=0,
     calendar_start="March",
     calendar_end="July",
-    attribute_range=(58, 85),
+    attribute_range=(11, 65),
     franchise_rating_range=(50, 80),
     name_pool="male_european",
 )
@@ -95,7 +95,7 @@ AL_CONFIG = ProLeagueConfig(
     bye_count=0,
     calendar_start="April",
     calendar_end="August",
-    attribute_range=(55, 82),
+    attribute_range=(10, 59),
     franchise_rating_range=(45, 78),
     name_pool="male_african",
 )
@@ -114,7 +114,7 @@ PL_CONFIG = ProLeagueConfig(
     bye_count=0,
     calendar_start="January",
     calendar_end="May",
-    attribute_range=(55, 80),
+    attribute_range=(10, 55),
     franchise_rating_range=(45, 75),
     name_pool="male_asian",
 )
@@ -133,7 +133,7 @@ LA_CONFIG = ProLeagueConfig(
     bye_count=0,
     calendar_start="June",
     calendar_end="October",
-    attribute_range=(55, 82),
+    attribute_range=(10, 59),
     franchise_rating_range=(45, 78),
     name_pool="male_latin",
 )
@@ -330,7 +330,7 @@ def create_champions_league() -> 'ProLeagueSeason':
         bye_count=bye_count,
         calendar_start="November",
         calendar_end="December",
-        attribute_range=(55, 95),
+        attribute_range=(10, 85),
         franchise_rating_range=(45, 95),
     )
 
@@ -676,19 +676,16 @@ class ProLeagueSeason:
                     unavailable_away=unavail_away,
                 )
             else:
-                from engine.pro_scale import engine_scale, league_scale
-                _center, _off = league_scale(self)
-                with engine_scale(home, away, center=_center, offsets=(_off, _off)):
-                    engine = ViperballEngine(
-                        home, away,
-                        seed=random.randint(1, 1_000_000),
-                        weather=weather_key,
-                        injury_tracker=self.injury_tracker,
-                        game_week=week_num,
-                        unavailable_home=unavail_home,
-                        unavailable_away=unavail_away,
-                    )
-                    result = engine.simulate_game()
+                engine = ViperballEngine(
+                    home, away,
+                    seed=random.randint(1, 1_000_000),
+                    weather=weather_key,
+                    injury_tracker=self.injury_tracker,
+                    game_week=week_num,
+                    unavailable_home=unavail_home,
+                    unavailable_away=unavail_away,
+                )
+                result = engine.simulate_game()
 
             home_score = result["final_score"]["home"]["score"]
             away_score = result["final_score"]["away"]["score"]
@@ -1290,14 +1287,11 @@ class ProLeagueSeason:
                     home_team = self.teams.get(matchup["home"]["team_key"])
                     away_team = self.teams.get(matchup["away"]["team_key"])
                     if home_team and away_team:
-                        from engine.pro_scale import engine_scale, league_scale
-                        _center, _off = league_scale(self)
-                        with engine_scale(home_team, away_team, center=_center, offsets=(_off, _off)):
-                            result = ViperballEngine(
-                                home_team, away_team,
-                                seed=random.randint(1, 1_000_000),
-                                neutral_site=True, is_playoff=True,
-                            ).simulate_game()
+                        result = ViperballEngine(
+                            home_team, away_team,
+                            seed=random.randint(1, 1_000_000),
+                            neutral_site=True, is_playoff=True,
+                        ).simulate_game()
                         h_score = result["final_score"]["home"]["score"]
                         a_score = result["final_score"]["away"]["score"]
                         winner_key = matchup["home"]["team_key"] if h_score > a_score else matchup["away"]["team_key"]

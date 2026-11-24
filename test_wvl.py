@@ -147,7 +147,7 @@ class TestFreeAgency:
         for fa in pool:
             assert fa.player_card.age is not None
             assert fa.player_card.pro_status == "free_agent"
-            assert 40 <= fa.player_card.overall <= 99
+            assert 10 <= fa.player_card.overall <= 96  # current rating scale
 
     def test_fa_attractiveness(self):
         score_t1 = compute_fa_attractiveness(tier=1, recent_wins=20, total_games=34, prestige=90)

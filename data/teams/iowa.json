@@ -52,17 +52,18 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 83,
-          "stamina": 94,
-          "kicking": 72,
-          "lateral_skill": 95,
-          "tackling": 94,
-          "agility": 87,
-          "power": 80,
-          "awareness": 72,
-          "hands": 82,
-          "kick_power": 100,
-          "kick_accuracy": 87
+          "speed": 23,
+          "stamina": 36,
+          "kicking": 43,
+          "lateral_skill": 34,
+          "tackling": 70,
+          "agility": 41,
+          "power": 32,
+          "awareness": 17,
+          "hands": 32,
+          "kick_power": 28,
+          "kick_accuracy": 44,
+          "work_rate": 45
         }
       },
       {
@@ -84,17 +85,18 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 73,
-          "stamina": 81,
-          "kicking": 100,
-          "lateral_skill": 80,
-          "tackling": 87,
-          "agility": 83,
-          "power": 97,
-          "awareness": 88,
-          "hands": 86,
-          "kick_power": 82,
-          "kick_accuracy": 68
+          "speed": 63,
+          "stamina": 45,
+          "kicking": 64,
+          "lateral_skill": 61,
+          "tackling": 74,
+          "agility": 71,
+          "power": 64,
+          "awareness": 65,
+          "hands": 66,
+          "kick_power": 61,
+          "kick_accuracy": 53,
+          "work_rate": 32
         }
       },
       {
@@ -116,17 +118,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 92,
-          "stamina": 76,
-          "kicking": 86,
-          "lateral_skill": 93,
-          "tackling": 86,
-          "agility": 82,
-          "power": 100,
-          "awareness": 96,
-          "hands": 87,
-          "kick_power": 83,
-          "kick_accuracy": 71
+          "speed": 63,
+          "stamina": 64,
+          "kicking": 47,
+          "lateral_skill": 61,
+          "tackling": 51,
+          "agility": 39,
+          "power": 54,
+          "awareness": 47,
+          "hands": 47,
+          "kick_power": 23,
+          "kick_accuracy": 49,
+          "work_rate": 48
         }
       },
       {
@@ -148,17 +151,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 99,
-          "stamina": 90,
-          "kicking": 93,
-          "lateral_skill": 84,
-          "tackling": 76,
-          "agility": 93,
-          "power": 85,
-          "awareness": 82,
-          "hands": 85,
-          "kick_power": 68,
-          "kick_accuracy": 88
+          "speed": 15,
+          "stamina": 10,
+          "kicking": 28,
+          "lateral_skill": 12,
+          "tackling": 30,
+          "agility": 10,
+          "power": 36,
+          "awareness": 33,
+          "hands": 15,
+          "kick_power": 10,
+          "kick_accuracy": 11,
+          "work_rate": 23
         }
       },
       {
@@ -180,17 +184,18 @@
         "potential": 3,
         "development": "late_bloomer",
         "stats": {
-          "speed": 96,
-          "stamina": 72,
-          "kicking": 74,
-          "lateral_skill": 73,
-          "tackling": 83,
-          "agility": 89,
-          "power": 87,
-          "awareness": 83,
-          "hands": 100,
-          "kick_power": 68,
-          "kick_accuracy": 75
+          "speed": 30,
+          "stamina": 49,
+          "kicking": 29,
+          "lateral_skill": 30,
+          "tackling": 36,
+          "agility": 28,
+          "power": 34,
+          "awareness": 55,
+          "hands": 34,
+          "kick_power": 28,
+          "kick_accuracy": 43,
+          "work_rate": 63
         }
       },
       {
@@ -212,17 +217,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 72,
-          "stamina": 94,
-          "kicking": 76,
-          "lateral_skill": 86,
-          "tackling": 87,
-          "agility": 83,
-          "power": 100,
-          "awareness": 88,
-          "hands": 74,
-          "kick_power": 82,
-          "kick_accuracy": 82
+          "speed": 32,
+          "stamina": 42,
+          "kicking": 26,
+          "lateral_skill": 27,
+          "tackling": 41,
+          "agility": 28,
+          "power": 24,
+          "awareness": 31,
+          "hands": 36,
+          "kick_power": 27,
+          "kick_accuracy": 24,
+          "work_rate": 22
         }
       },
       {
@@ -244,17 +250,18 @@
         "potential": 4,
         "development": "quick",
         "stats": {
-          "speed": 93,
-          "stamina": 93,
-          "kicking": 73,
-          "lateral_skill": 88,
-          "tackling": 88,
-          "agility": 80,
-          "power": 99,
-          "awareness": 80,
-          "hands": 98,
-          "kick_power": 76,
-          "kick_accuracy": 77
+          "speed": 27,
+          "stamina": 30,
+          "kicking": 12,
+          "lateral_skill": 36,
+          "tackling": 12,
+          "agility": 26,
+          "power": 22,
+          "awareness": 24,
+          "hands": 10,
+          "kick_power": 17,
+          "kick_accuracy": 31,
+          "work_rate": 44
         }
       },
       {
@@ -276,17 +283,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 100,
-          "stamina": 75,
-          "kicking": 90,
-          "lateral_skill": 99,
-          "tackling": 73,
-          "agility": 73,
-          "power": 80,
-          "awareness": 83,
-          "hands": 93,
-          "kick_power": 96,
-          "kick_accuracy": 99
+          "speed": 83,
+          "stamina": 78,
+          "kicking": 82,
+          "lateral_skill": 57,
+          "tackling": 74,
+          "agility": 60,
+          "power": 63,
+          "awareness": 72,
+          "hands": 74,
+          "kick_power": 44,
+          "kick_accuracy": 68,
+          "work_rate": 31
         }
       },
       {
@@ -308,17 +316,18 @@
         "potential": 2,
         "development": "normal",
         "stats": {
-          "speed": 82,
-          "stamina": 95,
-          "kicking": 100,
-          "lateral_skill": 79,
-          "tackling": 84,
-          "agility": 87,
-          "power": 100,
-          "awareness": 98,
-          "hands": 72,
-          "kick_power": 73,
-          "kick_accuracy": 99
+          "speed": 77,
+          "stamina": 68,
+          "kicking": 66,
+          "lateral_skill": 84,
+          "tackling": 61,
+          "agility": 64,
+          "power": 66,
+          "awareness": 59,
+          "hands": 73,
+          "kick_power": 56,
+          "kick_accuracy": 65,
+          "work_rate": 80
         }
       },
       {
@@ -340,17 +349,18 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 76,
-          "stamina": 91,
-          "kicking": 85,
-          "lateral_skill": 90,
-          "tackling": 93,
-          "agility": 71,
-          "power": 92,
-          "awareness": 91,
-          "hands": 76,
-          "kick_power": 75,
-          "kick_accuracy": 76
+          "speed": 10,
+          "stamina": 20,
+          "kicking": 24,
+          "lateral_skill": 10,
+          "tackling": 26,
+          "agility": 10,
+          "power": 10,
+          "awareness": 12,
+          "hands": 12,
+          "kick_power": 10,
+          "kick_accuracy": 16,
+          "work_rate": 38
         }
       },
       {
@@ -372,17 +382,18 @@
         "potential": 2,
         "development": "slow",
         "stats": {
-          "speed": 97,
-          "stamina": 90,
-          "kicking": 72,
-          "lateral_skill": 86,
-          "tackling": 99,
-          "agility": 91,
-          "power": 88,
-          "awareness": 80,
-          "hands": 91,
-          "kick_power": 85,
-          "kick_accuracy": 96
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 17,
+          "tackling": 17,
+          "agility": 10,
+          "power": 23,
+          "awareness": 12,
+          "hands": 10,
+          "kick_power": 16,
+          "kick_accuracy": 11,
+          "work_rate": 26
         }
       },
       {
@@ -404,17 +415,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 80,
-          "stamina": 81,
-          "kicking": 98,
-          "lateral_skill": 91,
-          "tackling": 94,
-          "agility": 98,
-          "power": 82,
-          "awareness": 83,
-          "hands": 75,
-          "kick_power": 89,
-          "kick_accuracy": 98
+          "speed": 30,
+          "stamina": 26,
+          "kicking": 17,
+          "lateral_skill": 37,
+          "tackling": 10,
+          "agility": 41,
+          "power": 32,
+          "awareness": 33,
+          "hands": 39,
+          "kick_power": 50,
+          "kick_accuracy": 24,
+          "work_rate": 13
         }
       },
       {
@@ -436,17 +448,18 @@
         "potential": 5,
         "development": "normal",
         "stats": {
-          "speed": 81,
-          "stamina": 97,
-          "kicking": 81,
-          "lateral_skill": 100,
-          "tackling": 89,
-          "agility": 94,
-          "power": 81,
-          "awareness": 77,
-          "hands": 95,
-          "kick_power": 76,
-          "kick_accuracy": 97
+          "speed": 10,
+          "stamina": 15,
+          "kicking": 13,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 18,
+          "power": 26,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 32,
+          "kick_accuracy": 12,
+          "work_rate": 35
         }
       },
       {
@@ -468,17 +481,18 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 86,
-          "stamina": 86,
-          "kicking": 96,
-          "lateral_skill": 80,
-          "tackling": 93,
-          "agility": 66,
-          "power": 79,
-          "awareness": 84,
-          "hands": 75,
-          "kick_power": 82,
-          "kick_accuracy": 89
+          "speed": 24,
+          "stamina": 38,
+          "kicking": 19,
+          "lateral_skill": 34,
+          "tackling": 30,
+          "agility": 41,
+          "power": 38,
+          "awareness": 35,
+          "hands": 17,
+          "kick_power": 20,
+          "kick_accuracy": 18,
+          "work_rate": 36
         }
       },
       {
@@ -500,17 +514,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 88,
-          "stamina": 97,
-          "kicking": 90,
-          "lateral_skill": 92,
-          "tackling": 90,
-          "agility": 74,
-          "power": 75,
-          "awareness": 74,
-          "hands": 96,
-          "kick_power": 89,
-          "kick_accuracy": 87
+          "speed": 11,
+          "stamina": 10,
+          "kicking": 45,
+          "lateral_skill": 23,
+          "tackling": 10,
+          "agility": 20,
+          "power": 19,
+          "awareness": 18,
+          "hands": 10,
+          "kick_power": 12,
+          "kick_accuracy": 40,
+          "work_rate": 20
         }
       },
       {
@@ -532,17 +547,18 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 98,
-          "stamina": 87,
-          "kicking": 95,
-          "lateral_skill": 75,
-          "tackling": 95,
-          "agility": 98,
-          "power": 80,
-          "awareness": 81,
-          "hands": 100,
-          "kick_power": 86,
-          "kick_accuracy": 76
+          "speed": 10,
+          "stamina": 23,
+          "kicking": 10,
+          "lateral_skill": 21,
+          "tackling": 21,
+          "agility": 10,
+          "power": 19,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 10,
+          "work_rate": 20
         }
       },
       {
@@ -564,17 +580,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 75,
-          "stamina": 84,
-          "kicking": 85,
-          "lateral_skill": 96,
-          "tackling": 99,
-          "agility": 67,
-          "power": 95,
-          "awareness": 86,
-          "hands": 79,
-          "kick_power": 80,
-          "kick_accuracy": 69
+          "speed": 48,
+          "stamina": 82,
+          "kicking": 45,
+          "lateral_skill": 53,
+          "tackling": 84,
+          "agility": 72,
+          "power": 74,
+          "awareness": 75,
+          "hands": 66,
+          "kick_power": 71,
+          "kick_accuracy": 64,
+          "work_rate": 69
         }
       },
       {
@@ -596,17 +613,18 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 80,
-          "stamina": 84,
-          "kicking": 93,
-          "lateral_skill": 77,
-          "tackling": 84,
-          "agility": 87,
-          "power": 95,
-          "awareness": 90,
-          "hands": 100,
-          "kick_power": 96,
-          "kick_accuracy": 69
+          "speed": 21,
+          "stamina": 18,
+          "kicking": 23,
+          "lateral_skill": 28,
+          "tackling": 36,
+          "agility": 36,
+          "power": 22,
+          "awareness": 16,
+          "hands": 21,
+          "kick_power": 31,
+          "kick_accuracy": 10,
+          "work_rate": 15
         }
       },
       {
@@ -628,17 +646,18 @@
         "potential": 4,
         "development": "late_bloomer",
         "stats": {
-          "speed": 90,
-          "stamina": 92,
-          "kicking": 82,
-          "lateral_skill": 90,
-          "tackling": 91,
-          "agility": 78,
-          "power": 83,
-          "awareness": 79,
-          "hands": 88,
-          "kick_power": 85,
-          "kick_accuracy": 80
+          "speed": 21,
+          "stamina": 45,
+          "kicking": 24,
+          "lateral_skill": 37,
+          "tackling": 26,
+          "agility": 25,
+          "power": 21,
+          "awareness": 24,
+          "hands": 26,
+          "kick_power": 50,
+          "kick_accuracy": 29,
+          "work_rate": 41
         }
       },
       {
@@ -660,17 +679,18 @@
         "potential": 1,
         "development": "late_bloomer",
         "stats": {
-          "speed": 100,
-          "stamina": 83,
-          "kicking": 99,
-          "lateral_skill": 83,
-          "tackling": 97,
-          "agility": 82,
-          "power": 100,
-          "awareness": 95,
-          "hands": 96,
-          "kick_power": 75,
-          "kick_accuracy": 84
+          "speed": 43,
+          "stamina": 30,
+          "kicking": 12,
+          "lateral_skill": 10,
+          "tackling": 39,
+          "agility": 33,
+          "power": 11,
+          "awareness": 20,
+          "hands": 10,
+          "kick_power": 19,
+          "kick_accuracy": 24,
+          "work_rate": 21
         }
       },
       {
@@ -692,17 +712,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 85,
-          "stamina": 75,
-          "kicking": 72,
-          "lateral_skill": 90,
-          "tackling": 99,
-          "agility": 81,
-          "power": 83,
-          "awareness": 72,
-          "hands": 92,
-          "kick_power": 99,
-          "kick_accuracy": 80
+          "speed": 34,
+          "stamina": 61,
+          "kicking": 67,
+          "lateral_skill": 64,
+          "tackling": 56,
+          "agility": 64,
+          "power": 65,
+          "awareness": 61,
+          "hands": 58,
+          "kick_power": 64,
+          "kick_accuracy": 49,
+          "work_rate": 56
         }
       },
       {
@@ -724,17 +745,18 @@
         "potential": 3,
         "development": "slow",
         "stats": {
-          "speed": 89,
-          "stamina": 81,
-          "kicking": 80,
-          "lateral_skill": 91,
-          "tackling": 72,
-          "agility": 100,
-          "power": 95,
-          "awareness": 73,
-          "hands": 91,
-          "kick_power": 80,
-          "kick_accuracy": 100
+          "speed": 11,
+          "stamina": 27,
+          "kicking": 24,
+          "lateral_skill": 21,
+          "tackling": 14,
+          "agility": 40,
+          "power": 10,
+          "awareness": 15,
+          "hands": 21,
+          "kick_power": 27,
+          "kick_accuracy": 23,
+          "work_rate": 33
         }
       },
       {
@@ -756,17 +778,18 @@
         "potential": 3,
         "development": "late_bloomer",
         "stats": {
-          "speed": 71,
-          "stamina": 80,
-          "kicking": 89,
-          "lateral_skill": 90,
-          "tackling": 74,
-          "agility": 100,
-          "power": 81,
-          "awareness": 80,
-          "hands": 100,
-          "kick_power": 100,
-          "kick_accuracy": 99
+          "speed": 38,
+          "stamina": 41,
+          "kicking": 29,
+          "lateral_skill": 26,
+          "tackling": 37,
+          "agility": 36,
+          "power": 10,
+          "awareness": 21,
+          "hands": 10,
+          "kick_power": 21,
+          "kick_accuracy": 29,
+          "work_rate": 52
         }
       },
       {
@@ -788,17 +811,18 @@
         "potential": 4,
         "development": "quick",
         "stats": {
-          "speed": 71,
-          "stamina": 94,
-          "kicking": 81,
-          "lateral_skill": 96,
-          "tackling": 80,
-          "agility": 89,
-          "power": 92,
-          "awareness": 95,
-          "hands": 77,
-          "kick_power": 77,
-          "kick_accuracy": 91
+          "speed": 36,
+          "stamina": 42,
+          "kicking": 37,
+          "lateral_skill": 33,
+          "tackling": 22,
+          "agility": 42,
+          "power": 27,
+          "awareness": 34,
+          "hands": 28,
+          "kick_power": 33,
+          "kick_accuracy": 39,
+          "work_rate": 24
         }
       },
       {
@@ -820,17 +844,18 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 86,
-          "stamina": 85,
-          "kicking": 95,
-          "lateral_skill": 79,
-          "tackling": 100,
-          "agility": 81,
-          "power": 80,
-          "awareness": 89,
-          "hands": 94,
-          "kick_power": 66,
-          "kick_accuracy": 82
+          "speed": 59,
+          "stamina": 71,
+          "kicking": 62,
+          "lateral_skill": 66,
+          "tackling": 61,
+          "agility": 51,
+          "power": 60,
+          "awareness": 50,
+          "hands": 71,
+          "kick_power": 70,
+          "kick_accuracy": 75,
+          "work_rate": 65
         }
       },
       {
@@ -852,17 +877,18 @@
         "potential": 3,
         "development": "late_bloomer",
         "stats": {
-          "speed": 94,
-          "stamina": 90,
-          "kicking": 78,
-          "lateral_skill": 78,
-          "tackling": 100,
-          "agility": 75,
-          "power": 86,
-          "awareness": 75,
-          "hands": 85,
-          "kick_power": 89,
-          "kick_accuracy": 92
+          "speed": 32,
+          "stamina": 27,
+          "kicking": 29,
+          "lateral_skill": 22,
+          "tackling": 28,
+          "agility": 38,
+          "power": 31,
+          "awareness": 25,
+          "hands": 20,
+          "kick_power": 21,
+          "kick_accuracy": 21,
+          "work_rate": 54
         }
       },
       {
@@ -884,17 +910,18 @@
         "potential": 4,
         "development": "normal",
         "stats": {
-          "speed": 74,
-          "stamina": 97,
-          "kicking": 88,
-          "lateral_skill": 99,
-          "tackling": 87,
-          "agility": 77,
-          "power": 89,
-          "awareness": 88,
-          "hands": 75,
-          "kick_power": 76,
-          "kick_accuracy": 86
+          "speed": 42,
+          "stamina": 34,
+          "kicking": 38,
+          "lateral_skill": 36,
+          "tackling": 33,
+          "agility": 38,
+          "power": 51,
+          "awareness": 21,
+          "hands": 16,
+          "kick_power": 38,
+          "kick_accuracy": 38,
+          "work_rate": 29
         }
       },
       {
@@ -916,17 +943,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 74,
-          "stamina": 88,
-          "kicking": 85,
-          "lateral_skill": 90,
-          "tackling": 94,
-          "agility": 71,
-          "power": 83,
-          "awareness": 79,
-          "hands": 97,
-          "kick_power": 66,
-          "kick_accuracy": 79
+          "speed": 21,
+          "stamina": 35,
+          "kicking": 20,
+          "lateral_skill": 24,
+          "tackling": 21,
+          "agility": 39,
+          "power": 21,
+          "awareness": 16,
+          "hands": 17,
+          "kick_power": 16,
+          "kick_accuracy": 37,
+          "work_rate": 27
         }
       },
       {
@@ -948,17 +976,18 @@
         "potential": 3,
         "development": "quick",
         "stats": {
-          "speed": 97,
-          "stamina": 82,
-          "kicking": 99,
-          "lateral_skill": 95,
-          "tackling": 85,
-          "agility": 98,
-          "power": 100,
-          "awareness": 100,
-          "hands": 83,
-          "kick_power": 90,
-          "kick_accuracy": 71
+          "speed": 86,
+          "stamina": 71,
+          "kicking": 81,
+          "lateral_skill": 94,
+          "tackling": 74,
+          "agility": 88,
+          "power": 67,
+          "awareness": 54,
+          "hands": 96,
+          "kick_power": 65,
+          "kick_accuracy": 77,
+          "work_rate": 54
         }
       },
       {
@@ -980,17 +1009,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 90,
-          "stamina": 85,
-          "kicking": 92,
-          "lateral_skill": 94,
-          "tackling": 88,
-          "agility": 84,
-          "power": 88,
-          "awareness": 83,
-          "hands": 97,
-          "kick_power": 80,
-          "kick_accuracy": 81
+          "speed": 57,
+          "stamina": 42,
+          "kicking": 46,
+          "lateral_skill": 45,
+          "tackling": 36,
+          "agility": 48,
+          "power": 28,
+          "awareness": 40,
+          "hands": 44,
+          "kick_power": 43,
+          "kick_accuracy": 37,
+          "work_rate": 39
         }
       },
       {
@@ -1012,17 +1042,18 @@
         "potential": 4,
         "development": "slow",
         "stats": {
-          "speed": 96,
-          "stamina": 90,
-          "kicking": 69,
-          "lateral_skill": 78,
-          "tackling": 99,
-          "agility": 68,
-          "power": 88,
-          "awareness": 85,
-          "hands": 78,
-          "kick_power": 100,
-          "kick_accuracy": 79
+          "speed": 10,
+          "stamina": 22,
+          "kicking": 23,
+          "lateral_skill": 17,
+          "tackling": 34,
+          "agility": 24,
+          "power": 19,
+          "awareness": 12,
+          "hands": 10,
+          "kick_power": 14,
+          "kick_accuracy": 21,
+          "work_rate": 10
         }
       },
       {
@@ -1044,17 +1075,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 85,
-          "stamina": 84,
-          "kicking": 80,
-          "lateral_skill": 79,
-          "tackling": 72,
-          "agility": 88,
-          "power": 100,
-          "awareness": 89,
-          "hands": 99,
-          "kick_power": 77,
-          "kick_accuracy": 93
+          "speed": 66,
+          "stamina": 58,
+          "kicking": 47,
+          "lateral_skill": 41,
+          "tackling": 56,
+          "agility": 59,
+          "power": 33,
+          "awareness": 37,
+          "hands": 63,
+          "kick_power": 44,
+          "kick_accuracy": 67,
+          "work_rate": 42
         }
       },
       {
@@ -1076,17 +1108,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 98,
-          "stamina": 78,
-          "kicking": 80,
-          "lateral_skill": 80,
-          "tackling": 98,
-          "agility": 75,
-          "power": 100,
-          "awareness": 85,
-          "hands": 100,
-          "kick_power": 69,
-          "kick_accuracy": 100
+          "speed": 17,
+          "stamina": 18,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 12,
+          "power": 20,
+          "awareness": 12,
+          "hands": 28,
+          "kick_power": 10,
+          "kick_accuracy": 21,
+          "work_rate": 17
         }
       },
       {
@@ -1108,17 +1141,18 @@
         "potential": 2,
         "development": "slow",
         "stats": {
-          "speed": 100,
-          "stamina": 94,
-          "kicking": 97,
-          "lateral_skill": 77,
-          "tackling": 72,
-          "agility": 79,
-          "power": 83,
-          "awareness": 92,
-          "hands": 90,
-          "kick_power": 68,
-          "kick_accuracy": 70
+          "speed": 30,
+          "stamina": 10,
+          "kicking": 15,
+          "lateral_skill": 31,
+          "tackling": 20,
+          "agility": 20,
+          "power": 27,
+          "awareness": 26,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 30,
+          "work_rate": 44
         }
       },
       {
@@ -1140,17 +1174,18 @@
         "potential": 3,
         "development": "slow",
         "stats": {
-          "speed": 78,
-          "stamina": 94,
-          "kicking": 95,
-          "lateral_skill": 86,
-          "tackling": 100,
-          "agility": 78,
-          "power": 93,
-          "awareness": 90,
-          "hands": 84,
-          "kick_power": 91,
-          "kick_accuracy": 81
+          "speed": 84,
+          "stamina": 70,
+          "kicking": 68,
+          "lateral_skill": 76,
+          "tackling": 81,
+          "agility": 79,
+          "power": 72,
+          "awareness": 62,
+          "hands": 82,
+          "kick_power": 66,
+          "kick_accuracy": 77,
+          "work_rate": 44
         }
       },
       {
@@ -1172,17 +1207,18 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 100,
-          "stamina": 95,
-          "kicking": 97,
-          "lateral_skill": 81,
-          "tackling": 100,
-          "agility": 77,
-          "power": 82,
-          "awareness": 81,
-          "hands": 84,
-          "kick_power": 68,
-          "kick_accuracy": 80
+          "speed": 17,
+          "stamina": 18,
+          "kicking": 26,
+          "lateral_skill": 20,
+          "tackling": 15,
+          "agility": 17,
+          "power": 22,
+          "awareness": 43,
+          "hands": 38,
+          "kick_power": 36,
+          "kick_accuracy": 33,
+          "work_rate": 26
         }
       },
       {
@@ -1204,17 +1240,18 @@
         "potential": 2,
         "development": "slow",
         "stats": {
-          "speed": 100,
-          "stamina": 91,
-          "kicking": 100,
-          "lateral_skill": 92,
-          "tackling": 81,
-          "agility": 79,
-          "power": 95,
-          "awareness": 97,
-          "hands": 86,
-          "kick_power": 97,
-          "kick_accuracy": 95
+          "speed": 24,
+          "stamina": 21,
+          "kicking": 24,
+          "lateral_skill": 11,
+          "tackling": 10,
+          "agility": 13,
+          "power": 10,
+          "awareness": 30,
+          "hands": 20,
+          "kick_power": 10,
+          "kick_accuracy": 33,
+          "work_rate": 11
         }
       },
       {
@@ -1236,28 +1273,29 @@
         "potential": 3,
         "development": "normal",
         "stats": {
-          "speed": 97,
-          "stamina": 75,
-          "kicking": 97,
-          "lateral_skill": 91,
-          "tackling": 78,
-          "agility": 73,
-          "power": 93,
-          "awareness": 75,
-          "hands": 71,
-          "kick_power": 79,
-          "kick_accuracy": 98
+          "speed": 52,
+          "stamina": 67,
+          "kicking": 68,
+          "lateral_skill": 59,
+          "tackling": 54,
+          "agility": 47,
+          "power": 64,
+          "awareness": 36,
+          "hands": 40,
+          "kick_power": 51,
+          "kick_accuracy": 47,
+          "work_rate": 66
         }
       }
     ]
   },
   "team_stats": {
-    "avg_speed": 88,
+    "avg_speed": 41,
     "avg_weight": 182,
-    "avg_stamina": 87,
-    "kicking_strength": 87,
-    "lateral_proficiency": 87,
-    "defensive_strength": 88
+    "avg_stamina": 40,
+    "kicking_strength": 41,
+    "lateral_proficiency": 39,
+    "defensive_strength": 43
   },
   "coaching": {
     "head_coach": "Peter Thomas",
@@ -1488,5 +1526,6 @@
       "coaching_tree": [],
       "hc_meter": 0
     }
-  }
+  },
+  "rating_scale": "current"
 }

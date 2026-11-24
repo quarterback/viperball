@@ -33,11 +33,11 @@
     "narrative_tag": ""
   },
   "team_stats": {
-    "avg_speed": 62,
-    "avg_stamina": 63,
-    "kicking_strength": 64,
-    "lateral_proficiency": 62,
-    "defensive_strength": 62
+    "avg_speed": 19,
+    "avg_stamina": 21,
+    "kicking_strength": 23,
+    "lateral_proficiency": 19,
+    "defensive_strength": 19
   },
   "roster": {
     "size": 36,
@@ -66,22 +66,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 59,
-          "stamina": 53,
-          "kicking": 79,
-          "lateral_skill": 52,
-          "tackling": 61,
-          "agility": 77,
-          "power": 68,
-          "awareness": 65,
-          "hands": 75,
-          "kick_power": 56,
-          "kick_accuracy": 51
+          "speed": 13,
+          "stamina": 10,
+          "kicking": 53,
+          "lateral_skill": 10,
+          "tackling": 17,
+          "agility": 49,
+          "power": 31,
+          "awareness": 25,
+          "hands": 45,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 78,
-        "name": "Ecrin Aydın",
+        "name": "Ecrin Ayd\u0131n",
         "position": "Viper",
         "height": "6-2",
         "weight": 154,
@@ -103,17 +103,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 63,
-          "stamina": 51,
-          "kicking": 71,
-          "lateral_skill": 60,
-          "tackling": 77,
-          "agility": 67,
-          "power": 47,
-          "awareness": 65,
-          "hands": 69,
-          "kick_power": 67,
-          "kick_accuracy": 48
+          "speed": 21,
+          "stamina": 10,
+          "kicking": 37,
+          "lateral_skill": 15,
+          "tackling": 49,
+          "agility": 29,
+          "power": 10,
+          "awareness": 25,
+          "hands": 33,
+          "kick_power": 29,
+          "kick_accuracy": 10
         }
       },
       {
@@ -140,17 +140,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 70,
-          "stamina": 51,
-          "kicking": 57,
-          "lateral_skill": 59,
-          "tackling": 73,
-          "agility": 75,
-          "power": 59,
-          "awareness": 62,
-          "hands": 55,
-          "kick_power": 59,
-          "kick_accuracy": 62
+          "speed": 35,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 13,
+          "tackling": 41,
+          "agility": 45,
+          "power": 13,
+          "awareness": 19,
+          "hands": 10,
+          "kick_power": 13,
+          "kick_accuracy": 19
         }
       },
       {
@@ -177,22 +177,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 76,
-          "stamina": 68,
-          "kicking": 69,
-          "lateral_skill": 53,
-          "tackling": 57,
-          "agility": 45,
-          "power": 54,
-          "awareness": 52,
-          "hands": 63,
-          "kick_power": 63,
-          "kick_accuracy": 70
+          "speed": 47,
+          "stamina": 31,
+          "kicking": 33,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 21,
+          "kick_power": 21,
+          "kick_accuracy": 35
         }
       },
       {
         "number": 92,
-        "name": "Yağmur Aslan",
+        "name": "Ya\u011fmur Aslan",
         "position": "Zeroback",
         "height": "5-2",
         "weight": 184,
@@ -214,22 +214,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 59,
-          "stamina": 70,
-          "kicking": 56,
-          "lateral_skill": 54,
-          "tackling": 49,
-          "agility": 78,
-          "power": 70,
-          "awareness": 65,
-          "hands": 67,
-          "kick_power": 67,
-          "kick_accuracy": 63
+          "speed": 13,
+          "stamina": 35,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 51,
+          "power": 35,
+          "awareness": 25,
+          "hands": 29,
+          "kick_power": 29,
+          "kick_accuracy": 21
         }
       },
       {
         "number": 48,
-        "name": "Berra Yılmaz",
+        "name": "Berra Y\u0131lmaz",
         "position": "Zeroback",
         "height": "6-0",
         "weight": 203,
@@ -251,22 +251,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 76,
-          "stamina": 59,
-          "kicking": 49,
-          "lateral_skill": 71,
-          "tackling": 55,
-          "agility": 54,
-          "power": 57,
-          "awareness": 70,
-          "hands": 72,
-          "kick_power": 51,
-          "kick_accuracy": 54
+          "speed": 47,
+          "stamina": 13,
+          "kicking": 10,
+          "lateral_skill": 37,
+          "tackling": 10,
+          "agility": 10,
+          "power": 10,
+          "awareness": 35,
+          "hands": 39,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 16,
-        "name": "Eylül Yılmaz",
+        "name": "Eyl\u00fcl Y\u0131lmaz",
         "position": "Halfback",
         "height": "6-1",
         "weight": 176,
@@ -288,22 +288,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 51,
-          "stamina": 47,
-          "kicking": 44,
-          "lateral_skill": 72,
-          "tackling": 49,
-          "agility": 53,
-          "power": 67,
-          "awareness": 63,
-          "hands": 61,
-          "kick_power": 54,
-          "kick_accuracy": 54
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 39,
+          "tackling": 10,
+          "agility": 10,
+          "power": 29,
+          "awareness": 21,
+          "hands": 17,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 44,
-        "name": "Azra Özdemir",
+        "name": "Azra \u00d6zdemir",
         "position": "Halfback",
         "height": "5-9",
         "weight": 168,
@@ -325,22 +325,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 72,
-          "stamina": 60,
-          "kicking": 62,
-          "lateral_skill": 59,
-          "tackling": 64,
-          "agility": 55,
-          "power": 62,
-          "awareness": 67,
-          "hands": 60,
-          "kick_power": 51,
-          "kick_accuracy": 54
+          "speed": 39,
+          "stamina": 15,
+          "kicking": 19,
+          "lateral_skill": 13,
+          "tackling": 23,
+          "agility": 10,
+          "power": 19,
+          "awareness": 29,
+          "hands": 15,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 64,
-        "name": "Ecrin Özdemir",
+        "name": "Ecrin \u00d6zdemir",
         "position": "Halfback",
         "height": "5-6",
         "weight": 218,
@@ -362,22 +362,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 61,
-          "stamina": 55,
-          "kicking": 63,
-          "lateral_skill": 80,
-          "tackling": 63,
-          "agility": 77,
-          "power": 78,
-          "awareness": 50,
-          "hands": 51,
-          "kick_power": 60,
-          "kick_accuracy": 65
+          "speed": 17,
+          "stamina": 10,
+          "kicking": 21,
+          "lateral_skill": 55,
+          "tackling": 21,
+          "agility": 49,
+          "power": 51,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 15,
+          "kick_accuracy": 25
         }
       },
       {
         "number": 63,
-        "name": "Lara Yılmaz",
+        "name": "Lara Y\u0131lmaz",
         "position": "Halfback",
         "height": "5-6",
         "weight": 170,
@@ -399,22 +399,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 55,
-          "stamina": 58,
-          "kicking": 70,
-          "lateral_skill": 53,
-          "tackling": 53,
-          "agility": 54,
-          "power": 56,
-          "awareness": 45,
-          "hands": 68,
-          "kick_power": 55,
-          "kick_accuracy": 70
+          "speed": 10,
+          "stamina": 11,
+          "kicking": 35,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 31,
+          "kick_power": 10,
+          "kick_accuracy": 35
         }
       },
       {
         "number": 24,
-        "name": "Melis Öztürk",
+        "name": "Melis \u00d6zt\u00fcrk",
         "position": "Wingback",
         "height": "5-8",
         "weight": 152,
@@ -436,22 +436,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 60,
-          "stamina": 72,
-          "kicking": 70,
-          "lateral_skill": 70,
-          "tackling": 55,
-          "agility": 75,
-          "power": 83,
-          "awareness": 76,
-          "hands": 77,
-          "kick_power": 76,
-          "kick_accuracy": 52
+          "speed": 15,
+          "stamina": 39,
+          "kicking": 35,
+          "lateral_skill": 35,
+          "tackling": 10,
+          "agility": 45,
+          "power": 61,
+          "awareness": 47,
+          "hands": 49,
+          "kick_power": 47,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 35,
-        "name": "Berra Yıldırım",
+        "name": "Berra Y\u0131ld\u0131r\u0131m",
         "position": "Wingback",
         "height": "6-1",
         "weight": 197,
@@ -473,22 +473,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 74,
-          "stamina": 71,
-          "kicking": 76,
-          "lateral_skill": 71,
-          "tackling": 77,
-          "agility": 72,
-          "power": 67,
-          "awareness": 67,
-          "hands": 77,
-          "kick_power": 74,
-          "kick_accuracy": 60
+          "speed": 43,
+          "stamina": 37,
+          "kicking": 47,
+          "lateral_skill": 37,
+          "tackling": 49,
+          "agility": 39,
+          "power": 29,
+          "awareness": 29,
+          "hands": 49,
+          "kick_power": 43,
+          "kick_accuracy": 15
         }
       },
       {
         "number": 19,
-        "name": "Nehir Yıldırım",
+        "name": "Nehir Y\u0131ld\u0131r\u0131m",
         "position": "Wingback",
         "height": "5-9",
         "weight": 194,
@@ -510,17 +510,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 69,
-          "stamina": 50,
-          "kicking": 62,
-          "lateral_skill": 65,
-          "tackling": 56,
-          "agility": 72,
-          "power": 79,
-          "awareness": 60,
-          "hands": 55,
-          "kick_power": 62,
-          "kick_accuracy": 58
+          "speed": 33,
+          "stamina": 10,
+          "kicking": 19,
+          "lateral_skill": 25,
+          "tackling": 10,
+          "agility": 39,
+          "power": 53,
+          "awareness": 15,
+          "hands": 10,
+          "kick_power": 19,
+          "kick_accuracy": 11
         }
       },
       {
@@ -547,17 +547,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 62,
-          "stamina": 76,
-          "kicking": 76,
-          "lateral_skill": 53,
-          "tackling": 57,
-          "agility": 61,
-          "power": 72,
-          "awareness": 84,
-          "hands": 68,
-          "kick_power": 55,
-          "kick_accuracy": 70
+          "speed": 19,
+          "stamina": 47,
+          "kicking": 47,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 17,
+          "power": 39,
+          "awareness": 63,
+          "hands": 31,
+          "kick_power": 10,
+          "kick_accuracy": 35
         }
       },
       {
@@ -584,22 +584,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 53,
-          "stamina": 68,
-          "kicking": 52,
-          "lateral_skill": 60,
-          "tackling": 80,
-          "agility": 67,
-          "power": 55,
-          "awareness": 76,
-          "hands": 60,
-          "kick_power": 69,
-          "kick_accuracy": 45
+          "speed": 10,
+          "stamina": 31,
+          "kicking": 10,
+          "lateral_skill": 15,
+          "tackling": 55,
+          "agility": 29,
+          "power": 10,
+          "awareness": 47,
+          "hands": 15,
+          "kick_power": 33,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 27,
-        "name": "Sude Öztürk",
+        "name": "Sude \u00d6zt\u00fcrk",
         "position": "Slotback",
         "height": "5-2",
         "weight": 151,
@@ -621,17 +621,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 64,
-          "stamina": 71,
-          "kicking": 58,
-          "lateral_skill": 55,
-          "tackling": 53,
-          "agility": 52,
-          "power": 71,
-          "awareness": 60,
-          "hands": 65,
-          "kick_power": 62,
-          "kick_accuracy": 51
+          "speed": 23,
+          "stamina": 37,
+          "kicking": 11,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 10,
+          "power": 37,
+          "awareness": 15,
+          "hands": 25,
+          "kick_power": 19,
+          "kick_accuracy": 10
         }
       },
       {
@@ -658,22 +658,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 59,
-          "stamina": 53,
-          "kicking": 50,
-          "lateral_skill": 64,
-          "tackling": 80,
-          "agility": 62,
-          "power": 57,
-          "awareness": 61,
-          "hands": 63,
-          "kick_power": 56,
-          "kick_accuracy": 59
+          "speed": 13,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 23,
+          "tackling": 55,
+          "agility": 19,
+          "power": 10,
+          "awareness": 17,
+          "hands": 21,
+          "kick_power": 10,
+          "kick_accuracy": 13
         }
       },
       {
         "number": 60,
-        "name": "Nisa Çelik",
+        "name": "Nisa \u00c7elik",
         "position": "Slotback",
         "height": "6-2",
         "weight": 166,
@@ -695,17 +695,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 75,
-          "stamina": 74,
-          "kicking": 73,
-          "lateral_skill": 79,
-          "tackling": 50,
-          "agility": 53,
-          "power": 78,
-          "awareness": 81,
-          "hands": 73,
-          "kick_power": 74,
-          "kick_accuracy": 73
+          "speed": 45,
+          "stamina": 43,
+          "kicking": 41,
+          "lateral_skill": 53,
+          "tackling": 10,
+          "agility": 10,
+          "power": 51,
+          "awareness": 57,
+          "hands": 41,
+          "kick_power": 43,
+          "kick_accuracy": 41
         }
       },
       {
@@ -732,22 +732,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 57,
-          "stamina": 64,
-          "kicking": 66,
-          "lateral_skill": 60,
-          "tackling": 47,
-          "agility": 72,
-          "power": 62,
-          "awareness": 72,
-          "hands": 70,
-          "kick_power": 76,
-          "kick_accuracy": 71
+          "speed": 10,
+          "stamina": 23,
+          "kicking": 27,
+          "lateral_skill": 15,
+          "tackling": 10,
+          "agility": 39,
+          "power": 19,
+          "awareness": 39,
+          "hands": 35,
+          "kick_power": 47,
+          "kick_accuracy": 37
         }
       },
       {
         "number": 6,
-        "name": "Selin Özdemir",
+        "name": "Selin \u00d6zdemir",
         "position": "Keeper",
         "height": "5-11",
         "weight": 156,
@@ -769,17 +769,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 58,
-          "stamina": 66,
-          "kicking": 66,
-          "lateral_skill": 74,
-          "tackling": 54,
-          "agility": 72,
-          "power": 73,
-          "awareness": 74,
-          "hands": 59,
-          "kick_power": 78,
-          "kick_accuracy": 71
+          "speed": 11,
+          "stamina": 27,
+          "kicking": 27,
+          "lateral_skill": 43,
+          "tackling": 10,
+          "agility": 39,
+          "power": 41,
+          "awareness": 43,
+          "hands": 13,
+          "kick_power": 51,
+          "kick_accuracy": 37
         }
       },
       {
@@ -806,22 +806,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 58,
-          "kicking": 53,
-          "lateral_skill": 73,
-          "tackling": 61,
-          "agility": 50,
-          "power": 49,
-          "awareness": 56,
-          "hands": 48,
-          "kick_power": 61,
-          "kick_accuracy": 49
+          "speed": 37,
+          "stamina": 11,
+          "kicking": 10,
+          "lateral_skill": 41,
+          "tackling": 17,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 17,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 71,
-        "name": "Nehir Yılmaz",
+        "name": "Nehir Y\u0131lmaz",
         "position": "Offensive Line",
         "height": "5-4",
         "weight": 211,
@@ -843,22 +843,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 66,
-          "stamina": 74,
-          "kicking": 60,
-          "lateral_skill": 67,
-          "tackling": 64,
-          "agility": 64,
-          "power": 57,
-          "awareness": 53,
-          "hands": 60,
-          "kick_power": 73,
-          "kick_accuracy": 51
+          "speed": 27,
+          "stamina": 43,
+          "kicking": 15,
+          "lateral_skill": 29,
+          "tackling": 23,
+          "agility": 23,
+          "power": 10,
+          "awareness": 10,
+          "hands": 15,
+          "kick_power": 41,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 88,
-        "name": "Lara Özdemir",
+        "name": "Lara \u00d6zdemir",
         "position": "Offensive Line",
         "height": "5-2",
         "weight": 219,
@@ -880,17 +880,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 73,
-          "stamina": 71,
-          "kicking": 60,
-          "lateral_skill": 77,
-          "tackling": 57,
-          "agility": 52,
-          "power": 69,
-          "awareness": 79,
-          "hands": 49,
-          "kick_power": 75,
-          "kick_accuracy": 66
+          "speed": 41,
+          "stamina": 37,
+          "kicking": 15,
+          "lateral_skill": 49,
+          "tackling": 10,
+          "agility": 10,
+          "power": 33,
+          "awareness": 53,
+          "hands": 10,
+          "kick_power": 45,
+          "kick_accuracy": 27
         }
       },
       {
@@ -917,22 +917,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 55,
-          "stamina": 60,
-          "kicking": 67,
-          "lateral_skill": 52,
-          "tackling": 60,
-          "agility": 48,
-          "power": 68,
-          "awareness": 72,
-          "hands": 67,
-          "kick_power": 67,
-          "kick_accuracy": 43
+          "speed": 10,
+          "stamina": 15,
+          "kicking": 29,
+          "lateral_skill": 10,
+          "tackling": 15,
+          "agility": 10,
+          "power": 31,
+          "awareness": 39,
+          "hands": 29,
+          "kick_power": 29,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 57,
-        "name": "Eylül Kılıç",
+        "name": "Eyl\u00fcl K\u0131l\u0131\u00e7",
         "position": "Offensive Line",
         "height": "5-9",
         "weight": 191,
@@ -954,22 +954,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 70,
-          "stamina": 80,
-          "kicking": 57,
-          "lateral_skill": 57,
-          "tackling": 73,
-          "agility": 75,
-          "power": 80,
-          "awareness": 67,
-          "hands": 43,
-          "kick_power": 52,
-          "kick_accuracy": 72
+          "speed": 35,
+          "stamina": 55,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 41,
+          "agility": 45,
+          "power": 55,
+          "awareness": 29,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 39
         }
       },
       {
         "number": 8,
-        "name": "Yağmur Yıldız",
+        "name": "Ya\u011fmur Y\u0131ld\u0131z",
         "position": "Offensive Line",
         "height": "5-4",
         "weight": 142,
@@ -991,22 +991,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 48,
-          "stamina": 47,
-          "kicking": 69,
-          "lateral_skill": 61,
-          "tackling": 66,
-          "agility": 55,
-          "power": 55,
-          "awareness": 55,
-          "hands": 54,
-          "kick_power": 61,
-          "kick_accuracy": 60
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 33,
+          "lateral_skill": 17,
+          "tackling": 27,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 17,
+          "kick_accuracy": 15
         }
       },
       {
         "number": 84,
-        "name": "Elif Özkan",
+        "name": "Elif \u00d6zkan",
         "position": "Offensive Line",
         "height": "5-10",
         "weight": 218,
@@ -1028,22 +1028,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 61,
-          "stamina": 70,
-          "kicking": 71,
-          "lateral_skill": 55,
-          "tackling": 58,
-          "agility": 71,
-          "power": 58,
-          "awareness": 70,
-          "hands": 50,
-          "kick_power": 81,
-          "kick_accuracy": 62
+          "speed": 17,
+          "stamina": 35,
+          "kicking": 37,
+          "lateral_skill": 10,
+          "tackling": 11,
+          "agility": 37,
+          "power": 11,
+          "awareness": 35,
+          "hands": 10,
+          "kick_power": 57,
+          "kick_accuracy": 19
         }
       },
       {
         "number": 21,
-        "name": "Zeynep Yıldırım",
+        "name": "Zeynep Y\u0131ld\u0131r\u0131m",
         "position": "Offensive Line",
         "height": "5-10",
         "weight": 212,
@@ -1065,22 +1065,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 80,
-          "kicking": 78,
-          "lateral_skill": 46,
-          "tackling": 75,
-          "agility": 46,
-          "power": 78,
-          "awareness": 62,
-          "hands": 48,
-          "kick_power": 64,
-          "kick_accuracy": 44
+          "speed": 37,
+          "stamina": 55,
+          "kicking": 51,
+          "lateral_skill": 10,
+          "tackling": 45,
+          "agility": 10,
+          "power": 51,
+          "awareness": 19,
+          "hands": 10,
+          "kick_power": 23,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 11,
-        "name": "Zeynep Aydın",
+        "name": "Zeynep Ayd\u0131n",
         "position": "Offensive Line",
         "height": "5-7",
         "weight": 164,
@@ -1102,17 +1102,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 54,
-          "stamina": 68,
-          "kicking": 52,
-          "lateral_skill": 64,
-          "tackling": 66,
-          "agility": 78,
-          "power": 59,
-          "awareness": 56,
-          "hands": 62,
-          "kick_power": 61,
-          "kick_accuracy": 71
+          "speed": 10,
+          "stamina": 31,
+          "kicking": 10,
+          "lateral_skill": 23,
+          "tackling": 27,
+          "agility": 51,
+          "power": 13,
+          "awareness": 10,
+          "hands": 19,
+          "kick_power": 17,
+          "kick_accuracy": 37
         }
       },
       {
@@ -1139,22 +1139,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 53,
-          "stamina": 70,
-          "kicking": 63,
-          "lateral_skill": 60,
-          "tackling": 83,
-          "agility": 57,
-          "power": 68,
-          "awareness": 82,
-          "hands": 78,
-          "kick_power": 62,
-          "kick_accuracy": 49
+          "speed": 10,
+          "stamina": 35,
+          "kicking": 21,
+          "lateral_skill": 15,
+          "tackling": 61,
+          "agility": 10,
+          "power": 31,
+          "awareness": 59,
+          "hands": 51,
+          "kick_power": 19,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 34,
-        "name": "Azra Yıldız",
+        "name": "Azra Y\u0131ld\u0131z",
         "position": "Defensive Line",
         "height": "5-4",
         "weight": 164,
@@ -1176,22 +1176,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 73,
-          "stamina": 59,
-          "kicking": 69,
-          "lateral_skill": 70,
-          "tackling": 56,
-          "agility": 47,
-          "power": 74,
-          "awareness": 56,
-          "hands": 75,
-          "kick_power": 77,
-          "kick_accuracy": 73
+          "speed": 41,
+          "stamina": 13,
+          "kicking": 33,
+          "lateral_skill": 35,
+          "tackling": 10,
+          "agility": 10,
+          "power": 43,
+          "awareness": 10,
+          "hands": 45,
+          "kick_power": 49,
+          "kick_accuracy": 41
         }
       },
       {
         "number": 73,
-        "name": "Melis Koç",
+        "name": "Melis Ko\u00e7",
         "position": "Defensive Line",
         "height": "6-4",
         "weight": 164,
@@ -1213,22 +1213,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 48,
-          "stamina": 68,
-          "kicking": 82,
-          "lateral_skill": 53,
-          "tackling": 69,
-          "agility": 55,
-          "power": 78,
-          "awareness": 64,
-          "hands": 55,
-          "kick_power": 69,
-          "kick_accuracy": 75
+          "speed": 10,
+          "stamina": 31,
+          "kicking": 59,
+          "lateral_skill": 10,
+          "tackling": 33,
+          "agility": 10,
+          "power": 51,
+          "awareness": 23,
+          "hands": 10,
+          "kick_power": 33,
+          "kick_accuracy": 45
         }
       },
       {
         "number": 37,
-        "name": "Asya Çelik",
+        "name": "Asya \u00c7elik",
         "position": "Defensive Line",
         "height": "5-5",
         "weight": 174,
@@ -1250,22 +1250,22 @@
           "salary": 2
         },
         "stats": {
-          "speed": 51,
-          "stamina": 75,
-          "kicking": 52,
-          "lateral_skill": 74,
-          "tackling": 69,
-          "agility": 57,
-          "power": 50,
-          "awareness": 59,
-          "hands": 75,
-          "kick_power": 79,
-          "kick_accuracy": 58
+          "speed": 10,
+          "stamina": 45,
+          "kicking": 10,
+          "lateral_skill": 43,
+          "tackling": 33,
+          "agility": 10,
+          "power": 10,
+          "awareness": 13,
+          "hands": 45,
+          "kick_power": 53,
+          "kick_accuracy": 11
         }
       },
       {
         "number": 31,
-        "name": "Yağmur Kılıç",
+        "name": "Ya\u011fmur K\u0131l\u0131\u00e7",
         "position": "Defensive Line",
         "height": "5-5",
         "weight": 199,
@@ -1287,22 +1287,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 54,
-          "stamina": 69,
-          "kicking": 69,
-          "lateral_skill": 74,
-          "tackling": 72,
-          "agility": 64,
-          "power": 63,
-          "awareness": 76,
-          "hands": 49,
-          "kick_power": 66,
-          "kick_accuracy": 52
+          "speed": 10,
+          "stamina": 33,
+          "kicking": 33,
+          "lateral_skill": 43,
+          "tackling": 39,
+          "agility": 23,
+          "power": 21,
+          "awareness": 47,
+          "hands": 10,
+          "kick_power": 27,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 91,
-        "name": "Zeynep Yıldırım",
+        "name": "Zeynep Y\u0131ld\u0131r\u0131m",
         "position": "Defensive Line",
         "height": "5-3",
         "weight": 188,
@@ -1324,22 +1324,22 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 48,
-          "kicking": 65,
-          "lateral_skill": 52,
-          "tackling": 63,
-          "agility": 75,
-          "power": 56,
-          "awareness": 61,
-          "hands": 77,
-          "kick_power": 72,
-          "kick_accuracy": 50
+          "speed": 37,
+          "stamina": 10,
+          "kicking": 25,
+          "lateral_skill": 10,
+          "tackling": 21,
+          "agility": 45,
+          "power": 10,
+          "awareness": 17,
+          "hands": 49,
+          "kick_power": 39,
+          "kick_accuracy": 10
         }
       },
       {
         "number": 67,
-        "name": "Ada Yıldırım",
+        "name": "Ada Y\u0131ld\u0131r\u0131m",
         "position": "Defensive Line",
         "height": "5-2",
         "weight": 216,
@@ -1361,19 +1361,20 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 68,
-          "kicking": 81,
-          "lateral_skill": 62,
-          "tackling": 58,
-          "agility": 77,
-          "power": 73,
-          "awareness": 56,
-          "hands": 67,
-          "kick_power": 80,
-          "kick_accuracy": 69
+          "speed": 37,
+          "stamina": 31,
+          "kicking": 57,
+          "lateral_skill": 19,
+          "tackling": 11,
+          "agility": 49,
+          "power": 41,
+          "awareness": 10,
+          "hands": 29,
+          "kick_power": 55,
+          "kick_accuracy": 33
         }
       }
     ]
-  }
+  },
+  "rating_scale": "current"
 }

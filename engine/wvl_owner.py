@@ -445,10 +445,10 @@ def apply_investment_boosts(
         # Training Facilities → physical attrs (infra-scaled)
         if allocation.training > 0.05:
             raw = allocation.training * budget_factor * rng.uniform(1, 3) * training_infra_mult
-            boost = max(0, min(5, int(raw)))
+            boost = 2 * max(0, min(5, int(raw)))  # current scale: 2 per old point
             for attr in ["speed", "stamina", "agility"]:
                 old = getattr(card, attr)
-                new = min(99, old + boost)
+                new = min(96, old + boost)
                 if new != old:
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
@@ -456,10 +456,10 @@ def apply_investment_boosts(
         # Coaching Staff Budget → mental attrs (infra-scaled)
         if allocation.coaching > 0.05:
             raw = allocation.coaching * budget_factor * rng.uniform(1, 3) * coaching_infra_mult
-            boost = max(0, min(5, int(raw)))
+            boost = 2 * max(0, min(5, int(raw)))  # current scale: 2 per old point
             for attr in ["awareness", "tackling"]:
                 old = getattr(card, attr)
-                new = min(99, old + boost)
+                new = min(96, old + boost)
                 if new != old:
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
@@ -467,10 +467,10 @@ def apply_investment_boosts(
         # Youth Academy → development speed for young players (infra-scaled)
         if allocation.youth > 0.05 and getattr(card, "age", 30) and card.age is not None and card.age < 25:
             raw_boost = allocation.youth * budget_factor * rng.uniform(1, 5) * youth_infra_mult
-            boost = max(0, min(7, int(raw_boost)))
+            boost = 2 * max(0, min(7, int(raw_boost)))
             for attr in ["speed", "agility", "lateral_skill", "hands"]:
                 old = getattr(card, attr)
-                new = min(99, old + boost)
+                new = min(96, old + boost)
                 if new != old:
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)
@@ -478,10 +478,10 @@ def apply_investment_boosts(
         # Sports Science → injury resilience (infra-scaled)
         if allocation.science > 0.05:
             raw = allocation.science * budget_factor * rng.uniform(0.5, 2.5) * science_infra_mult
-            boost = max(0, min(3, int(raw)))
+            boost = 2 * max(0, min(3, int(raw)))
             for attr in ["stamina", "power"]:
                 old = getattr(card, attr)
-                new = min(99, old + boost)
+                new = min(96, old + boost)
                 if new != old:
                     setattr(card, attr, new)
                     boosts_applied[attr] = boosts_applied.get(attr, 0) + (new - old)

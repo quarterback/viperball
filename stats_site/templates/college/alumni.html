@@ -84,7 +84,7 @@
       <td style="font-size:11px">{{ a.conference[:12] if a.conference else '' }}</td>
       <td class="num">{{ a.graduation_year }}</td>
       <td class="num">{{ a.college_seasons_count }}</td>
-      <td class="num {% if a.peak_overall >= 90 %}stat-elite{% elif a.peak_overall >= 80 %}stat-good{% endif %}">{{ a.peak_overall }}</td>
+      <td class="num {% if a.peak_overall >= 70 %}stat-elite{% elif a.peak_overall >= 55 %}stat-good{% endif %}">{{ a.peak_overall }}</td>
       <td class="num">{{ a.career_games }}</td>
       <td class="num {% if a.career_yards >= 3000 %}stat-elite{% elif a.career_yards >= 1500 %}stat-good{% endif %}">{{ a.career_yards }}</td>
       <td class="num {% if a.career_tds >= 30 %}stat-elite{% elif a.career_tds >= 15 %}stat-good{% endif %}">{{ a.career_tds }}</td>

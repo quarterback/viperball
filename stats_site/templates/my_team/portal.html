@@ -88,7 +88,7 @@
   <tr>
     <td style="color:var(--green);font-weight:bold;">{{ p.player_name }}</td>
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
-    <td class="num {% if p.overall >= 80 %}stat-elite{% elif p.overall >= 65 %}stat-good{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 55 %}stat-elite{% elif p.overall >= 40 %}stat-good{% endif %}">{{ p.overall }}</td>
     <td style="font-size:11px;">{{ p.year }}</td>
     <td style="font-size:11px;color:var(--fg-dim);">{{ p.origin_team }}</td>
   </tr>
@@ -120,7 +120,7 @@
   <tr>
     <td style="font-weight:bold;">{{ p.player_name }}</td>
     <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
-    <td class="num {% if p.overall >= 80 %}stat-elite{% elif p.overall >= 65 %}stat-good{% elif p.overall < 45 %}stat-bad{% endif %}">{{ p.overall }}</td>
+    <td class="num {% if p.overall >= 55 %}stat-elite{% elif p.overall >= 40 %}stat-good{% elif p.overall < 15 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{{ p.get("potential", "?") }}</td>
     <td style="font-size:11px;">{{ p.year }}</td>
     <td style="font-size:11px;color:var(--fg-dim);">{{ p.origin_team }}</td>

@@ -1,11 +1,11 @@
 {
   "team_info": {
     "school_id": "bodo_glimt",
-    "school_name": "Bodø/Glimt",
+    "school_name": "Bod\u00f8/Glimt",
     "abbreviation": "BOD",
-    "mascot": "Bodø/Glimt",
+    "mascot": "Bod\u00f8/Glimt",
     "conference": "WVL Tier 4",
-    "city": "Bodø",
+    "city": "Bod\u00f8",
     "state": "NOR",
     "country": "Norway",
     "colors": [
@@ -29,15 +29,15 @@
   "wvl_metadata": {
     "tier": 4,
     "country": "Norway",
-    "city": "Bodø",
+    "city": "Bod\u00f8",
     "narrative_tag": "cinderella"
   },
   "team_stats": {
-    "avg_speed": 61,
-    "avg_stamina": 59,
-    "kicking_strength": 62,
-    "lateral_proficiency": 61,
-    "defensive_strength": 60
+    "avg_speed": 17,
+    "avg_stamina": 13,
+    "kicking_strength": 19,
+    "lateral_proficiency": 17,
+    "defensive_strength": 15
   },
   "roster": {
     "size": 36,
@@ -51,7 +51,7 @@
         "year": "Senior Pro",
         "age": 32,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -66,17 +66,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 61,
-          "stamina": 65,
-          "kicking": 69,
-          "lateral_skill": 61,
-          "tackling": 54,
-          "agility": 53,
-          "power": 49,
-          "awareness": 62,
-          "hands": 58,
-          "kick_power": 76,
-          "kick_accuracy": 55
+          "speed": 17,
+          "stamina": 25,
+          "kicking": 33,
+          "lateral_skill": 17,
+          "tackling": 10,
+          "agility": 10,
+          "power": 10,
+          "awareness": 19,
+          "hands": 11,
+          "kick_power": 47,
+          "kick_accuracy": 10
         }
       },
       {
@@ -88,7 +88,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -103,17 +103,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 63,
-          "stamina": 48,
-          "kicking": 61,
-          "lateral_skill": 62,
-          "tackling": 64,
-          "agility": 57,
-          "power": 73,
-          "awareness": 74,
-          "hands": 73,
-          "kick_power": 61,
-          "kick_accuracy": 60
+          "speed": 21,
+          "stamina": 10,
+          "kicking": 17,
+          "lateral_skill": 19,
+          "tackling": 23,
+          "agility": 10,
+          "power": 41,
+          "awareness": 43,
+          "hands": 41,
+          "kick_power": 17,
+          "kick_accuracy": 15
         }
       },
       {
@@ -125,7 +125,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -140,17 +140,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 57,
-          "stamina": 47,
-          "kicking": 72,
-          "lateral_skill": 74,
-          "tackling": 62,
-          "agility": 64,
-          "power": 68,
-          "awareness": 62,
-          "hands": 50,
-          "kick_power": 74,
-          "kick_accuracy": 61
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 39,
+          "lateral_skill": 43,
+          "tackling": 19,
+          "agility": 23,
+          "power": 31,
+          "awareness": 19,
+          "hands": 10,
+          "kick_power": 43,
+          "kick_accuracy": 17
         }
       },
       {
@@ -162,7 +162,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -177,17 +177,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 69,
-          "stamina": 46,
-          "kicking": 61,
-          "lateral_skill": 72,
-          "tackling": 48,
-          "agility": 68,
-          "power": 68,
-          "awareness": 53,
-          "hands": 81,
-          "kick_power": 47,
-          "kick_accuracy": 67
+          "speed": 33,
+          "stamina": 10,
+          "kicking": 17,
+          "lateral_skill": 39,
+          "tackling": 10,
+          "agility": 31,
+          "power": 31,
+          "awareness": 10,
+          "hands": 57,
+          "kick_power": 10,
+          "kick_accuracy": 29
         }
       },
       {
@@ -199,7 +199,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -214,17 +214,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 70,
-          "stamina": 67,
-          "kicking": 75,
-          "lateral_skill": 55,
-          "tackling": 64,
-          "agility": 69,
-          "power": 71,
-          "awareness": 73,
-          "hands": 41,
-          "kick_power": 73,
-          "kick_accuracy": 65
+          "speed": 35,
+          "stamina": 29,
+          "kicking": 45,
+          "lateral_skill": 10,
+          "tackling": 23,
+          "agility": 33,
+          "power": 37,
+          "awareness": 41,
+          "hands": 10,
+          "kick_power": 41,
+          "kick_accuracy": 25
         }
       },
       {
@@ -236,7 +236,7 @@
         "year": "Veteran",
         "age": 27,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -251,17 +251,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 51,
-          "stamina": 67,
-          "kicking": 58,
-          "lateral_skill": 66,
-          "tackling": 49,
-          "agility": 71,
-          "power": 52,
-          "awareness": 58,
-          "hands": 63,
-          "kick_power": 50,
-          "kick_accuracy": 55
+          "speed": 10,
+          "stamina": 29,
+          "kicking": 11,
+          "lateral_skill": 27,
+          "tackling": 10,
+          "agility": 37,
+          "power": 10,
+          "awareness": 11,
+          "hands": 21,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
@@ -273,7 +273,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -288,17 +288,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 56,
-          "stamina": 66,
-          "kicking": 52,
-          "lateral_skill": 58,
-          "tackling": 45,
-          "agility": 71,
-          "power": 60,
-          "awareness": 71,
-          "hands": 56,
-          "kick_power": 64,
-          "kick_accuracy": 65
+          "speed": 10,
+          "stamina": 27,
+          "kicking": 10,
+          "lateral_skill": 11,
+          "tackling": 10,
+          "agility": 37,
+          "power": 15,
+          "awareness": 37,
+          "hands": 10,
+          "kick_power": 23,
+          "kick_accuracy": 25
         }
       },
       {
@@ -310,7 +310,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -325,17 +325,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 54,
-          "stamina": 63,
-          "kicking": 60,
-          "lateral_skill": 71,
-          "tackling": 65,
-          "agility": 81,
-          "power": 66,
-          "awareness": 62,
-          "hands": 67,
-          "kick_power": 52,
-          "kick_accuracy": 52
+          "speed": 10,
+          "stamina": 21,
+          "kicking": 15,
+          "lateral_skill": 37,
+          "tackling": 25,
+          "agility": 57,
+          "power": 27,
+          "awareness": 19,
+          "hands": 29,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
@@ -347,7 +347,7 @@
         "year": "Young Pro",
         "age": 22,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -362,17 +362,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 62,
-          "stamina": 53,
-          "kicking": 46,
-          "lateral_skill": 86,
-          "tackling": 64,
-          "agility": 56,
-          "power": 50,
-          "awareness": 55,
-          "hands": 50,
-          "kick_power": 61,
-          "kick_accuracy": 59
+          "speed": 19,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 67,
+          "tackling": 23,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 17,
+          "kick_accuracy": 13
         }
       },
       {
@@ -384,7 +384,7 @@
         "year": "Veteran",
         "age": 29,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -399,17 +399,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 73,
-          "stamina": 58,
-          "kicking": 70,
-          "lateral_skill": 50,
-          "tackling": 73,
-          "agility": 64,
-          "power": 55,
-          "awareness": 46,
-          "hands": 55,
-          "kick_power": 79,
-          "kick_accuracy": 69
+          "speed": 41,
+          "stamina": 11,
+          "kicking": 35,
+          "lateral_skill": 10,
+          "tackling": 41,
+          "agility": 23,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 53,
+          "kick_accuracy": 33
         }
       },
       {
@@ -421,7 +421,7 @@
         "year": "Veteran",
         "age": 28,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -436,17 +436,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 49,
-          "stamina": 56,
-          "kicking": 71,
-          "lateral_skill": 58,
-          "tackling": 77,
-          "agility": 53,
-          "power": 69,
-          "awareness": 47,
-          "hands": 53,
-          "kick_power": 74,
-          "kick_accuracy": 63
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 37,
+          "lateral_skill": 11,
+          "tackling": 49,
+          "agility": 10,
+          "power": 33,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 43,
+          "kick_accuracy": 21
         }
       },
       {
@@ -458,7 +458,7 @@
         "year": "Young Pro",
         "age": 22,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -473,17 +473,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 67,
-          "stamina": 50,
-          "kicking": 58,
-          "lateral_skill": 75,
-          "tackling": 70,
-          "agility": 58,
-          "power": 61,
-          "awareness": 61,
-          "hands": 47,
-          "kick_power": 66,
-          "kick_accuracy": 64
+          "speed": 29,
+          "stamina": 10,
+          "kicking": 11,
+          "lateral_skill": 45,
+          "tackling": 35,
+          "agility": 11,
+          "power": 17,
+          "awareness": 17,
+          "hands": 10,
+          "kick_power": 27,
+          "kick_accuracy": 23
         }
       },
       {
@@ -495,7 +495,7 @@
         "year": "Senior Pro",
         "age": 31,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -510,17 +510,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 65,
-          "stamina": 52,
-          "kicking": 64,
-          "lateral_skill": 62,
-          "tackling": 74,
-          "agility": 56,
-          "power": 54,
-          "awareness": 76,
-          "hands": 53,
-          "kick_power": 79,
-          "kick_accuracy": 73
+          "speed": 25,
+          "stamina": 10,
+          "kicking": 23,
+          "lateral_skill": 19,
+          "tackling": 43,
+          "agility": 10,
+          "power": 10,
+          "awareness": 47,
+          "hands": 10,
+          "kick_power": 53,
+          "kick_accuracy": 41
         }
       },
       {
@@ -532,7 +532,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -547,17 +547,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 74,
-          "stamina": 48,
-          "kicking": 61,
-          "lateral_skill": 42,
-          "tackling": 59,
-          "agility": 61,
-          "power": 61,
-          "awareness": 67,
-          "hands": 71,
-          "kick_power": 60,
-          "kick_accuracy": 57
+          "speed": 43,
+          "stamina": 10,
+          "kicking": 17,
+          "lateral_skill": 10,
+          "tackling": 13,
+          "agility": 17,
+          "power": 17,
+          "awareness": 29,
+          "hands": 37,
+          "kick_power": 15,
+          "kick_accuracy": 10
         }
       },
       {
@@ -569,7 +569,7 @@
         "year": "Veteran",
         "age": 29,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -584,17 +584,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 52,
-          "stamina": 56,
-          "kicking": 51,
-          "lateral_skill": 51,
-          "tackling": 48,
-          "agility": 73,
-          "power": 59,
-          "awareness": 64,
-          "hands": 62,
-          "kick_power": 66,
-          "kick_accuracy": 50
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 41,
+          "power": 13,
+          "awareness": 23,
+          "hands": 19,
+          "kick_power": 27,
+          "kick_accuracy": 10
         }
       },
       {
@@ -606,7 +606,7 @@
         "year": "Senior Pro",
         "age": 30,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -621,17 +621,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 50,
-          "stamina": 63,
-          "kicking": 69,
-          "lateral_skill": 71,
-          "tackling": 49,
-          "agility": 49,
-          "power": 66,
-          "awareness": 52,
-          "hands": 70,
-          "kick_power": 51,
-          "kick_accuracy": 67
+          "speed": 10,
+          "stamina": 21,
+          "kicking": 33,
+          "lateral_skill": 37,
+          "tackling": 10,
+          "agility": 10,
+          "power": 27,
+          "awareness": 10,
+          "hands": 35,
+          "kick_power": 10,
+          "kick_accuracy": 29
         }
       },
       {
@@ -643,7 +643,7 @@
         "year": "Veteran",
         "age": 25,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -658,17 +658,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 69,
-          "stamina": 63,
-          "kicking": 79,
-          "lateral_skill": 53,
-          "tackling": 66,
-          "agility": 56,
-          "power": 58,
-          "awareness": 44,
-          "hands": 46,
-          "kick_power": 72,
-          "kick_accuracy": 48
+          "speed": 33,
+          "stamina": 21,
+          "kicking": 53,
+          "lateral_skill": 10,
+          "tackling": 27,
+          "agility": 10,
+          "power": 11,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 39,
+          "kick_accuracy": 10
         }
       },
       {
@@ -680,7 +680,7 @@
         "year": "Senior Pro",
         "age": 32,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -695,17 +695,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 45,
-          "stamina": 68,
-          "kicking": 54,
-          "lateral_skill": 51,
-          "tackling": 47,
-          "agility": 54,
-          "power": 82,
-          "awareness": 62,
-          "hands": 51,
-          "kick_power": 80,
-          "kick_accuracy": 63
+          "speed": 10,
+          "stamina": 31,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 10,
+          "power": 59,
+          "awareness": 19,
+          "hands": 10,
+          "kick_power": 55,
+          "kick_accuracy": 21
         }
       },
       {
@@ -717,7 +717,7 @@
         "year": "Veteran",
         "age": 28,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -732,17 +732,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 57,
-          "stamina": 41,
-          "kicking": 76,
-          "lateral_skill": 60,
-          "tackling": 67,
-          "agility": 62,
-          "power": 72,
-          "awareness": 67,
-          "hands": 65,
-          "kick_power": 59,
-          "kick_accuracy": 47
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 47,
+          "lateral_skill": 15,
+          "tackling": 29,
+          "agility": 19,
+          "power": 39,
+          "awareness": 29,
+          "hands": 25,
+          "kick_power": 13,
+          "kick_accuracy": 10
         }
       },
       {
@@ -754,7 +754,7 @@
         "year": "Young Pro",
         "age": 23,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -769,17 +769,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 71,
-          "kicking": 64,
-          "lateral_skill": 52,
-          "tackling": 43,
-          "agility": 71,
-          "power": 54,
-          "awareness": 56,
-          "hands": 57,
-          "kick_power": 59,
-          "kick_accuracy": 57
+          "speed": 37,
+          "stamina": 37,
+          "kicking": 23,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 37,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 13,
+          "kick_accuracy": 10
         }
       },
       {
@@ -791,7 +791,7 @@
         "year": "Young Pro",
         "age": 22,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -806,17 +806,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 67,
-          "stamina": 55,
-          "kicking": 53,
-          "lateral_skill": 44,
-          "tackling": 73,
-          "agility": 56,
-          "power": 65,
-          "awareness": 62,
-          "hands": 62,
-          "kick_power": 67,
-          "kick_accuracy": 55
+          "speed": 29,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 10,
+          "tackling": 41,
+          "agility": 10,
+          "power": 25,
+          "awareness": 19,
+          "hands": 19,
+          "kick_power": 29,
+          "kick_accuracy": 10
         }
       },
       {
@@ -828,7 +828,7 @@
         "year": "Senior Pro",
         "age": 32,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -843,17 +843,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 64,
-          "stamina": 70,
-          "kicking": 81,
-          "lateral_skill": 55,
-          "tackling": 78,
-          "agility": 73,
-          "power": 60,
-          "awareness": 47,
-          "hands": 48,
-          "kick_power": 71,
-          "kick_accuracy": 57
+          "speed": 23,
+          "stamina": 35,
+          "kicking": 57,
+          "lateral_skill": 10,
+          "tackling": 51,
+          "agility": 41,
+          "power": 15,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 37,
+          "kick_accuracy": 10
         }
       },
       {
@@ -865,7 +865,7 @@
         "year": "Senior Pro",
         "age": 33,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -880,17 +880,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 45,
-          "stamina": 57,
-          "kicking": 62,
-          "lateral_skill": 60,
-          "tackling": 69,
-          "agility": 68,
-          "power": 56,
-          "awareness": 60,
-          "hands": 64,
-          "kick_power": 73,
-          "kick_accuracy": 64
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 19,
+          "lateral_skill": 15,
+          "tackling": 33,
+          "agility": 31,
+          "power": 10,
+          "awareness": 15,
+          "hands": 23,
+          "kick_power": 41,
+          "kick_accuracy": 23
         }
       },
       {
@@ -902,7 +902,7 @@
         "year": "Young Pro",
         "age": 22,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -917,17 +917,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 78,
-          "stamina": 64,
-          "kicking": 61,
-          "lateral_skill": 58,
-          "tackling": 45,
-          "agility": 58,
-          "power": 66,
-          "awareness": 70,
-          "hands": 62,
-          "kick_power": 66,
-          "kick_accuracy": 47
+          "speed": 51,
+          "stamina": 23,
+          "kicking": 17,
+          "lateral_skill": 11,
+          "tackling": 10,
+          "agility": 11,
+          "power": 27,
+          "awareness": 35,
+          "hands": 19,
+          "kick_power": 27,
+          "kick_accuracy": 10
         }
       },
       {
@@ -939,7 +939,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -954,17 +954,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 55,
-          "stamina": 56,
-          "kicking": 74,
-          "lateral_skill": 66,
-          "tackling": 69,
-          "agility": 45,
-          "power": 51,
-          "awareness": 46,
-          "hands": 74,
-          "kick_power": 48,
-          "kick_accuracy": 66
+          "speed": 10,
+          "stamina": 10,
+          "kicking": 43,
+          "lateral_skill": 27,
+          "tackling": 33,
+          "agility": 10,
+          "power": 10,
+          "awareness": 10,
+          "hands": 43,
+          "kick_power": 10,
+          "kick_accuracy": 27
         }
       },
       {
@@ -976,7 +976,7 @@
         "year": "Young Pro",
         "age": 23,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -991,17 +991,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 71,
-          "stamina": 53,
-          "kicking": 53,
-          "lateral_skill": 64,
-          "tackling": 57,
-          "agility": 72,
-          "power": 63,
-          "awareness": 62,
-          "hands": 44,
-          "kick_power": 64,
-          "kick_accuracy": 75
+          "speed": 37,
+          "stamina": 10,
+          "kicking": 10,
+          "lateral_skill": 23,
+          "tackling": 10,
+          "agility": 39,
+          "power": 21,
+          "awareness": 19,
+          "hands": 10,
+          "kick_power": 23,
+          "kick_accuracy": 45
         }
       },
       {
@@ -1013,7 +1013,7 @@
         "year": "Veteran",
         "age": 28,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1028,17 +1028,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 72,
-          "stamina": 69,
-          "kicking": 72,
-          "lateral_skill": 64,
-          "tackling": 58,
-          "agility": 72,
-          "power": 63,
-          "awareness": 63,
-          "hands": 55,
-          "kick_power": 64,
-          "kick_accuracy": 74
+          "speed": 39,
+          "stamina": 33,
+          "kicking": 39,
+          "lateral_skill": 23,
+          "tackling": 11,
+          "agility": 39,
+          "power": 21,
+          "awareness": 21,
+          "hands": 10,
+          "kick_power": 23,
+          "kick_accuracy": 43
         }
       },
       {
@@ -1050,7 +1050,7 @@
         "year": "Veteran",
         "age": 28,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1065,17 +1065,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 44,
-          "stamina": 77,
-          "kicking": 69,
-          "lateral_skill": 53,
-          "tackling": 47,
-          "agility": 61,
-          "power": 62,
-          "awareness": 50,
-          "hands": 58,
-          "kick_power": 74,
-          "kick_accuracy": 65
+          "speed": 10,
+          "stamina": 49,
+          "kicking": 33,
+          "lateral_skill": 10,
+          "tackling": 10,
+          "agility": 17,
+          "power": 19,
+          "awareness": 10,
+          "hands": 11,
+          "kick_power": 43,
+          "kick_accuracy": 25
         }
       },
       {
@@ -1087,7 +1087,7 @@
         "year": "Veteran",
         "age": 25,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1102,17 +1102,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 75,
-          "stamina": 51,
-          "kicking": 64,
-          "lateral_skill": 63,
-          "tackling": 53,
-          "agility": 73,
-          "power": 49,
-          "awareness": 52,
-          "hands": 44,
-          "kick_power": 62,
-          "kick_accuracy": 53
+          "speed": 45,
+          "stamina": 10,
+          "kicking": 23,
+          "lateral_skill": 21,
+          "tackling": 10,
+          "agility": 41,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 19,
+          "kick_accuracy": 10
         }
       },
       {
@@ -1124,7 +1124,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1139,17 +1139,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 70,
-          "stamina": 66,
-          "kicking": 46,
-          "lateral_skill": 75,
-          "tackling": 63,
-          "agility": 51,
-          "power": 78,
-          "awareness": 46,
-          "hands": 42,
-          "kick_power": 48,
-          "kick_accuracy": 59
+          "speed": 35,
+          "stamina": 27,
+          "kicking": 10,
+          "lateral_skill": 45,
+          "tackling": 21,
+          "agility": 10,
+          "power": 51,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 13
         }
       },
       {
@@ -1161,7 +1161,7 @@
         "year": "Veteran",
         "age": 26,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1176,17 +1176,17 @@
           "salary": 2
         },
         "stats": {
-          "speed": 54,
-          "stamina": 62,
-          "kicking": 58,
-          "lateral_skill": 60,
-          "tackling": 67,
-          "agility": 80,
-          "power": 66,
-          "awareness": 51,
-          "hands": 70,
-          "kick_power": 66,
-          "kick_accuracy": 78
+          "speed": 10,
+          "stamina": 19,
+          "kicking": 11,
+          "lateral_skill": 15,
+          "tackling": 29,
+          "agility": 55,
+          "power": 27,
+          "awareness": 10,
+          "hands": 35,
+          "kick_power": 27,
+          "kick_accuracy": 51
         }
       },
       {
@@ -1198,7 +1198,7 @@
         "year": "Veteran",
         "age": 27,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1213,17 +1213,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 60,
-          "stamina": 73,
-          "kicking": 68,
-          "lateral_skill": 66,
-          "tackling": 51,
-          "agility": 56,
-          "power": 66,
-          "awareness": 69,
-          "hands": 46,
-          "kick_power": 43,
-          "kick_accuracy": 48
+          "speed": 15,
+          "stamina": 41,
+          "kicking": 31,
+          "lateral_skill": 27,
+          "tackling": 10,
+          "agility": 10,
+          "power": 27,
+          "awareness": 33,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       },
       {
@@ -1235,7 +1235,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1250,17 +1250,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 66,
-          "stamina": 58,
-          "kicking": 60,
-          "lateral_skill": 62,
-          "tackling": 64,
-          "agility": 52,
-          "power": 59,
-          "awareness": 66,
-          "hands": 62,
-          "kick_power": 65,
-          "kick_accuracy": 63
+          "speed": 27,
+          "stamina": 11,
+          "kicking": 15,
+          "lateral_skill": 19,
+          "tackling": 23,
+          "agility": 10,
+          "power": 13,
+          "awareness": 27,
+          "hands": 19,
+          "kick_power": 25,
+          "kick_accuracy": 21
         }
       },
       {
@@ -1272,7 +1272,7 @@
         "year": "Young Pro",
         "age": 24,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1287,17 +1287,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 67,
-          "stamina": 53,
-          "kicking": 58,
-          "lateral_skill": 73,
-          "tackling": 49,
-          "agility": 70,
-          "power": 58,
-          "awareness": 63,
-          "hands": 69,
-          "kick_power": 81,
-          "kick_accuracy": 56
+          "speed": 29,
+          "stamina": 10,
+          "kicking": 11,
+          "lateral_skill": 41,
+          "tackling": 10,
+          "agility": 35,
+          "power": 11,
+          "awareness": 21,
+          "hands": 33,
+          "kick_power": 57,
+          "kick_accuracy": 10
         }
       },
       {
@@ -1309,7 +1309,7 @@
         "year": "Senior Pro",
         "age": 31,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1324,17 +1324,17 @@
           "salary": 3
         },
         "stats": {
-          "speed": 56,
-          "stamina": 72,
-          "kicking": 52,
-          "lateral_skill": 63,
-          "tackling": 62,
-          "agility": 63,
-          "power": 61,
-          "awareness": 77,
-          "hands": 51,
-          "kick_power": 78,
-          "kick_accuracy": 68
+          "speed": 10,
+          "stamina": 39,
+          "kicking": 10,
+          "lateral_skill": 21,
+          "tackling": 19,
+          "agility": 21,
+          "power": 17,
+          "awareness": 49,
+          "hands": 10,
+          "kick_power": 51,
+          "kick_accuracy": 31
         }
       },
       {
@@ -1346,7 +1346,7 @@
         "year": "Young Pro",
         "age": 22,
         "hometown": {
-          "city": "Bodø",
+          "city": "Bod\u00f8",
           "state": "NOR",
           "country": "Norway",
           "region": "norway"
@@ -1361,19 +1361,20 @@
           "salary": 2
         },
         "stats": {
-          "speed": 52,
-          "stamina": 71,
-          "kicking": 48,
-          "lateral_skill": 70,
-          "tackling": 67,
-          "agility": 69,
-          "power": 40,
-          "awareness": 51,
-          "hands": 51,
-          "kick_power": 51,
-          "kick_accuracy": 57
+          "speed": 10,
+          "stamina": 37,
+          "kicking": 10,
+          "lateral_skill": 35,
+          "tackling": 29,
+          "agility": 33,
+          "power": 10,
+          "awareness": 10,
+          "hands": 10,
+          "kick_power": 10,
+          "kick_accuracy": 10
         }
       }
     ]
-  }
+  },
+  "rating_scale": "current"
 }
