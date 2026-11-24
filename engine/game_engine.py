@@ -15310,6 +15310,10 @@ class ViperballEngine:
             "away_defense_style": DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style),
             "home_st_scheme": self.home_team.st_scheme,
             "away_st_scheme": self.away_team.st_scheme,
+            "special_teams_coach_tactics": {
+                "home": dict(self.home_stc_tactics),
+                "away": dict(self.away_stc_tactics),
+            },
             "home_coaching_snapshot": self._coaching_snapshot("home"),
             "away_coaching_snapshot": self._coaching_snapshot("away"),
             "coach_tactics": {
