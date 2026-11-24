@@ -63,6 +63,8 @@ V2_ENGINE_CONFIG = {
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
     "delta_restarts_enabled": True,
+    # DEF-08: explicit control for matched attribution study.
+    "rush_credit_model": "weighted",
     # Independently switch the two missing defensive layers off for paired benchmarks.
     "defensive_reads_enabled": True,
     "defense_scheme_effects_enabled": True,
@@ -10393,10 +10395,12 @@ class ViperballEngine:
                            # but the highest-rated player is not guaranteed
                            # every sack and hurry on every snap.
                            "lead_rusher": (
-                               self._rush_credit_rng.choices(
-                                   rushers,
-                                   weights=[max(1.0, score(p)) ** 2 for p in rushers],
-                                   k=1)[0] if rushers else None)}
+                               (max(rushers, key=score)
+                                if V2_ENGINE_CONFIG.get("rush_credit_model") == "highest"
+                                else self._rush_credit_rng.choices(
+                                    rushers,
+                                    weights=[max(1.0, score(p)) ** 2 for p in rushers],
+                                    k=1)[0]) if rushers else None)}
         return self._rush_plan
 
     def compute_sack_probability(self, team, def_team, subfamily, formation=None):
@@ -15415,8 +15419,16 @@ class ViperballEngine:
         away_stats["bells"] = home_turnovers
 
         # Delta yards and adjusted yardage (AdjY)
-        home_stats["delta_yards"] = self.state.home_delta_yards
-        away_stats["delta_yards"] = self.state.away_delta_yards
+        # Charge only restarts actually used by a drive. A kickoff
+        # after the final score can schedule a restart without a snap.
+        home_stats["delta_yards"] = sum(d.get("delta_cost", 0) for d in self.drive_log
+                                         if d.get("team") == "home")
+        away_stats["delta_yards"] = sum(d.get("delta_cost", 0) for d in self.drive_log
+                                         if d.get("team") == "away")
+        home_stats["delta_restart_unplayed"] = (self.state.home_delta_yards -
+                                                home_stats["delta_yards"])
+        away_stats["delta_restart_unplayed"] = (self.state.away_delta_yards -
+                                                away_stats["delta_yards"])
         home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_delta_yards
         away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_delta_yards
 
@@ -15496,6 +15508,12 @@ class ViperballEngine:
                 "pp_efficiency": pp_efficiency,
             }
             stats["mess_rate"] = mess_rate
+            # Single definition for all consumers (including DTW).
+            # Count eligible penalty-kill drives, not just every restart
+            # recorded in mutable GameState after a score.
+            stats["delta_drives"] = pk_stats["count"]
+            stats["delta_scores"] = pk_stats["scores"]
+            stats["kill_rate"] = pk_stats["score_rate"] if pk_stats["count"] else None
 
         # ── Bonus Possession stats (pesäpallo-inspired) ──
         # Count bonus drives from the drive_log and tally yards/scores.
