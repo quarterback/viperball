@@ -11,3 +11,8 @@ Benchmark script: `PYTHONHASHSEED=0 python scripts/benchmark_defensive_packages.
 
 ## Next
 DEF-07 pressure/hurry instrumentation, CCH-06 drive/score/turnover/fatigue context, combined calibration and nonblocking deployment smoke. No new test suite per task. See the shared assessment queue.
+
+
+## Integrated implementation — DEF-07 and CCH-06
+Commits 279da397, 002dee23 and 3f41b1a3 connect the rush contest and package context. A single existing sack roll partitions clean release, hurry and sack; the initial hurry threshold is 2.5 times the final sack probability (capped at 0.65). A hurry reduces completion probability by 15% relative. These are tuning hypotheses. Rush event records include defender side, called blitz, rusher/blocker, skill estimates, release type and completion probabilities before/after. Blitz is a commitment indicator, not a count of physical rushers. Possession origin and snap index carry across quarter breaks; opening, turnover, bonus, score restart and other restart are distinct. On-field defensive energy feeds the catalog. Kick-In Press and Ride require both opening snap and their respective field/origin predicates. The existing package benchmark now also measures rush outcomes and event packages (five matched scheme/package pairs). Run the combined study only; no modular validation gate. Stats-site migration PR #336 is separate; fields are additive, no React changes. No runtime evidence yet.
+
