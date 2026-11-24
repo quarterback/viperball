@@ -708,7 +708,7 @@
   {% for p in sorted_roster %}
   <tr>
     <td class="num">{{ p.number }}</td>
-    <td><a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
+    <td>{% if p.face_src %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ p.name }}">{{ p.name }}</a></td>
     <td><span class="tag tag-pos">{{ p.position }}</span></td>
     <td>{{ p.year_abbr }}</td>
     <td class="num">{{ p.games_played }}</td>

@@ -46,7 +46,7 @@
         <div><label for="pp">Portal pool</label><input type="number" id="pp" name="portal_pool:float" step="1000" min="0" value="{{ nil.portal_pool|int }}"></div>
         <div><label for="tp">Retention pool</label><input type="number" id="tp" name="retention_pool:float" step="1000" min="0" value="{{ nil.retention_pool|int }}"></div>
       </div>
-      <div><button class="btn-run" type="submit">Allocate and open the portal</button></div>
+      <div><button class="btn-run" type="submit">{{ icon("coin") }}Allocate and open the portal</button></div>
     </form>
 
     {% elif ph == 'portal' and portal %}
@@ -138,7 +138,7 @@
     <h2>{{ season.name }}</h2>
     <p>{{ season.games_played }}/{{ season.total_games }} games played{% if season.champion %} · Champion: {{ season.champion }}{% endif %}</p>
     <div class="run-bar">
-      <a href="/stats/college/{{ session_id }}/"><button class="btn-run" type="button">Play the season</button></a>
+      <a href="/stats/college/{{ session_id }}/"><button class="btn-run" type="button">{{ icon("play") }}Play the season</button></a>
       {% if season.champion %}{{ action('/sessions/' ~ session_id ~ '/dynasty/advance', 'Advance to offseason', here) }}{% endif %}
     </div>
     {% if not season.champion %}<p class="hint" style="color:var(--fg-dim);font-size:13px;margin-top:8px">Finish the season, including the playoffs, to advance.</p>{% endif %}
@@ -157,7 +157,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:8px">{{ style_selects(styles, '') }}</div>
       </div>
       <div style="max-width:240px"><label for="seed">AI seed</label><input type="number" id="seed" name="ai_seed:int" value="" min="1" placeholder="Random"></div>
-      <div><button class="btn-run" type="submit">Start season</button></div>
+      <div><button class="btn-run" type="submit">{{ icon("flag") }}Start season</button></div>
     </form>
   {% endif %}
 

@@ -16,21 +16,21 @@
 </div>
 
 {% set here = request.url.path %}
-{% macro wvl_btn(what, label, cls='btn-small', next=None) %}
+{% macro wvl_btn(what, label, cls='btn-small', ic=None) %}
 <form class="inline-form" method="post" action="/stats/do">
   <input type="hidden" name="_path" value="/api/wvl/{{ league_id }}/{{ what }}">
   <input type="hidden" name="_back" value="{{ here }}">
-  <button class="{{ cls }}" type="submit">{{ label }}</button>
+  <button class="{{ cls }}" type="submit">{% if ic %}{{ icon(ic) }}{% endif %}{{ label }}</button>
 </form>
 {% endmacro %}
 <div class="run-bar">
   {% if st.phase == 'complete' %}
-  {{ wvl_btn('advance-season', 'Start the next season', 'btn-run') }}
+  {{ wvl_btn('advance-season', 'Start the next season', 'btn-run', 'flag') }}
   {% else %}
-  {{ wvl_btn('sim-week', 'Sim week', 'btn-run') }}
-  {{ wvl_btn('sim-all', 'Sim rest of season') }}
+  {{ wvl_btn('sim-week', 'Sim week', 'btn-run', 'play') }}
+  {{ wvl_btn('sim-all', 'Sim rest of season', 'btn-small', 'forward') }}
   {% endif %}
-  {{ wvl_btn('import-graduates', 'Import CVL graduates') }}
+  {{ wvl_btn('import-graduates', 'Import CVL graduates', 'btn-small', 'people') }}
 </div>
 
 <div class="tabs">

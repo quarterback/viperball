@@ -37,7 +37,7 @@
 <form class="run-bar" method="post" action="/stats/do">
   <input type="hidden" name="_path" value="/api/pro/{{ league }}/{{ session_id }}/playoffs">
   <input type="hidden" name="_back" value="/stats/pro/{{ league }}/{{ session_id }}/playoffs">
-  <button class="btn-run" type="submit">Play next round</button>
+  <button class="btn-run" type="submit">{{ icon("bracket") }}Play next round</button>
 </form>
 {% endif %}
 

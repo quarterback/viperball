@@ -24,7 +24,7 @@
     <form class="inline-form" method="post" action="/stats/do">
       <input type="hidden" name="_path" value="{{ steps[ph][0] }}">
       <input type="hidden" name="_back" value="/stats/international/">
-      <button class="btn-run" type="submit">{{ steps[ph][1] }}</button>
+      <button class="btn-run" type="submit">{{ icon("globe") }}{{ steps[ph][1] }}</button>
     </form>
     {% endif %}
     {% if ph == 'completed' %}
@@ -32,7 +32,7 @@
       <input type="hidden" name="_path" value="/archives/fiv">
       <input type="hidden" name="_back" value="/stats/international/">
       <input type="hidden" name="_next" value="/stats/archives/{archive_key}/">
-      <button class="btn-small" type="submit">Archive this cycle</button>
+      <button class="btn-small" type="submit">{{ icon("box") }}Archive this cycle</button>
     </form>
     {% endif %}
     <details class="inline-form">
@@ -125,6 +125,6 @@
 {% endif %}
 
 {% else %}
-<div class="empty">No active FIV cycle. Start one from the main app.</div>
+<div class="empty">{{ icon("globe", 64, cls="empty-art") }}No cycle yet. Use New cycle above.</div>
 {% endif %}
 {% endblock %}

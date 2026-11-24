@@ -125,6 +125,8 @@ def _flag_emoji(code: str) -> str:
     return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in iso2)
 
 templates.env.filters["flag"] = _flag_emoji
+from stats_site.pixel_icons import icon as _px_icon
+templates.env.globals["icon"] = _px_icon
 
 # ── Pixel-art face pool ──
 _FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
@@ -1813,9 +1815,12 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
 
     # Build merged roster: player info + season stats, then sort
     sorted_roster = []
+    _pids = {p.name: getattr(p, "player_id", "") for p in team.players}
     for p_ser in players:
         ps = player_season_stats.get(p_ser["name"], {})
         entry = {**p_ser, **ps}
+        _pid = _pids.get(p_ser["name"])
+        entry["face_src"] = _face_url_for(_pid) if _pid else None
         entry.setdefault("games_played", 0)
         entry.setdefault("yards", 0)
         entry.setdefault("touches", 0)

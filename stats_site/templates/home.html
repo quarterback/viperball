@@ -8,15 +8,18 @@
 </div>
 
 {% if college_sessions %}
-<a href="/stats/college/{{ college_sessions[-1].session_id }}/draftyqueenz" style="display:flex;align-items:center;justify-content:space-between;gap:12px;
-   text-decoration:none;border:1px solid #14b8a6;border-radius:8px;padding:10px 14px;margin-bottom:14px;
-   background:linear-gradient(90deg, rgba(20,184,166,0.10), transparent);">
-  <span style="color:var(--fg);font-weight:600;">
-    <span style="color:#14b8a6;font-weight:800;letter-spacing:.04em;">DraftyQueenz</span>
-    &mdash; bet the board and draft a daily lineup
-  </span>
-  <span style="color:#14b8a6;font-weight:700;white-space:nowrap;">Play DraftyQueenz</span>
+<a class="promo" href="/stats/college/{{ college_sessions[-1].session_id }}/draftyqueenz">
+  {{ icon("coin", 32) }}
+  <span><strong>DraftyQueenz</strong> bet the board and draft a daily lineup</span>
+  <span class="promo-go">Play</span>
 </a>
+<style>
+.promo { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--fg);
+  border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 10px 16px; margin-bottom: 16px; background: var(--bg-alt); }
+.promo strong { color: var(--accent); margin-right: 6px; }
+.promo-go { margin-left: auto; font-weight: 600; color: var(--accent); }
+.promo:hover { border-color: var(--accent); }
+</style>
 {% endif %}
 {% if last_updated %}
 <div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;">{{ last_updated }}</div>
@@ -28,7 +31,7 @@
 
   {# ── College ── #}
   <div>
-    <h2>College (CVL)</h2>
+    <h2>{{ icon("ball") }} College (CVL)</h2>
     {% if college_sessions %}
     <table>
       <thead><tr><th>Season</th><th class="num">Teams</th><th class="num">GP</th><th>Champion</th></tr></thead>
@@ -44,13 +47,13 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty">No active college seasons. Start one from the main app.</p>
+    <p class="empty"><a href="/stats/college/new">Start a season</a></p>
     {% endif %}
   </div>
 
   {# ── Pro ── #}
   <div>
-    <h2>Pro Leagues</h2>
+    <h2>{{ icon("trophy") }} Pro Leagues</h2>
     {% if pro_sessions %}
     <table>
       <thead><tr><th>League</th><th>Status</th></tr></thead>
@@ -64,13 +67,13 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty">No active pro leagues.</p>
+    <p class="empty"><a href="/stats/pro/">Start a pro league</a></p>
     {% endif %}
   </div>
 
   {# ── WVL ── #}
   <div>
-    <h2>WVL — Career League</h2>
+    <h2>{{ icon("planet") }} WVL Career League</h2>
     {% if wvl_sessions %}
     <table>
       <thead><tr><th>League</th><th class="num">Year</th><th class="num">Careers</th></tr></thead>
@@ -85,13 +88,13 @@
       </tbody>
     </table>
     {% else %}
-    <p class="empty">No WVL career leagues.</p>
+    <p class="empty"><a href="/stats/wvl/">Start a career league</a></p>
     {% endif %}
   </div>
 
   {# ── International ── #}
   <div>
-    <h2>International (FIV)</h2>
+    <h2>{{ icon("globe") }} International (FIV)</h2>
     {% if fiv_data %}
     <table>
       <thead><tr><th>Cycle</th><th>Phase</th><th>Host</th></tr></thead>
@@ -119,7 +122,7 @@
     </table>
     {% endif %}
     {% else %}
-    <p class="empty">No active FIV cycle.</p>
+    <p class="empty"><a href="/stats/international/">Start a cycle</a></p>
     {% endif %}
   </div>
 
@@ -127,8 +130,10 @@
 
 {% else %}
 <div class="empty">
-  <p>No active simulations found.</p>
-  <p style="margin-top: 8px;">Start a season, pro league, or FIV cycle from the main app to see stats here.</p>
+  {{ icon("ball", 64, cls="empty-art") }}
+  <p>Nothing is running yet.</p>
+  <p style="margin-top: 12px;"><a href="/stats/college/new"><button class="btn-run" type="button">{{ icon("ball") }}New season</button></a>
+  <a href="/stats/dynasty/new"><button type="button">{{ icon("crown") }}New dynasty</button></a></p>
 </div>
 {% endif %}
 

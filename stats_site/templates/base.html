@@ -1025,6 +1025,13 @@ button:hover, input[type="submit"]:hover {
   color: var(--fg-bright);
   border-color: var(--accent);
 }
+/* Pixel icons (stats_site/pixel_icons.py) */
+.px-icon { display: inline-block; vertical-align: -3px; flex: none; image-rendering: pixelated; }
+#main-nav a { display: inline-flex; align-items: center; gap: 7px; }
+#main-nav a .px-icon { vertical-align: 0; }
+button .px-icon, summary .px-icon, .btn-icon .px-icon { margin-right: 7px; }
+.empty-art { display: block; margin: 0 auto 10px; color: var(--fg-dim); }
+td .face { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; margin-right: 8px; }
 /* A <summary> that opens a small form looks like a button */
 summary.btn-run, summary.btn-small {
   list-style: none; display: inline-block; cursor: pointer;
@@ -1218,17 +1225,17 @@ select, input[type="text"], input[type="search"], input[type="number"], textarea
     <a class="brand" href="/stats/">VIPERBALL</a>
     <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
     <nav id="main-nav">
-      <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>Home</a>
-      <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>College</a>
-      <a href="/stats/dynasty/" {% if section == 'dynasty' %}class="active"{% endif %}>Dynasty</a>
-      <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>Pro</a>
-      <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>WVL</a>
-      <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>International</a>
-      <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>Archives</a>
-      <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>Search</a>
-      <a href="/stats/saves" {% if section == 'saves' %}class="active"{% endif %}>Saves</a>
-      <a href="/stats/game-sim" {% if section == 'tools' %}class="active"{% endif %}>Tools</a>
-      <a href="/stats/my-team/" {% if section == 'my-team' %}class="active"{% endif %} style="color:var(--green);font-weight:bold;">My Team</a>
+      <a href="/stats/" {% if section == 'home' %}class="active"{% endif %}>{{ icon("home") }}<span>Home</span></a>
+      <a href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>{{ icon("ball") }}<span>College</span></a>
+      <a href="/stats/dynasty/" {% if section == 'dynasty' %}class="active"{% endif %}>{{ icon("crown") }}<span>Dynasty</span></a>
+      <a href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>{{ icon("trophy") }}<span>Pro</span></a>
+      <a href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>{{ icon("planet") }}<span>WVL</span></a>
+      <a href="/stats/international/" {% if section == 'international' %}class="active"{% endif %}>{{ icon("globe") }}<span>International</span></a>
+      <a href="/stats/archives/" {% if section == 'archives' %}class="active"{% endif %}>{{ icon("box") }}<span>Archives</span></a>
+      <a href="/stats/search" {% if section == 'search' %}class="active"{% endif %}>{{ icon("search") }}<span>Search</span></a>
+      <a href="/stats/saves" {% if section == 'saves' %}class="active"{% endif %}>{{ icon("floppy") }}<span>Saves</span></a>
+      <a href="/stats/game-sim" {% if section == 'tools' %}class="active"{% endif %}>{{ icon("wrench") }}<span>Tools</span></a>
+      <a href="/stats/my-team/" {% if section == 'my-team' %}class="active"{% endif %} style="color:var(--green);font-weight:bold;">{{ icon("shield") }}<span>My Team</span></a>
     </nav>
     <div class="theme-switcher">
       <button class="theme-btn" onclick="document.querySelector('.theme-menu').classList.toggle('open')" aria-label="Change theme">Theme</button>
