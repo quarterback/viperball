@@ -26,7 +26,11 @@ place kicks and snap kicks count as kicker attempts; defensive recoveries
 award the half-point bell whether or not the recovery becomes a touchdown.
 The final game result includes `special_teams_coach_tactics` for each side.
 Fake punts can score when crossing the goal line, and successful trick
-plays must actually reach the yards to gain to reset downs.
+plays must actually reach the yards to gain to reset downs. Normal punt
+returns now advance field position in the correct direction; return-TD
+yards are credited from the catch spot to the opponent's goal line.
+The STC's field-position preference also adjusts optional snap-kick range,
+without changing the hard kick-distance success rules.
 
 `scripts/benchmark_special_teams.py` supplies a full-engine, seeded
 comparison of the five schemes, three coordinator cases, and clear/rain
@@ -50,8 +54,11 @@ Before marking both tickets complete:
   player statistics and legal substitution at injury boundaries.
 - Rebase after the separate PEN-01 and INJ-01 PRs to ensure physical
   special-teams exposure and accepted/declined fouls are attributed once.
-- Verify canonical pindown/rouge behavior and its documented scoring;
-  no rule interpretation has been changed here.
+- Resolve the repository's two pindown descriptions before changing the
+  scoring model: the rules file awards pindowns when a receiver starts
+  inside its own 10, while the current engine awards end-zone punts that
+  fail to return and resets subsequent possession differently in two
+  paths. No pindown rule interpretation has been changed in this PR.
 - Run a live dynasty smoke before claiming end-to-end completion.
 
 This report is an implementation handoff, **not** a completed AAR.
