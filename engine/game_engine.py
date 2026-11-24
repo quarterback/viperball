@@ -6135,6 +6135,8 @@ class ViperballEngine:
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
         pindown_defense_factor = receiving_defense.get("pindown_defense", 1.0)
         return_chance = (scale_rating(return_speed, "rescale_speed") / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
+        kicking_st = self.home_st if kicking_possession == "home" else self.away_st
+        return_chance /= kicking_st["coverage_modifier"] ** 0.25
         return_chance = max(0.75, min(0.98, return_chance))
         can_return_out = random.random() < return_chance
         return not can_return_out
@@ -6801,6 +6803,7 @@ class ViperballEngine:
                 # not wasting the play on a futile field goal)
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
+            self._finish_st_event(final_play)
             final_play.home_score_after = self.state.home_score
             final_play.away_score_after = self.state.away_score
             self.play_log.append(final_play)
@@ -8082,10 +8085,7 @@ class ViperballEngine:
         play.possession_origin = self._drive_origin
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
-        if self._st_event:
-            self._st_event.update(result=play.result, end_possession=self.state.possession,
-                                  end_field_position=self.state.field_position)
-            play.special_teams_event = dict(self._st_event)
+        self._finish_st_event(play)
         # Copy the actual pre-snap call, even when the resulting play changes
         # possession. No additional RNG or defensive ratings are involved.
         dc_call = getattr(self, "_active_defensive_call", None)
@@ -9437,6 +9437,17 @@ class ViperballEngine:
                           "start_field_position": self.state.field_position}
         self._st_count(side, kind + "_calls")
 
+    def _finish_st_event(self, play):
+        if not self._st_event:
+            return
+        event = self._st_event
+        event.update(result=play.result, end_possession=self.state.possession,
+                     end_field_position=self.state.field_position,
+                     nullified=play.result == "penalty")
+        self._st_count(event["kicking_side"], event["kind"] + ":" + play.result)
+        play.special_teams_event = dict(event)
+        self._st_event = None
+
     def _st_return_factor(self, team):
         return self._st_preferences(team).get("return_aggression", 0.0)
 
@@ -9625,7 +9636,9 @@ class ViperballEngine:
         if st_starters and random.random() < 0.75:
             weights = []
             for p in st_starters:
-                w = p.speed * 0.55 + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * 0.20
+                aggression = self._st_return_factor(team)
+                w = p.speed * (0.55 + 0.20 * aggression) + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * (0.20 - 0.20 * aggression)
+                w *= self.player_fatigue_modifier(p)
                 if p.position == "Keeper" and p.archetype == "return_keeper":
                     w *= 1.40
                 weights.append(max(1.0, w))
@@ -9633,7 +9646,9 @@ class ViperballEngine:
 
         weights = []
         for p in eligible:
-            w = p.speed * 0.55 + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * 0.20
+            aggression = self._st_return_factor(team)
+            w = p.speed * (0.55 + 0.20 * aggression) + getattr(p, 'agility', 75) * 0.25 + getattr(p, 'hands', 75) * (0.20 - 0.20 * aggression)
+            w *= self.player_fatigue_modifier(p)
             if p.position == "Keeper" and p.archetype == "return_keeper":
                 w *= 1.40
             if getattr(p, 'game_role', 'ROTATION') == "STARTER":
@@ -9662,7 +9677,7 @@ class ViperballEngine:
 
         weights = []
         for p in eligible:
-            w = p.tackling * 0.40 + p.speed * 0.35 + getattr(p, 'awareness', 75) * 0.25
+            w = (p.tackling * 0.40 + p.speed * 0.35 + getattr(p, 'awareness', 75) * 0.25) * self.player_fatigue_modifier(p)
             if p.position == "Keeper" and p.archetype == "tackle_keeper":
                 w *= 1.30
             if getattr(p, 'game_def_role', 'ROTATION') == "ROTATION":
@@ -13038,6 +13053,7 @@ class ViperballEngine:
         # Coverage unit tackles the returner
         tackler = self._pick_coverage_tackler(punt_coverage_team)
         if tackler and return_yards > 0:
+            self._st_event["coverage_tackler"] = player_label(tackler)
             tackler.game_st_tackles += 1
             tackler.game_coverage_snaps += 1
         # Additional coverage snap for another unit member
@@ -13048,6 +13064,7 @@ class ViperballEngine:
             cov1 = random.choice(punt_cov_eligible)
             cov1.game_coverage_snaps += 1
 
+        self._st_event["return_yards"] = return_yards
         self.change_possession()
         self.state.field_position = max(1, final_position)
         self.state.down = 1
