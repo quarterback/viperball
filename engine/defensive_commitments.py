@@ -3,8 +3,6 @@
 All decisions use pre-snap state and prior completed plays only.
 Primary and secondary eligibility share the same contract in game and benchmark.
 """
-from math import exp
-
 def eligibility(package_id, tags, context, primary_tags):
     tags = set(tags)
     fp = context.get("field_position", 0)
@@ -14,11 +12,22 @@ def eligibility(package_id, tags, context, primary_tags):
     deep = context.get("recent_deep_rate", 0.0)
     pass_rate = context.get("recent_kick_rate", 0.0)
     explosive = context.get("recent_explosive_rate", 0.0)
+    perimeter = context.get("recent_perimeter_rate", 0.0)
+    lateral = context.get("recent_lateral_rate", 0.0)
+    offense_energy = context.get("offense_energy")
     primary = bool(tags.intersection(primary_tags))
     if package_id == "afl_kick_in_press":
         primary = {"backed_up", "first_play_of_drive"} <= tags
     if package_id == "lax_ride":
         primary = {"after_takeaway", "first_play_of_drive"} <= tags
+    if package_id == "swarm_containment":
+        primary = "early_down" in tags and perimeter >= .20
+    if package_id == "shadow_robber":
+        primary = "late_downs" in tags and pass_rate >= .25
+    if package_id == "chaos_lateral_trap":
+        primary = "early_down" in tags and lateral >= .15
+    if package_id == "predator_exhaustion_press":
+        primary = "early_down" in tags and offense_energy is not None and offense_energy < 75
     if primary:
         return 1.0
     secondary = {
@@ -31,11 +40,15 @@ def eligibility(package_id, tags, context, primary_tags):
         "rugby_rush_line": down <= 3 and ytg >= 12,
         "afl_kick_in_press": fp <= 20 and snap <= 3,
         "lax_ride": "after_takeaway" in tags and 1 <= snap <= 3,
+        "swarm_containment": "early_down" in tags or perimeter >= .25,
+        "shadow_robber": down >= 4 or pass_rate >= .45,
+        "chaos_lateral_trap": "early_down" in tags or lateral >= .20,
+        "predator_exhaustion_press": offense_energy is not None and offense_energy < 82 and 1 <= snap <= 3,
     }.get(package_id, False)
     return .45 if secondary else 0.0
 
-PRESS_PACKAGES = {"blitz_short_yardage_pressure", "rugby_rush_line", "afl_kick_in_press", "lax_ride"}
-COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", "drift_prevent"}
+PRESS_PACKAGES = {"blitz_short_yardage_pressure", "rugby_rush_line", "afl_kick_in_press", "lax_ride", "predator_exhaustion_press"}
+COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", "drift_prevent", "shadow_robber", "swarm_containment", "chaos_lateral_trap"}
 WALL_PACKAGES = {"fortress_goal_line_stand", "fortress_short_yardage_wall"}
 
 def execution_strength(familiarity, energy, authority):
