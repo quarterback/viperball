@@ -37,6 +37,19 @@ jobs:
         run: python -m pytest tests/ -q
       - name: BOX-01 full-game accounting smoke
         run: python scripts/benchmark_boxscore_reconciliation.py --games 8 --seed 20261124
+      - name: DEF-08 and DEL-01 paired full-engine smoke
+        run: python scripts/benchmark_rush_delta.py --games 40 --seed 20261124 --out reports/rush-delta-integrated.json
+      - name: VAL-03 national scheduled-league first-week audit
+        run: python scripts/benchmark_national_engine.py --full-season --seed 20261124 --out reports/national-integrated.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rush-delta-national-audit
+          path: |
+            reports/rush-delta-integrated.json
+            reports/national-integrated.json
+          if-no-files-found: warn
+          retention-days: 90
 
   matched-games:
     runs-on: ubuntu-latest
