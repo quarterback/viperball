@@ -6942,6 +6942,11 @@ class ViperballEngine:
             "plays": drive_plays,
             "yards": drive_yards,
             "result": drive_result,
+            "scoring_channel": (
+                self.play_log[-1].play_type if self.play_log and
+                drive_result == "successful_kick" and
+                self.play_log[-1].result == "successful_kick" else None
+            ),
             "delta_drive": drive_delta,
             "delta_cost": drive_delta_cost,
             "bonus_drive": is_bonus_drive,
@@ -15580,7 +15585,20 @@ class ViperballEngine:
         # Post-game analytic: how much did the delta system help/hurt each team?
         # Splits drives into penalty_kill (leading, delta_cost > 0), power_play (trailing, delta_cost < 0), neutral (tied, delta_cost == 0)
         # Compares yards/drive and scoring rate across buckets.
-        score_results = {"touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td"}
+        # Calculate scoring value from actual completed drive score changes.
+        # A defensive score on an opponent's drive is not credited as
+        # offensive points to the team that started that drive.
+        prior_scores = {"home": 0.0, "away": 0.0}
+        drive_points = {}
+        for drive in self.drive_log:
+            current = {
+                side: float(drive.get(side + "_score_after", prior_scores[side]))
+                for side in ("home", "away")
+            }
+            possessing = drive["team"]
+            drive_points[id(drive)] = max(0.0, current[possessing] - prior_scores[possessing])
+            prior_scores = current
+        from .epa import calculate_ep
         for side, stats in [("home", home_stats), ("away", away_stats)]:
             side_drives = [d for d in self.drive_log if d.get("team") == side]
             pk_drives = [d for d in side_drives if d.get("delta_cost", 0) > 0]
@@ -15588,18 +15606,51 @@ class ViperballEngine:
             neutral = [d for d in side_drives if d.get("delta_cost", 0) == 0]
 
             def _bucket_stats(drives):
-                if not drives:
-                    return {"count": 0, "yards_per_drive": 0.0, "score_rate": 0.0, "total_yards": 0, "scores": 0, "avg_delta": 0.0}
-                total_yds = sum(d.get("yards", 0) for d in drives)
-                scores = sum(1 for d in drives if d.get("result") in score_results)
-                avg_delta = sum(abs(d.get("delta_cost", 0)) for d in drives) / len(drives)
+                count = len(drives)
+                if not count:
+                    return {
+                        "count": 0, "yards_per_drive": 0.0, "score_rate": 0.0,
+                        "total_yards": 0, "scores": 0, "avg_delta": 0.0,
+                        "points": 0.0, "points_per_drive": 0.0,
+                        "touchdowns": 0, "touchdown_rate": 0.0,
+                        "kicks": 0, "kick_rate": 0.0,
+                        "drop_kicks": 0, "place_kicks": 0,
+                        "points_vs_start_ep": 0.0,
+                    }
+                total_yards = sum(d.get("yards", 0) for d in drives)
+                # Score incidence, kick incidence and point value are
+                # deliberately separate. Bells affect point totals but
+                # do not turn a non-scoring drive into a TD or kick.
+                scores = sum(d.get("result") in ("touchdown", "successful_kick")
+                             and drive_points[id(d)] > 0 for d in drives)
+                touchdowns = sum(d.get("result") == "touchdown" and
+                                 drive_points[id(d)] > 0 for d in drives)
+                kicks = sum(d.get("result") == "successful_kick" and
+                            drive_points[id(d)] > 0 for d in drives)
+                points = sum(drive_points[id(d)] for d in drives)
+                ep_baseline = sum(calculate_ep(int(d.get("start_yard_line") or 20), 1)
+                                  for d in drives)
                 return {
-                    "count": len(drives),
-                    "yards_per_drive": round(total_yds / len(drives), 1),
-                    "score_rate": round(scores / len(drives) * 100, 1),
-                    "total_yards": total_yds,
+                    "count": count,
+                    "yards_per_drive": round(total_yards / count, 1),
+                    "score_rate": round(100 * scores / count, 1),
+                    "total_yards": total_yards,
                     "scores": scores,
-                    "avg_delta": round(avg_delta, 1),
+                    "avg_delta": round(
+                        sum(abs(d.get("delta_cost", 0)) for d in drives) / count, 1),
+                    "points": round(points, 1),
+                    "points_per_drive": round(points / count, 2),
+                    "touchdowns": touchdowns,
+                    "touchdown_rate": round(100 * touchdowns / count, 1),
+                    "kicks": kicks,
+                    "kick_rate": round(100 * kicks / count, 1),
+                    "drop_kicks": sum(d.get("scoring_channel") == "drop_kick"
+                                      and drive_points[id(d)] > 0 for d in drives),
+                    "place_kicks": sum(d.get("scoring_channel") == "place_kick"
+                                       and drive_points[id(d)] > 0 for d in drives),
+                    # Compared with the existing fixed starting-position
+                    # EP table. It is not an empirical replacement baseline.
+                    "points_vs_start_ep": round(points - ep_baseline, 2),
                 }
 
             pk_stats = _bucket_stats(pk_drives)
