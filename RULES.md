@@ -1,960 +1,682 @@
-# VIPERBALL — Official Rulebook (v1.1)
+# Viperball Official Rulebook (v2.0)
 
-## Table of Contents
+This is the full rulebook. The README carries the same rules in shorter form, and the two
+must agree. When the engine and this book disagree, the disagreement is a bug in one of
+them. `tests/test_rules_doc.py` checks the numbers in this book against the engine.
+
+## Contents
 
 1. [Fundamentals](#1-fundamentals)
-   - [Origin](#origin)
-   - [Design Philosophy](#design-philosophy)
-   - [Players](#players)
-   - [Equipment](#equipment)
-2. [Game Structure](#2-game-structure)
-3. [Downs & Possession](#3-downs--possession)
-4. [Movement of the Ball](#4-movement-of-the-ball)
-5. [Kicking](#5-kicking)
+2. [Field](#2-field)
+3. [Game Length and Clock](#3-game-length-and-clock)
+4. [Downs and Possession](#4-downs-and-possession)
+5. [Moving the Ball](#5-moving-the-ball)
 6. [Scoring](#6-scoring)
-7. [Restarts](#7-restarts)
-8. [Kickoff Rules](#8-kickoff-rules)
-9. [Tackling & Blocking](#9-tackling--blocking)
-10. [Fumbles & Possession](#10-fumbles--possession)
-11. [Turnover Mechanics](#11-turnover-mechanics)
-12. [Out of Bounds](#12-out-of-bounds)
-13. [Field Dimensions & Markings](#13-field-dimensions--markings)
-14. [Clock Management](#14-clock-management)
-15. [Players on the Field](#15-players-on-the-field)
-16. [Offensive Positions](#16-offensive-positions)
-17. [Defensive Positions](#17-defensive-positions)
-18. [Formation Diagrams](#18-formation-diagrams)
-19. [Snap Rules](#19-snap-rules)
-20. [Illegal Formation](#20-illegal-formation)
-21. [Motion](#21-motion)
-22. [Positional Freedom After Snap](#22-positional-freedom-after-snap)
-23. [Penalties](#23-penalties)
-24. [Officials & Enforcement](#24-officials--enforcement)
-25. [Player Safety](#25-player-safety)
-26. [Overtime Rules](#26-overtime-rules)
-27. [Optional Variations](#27-optional-variations)
-28. [Glossary](#28-glossary)
-29. [Version History](#29-version-history)
+7. [Restarts and Delta Yards](#7-restarts-and-delta-yards)
+8. [Kicking](#8-kicking)
+9. [Loose Balls, Turnovers and Bonus Possession](#9-loose-balls-turnovers-and-bonus-possession)
+10. [Out of Bounds](#10-out-of-bounds)
+11. [Players and Positions](#11-players-and-positions)
+12. [Formations, Snap and Motion](#12-formations-snap-and-motion)
+13. [Substitution and Rotations](#13-substitution-and-rotations)
+14. [Tackling and Player Safety](#14-tackling-and-player-safety)
+15. [Penalties](#15-penalties)
+16. [Officials, Enforcement and Review](#16-officials-enforcement-and-review)
+17. [Overtime](#17-overtime)
+18. [Weather](#18-weather)
+19. [Glossary](#19-glossary)
+20. [Version History](#20-version-history)
 
 ---
 
 ## 1. Fundamentals
 
-### Origin
+Viperball began as a thought experiment from a Reddit discussion about whether the 1894
+Yale team could compete in modern football
+([original thread](https://www.reddit.com/r/CFB/comments/1r4qgd3/what_if_the_entire_1894_yale_team_came_back_to/)).
+It imagines a timeline where the forward pass never took over, kicking stayed central,
+players kept playing both ways, and the game grew around space, stamina and field
+position.
 
-Viperball began as a thought experiment inspired by a Reddit discussion about whether a late-19th-century team could compete in modern football.
-
-Original thread: [What if the entire 1894 Yale team came back to life?](https://www.reddit.com/r/CFB/comments/1r4qgd3/what_if_the_entire_1894_yale_team_came_back_to/)
-
-The discussion raised a key question: if early teams played under rules closer to their own era—no forward pass, heavier kicking, fewer specialized roles—what would a modern version of that game look like? Viperball is the answer to that question, creating a modern tactical sport that honors the historical roots of football while developing its own strategic depth.
-
-### Design Philosophy
-
-Viperball assumes a timeline where:
-
-- The forward pass never became dominant
-- Kicking remained central to strategy
-- Players continued to play both ways
-- Football evolved around space, stamina, and field position.
-
-### Players
-
-- 11 players per side
-- Substitutions permitted (league may define limits)
-
-### Equipment
-
-- Pads optional depending on league level
-- Helmets recommended for competitive play
+- Two teams of 11 players.
+- No forward pass of any kind.
+- The ball moves by running, lateral passing and kick passing.
+- Points come from six channels: touchdowns, snap kicks, field goals, safeties, pindowns
+  and bells.
+- The ball is a CFL spec Canadian football: 12⅞ to 13⅛ inches around the short axis,
+  27¾ to 28¼ inches around the long axis, 14 to 15 ounces, inflated to 12.5 to 13.5 psi.
 
 ---
 
-## 2. Game Structure
+## 2. Field
 
-### Game Length
-
-- 4 quarters
-- 12–15 minutes each
-- Running clock except final 2 minutes of each half
-
-League organizers may adjust timing.
-
----
-
-## 3. Downs & Possession
-
-- 5 downs to gain 20 yards
-- Gaining 20 yards resets the count
-- Failure after 5 downs results in turnover at the spot
+- 100 yards goal line to goal line, with 10 yard end zones (120 yards in all).
+- 53⅓ yards wide.
+- Yard lines every 5 yards, numbered every 10 from each goal line to midfield.
+- Hash marks at standard NCAA spacing. A ball downed outside the hashes is spotted on the
+  nearest hash.
+- Goal posts at the back line of each end zone, standard college dimensions.
+- No kickoff restraining lines; the game has no kickoff.
 
 ---
 
-## 4. Movement of the Ball
+## 3. Game Length and Clock
 
-Teams may advance the ball by:
+### Quarters
 
-- Running
-- Laterals and backward passes
-- Kicking (punt or drop kick)
+- Four 10 minute quarters, a 40 minute game.
+- Halftime between the 2nd and 3rd quarters.
+- The away team receives to start the 3rd quarter.
 
-### Forward Pass
+### Running clock
 
-Forward passes are not permitted.
+The game clock runs between plays except:
 
-Any forward throw results in:
+- After a score, until the restart.
+- Out of bounds, in the final 2 minutes of each half only.
+- Timeouts.
+- The 3 minute warning: the clock stops once in each half when it crosses 3:00.
+- Penalty enforcement.
+- Injuries. An injury in the final 2 minutes of a half costs the injured player's team a
+  timeout.
+- Official reviews.
 
-- Dead ball
-- Loss of down
-- Penalty yardage (league-defined)
+### Timeouts
+
+Each team has 4 timeouts per half. Unused timeouts do not carry over.
+
+### Play clock
+
+The offense has 40 seconds to snap. A team that fails gets a delay of game: 5 yards and the
+down is replayed. A clock management minded staff snaps in time more often.
+
+### Final play
+
+If time expires during a live play, the play continues until the ball is dead. A half can
+end on a defensive foul that would give the offense an untimed down.
+
+### Coin toss
+
+The visiting team calls the toss. The winner chooses to receive, kick or defer to the
+second half. The loser picks the end to defend.
 
 ---
 
-## 5. Kicking
+## 4. Downs and Possession
 
-Kicking may occur at any time during live play.
+- A team has **six downs to gain 20 yards**. Gaining 20 yards earns a new set of six downs.
+- If a team fails to gain 20 yards in six downs, the other team takes over at the spot of
+  the ball with 1st and 20.
+- A team may kick (snap kick, field goal or punt) on any down.
 
-Players may:
+### When teams kick
 
-- Punt forward
-- Drop kick
-- Attempt field goals
-- Kick ahead and pursue
+A missed snap kick on downs 1 through 5 keeps the ball (see [Missed snap kicks](#missed-snap-kicks)),
+so coaches follow a simple logic:
 
-The ball remains live after a kick unless it passes through the uprights for a scoring play or goes out of bounds.
+- **Downs 1 to 3:** advance the ball and chase the touchdown. In the last two minutes of a
+  half, a team in range takes the shot on any down when the points matter.
+- **4th down:** kick only when the drive has stalled, the first down is far away and the
+  kicker is in range.
+- **5th down:** the natural kicking down. A miss still leaves 6th down for a second try.
+- **6th down:** the last chance. A missed snap kick is a turnover, so a team kicks, punts
+  or goes for it. A trailing team never punts on 6th down.
+
+A field goal is the answer when a drive stalls outside snap kick range. Near the goal line,
+teams keep driving for the touchdown. Late in a game, a team does not take a kick that
+cannot tie or win.
+
+---
+
+## 5. Moving the Ball
+
+### Running
+
+The ball carrier may run in any direction. Any player may carry the ball.
+
+### Lateral passing
+
+A player may throw, toss or hand the ball to a teammate who is **beside or behind** her.
+There is no limit on laterals in a play. A lateral that travels forward, even slightly, is
+an Illegal Forward Lateral: 5 yards and loss of down. A dropped lateral is a live ball and
+either team may recover it.
+
+### Kick passing
+
+A kick pass is a ball kicked to a teammate downfield. It is Viperball's aerial game.
+
+- A catch by the intended receiver keeps the play alive: she may run, lateral or kick again.
+- A catch by a defender is an interception. Possession changes and the defender may return
+  it.
+- A kick pass that hits the ground is incomplete. The ball is dead, the offense keeps it and
+  the down is used.
+- One kick pass per play. A second is Illegal Double Kickpass (10 yards and loss of down).
+- A kick pass that goes out of bounds is a foul on the offense (5 yards and loss of down).
 
 ---
 
 ## 6. Scoring
 
-### Touchdown — 9 points
+| Score | Points | How |
+|---|---|---|
+| Touchdown | 9 | Carrying the ball into, or catching it in, the opponent's end zone |
+| Snap kick | 5 | Drop kicking the ball through the uprights during live play |
+| Field goal | 3 | Place kicking the ball through the uprights from scrimmage |
+| Safety | 2 | The ball carrier downed in her own end zone, or an offensive foul there |
+| Pindown | 1 | A punt, missed snap kick or missed field goal goes into the end zone and is not returned out |
+| Bell | 0.5 | Recovering a loose ball: a fumble, a muff, or a blocked or bouncing kick |
 
-Scored by advancing the ball into the opponent's end zone. No conversion attempts are taken.
+There are no conversion attempts after a touchdown.
 
-### Drop-Kick Field Goal — 5 points
+### Pindown
 
-A successful drop kick through the uprights. May be attempted from scrimmage or during live play.
+The kicking team scores 1 point when a punt, missed snap kick or missed field goal goes
+into the end zone and the receiving team cannot return it out. The receiving team then
+starts at its own 25. A team that returns the ball out of its end zone starts where the
+return ends and no point is scored. This is the same score as the rouge in Canadian
+football.
 
-### Place-Kick Field Goal — 3 points
+### Bell
 
-A successful place kick through the uprights. Must be taken from scrimmage.
-
-### Safety — 2 points
-
-Awarded to the defense when the offensive team is downed in its own end zone.
-
----
-
-## 7. Restarts
-
-### After Touchdown
-
-Scoring team kicks off from midfield or its own 35 (league preference).
-
-### After Field Goal
-
-Opposing team receives kickoff.
-
-### After Safety
-
-Free kick from scoring team's 20.
+A team scores half a point the moment it recovers a loose ball, and play continues. A
+defense that recovers a blocked kick and returns it for a touchdown scores 9.5.
 
 ---
 
-## 8. Kickoff Rules
+## 7. Restarts and Delta Yards
 
-### Intent
+There is no kickoff. After every score the team that did not score receives the ball.
 
-Kickoffs restart play and create field position battles. The kicking team attempts to limit return yardage while the receiving team seeks optimal field position.
-
-### Alignment
-
-**Kicking Team:**
-- Must have at least 4 players on each side of the kicker
-- All players except the kicker must be behind the ball at kickoff
-- Players may not cross the restraining line until the ball is kicked
-
-**Receiving Team:**
-- Must have at least 7 players within 15 yards of their restraining line
-- May not cross the restraining line until the ball is kicked
-- Must have designated return personnel positioned in the return zone
-
-### Live Ball
-
-The ball is live once kicked and may be:
-- Advanced by the receiving team
-- Recovered by the kicking team if it travels at least 20 yards
-- Downed by the receiving team for a touchback
-
-### Onside Kicks
-
-Onside kicks are permitted. The kicking team may recover the ball once it has traveled at least 20 yards. The receiving team may recover the ball at any point after it is kicked.
-
-### Fair Catch
-
-Fair catches are not permitted in Viperball. All kicked balls remain live until downed or out of bounds.
-
-### Out of Bounds
-
-If a kickoff goes out of bounds:
-- Before reaching the receiving team's 20-yard line: receiving team takes possession at their 35-yard line
-- Beyond the receiving team's 20-yard line: receiving team takes possession at the point where it went out of bounds
-
-### Touchback
-
-A kickoff into the end zone may be:
-- Returned by the receiving team
-- Downed for a touchback, resulting in possession at the receiving team's 25-yard line
+- **Delta Yards.** The receiving team starts at its own 20, moved back one yard for every
+  point it leads by and forward one yard for every point it trails by. A team down 14 starts
+  at its own 34; a team up 10 starts at its own 10. A drive never starts behind the 1 or
+  past the opponent's 20.
+- **After a safety,** the team that conceded it restarts from its own 20.
+- **After a pindown,** the receiving team starts at its own 25.
+- **Opening and second half possessions** start at the receiving team's own 20.
 
 ---
 
-## 9. Tackling & Blocking
+## 8. Kicking
 
-### Tackling
+### Snap kick
 
-- Rugby-style wrap tackling permitted
-- No targeting of head or neck
-- Dangerous contact penalized
+A drop kick during live play: the kicker drops the ball, lets it bounce once and kicks it.
+No holder and no stoppage. It is legal on any down from anywhere. It is reliable within
+40 yards and plausible out to about 55.
 
-### Blocking
+#### Missed snap kicks
 
-- Open-field blocking allowed
-- Blindside blocks restricted
-- No wedge formations
+- On downs 1 to 5, a miss that stays in the field of play is a dead ball. The kicking team
+  keeps the ball and the down advances.
+- Misses from beyond about 50 yards may be fielded and returned by the defense as a live
+  ball. The longer the kick, the more likely the return.
+- On 6th down, a miss from any distance is a turnover at the spot of the kick.
+- A miss into the end zone that is not returned out is a pindown.
 
----
+### Field goal
 
-## 10. Fumbles & Possession
+A place kick from scrimmage with a holder. It carries farther than a snap kick: its
+comfortable range runs about 15 yards beyond the kicker's snap kick range, and attempts are
+possible out to about 71 yards. A missed field goal can be fielded and returned like a
+missed snap kick.
 
-- Live ball on fumble
-- Any player may recover
-- Ball remains live after kicks unless ruled dead
+### Punt
 
----
+A territorial kick that gives up the ball. The punter kicks it before it touches the ground.
+There is no fair catch; the kick catch interference fouls protect the returner. A muffed
+punt is a live ball and the team that recovers it scores a bell.
 
-## 11. Turnover Mechanics
+### Blocked kicks
 
-### Intent
+Any kick may be blocked before it clears the line.
 
-Clear rules govern how possession changes, particularly involving kicks, fumbles, and laterals in this no-forward-pass game.
-
-### Kicked Ball Recovery
-
-- Any kicked ball that travels beyond the line of scrimmage may be recovered by either team
-- The kicking team may advance a recovered kick
-- The receiving team may advance any recovered kick
-- A kicked ball that does not cross the line of scrimmage may only be recovered by the kicking team
-
-### Muffed Kicks
-
-- A muffed kick (touched but not possessed by the receiving team) remains live
-- Either team may recover and advance a muffed kick
-- There is no distinction between muffed punts and muffed kickoffs—all remain live
-
-### Lateral Interceptions
-
-- A lateral pass intercepted by the defense may be advanced
-- An incomplete lateral (touching the ground) results in a fumble situation
-- Any player may recover a loose lateral
-
-### Turnover on Downs
-
-- Failure to gain 20 yards in 5 downs results in immediate change of possession
-- The opposing team takes possession at the spot where the ball was declared dead on the final down
-- No "punt on 4th down" exemption exists, though teams may elect to kick strategically before the final down
+- A defensive recovery is a bell, and the defense may return the ball.
+- A kicking team recovery is dead and the down is used.
 
 ---
 
-## 12. Out of Bounds
+## 9. Loose Balls, Turnovers and Bonus Possession
 
-- Ball carrier out of bounds results in dead ball
-- Kicked ball out of bounds results in possession at exit spot
+### Fumbles
 
----
+A fumbled ball is live and either team may recover it. The recovering team scores a bell
+and takes possession. A fumble that goes out of bounds stays with the team that last had
+it, at the spot it went out.
 
-## 13. Field Dimensions & Markings
+### Interceptions
 
-### Field Length and Width
+A kick pass or lateral caught by a defender changes possession at once, and she may return
+it. A return touchdown scores 9.
 
-- Total length: 120 yards (100-yard playing field plus two 10-yard end zones)
-- Width: 53⅓ yards (160 feet)
+### Bonus possession
 
-### End Zones
+An interception earns the intercepting team a bonus possession. After it finishes the
+drive that follows its interception, it gets the ball again from its own 20 before the
+opponent's next possession.
 
-- Depth: 10 yards each
-- Goal line marks the boundary between end zone and playing field
+- Any fumble or interception while a bonus is pending cancels it.
+- An interception during a bonus drive does not earn another one.
+- A pending bonus does not carry past halftime or the end of the game.
 
-### Yard Lines
+### Turnover on downs
 
-- Marked every 5 yards across the width of the field
-- Numbered every 10 yards from each goal line (10, 20, 30, 40, 50)
-- Midfield marked at the 50-yard line
-
-### Hash Marks
-
-- Located 40 feet from each sideline (positioned similar to college football)
-- Marked at each yard line
-- Ball is spotted on the nearest hash mark if downed outside the hash marks
-
-### Goal Posts
-
-- Height: Crossbar at 10 feet above the ground
-- Uprights extend at least 35 feet above the crossbar
-- Width between uprights: 18 feet 6 inches
-- Positioned at the back line of each end zone
-- Critical for field goal attempts, which are central to Viperball strategy
-
-### Restraining Lines
-
-- Kickoff restraining lines marked at appropriate positions based on kickoff type
-- Clearly distinguished from regular yard lines
-
-### Special Markings
-
-- Team benches positioned outside the playing surface between the 25-yard lines
-- Officials' restraining area marked along sidelines
+See [Downs and Possession](#4-downs-and-possession).
 
 ---
 
-## 14. Clock Management
+## 10. Out of Bounds
 
-### Intent
-
-Clock management creates strategic decisions about tempo, timeouts, and game flow.
-
-### Running Clock
-
-- Clock runs continuously during the first and third quarters
-- Clock runs continuously during the first 10-13 minutes of the second and fourth quarters (depending on quarter length)
-
-### Clock Stoppages
-
-The clock stops for:
-- Timeouts
-- Scores (touchdown, field goal, safety)
-- End of quarter
-- Penalties (at referee's discretion)
-- Injuries
-- Out of bounds (final 2 minutes of each half only)
-- Incomplete lateral that goes out of bounds (final 2 minutes of each half only)
-- Change of possession (final 2 minutes of each half only)
-- First downs (final 2 minutes of each half only)
-
-### Timeouts
-
-- Each team receives 4 timeouts per half
-- Timeouts do not carry over between halves
-- Each timeout lasts 90 seconds
-- Officials may grant additional timeouts for injuries
-
-### Two-Minute Warning
-
-- Official timeout at the 2:00 mark of the second and fourth quarters
-- Clock begins on referee's signal after the two-minute warning
-
-### Play Clock
-
-- 40 seconds from the end of the previous play
-- 25 seconds after administrative stoppages, timeouts, and penalties
-- Visible on stadium clock or field display
-
-### Delay of Game
-
-- Failure to snap before play clock expires results in a 5-yard penalty
-- Repeated delay of game infractions may result in unsportsmanlike conduct penalties
-
-### Final Play
-
-- If time expires during a live play, the play continues until the ball is ruled dead
-- Untimed downs are awarded if defensive penalties occur on the final play of a half
+- A ball carrier is out when any part of her body touches the sideline or beyond. The ball
+  is spotted where she went out.
+- A lateral or kick pass that goes out of bounds is dead at the sideline. A lateral out of
+  bounds behind the line is spotted where it crossed the sideline.
+- The clock stops on out of bounds only in the final 2 minutes of each half.
 
 ---
 
-## 15. Players on the Field
+## 11. Players and Positions
 
-Each team shall field eleven players. No more than eleven players may participate in play at any time. A team must have no fewer than nine players on the field to continue play. If a team falls below nine players, the referee may suspend play until the number is restored. Violation of player count results in a penalty for illegal substitution or too many players on the field.
+Each side fields 11 players. A team carries a 36 player game day roster, and every active
+player may play on any down.
 
----
+### Offense
 
-## 16. Offensive Positions
+| Position | Count | Role |
+|---|---|---|
+| Offensive Line | 5 | Blocks and protects the kicker; may receive laterals and advance |
+| Zeroback | 1 | Takes the snap; primary runner, kicker and lateral chain starter |
+| Viper | 1 | Free alignment mismatch player |
+| Flankers | 4 | A Halfback, a Wingback, a Slotback and the best remaining flanker |
 
-### Intent
+### Defense
 
-Offensive formations balance structure with tactical flexibility. Positional requirements ensure competitive alignment while allowing creative play design.
+| Position | Count | Role |
+|---|---|---|
+| Defensive Line | 5 | Rushes the kicker and stops the run |
+| Keeper | 2 | Deepest defenders; field missed kicks and return them |
+| Defensive backs | 4 | The four best tacklers of the midfield line on the field |
 
-### Rules
+### Two way play
 
-At the snap, the offensive team shall satisfy positional distribution requirements for legal formation. Positional titles exist for alignment and enforcement only and do not restrict movement once the ball is live.
-
-### Linemen
-
-Five players shall be designated as Linemen at the snap. Linemen must align within one yard of the line of scrimmage and between the outermost offensive players. Linemen may advance, lateral, receive laterals, and kick once the ball is live. Linemen are eligible to recover all live balls. Linemen provide the foundation for both blocking schemes and quick lateral distribution in open play.
-
-### Zeroback
-
-Each offensive formation must include one Zeroback. The Zeroback is the primary distributor and may receive the snap directly. The Zeroback may run, lateral, or kick at any time. A different player may receive the snap, but the Zeroback designation must still be present on the field. The Zeroback serves as the offensive quarterback equivalent, orchestrating plays and making critical tactical decisions in real time.
-
-### Halfback
-
-One Halfback must be present. The Halfback may receive handoffs, laterals, or kicks and may kick in open play.
-
-### Wingbacks
-
-One Left Wingback (LW) and one Right Wingback (RW) must be present at the snap. Wingbacks must align outside the interior formation.
-
-### Shiftback
-
-One Shiftback shall be designated at the snap. The Shiftback aligns between the interior and perimeter and may block, run, lateral, receive kicks, or defend. The Shiftback may shift position prior to the snap provided the minimum offensive structure remains intact. The Shiftback creates unpredictability, shifting based on defensive alignment and exploiting mismatches.
-
-### Viper
-
-One Viper shall be designated at the snap. The Viper is alignment-exempt and may position freely at any depth or width. The Viper shall wear a jersey of a distinctly different color from the rest of the team. The Viper serves as a wild card, capable of deep positioning for kick returns, motion-based misdirection, or surprise rushing angles. The distinct jersey allows officials and opponents to track the Viper's unique status.
-
-### Offensive 11
-
-| Position | Count |
-|----------|-------|
-| Linemen | 5 |
-| Zeroback | 1 |
-| Halfback | 1 |
-| Left Wingback (LW) | 1 |
-| Right Wingback (RW) | 1 |
-| Shiftback | 1 |
-| Viper | 1 |
+The Viper and the four flankers play as one two way midfield line. On defense, the line's
+four best tacklers play defensive back. See [Substitution and Rotations](#13-substitution-and-rotations).
 
 ---
 
-## 17. Defensive Positions
+## 12. Formations, Snap and Motion
 
-### Intent
-
-Defensive formations provide structure to counter offensive tactics while maintaining flexibility for kick coverage and pursuit.
-
-### Rules
-
-At the snap, the defensive team shall satisfy positional distribution requirements for legal formation. Positional titles exist for alignment and enforcement only and do not restrict movement once the ball is live.
-
-### Line Anchors
-
-Three players shall be designated as Line Anchors at the snap: Left Guard, Nose, and Right Guard. Line Anchors must align within one yard of the line of scrimmage. Left Guard and Right Guard provide front line pressure. The Nose serves as the central anchor point. These players disrupt offensive blocking schemes and pursue ball carriers in the backfield.
-
-### Edge Defenders
-
-Two Edge Defenders must be present at the snap. Edge Defenders align outside the Line Anchors.
-
-### Spotbacks
-
-Two Spotbacks must be present at the snap. Spotbacks align behind the primary defensive line.
-
-### Cornerbacks
-
-Two Cornerbacks must be present at the snap.
-
-### Lastback
-
-One Lastback must be present at the snap. The Lastback aligns deep.
-
-### Keeper
-
-One Keeper must be present at the snap. The Keeper is the deepest defender and fields missed field goal attempts.
-
-### Defensive 11
-
-| Position | Count |
-|----------|-------|
-| Left Guard | 1 |
-| Nose | 1 |
-| Right Guard | 1 |
-| Edge Defenders | 2 |
-| Spotbacks | 2 |
-| Cornerbacks | 2 |
-| Lastback | 1 |
-| Keeper | 1 |
+- At least five offensive players on the line at the snap. The rest may line up anywhere
+  behind it.
+- The Viper may line up anywhere on the offensive side but must be set for one full second
+  before the snap, unless she is the single player in legal motion. Breaking this is an
+  Illegal Viper Alignment (5 yards).
+- One player may be in motion at the snap, moving parallel to or away from the line.
+- Any legally positioned player may take the snap; it is usually the Zeroback.
+- Once the ball is snapped, every positional restriction is lifted. Any player may carry,
+  kick, lateral or receive the ball.
 
 ---
 
-## 18. Formation Diagrams
+## 13. Substitution and Rotations
 
-### Standard Offensive Formation
+Substitution is unlimited and allowed at any time, including during live play, through the
+team's substitution zone at midfield. A player leaving must be fully off the field before
+her replacement enters, or it is Illegal Substitution (5 yards).
 
-```
-                    Viper (V) - alignment-exempt, anywhere on field
-                    
-                    
-                      LW              RW
-                    
-                           HB
-                    
-                       SB        ZB
-                    
-           LT    LG    C    RG    RT
-    ================================================  LINE OF SCRIMMAGE
-    
-    
-Legend:
-LT, LG, C, RG, RT = Linemen (5 total)
-ZB = Zeroback
-HB = Halfback
-LW = Left Wingback
-RW = Right Wingback
-SB = Shiftback
-V = Viper (distinctly colored jersey)
-```
+- **Midfield lines.** Each team carries three lines of a Viper and four flankers and changes
+  them as a unit. The top line takes the longest shifts.
+- **Defensive specialist.** The best tackler on the other lines may come on for one of the
+  defensive backs while she is fresh.
+- **Anchors.** The Zeroback and the two Keepers stay on almost all game.
+- **Offensive line.** A set five that rarely changes.
+- **Defensive line.** Rotates heavily, one player at a time.
+- **Cover.** A spare offensive lineman can cover the defensive line and a bench midfielder
+  can cover Keeper, at 90% of her rating.
+- **Changing on the fly.** A team that loses the ball during live play may change while the
+  ball is live. If it is caught changing, the other side gets a fast break on the next play.
 
-### Standard Defensive Formation
+### Fatigue and work rate
 
-```
-                           K (Keeper - deepest)
-                      
-                           LB (Lastback)
-                      
-                  CB                    CB
-                  (Cornerback)      (Cornerback)
-                  
-              SP                          SP
-           (Spotback)                  (Spotback)
-           
-        ED                                    ED
-    (Edge Defender)                    (Edge Defender)
-    
-         LG         N         RG
-    ================================================  LINE OF SCRIMMAGE
+Every player on the field spends energy each snap and recovers on the sideline, most at
+halftime. Stamina sets how fast she tires and recovers. Work rate sets how much tiredness
+costs her and how long a coach leaves her on. Part of a game's fatigue carries into the
+next week.
 
+### Injuries
 
-Legend:
-LG = Left Guard (Line Anchor)
-N = Nose (Line Anchor)
-RG = Right Guard (Line Anchor)
-ED = Edge Defenders (2 total)
-SP = Spotbacks (2 total)
-CB = Cornerbacks (2 total)
-LB = Lastback
-K = Keeper
-```
+- A player removed with an injury may not return for at least one play.
+- A player removed under concussion protocol may not return to the same game.
 
 ---
 
-## 19. Snap Rules
+## 14. Tackling and Player Safety
 
-### Intent
+A ball carrier is down when any part of her body other than hands or feet touches the
+ground while in a defender's grasp, or when her forward progress is stopped.
 
-The snap initiates each play and must follow consistent mechanics to ensure fair play and prevent false starts.
+Tackling is rugby style wrap tackling. Targeting the head or neck, horse collar tackles,
+clipping, chop blocks, late hits and wedge formations are fouls (see the penalty table).
 
-### Legal Snap
+A player who shows signs of a concussion is removed at once and may not return. Officials
+and medical staff decide, regardless of the player's or coach's wishes.
 
-- The snap must be a continuous motion backward from the line of scrimmage
-- The ball must be snapped to a player positioned at least one yard behind the line of scrimmage, or laterally to a player on the line
-- The center (middle lineman) executes the snap
-- All other offensive players must be set for at least one second before the snap (except one player in legal motion)
-
-### Snap Recipient
-
-- The Zeroback typically receives the snap but is not required to do so
-- Any offensive player positioned legally may receive the snap
-- The snap may be direct (handed) or thrown backward
-
-### False Start
-
-A false start occurs when:
-- An offensive player moves after being set and before the snap
-- The exception is one player in legal lateral or backward motion
-- Penalty: 5 yards, replay of down
-
-### Encroachment and Offside
-
-- **Encroachment:** A defensive player makes contact with an offensive player before the snap. Penalty: 5 yards, automatic first down.
-- **Offside:** A player is on the wrong side of the line of scrimmage when the ball is snapped. Penalty: 5 yards.
-
-### Dead Ball Fouls Before Snap
-
-Any foul committed before the snap results in a dead ball foul:
-- False start (offense)
-- Encroachment (defense)
-- Illegal formation
-- Delay of game
+Targeting, fighting and throwing a punch are 15 yard fouls. The game does not eject players.
 
 ---
 
-## 20. Illegal Formation
+## 15. Penalties
 
-- Fewer than five offensive Linemen on the line at the snap: five-yard penalty, replay of down
-- Absence of a designated Zeroback: five-yard penalty, replay of down
-- Fewer than the minimum required Wingbacks, Halfback, Shiftback, or Viper: five-yard penalty
-- Defensive alignment violations: five-yard penalty enforced at the snap
+Penalties are enforced from the spot of the foul unless the table says otherwise.
 
----
+- **Automatic first down** gives the offense a new set of downs whatever the distance.
+- **Loss of down** uses the down as well as the yardage.
+- Live ball fouls may be accepted or declined by the team fouled against.
+- An accepted live ball foul by the offense wipes out the play, including any score and any
+  change of possession on it.
+- Post play fouls are enforced from the succeeding spot.
+- Fair Catch Interference and Kick Catch Interference are fouls by the kicking team on
+  punts.
 
-## 21. Motion
+The table below is the engine's full penalty catalog, grouped by the phase of play in which
+each foul can be called. Some fouls appear in more than one phase.
 
-One offensive player may be in motion at the snap provided that player is moving laterally or backward. No player may be in forward motion at the snap.
+<!-- PENALTY_TABLE -->
 
----
+### Before the snap
 
-## 22. Positional Freedom After Snap
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| False Start | 5 | Offense |  |
+| Offsides | 5 | Defense |  |
+| Delay of Game | 5 | Offense |  |
+| Delay of Game (Defense) | 5 | Defense |  |
+| Illegal Formation | 5 | Offense |  |
+| Encroachment | 5 | Defense |  |
+| Too Many Men on Field | 5 | Either |  |
+| Illegal Substitution | 5 | Either |  |
+| Illegal Viper Alignment | 5 | Offense |  |
+| Illegal Motion | 5 | Offense |  |
+| Illegal Snap | 5 | Offense |  |
+| Illegal Defensive Formation | 5 | Defense |  |
+| Missing Viper Jersey | 5 | Offense |  |
+| Illegal Shift | 5 | Offense |  |
+| Disconcerting Signals | 5 | Defense |  |
+| Player Out of Bounds at Snap | 5 | Either |  |
+| Illegal Viper Substitution | 5 | Offense |  |
+| Illegal Numbering | 5 | Offense |  |
+| Illegal Formation (Numbering Exception) | 5 | Offense |  |
 
-Once the ball is live, all players may move freely. Positional designations apply only at the moment of the snap for purposes of formation legality and officiating.
+### During a run
 
----
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| Holding | 10 | Offense |  |
+| Illegal Block | 10 | Offense |  |
+| Clipping | 15 | Offense |  |
+| Chop Block | 15 | Offense |  |
+| Defensive Holding | 5 | Defense | Automatic first down |
+| Facemask | 15 | Defense | Automatic first down |
+| Unnecessary Roughness | 15 | Either |  |
+| Horse Collar | 15 | Defense | Automatic first down |
+| Personal Foul | 15 | Either |  |
+| Tripping | 10 | Either |  |
+| Targeting | 15 | Either |  |
+| Blindside Block | 15 | Offense |  |
+| Illegal Use of Hands | 10 | Offense |  |
+| Lowering the Helmet | 15 | Either |  |
+| Illegal Block in Back | 10 | Offense |  |
+| Blocking Below the Waist | 15 | Offense |  |
+| Hurdling | 15 | Either |  |
+| Hands to the Face | 15 | Either |  |
+| Interlocked Interference | 5 | Offense |  |
+| Illegal Contact Against Snapper | 15 | Defense | Automatic first down |
+| Fouling Out of Play | 15 | Either |  |
+| Too Many Men on Field | 5 | Either |  |
+| Striking | 15 | Either |  |
+| Piling On | 15 | Defense |  |
+| Assisting the Runner | 5 | Offense |  |
+| Roughing the Zeroback | 15 | Defense | Automatic first down |
+| Illegal Participation | 5 | Either |  |
 
-## 23. Penalties
+### During a lateral play
 
-### Intent
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| Holding | 10 | Offense |  |
+| Illegal Forward Lateral | 5 | Offense | Loss of down |
+| Illegal Block in Back | 10 | Offense |  |
+| Lateral Interference | 10 | Defense | Automatic first down |
+| Illegal Contact | 5 | Defense | Automatic first down |
+| Defensive Holding | 5 | Defense | Automatic first down |
+| Facemask | 15 | Defense | Automatic first down |
+| Clipping | 15 | Offense |  |
+| Illegal Screen | 10 | Offense |  |
+| Illegal Viper Contact | 10 | Defense | Automatic first down |
+| Unnecessary Roughness | 15 | Either |  |
+| Personal Foul | 15 | Either |  |
+| Wedge Formation | 15 | Offense |  |
+| Double Forward Lateral | 10 | Offense | Loss of down |
+| Blindside Block | 15 | Offense |  |
+| Targeting | 15 | Either |  |
+| Illegal Viper Handoff | 10 | Offense |  |
+| Lowering the Helmet | 15 | Either |  |
+| Illegal Lateral Beyond Scrimmage | 5 | Offense |  |
+| Concealing the Ball | 15 | Offense |  |
+| Illegal Use of Hands | 10 | Offense |  |
+| Blocking Below the Waist | 15 | Offense |  |
+| Hurdling | 15 | Either |  |
+| Interlocked Interference | 5 | Offense |  |
+| Hands to the Face | 15 | Either |  |
+| Horse Collar | 15 | Defense | Automatic first down |
+| Tripping | 10 | Either |  |
+| Illegal Lateral Formation | 10 | Offense |  |
+| Contact Before Lateral Arrives | 10 | Defense | Automatic first down |
+| Excessive Contact on Lateral Receiver | 15 | Defense | Automatic first down |
+| Too Many Men on Field | 5 | Either |  |
+| Illegal Participation | 5 | Either |  |
+| Piling On | 15 | Defense |  |
+| Striking | 15 | Either |  |
 
-Penalties maintain fair play, player safety, and game integrity. Officials enforce penalties consistently to ensure competitive balance.
+### During a kick pass
 
-### Penalty Table
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| Contact on Kickpass Receiver | 15 | Defense | Automatic first down |
+| Roughing the Kickpasser | 15 | Defense | Automatic first down |
+| Hit on Defenseless Kickpass Receiver | 15 | Defense | Automatic first down |
+| Kickpass Interference | 15 | Defense | Automatic first down |
+| Offensive Kickpass Interference | 10 | Offense |  |
+| Illegal Kickpass Formation | 5 | Offense |  |
+| Illegal Double Kickpass | 10 | Offense | Loss of down |
+| Kickpass Out of Bounds | 5 | Offense | Loss of down |
+| Shielding the Kickpass | 10 | Offense |  |
+| Illegal Kickpass Touch | 5 | Offense |  |
+| Holding | 10 | Offense |  |
+| Defensive Holding | 5 | Defense | Automatic first down |
+| Facemask | 15 | Defense | Automatic first down |
+| Illegal Block in Back | 10 | Offense |  |
+| Illegal Use of Hands | 10 | Offense |  |
+| Blindside Block | 15 | Offense |  |
+| Targeting | 15 | Either |  |
+| Lowering the Helmet | 15 | Either |  |
+| Unnecessary Roughness | 15 | Either |  |
+| Personal Foul | 15 | Either |  |
+| Horse Collar | 15 | Defense | Automatic first down |
+| Illegal Viper Contact | 10 | Defense | Automatic first down |
+| Too Many Men on Field | 5 | Either |  |
+| Illegal Bat | 10 | Either |  |
 
-| Infraction | Penalty | Enforcement |
-|------------|---------|-------------|
-| | **Pre-Snap Infractions** | |
-| **False Start** | 5 yards | Enforced at line of scrimmage |
-| **Offside** | 5 yards | Enforced at line of scrimmage |
-| **Encroachment** | 5 yards + automatic first down | Enforced at line of scrimmage |
-| **Delay of Game** | 5 yards | Enforced at line of scrimmage |
-| **Delay of Game (Defense)** | 5 yards | Enforced at line of scrimmage |
-| **Illegal Offensive Formation** | 5 yards | Replay of down |
-| **Illegal Defensive Formation** | 5 yards | Enforced at snap |
-| **Too Many Players on Field** | 5 yards | Enforced at snap (also during play) |
-| **Illegal Substitution** | 5 yards | Enforced at snap |
-| **Illegal Motion** | 5 yards | Enforced at snap |
-| **Illegal Shift** | 5 yards | Enforced at snap |
-| **Illegal Snap** | 5 yards | Enforced at line of scrimmage |
-| **Illegal Viper Alignment** | 5 yards | Enforced at snap |
-| **Illegal Viper Substitution** | 5 yards | Enforced at snap |
-| **Missing Viper Jersey** | 5 yards | Enforced at snap |
-| **Disconcerting Signals** | 5 yards | Enforced at snap |
-| **Player Out of Bounds at Snap** | 5 yards | Enforced at snap |
-| **Illegal Numbering** | 5 yards | Enforced at snap |
-| | **Run Play Infractions** | |
-| **Offensive Holding** | 10 yards | From spot of foul |
-| **Illegal Block** | 10 yards | From spot of foul |
-| **Illegal Block in Back** | 10 yards | From spot of foul |
-| **Illegal Use of Hands** | 10 yards | From spot of foul |
-| **Clipping** | 15 yards | From spot of foul |
-| **Chop Block** | 15 yards | From spot of foul |
-| **Blindside Block** | 15 yards | From spot of foul |
-| **Blocking Below the Waist** | 15 yards | From spot of foul |
-| **Defensive Holding** | 5 yards + automatic first down | From spot of foul |
-| **Face Mask** | 15 yards + automatic first down | From spot of foul |
-| **Hands to the Face** | 15 yards | From spot of foul |
-| **Horse Collar Tackle** | 15 yards + automatic first down | From spot of foul |
-| **Unnecessary Roughness** | 15 yards | From spot of foul |
-| **Personal Foul** | 15 yards | From spot of foul |
-| **Targeting Head/Neck** | 15 yards + ejection | From spot of foul |
-| **Lowering the Helmet** | 15 yards | From spot of foul |
-| **Tripping** | 10 yards | From spot of foul |
-| **Hurdling** | 15 yards | From spot of foul |
-| **Striking** | 15 yards | From spot of foul |
-| **Piling On** | 15 yards | From spot of foul |
-| **Assisting the Runner** | 5 yards | From spot of foul |
-| **Interlocked Interference** | 5 yards | From spot of foul |
-| **Illegal Contact Against Snapper** | 15 yards + automatic first down | From spot of foul |
-| **Roughing the Zeroback** | 15 yards + automatic first down | From spot of foul |
-| **Illegal Participation** | 5 yards | From spot of foul |
-| | **Lateral Play Infractions** | |
-| **Illegal Forward Lateral** | 5 yards + loss of down | From spot of lateral |
-| **Double Forward Lateral** | 10 yards + loss of down | From spot of lateral |
-| **Illegal Lateral Beyond Scrimmage** | 5 yards | From spot of lateral |
-| **Illegal Lateral Formation** | 10 yards | From spot of foul |
-| **Lateral Interference** | 10 yards + automatic first down | From spot of foul |
-| **Contact Before Lateral Arrives** | 10 yards + automatic first down | From spot of foul |
-| **Excessive Contact on Lateral Receiver** | 15 yards + automatic first down | From spot of foul |
-| **Illegal Contact** | 5 yards + automatic first down | From spot of foul |
-| **Illegal Screen** | 10 yards | From spot of foul |
-| **Illegal Viper Contact** | 10 yards + automatic first down | From spot of foul |
-| **Illegal Viper Handoff** | 10 yards | From spot of foul |
-| **Concealing the Ball** | 15 yards | From spot of foul |
-| **Wedge Formation (3+ players)** | 15 yards | From spot of foul |
-| | **Kickpass Infractions (Viperball-specific)** | |
-| **Contact on Kickpass Receiver** | 15 yards + automatic first down | From spot of foul |
-| **Roughing the Kickpasser** | 15 yards + automatic first down | From spot of foul |
-| **Hit on Defenseless Kickpass Receiver** | 15 yards + automatic first down | From spot of foul |
-| **Kickpass Interference** | 15 yards + automatic first down | From spot of foul |
-| **Offensive Kickpass Interference** | 10 yards | From spot of foul |
-| **Illegal Kickpass Formation** | 5 yards | Enforced at snap |
-| **Illegal Double Kickpass** | 10 yards + loss of down | From spot of foul |
-| **Kickpass Out of Bounds** | 5 yards + loss of down | From spot of kick |
-| **Shielding the Kickpass** | 10 yards | From spot of foul |
-| **Illegal Kickpass Touch** | 5 yards | From spot of foul |
-| | **Punt / Drop Kick / Place Kick Infractions** | |
-| **Roughing the Kicker** | 15 yards + automatic first down | From spot of foul |
-| **Running Into the Kicker** | 5 yards | From spot of foul |
-| **Fair Catch Interference** | 15 yards | From spot of foul |
-| **Kick Catch Interference** | 15 yards | From spot of foul |
-| **Illegal Kick** | 10 yards | From spot of kick |
-| **Illegal Wedge Formation** | 15 yards | From spot of foul |
-| **Illegal Free Kick Formation** | 5 yards | Enforced at snap |
-| **Free Kick Out of Bounds** | 5 yards | Enforced at line of scrimmage |
-| **Leverage** | 15 yards | From spot of foul |
-| **Illegal Bat** | 10 yards | From spot of foul |
-| **Offside on Kick** | 5 yards | Enforced at line of scrimmage |
-| **Illegal Touch** | 5 yards | From spot of foul |
-| **Kicker Simulating Being Roughed** | 15 yards | From spot of foul |
-| **Player Out of Bounds During Kick** | 5 yards | From spot of foul |
-| | **Post-Play Infractions** | |
-| **Taunting** | 15 yards | From succeeding spot |
-| **Unsportsmanlike Conduct** | 15 yards | From succeeding spot |
-| **Late Hit** | 15 yards | From succeeding spot |
-| **Late Hit Out of Bounds** | 15 yards | From succeeding spot |
-| **Excessive Celebration** | 15 yards | From succeeding spot |
-| **Sideline Interference** | 15 yards | From succeeding spot |
-| **Throwing Punch** | 15 yards + ejection | From succeeding spot |
-| **Fighting** | 15 yards + ejection | From succeeding spot |
-| **Helmet-to-Helmet Contact** | 15 yards | From succeeding spot |
-| **Bench Area Violation** | 15 yards | From succeeding spot |
-| **Persons Illegally on Field** | 15 yards | From succeeding spot |
-| **Player Not Returning Ball** | 15 yards | From succeeding spot |
-| **Continued Play Without Helmet** | 15 yards | From succeeding spot |
-| **Removal of Helmet** | 15 yards | From succeeding spot |
-| **Spiking the Ball** | 15 yards | From succeeding spot |
-| **Piling On** | 15 yards | From succeeding spot |
-| **Provoking Ill Will** | 15 yards | From succeeding spot |
-| **Obscene Language** | 15 yards | From succeeding spot |
-| | **Not Applicable** | |
-| **Pass Interference** | Not applicable (no forward passes) | N/A |
-| **Intentional Grounding** | Not applicable (no forward passes) | N/A |
+### During a punt, snap kick or field goal
 
-### Viperball-Specific Physicality Rules
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| Roughing the Kicker | 15 | Defense | Automatic first down |
+| Running Into Kicker | 5 | Defense |  |
+| Fair Catch Interference | 15 | Offense | Punts only |
+| Kick Catch Interference | 15 | Offense | Punts only |
+| Illegal Kick | 10 | Offense |  |
+| Holding | 10 | Offense |  |
+| Illegal Block in Back | 10 | Either |  |
+| Illegal Wedge Formation | 15 | Offense |  |
+| Leverage | 15 | Defense |  |
+| Illegal Bat | 10 | Either |  |
+| Targeting | 15 | Either |  |
+| Offside on Kick | 5 | Offense |  |
+| Illegal Touch | 5 | Offense |  |
+| Illegal Free Kick Formation | 5 | Offense |  |
+| Player Out of Bounds During Kick | 5 | Offense |  |
+| Kicker Simulating Being Roughed | 15 | Offense |  |
+| Clipping | 15 | Either |  |
+| Defensive Holding | 5 | Defense | Automatic first down |
+| Facemask | 15 | Defense | Automatic first down |
+| Blindside Block | 15 | Offense |  |
+| Too Many Men on Field | 5 | Either |  |
+| Unnecessary Roughness | 15 | Either |  |
+| Blocking Below the Waist | 15 | Offense |  |
+| Free Kick Out of Bounds | 5 | Offense |  |
 
-Viperball enforces stricter contact rules than traditional football in several areas, reflecting the sport's emphasis on rugby-style play and player safety:
+### After the play
 
-- **Kickpass receiver protection:** A player positioned to receive a kickpass is considered defenseless from the moment the kick is launched until the player has had a reasonable opportunity to secure the ball and brace for contact. Defenders may not initiate forceful contact during this window. Violation: 15 yards + automatic first down.
-- **Roughing the Zeroback:** The Zeroback receives protection similar to a passer. Defenders who make forceful contact after the Zeroback has released a lateral or kickpass are penalized. Violation: 15 yards + automatic first down.
-- **Lateral receiver protection:** Contact on a player before a lateral arrives is penalized to protect players in vulnerable catching positions during lateral chains. Violation: 10 yards + automatic first down.
-- **Excessive contact on lateral receiver:** Defenders may not deliver unnecessarily forceful hits to a player immediately after receiving a lateral while the player is still in the act of securing the ball. Violation: 15 yards + automatic first down.
-- **Kickpass interference:** Defenders may not impede a receiver's ability to position for a kickpass through contact or obstruction. This is Viperball's equivalent of pass interference. Violation: 15 yards + automatic first down.
+| Foul | Yards | On | Notes |
+|---|---|---|---|
+| Taunting | 15 | Either |  |
+| Unsportsmanlike Conduct | 15 | Either |  |
+| Late Hit | 15 | Defense |  |
+| Late Hit Out of Bounds | 15 | Defense |  |
+| Excessive Celebration | 15 | Offense |  |
+| Sideline Interference | 15 | Either |  |
+| Throwing Punch | 15 | Either |  |
+| Helmet-to-Helmet Contact | 15 | Either |  |
+| Bench Area Violation | 15 | Either |  |
+| Persons Illegally on Field | 15 | Either |  |
+| Player Not Returning Ball | 15 | Either |  |
+| Continued Play Without Helmet | 15 | Either |  |
+| Provoking Ill Will | 15 | Either |  |
+| Obscene Language | 15 | Either |  |
+| Removal of Helmet | 15 | Either |  |
+| Spiking the Ball | 15 | Either |  |
+| Piling On | 15 | Defense |  |
+| Fighting | 15 | Either |  |
 
-### Notes
-
-- Dead ball fouls are enforced before the next snap
-- Live ball fouls may be accepted or declined by the non-offending team
-- Multiple fouls on the same play: accepting team chooses which penalty to enforce
-- Personal fouls (targeting, unnecessary roughness, unsportsmanlike conduct) may result in ejection at referee's discretion
-- Two unsportsmanlike conduct penalties on the same player result in automatic ejection
-- "Too Many Men on Field" can be called both pre-snap and during live play
-
----
-
-## 24. Officials & Enforcement
-
-### Number and Roles
-
-A complete officiating crew consists of **seven officials**:
-
-1. **Referee (R):** Overall game authority, positioned behind the offensive backfield. Signals penalties, communicates with team captains, and makes final rulings on disputed calls.
-
-2. **Umpire (U):** Positioned behind the defensive line. Monitors line play, illegal blocks, and equipment violations.
-
-3. **Head Linesman (HL):** Positioned on one sideline at the line of scrimmage. Monitors offside, encroachment, and out-of-bounds on their sideline. Manages the chain crew.
-
-4. **Line Judge (LJ):** Positioned opposite the Head Linesman. Mirrors HL responsibilities on the opposite sideline. Monitors the play clock.
-
-5. **Field Judge (FJ):** Positioned deep downfield behind the defense. Monitors kicks, deep coverage, and scoring plays.
-
-6. **Side Judge (SJ):** Positioned deep on the sideline. Monitors kicks, counts defensive players, and watches for illegal formations.
-
-7. **Back Judge (BJ):** Positioned deep in the defensive backfield. Monitors kick coverage, tracks the Keeper position, and assists with field goal attempts.
-
-### Penalty Signals and Enforcement
-
-- Officials signal penalties using standard hand signals and verbal announcements
-- Yellow flags mark the spot of infractions
-- The Referee announces the penalty to both teams and the crowd
-- Distance penalties are measured from the appropriate enforcement spot using the chain crew
-
-### Acceptance and Declination
-
-- The non-offending team's captain may accept or decline most live-ball penalties
-- Dead-ball fouls and personal fouls are automatically enforced
-- Penalties that result in first downs or loss of downs cannot be declined if they benefit the non-offending team
-
-### Review System
-
-- **Coach's Challenges:** Each team receives two challenges per game. A third challenge is awarded if the first two are successful. Challenges require a timeout.
-- **Reviewable Plays:** Scoring plays, turnovers, spot of the ball, player down by contact, out-of-bounds, and certain penalties.
-- **Automatic Reviews:** All scoring plays and turnovers are automatically reviewed in the final two minutes of each half.
-- The Referee consults video replay and makes the final determination.
+<!-- /PENALTY_TABLE -->
 
 ---
 
-## 25. Player Safety
+## 16. Officials, Enforcement and Review
 
-### Intent
+### Crew
 
-Player safety is paramount. Viperball emphasizes rugby-style tackling and restricts dangerous play to protect participants at all levels.
+| Official | Watches |
+|---|---|
+| Referee | Final authority on all calls |
+| Umpire | The line of scrimmage |
+| Head Linesman | The down markers and one sideline |
+| Line Judge | The opposite sideline |
+| Back Judge | Deep plays and kicks through the uprights |
+| Side Judge | The Viper's alignment and contact on her |
 
-### Concussion Protocol
+The Side Judge is unique to Viperball because the Viper's pre snap freedom needs its own
+official. Crews differ in accuracy and consistency, and some lean slightly toward the home
+side on close calls.
 
-- Any player exhibiting signs of head injury must be immediately removed from play
-- A medical professional must evaluate the player before they may return
-- Players diagnosed with a concussion may not return to the same game
-- Teams must follow league-mandated return-to-play protocols for concussed players
+### Coach's challenge
 
-### Ejection Criteria
-
-Players shall be ejected for:
-- Targeting an opponent's head or neck area
-- Fighting or throwing punches
-- Repeated unsportsmanlike conduct (two unsportsmanlike penalties in one game)
-- Intentionally dangerous play as determined by the Referee
-- Leaving the bench during an on-field altercation
-
-### Dangerous Play Definitions
-
-**Targeting:** Leading with the crown of the helmet, launching into a defenseless player, or striking an opponent's head or neck area.
-
-**Blindside Block:** A block delivered from outside the opponent's field of vision that makes forceful contact with the head, neck, or torso.
-
-**Wedge Formation:** Three or more blockers grouped together in a coordinated blocking pattern on kickoffs or punts.
-
-**Clipping:** Blocking an opponent below the waist from behind.
-
-**Unnecessary Roughness:** Any act of excessive force beyond what is necessary to tackle or block.
-
-### Equipment Safety Requirements
-
-- **Helmets:** Strongly recommended for all competitive play; mandatory for organized leagues. Helmets must meet safety certification standards.
-- **Mouthguards:** Mandatory for all players.
-- **Pads:** Optional but recommended. Shoulder pads, rib pads, and thigh pads may be worn.
-- **Footwear:** Cleats with detachable studs are permitted. Metal spikes are prohibited.
-- **Viper Jersey:** The Viper must wear a distinctly colored jersey for identification purposes.
-
-### League Obligations
-
-- Leagues must provide certified athletic trainers or medical personnel at all games
-- Emergency action plans must be established for serious injuries
-- All coaches must complete certified tackling and safety training
-- Leagues must maintain injury reporting and tracking systems
+Each team has 3 challenges per game. A coach may challenge the spot of the ball, a turnover
+on downs, a fumble or interception ruling, a kick pass catch or a short touchdown.
+Penalties cannot be challenged. Inside the 3 minute warning, plays are reviewed
+automatically.
 
 ---
 
-## 26. Overtime Rules
+## 17. Overtime
 
-### Intent
-
-Overtime provides a fair method to determine a winner when regulation ends in a tie. The format emphasizes kicking skills consistent with Viperball's core philosophy.
-
-### Overtime Structure
-
-**Coin Toss:**
-- The Referee conducts a coin toss at midfield
-- The visiting team calls the toss
-- The winner chooses to kick or receive; the loser chooses the end of the field to defend
-
-**Sudden Victory:**
-- Overtime periods are sudden victory (first score wins)
-- Each team is guaranteed one possession unless the receiving team scores a touchdown on the first possession
-
-**Possession:**
-- The receiving team starts at their own 25-yard line
-- If the first possession results in a field goal, the opposing team receives one possession from their 25-yard line
-- If the second team matches the field goal, play continues with alternating possessions
-
-**Kicking Duel (Alternative Format):**
-- Teams alternate drop-kick field goal attempts from increasing distances
-- Start at the 25-yard line (35-yard attempt)
-- Each successful kick moves to the next distance: 30, 35, 40, 45, 50+ yard lines
-- First team to miss while the other succeeds loses
-- If both teams remain tied after five rounds, sudden-death kicking continues
-
-**Multiple Overtime Periods:**
-- If neither team has scored after one overtime period (10 minutes), a second period begins
-- After two overtime periods, the kicking duel format may be implemented
-- Ties are permitted in regular season play at league discretion
-
-**Timeouts:**
-- Each team receives one timeout per overtime period
-- Timeouts do not carry over between overtime periods
+- Regular season games tied after regulation end in a tie.
+- Postseason games (bowls and playoffs) go to overtime.
+- Each overtime period is 8 minutes. The visiting team receives first and possession
+  alternates each period. Each period starts from the receiving team's own 20.
+- Each team gets 4 fresh timeouts per period, and the 3 minute warning applies.
+- Periods continue until the tie is broken, up to five.
 
 ---
 
-## 27. Optional Variations
+## 18. Weather
 
-Leagues may experiment with:
+Games are played outdoors in six weather categories:
 
-- Substitution limits
-- Clock rules
-- Field-goal distance bonuses
-- Overtime formats
-
----
-
-## 28. Glossary
-
-**Cornerback:** One of two defensive players positioned wide to cover the perimeter and defend against sweeps and outside runs.
-
-**Drop Kick:** A kick executed by dropping the ball and kicking it immediately after it bounces off the ground. Worth 5 points when successfully kicked through the uprights.
-
-**Edge Defender:** One of two defensive players positioned outside the Line Anchors, responsible for containing the edge and pursuing ball carriers.
-
-**Halfback:** An offensive player who serves as a primary ball carrier. Must be present in every offensive formation.
-
-**Keeper:** The deepest defensive player, responsible for fielding missed field goals, serving as the last line of defense, and defending against deep kicks.
-
-**Lastback:** A defensive player positioned deep in the secondary, just in front of the Keeper. Provides run support and coverage against deep plays.
-
-**Lateral:** A backward or sideways pass. Laterals may be thrown at any time and remain live if they touch the ground.
-
-**Line Anchor:** One of three defensive linemen (Left Guard, Nose, Right Guard) who must align within one yard of the line of scrimmage and provide the foundation of the defensive front.
-
-**Shiftback:** An offensive player who aligns between the interior and perimeter and may shift position before the snap to create tactical advantages.
-
-**Spotback:** One of two defensive players positioned behind the Line Anchors, responsible for filling gaps and pursuing ball carriers.
-
-**Viper:** A uniquely designated offensive player who is alignment-exempt and wears a distinctly colored jersey. The Viper may position freely anywhere on the field and serves as a tactical wild card.
-
-**Wedge Formation:** An illegal formation where three or more blockers group together in a coordinated pattern. Prohibited due to safety concerns.
-
-**Wingback:** One of two offensive players (Left Wingback and Right Wingback) who must align outside the interior formation and provide perimeter blocking and receiving options.
-
-**Zeroback:** The primary offensive distributor, similar to a quarterback in traditional football. The Zeroback orchestrates plays and makes tactical decisions. Must be present in every offensive formation.
+| Weather | Effect |
+|---|---|
+| Clear | None |
+| Rain | More fumbles and muffs; less kick accuracy |
+| Snow | Much less kick accuracy; more fumbles; slower play |
+| Sleet | Worst conditions; extreme fumble risk; kicking badly hurt |
+| Extreme Heat | Faster fatigue; slightly more fumbles |
+| Heavy Wind | Kick accuracy and punt distance hurt; unpredictable ball flight |
 
 ---
 
-## 29. Version History
+## 19. Glossary
 
-### v1.1 — February 15, 2026
+**Bell:** half point score for recovering a loose ball. Play continues.
 
-**Major Additions:**
-- Added comprehensive Table of Contents with section links
-- Added Field Dimensions & Markings section (§13)
-- Added Clock Management section (§14)
-- Added Formation Diagrams with ASCII art (§18)
-- Added Snap Rules section (§19)
-- Added comprehensive Penalties section with full table (§23)
-- Added Officials & Enforcement section (§24)
-- Added Player Safety section (§25)
-- Added Overtime Rules section (§26)
-- Added Glossary defining all Viperball-specific terms (§28)
-- Added Kickoff Rules section (§8)
-- Added Turnover Mechanics section (§11)
+**Bonus possession:** an extra drive from the team's own 20 after it intercepts a kick
+pass or lateral.
 
-**Structural Improvements:**
-- Fixed section numbering (added § 1. Fundamentals)
-- Reorganized sections with consistent Intent/Rules formatting
-- Standardized all section headers and formatting
-- Improved consistency across all sections
+**Delta Yards:** the restart rule after a score. The receiving team starts at its own 20,
+minus its lead or plus its deficit in yards.
 
-**Content Fixes:**
-- Fixed typo: "field positiond." → "field position."
-- Completed truncated Origin paragraph
-- Completed truncated Players on the Field section
-- Completed all truncated Offensive Position descriptions (Linemen, Zeroback, Shiftback, Viper)
-- Completed all truncated Defensive Position descriptions (Line Anchors)
-- Expanded Restarts section with detailed kickoff rules
+**Drop kick (DK):** see snap kick.
 
-**Enhancements:**
-- Expanded clock management with detailed stoppage rules
-- Added formation diagrams showing standard offensive and defensive alignments
-- Added comprehensive penalty table with 20+ infractions
-- Added detailed officiating crew structure and review system
-- Added player safety protocols and equipment requirements
-- Added detailed overtime structure with multiple formats
+**Flanker:** a Halfback, Wingback or Slotback, the skill players of the midfield line.
 
-### v1.0 — Initial Release
+**Kick pass (KP):** a ball kicked to a teammate downfield.
 
-Original rulebook establishing core Viperball mechanics, scoring, positions, and gameplay structure.
+**Keeper:** one of the two deepest defenders. Fields missed kicks and returns them.
+
+**Lateral:** a backward or sideways pass, legal at any time in live play.
+
+**Lateral chain:** two or more laterals in a row on one play.
+
+**Midfield line:** the Viper and four flankers, who play offense and defense together.
+
+**Pindown:** one point for a kick into the end zone that is not returned out.
+
+**Place kick (PK):** see field goal.
+
+**Snap kick:** a 5 point drop kick through the uprights during live play.
+
+**Viper:** the free alignment skill player unique to Viperball.
+
+**Zeroback (ZB):** the player who takes the snap; primary runner, kicker and lateral chain
+starter.
 
 ---
 
-*Last updated: February 15, 2026*
+## 20. Version History
 
+### v2.0, November 24, 2026
+
+Rewritten to match the engine and the README after the 2026 rules changes.
+
+- Six downs to gain 20 yards (v1.1 said five).
+- Four 10 minute quarters (v1.1 said 12 to 15 minutes).
+- No kickoff: Delta Yards restarts after every score. The kickoff, touchback and onside
+  rules are removed.
+- Pindown (1 point) and bell (half a point) added to scoring.
+- Snap kick legal on any down, with the missed snap kick rule.
+- Kick pass, interception and bonus possession rules added.
+- 3 minute warning replaces the 2 minute warning.
+- Positions match the game: five line, Zeroback, Viper and four flankers on offense; five
+  line, two Keepers and four defensive backs on defense.
+- Midfield lines, live substitution, fatigue and work rate added.
+- Penalty table taken from the engine catalog.
+- Six officials, three challenges per game and the current overtime format.
+
+### v1.1, February 15, 2026
+
+Full sections for field, clock, formations, snap, penalties, officials, safety and
+overtime.
+
+### v1.0
+
+Original rulebook.

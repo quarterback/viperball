@@ -101,7 +101,7 @@ The game clock runs continuously with the following exceptions:
 - **Injuries** — clock stops; team charged a timeout if injury occurs in final 2 minutes of a half
 - **Official reviews** — clock stops
 
-Play clock between snaps runs 25 seconds. Delay of game is a 5-yard penalty.
+The offense has 40 seconds to snap. Delay of game is a 5 yard penalty and the down is replayed.
 
 ### Coach's Challenge
 
@@ -469,82 +469,29 @@ Missed field goals and missed snap kicks that travel into the field of play may 
 
 ## Penalties
 
-Viperball enforces a comprehensive penalty system across five phases of play. Penalties are enforced as yardage from the spot of the foul unless otherwise noted.
-
-### Pre-Snap Penalties
-
-| Penalty | Yards | On |
-|---|---|---|
-| False Start | 5 | Offense |
-| Offsides | 5 | Defense |
-| Delay of Game | 5 | Offense |
-| Illegal Formation | 5 | Offense |
-| Encroachment | 5 | Defense |
-| Too Many Men on Field | 5 | Either |
-| Illegal Substitution | 5 | Either |
-| Illegal Viper Alignment | 5 | Offense |
-
-### During-Play Penalties (Run)
+The full penalty table, with every foul the game can call, is in [RULES.md](RULES.md#15-penalties). It is built from the engine's penalty catalog. These are the fouls called most often:
 
 | Penalty | Yards | On | Notes |
 |---|---|---|---|
 | Holding | 10 | Offense | |
-| Illegal Block | 10 | Offense | |
-| Clipping | 15 | Offense | |
-| Chop Block | 15 | Offense | |
 | Defensive Holding | 5 | Defense | Automatic first down |
-| Facemask | 15 | Defense | Automatic first down |
-| Unnecessary Roughness | 15 | Either | |
-| Horse Collar | 15 | Defense | Automatic first down |
-| Personal Foul | 15 | Either | |
-| Tripping | 10 | Either | |
-
-### During-Play Penalties (Lateral)
-
-| Penalty | Yards | On | Notes |
-|---|---|---|---|
-| Holding | 10 | Offense | |
-| Illegal Forward Lateral | 5 | Offense | Loss of down |
 | Illegal Block in Back | 10 | Offense | |
-| Lateral Interference | 10 | Defense | Automatic first down |
-| Illegal Contact | 5 | Defense | Automatic first down |
-| Defensive Holding | 5 | Defense | Automatic first down |
 | Facemask | 15 | Defense | Automatic first down |
-| Clipping | 15 | Offense | |
-| Illegal Screen | 10 | Offense | |
-| Illegal Viper Contact | 10 | Defense | Automatic first down |
+| False Start | 5 | Offense | |
+| Offsides | 5 | Defense | |
 | Unnecessary Roughness | 15 | Either | |
-| Personal Foul | 15 | Either | |
-
-### During-Play Penalties (Kick)
-
-| Penalty | Yards | On | Notes |
-|---|---|---|---|
-| Roughing the Kicker | 15 | Defense | Automatic first down |
+| Too Many Men on Field | 5 | Either | |
 | Running Into Kicker | 5 | Defense | |
-| Fair Catch Interference | 15 | Defense | |
-| Kick Catch Interference | 15 | Defense | |
-| Illegal Kick | 10 | Offense | |
-| Holding | 10 | Offense | |
-| Illegal Block in Back | 10 | Either | |
+| Contact on Kickpass Receiver | 15 | Defense | Automatic first down |
+| Illegal Forward Lateral | 5 | Offense | Loss of down |
 
-### Post-Play Penalties
+Enforcement:
 
-| Penalty | Yards | On |
-|---|---|---|
-| Taunting | 15 | Either |
-| Unsportsmanlike Conduct | 15 | Either |
-| Late Hit | 15 | Defense |
-| Excessive Celebration | 15 | Offense |
-| Sideline Interference | 15 | Either |
-
-### Automatic First Down
-
-Certain defensive penalties award the offense an automatic new set of downs regardless of the yardage gained. These are marked in the tables above.
-
-### Loss of Down
-
-The **Illegal Forward Lateral** is the only penalty that carries a loss of down. This harsh punishment reflects the fundamental rule of Viperball: the ball may never travel forward through the air from a player's hand.
+- Penalties are enforced from the spot of the foul unless noted; post play fouls from the succeeding spot.
+- **Automatic first down** gives the offense a new set of downs whatever the distance.
+- **Loss of down** applies to four fouls, all about the ball going forward illegally: Illegal Forward Lateral, Double Forward Lateral, Illegal Double Kickpass and Kickpass Out of Bounds.
+- Live ball fouls may be accepted or declined by the team fouled against. An accepted live ball foul by the offense wipes out the play, including any score or change of possession on it.
+- Fair Catch Interference and Kick Catch Interference are fouls by the kicking team on punts.
 
 ---
 
