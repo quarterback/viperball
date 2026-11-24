@@ -32,3 +32,25 @@ Corrected run: https://github.com/quarterback/viperball/actions/runs/45310851890
 | Ride | 131 | 85 | 28.5% (1444) | 72.075 / 72.425 | 2/40 |
 
 Every selected Kick-In Press and Ride occurred on an opening snap; all 85 Ride activations occurred on turnover/bonus possessions. Enabled Blitz Pack had 13.2% hurry and 9.2% sack rates; base comparison 13.0% and 8.7%. Comparisons are within each scheme/attack pair, not causal comparisons across different attacking styles. Conditional short power gains against Fortress went from 4.14 to 4.64 yards (28 attempts each); long kick-pass gains against Lockdown went from 6.06 to 6.61 (272/279 attempts). These results do not establish the expected package benefits. Avoid tuning overall scoring to an arbitrary target; investigate conditional coverage and interior-run effects in a broader matched study. Physical rusher counts, full dynasty progression and live deployment verification remain outstanding. The merged engine is operational in full-game CI; balance and deployment are not certified.
+
+
+## Tactical calibration and physical rush personnel — November 24 UTC
+PR [#339](https://github.com/quarterback/viperball/pull/339) merged as e3446d9. The run/lateral/coverage contest now has bounded package-specific tradeoffs scaled by installation familiarity instead of an added package read bonus. On kick-pass attempts the engine commits two actual on-field defenders to the base rush, three on a normal blitz, and four on a Blitz Pack blitz (subject to available personnel). Remaining defenders cover; rushers cannot also be the matched coverage defender. Protection uses actual on-field blockers, and extra commitments increase pressure potential while conceding coverage space. The new `defensive_rush` game summary and `rush_event` play records include counts, names, pressure, hurries, sacks and completions. This does not model a spatial tracking system; counts are assignments within the simulated contest.
+
+**Evidence:** [final integrated run 45322016267](https://github.com/quarterback/viperball/actions/runs/45322016267), artifact 14887578008, seed 20261123. 600 full games, 24 games per condition (11 package/opponent pairs with packages on/off, plus three base-scheme controls), alternating two roster matchups. 16,603 resolved away-defense kick-pass attempts and 37,170 rusher commitments reconciled with play logs; no overlap between rush and coverage assignments. Results were identical to the preliminary run after the compatibility correction for teams without installed packages. Existing 174-test suite passed. No new test suite.
+
+### Matched results
+| Comparison | Packages off | Packages on |
+|---|---:|---:|
+| Lockdown long bracket vs Boot Raid: long-situation kick-pass yards/attempt | 10.35 (173) | 9.52 (183) |
+| Same: completion rate | 45.7% | 43.2% |
+| Lockdown long bracket vs Ground Pound: eligible inside-run yards/attempt | 6.56 (55) | 8.32 (65) |
+| Blitz short-yardage pressure vs Ground Pound: eligible inside-run yards/attempt | 9.00 (25) | 5.23 (26) |
+| Rugby rush line vs Lateral Spread: eligible sweep/speed/lateral yards/attempt | 2.91 (219) | 2.03 (210) |
+| Same: eligible kick-pass yards/attempt | 7.07 (531) | 7.63 (565) |
+| Drift prevent vs Shock & Awe: eligible kick-pass yards/attempt | 5.33 (344) | 3.40 (347) |
+| Same: eligible inside-run yards/attempt | 1.16 (19) | 2.32 (19) |
+
+Base-scheme controls against Boot Raid: Swarm pressure 31.9% (790 attempts), Lockdown 30.4% (773), Blitz Pack 38.8% (760). Within Blitz Pack, two rushers: 30.5% pressure, 11.8% sacks, 40.0% completion on non-sack releases (442 attempts); four: 50.3% pressure, 20.4% sacks, 43.1% completion on non-sack releases (318 attempts). These are descriptive conditional rates, not randomized per-snap comparisons. The four-rusher call adds seven percentage points to the pre-hurry completion model; greater pressure can still reduce overall completion.
+
+All nine packages activated. Goal-line stand, bracket, prevent, short-yardage pressure and rush-line effects broadly support their intended tradeoffs, but some cells are small and overall scoring differences are uncertain. Kick-In Press activated only ten times and produced no change in paired scores; Ride activated fifty times. Short Yardage Wall results were mixed. Do not claim universal optimization or force scoring targets. Further tuning of those rare situations should use larger dynasty samples rather than repeated narrow PR benchmarks. Full-season/dynasty and live deployment remain unverified. The stats-site agent can consume `full_result.defensive_rush` and `play_by_play[].rush_event` without changing the engine.
