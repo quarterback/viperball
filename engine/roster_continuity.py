@@ -32,3 +32,13 @@ def restore_finalized_rosters(teams, saved_rosters):
         restored[name] = players
     for name, players in restored.items():
         teams[name].players = players
+
+
+def retired_dispersal_sources(retired_programs, pending_programs, saved_rosters):
+    """Only disperse a retired program that has an actual saved roster or
+    a newly recorded retirement awaiting its first season boundary.
+    A roster generated from a program file on every start is not a new
+    pool of free agents from a previously frozen program.
+    """
+    return sorted(set(retired_programs) &
+                  (set(pending_programs) | set(saved_rosters or {})))

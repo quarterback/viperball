@@ -73,3 +73,24 @@ def test_invalid_saved_roster_does_not_partially_replace_other_team():
         )
     assert first.players == ["first old"]
     assert second.players == ["second old"]
+
+
+def test_frozen_program_is_not_a_repeated_dispersal_source():
+    from engine.roster_continuity import retired_dispersal_sources
+    retired = ["Coast Guard", "School"]
+    assert retired_dispersal_sources(retired, ["Coast Guard"], None) == ["Coast Guard"]
+    assert retired_dispersal_sources(retired, [], {"Active": [_card()]}) == []
+    assert retired_dispersal_sources(retired, [], {"School": [_card()]}) == ["School"]
+    assert retired_dispersal_sources(retired, ["Active"], None) == []
+
+
+def test_pending_retirement_survives_database_roundtrip():
+    dynasty = create_dynasty("Retirement", "Coach", "Active", starting_year=2026)
+    dynasty.retired_programs = ["Coast Guard"]
+    dynasty._pending_retired_dispersal = ["Coast Guard"]
+    data = json.loads(json.dumps(serialize_dynasty(dynasty)))
+    restored = deserialize_dynasty(data)
+    assert restored.retired_programs == ["Coast Guard"]
+    assert restored._pending_retired_dispersal == ["Coast Guard"]
+    data.pop("pending_retired_dispersal")
+    assert deserialize_dynasty(data)._pending_retired_dispersal == []

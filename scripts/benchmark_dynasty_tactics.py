@@ -55,7 +55,10 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
     scores = fr["final_score"]
     for side,name in (("home",game.home_team),("away",game.away_team)):
         if name not in teams:
-            continue
+            raise RuntimeError(f"Game includes inactive program: {name}")
+        stats = fr["stats"][side]
+        if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
+            raise RuntimeError(f"Score ledger mismatch for {name}")
         dc = fr["defensive_coach_tactics"][side]
         if not dc:
             raise RuntimeError("Active program without DC decisions: "+name)
@@ -124,7 +127,7 @@ def roster_fit(season, records):
                     mismatches.append({"team":name,"side":side,"package":pkg["package_id"]})
     return mismatches
 
-def run(seasons, nteams, seed, out):
+def run(seasons, nteams, seed, out, *, national=False):
     from fastapi.testclient import TestClient
     with tempfile.TemporaryDirectory(prefix="viperball-dynasty-") as tmp:
         os.environ["VIPERBALL_DB_PATH"] = str(Path(tmp)/"study.sqlite3")
@@ -133,7 +136,8 @@ def run(seasons, nteams, seed, out):
         from engine.recruiting import auto_recruit_team
         random.seed(seed)
         paths=sorted((ROOT/"data"/"teams").glob("*.json"))
-        selected=[paths[round(i*(len(paths)-1)/(nteams-1))] for i in range(nteams)]
+        selected = paths if national else [paths[round(i*(len(paths)-1)/(nteams-1))] for i in range(nteams)]
+        nteams = len(selected)
         league_dir=Path(tmp)/"teams"
         league_dir.mkdir()
         names=[]
@@ -156,10 +160,16 @@ def run(seasons, nteams, seed, out):
             return r.json()
         sid=post("/sessions")["session_id"]
         base=f"/sessions/{sid}"
-        post(base+"/dynasty",{"coach_team":human,"dynasty_name":"Tactical calibration",
-            "starting_year":2026,"conferences":conf,"games_per_team":12,
-            "playoff_size":4,"bowl_count":0,"history_years":0})
-        report={"seed":seed,"programs":names,"years":[],"transitions":[]}
+        payload={"coach_team":human,"dynasty_name":"Tactical calibration",
+            "starting_year":2026,"games_per_team":12,
+            "playoff_size":8 if national else 4,"bowl_count":0,"history_years":0}
+        if not national:
+            payload["conferences"] = conf
+        post(base+"/dynasty",payload)
+        source_names = set(names)
+        expected_active = None
+        report={"seed":seed,"national":national,"source_programs":names,
+                "requested_games_per_team":12,"years":[],"transitions":[]}
         out.mkdir(parents=True,exist_ok=True)
         def checkpoint():
             (out/"dynasty_results.json").write_text(json.dumps(report,indent=2,sort_keys=True))
@@ -170,11 +180,36 @@ def run(seasons, nteams, seed, out):
         expected_rosters=None
         for index in range(seasons):
             year=2026+index
-            post(base+"/dynasty/start-season",{"ai_seed":seed+year,"offense_style":"balanced","defense_style":"swarm"})
+            setup=post(base+"/dynasty/start-season",{"ai_seed":seed+year,"offense_style":"balanced","defense_style":"swarm"})
             sess=api.sessions[sid]
             dyn, season=sess["dynasty"],sess["season"]
-            if dyn.current_year!=year or len(season.teams)!=nteams:
-                raise RuntimeError("Wrong season or program count")
+            if dyn.current_year != year:
+                raise RuntimeError("Wrong dynasty year")
+            active = set(season.teams)
+            retired = set(getattr(dyn, "retired_programs", []) or [])
+            if national and index == 0:
+                auto_retired = setup.get("auto_retired")
+                # The playable dynasty requires even program counts. Verify
+                # its normal explicit retirement policy, never silently drop
+                # a school to manufacture a passing schedule.
+                permitted = {"Coast Guard", "Merchant Marine"}
+                if len(source_names) % 2:
+                    if auto_retired not in permitted or auto_retired not in retired:
+                        raise RuntimeError("Missing expected odd-league retirement")
+                    expected_active = source_names - {auto_retired}
+                else:
+                    expected_active = source_names
+            elif expected_active is None:
+                expected_active = source_names
+            if active != expected_active:
+                raise RuntimeError(f"Unexpected active programs: missing {sorted(expected_active-active)}, extra {sorted(active-expected_active)}")
+            names = sorted(active)
+            report["programs"] = names
+            report["retired_programs"] = sorted(retired)
+            report.setdefault("conference_sizes", {})[str(year)] = {
+                c: len(set(ts) & active) for c, ts in season.conferences.items()
+            }
+            checkpoint()
             # A completed generated schedule is not evidence that the
             # requested schedule was fulfilled.
             scheduled_counts = Counter()
@@ -182,6 +217,8 @@ def run(seasons, nteams, seed, out):
             weekly_slots = set()
             for game in season.schedule:
                 pair = tuple(sorted((game.home_team, game.away_team)))
+                if not set(pair) <= active:
+                    raise RuntimeError(f"Scheduled inactive or unknown program: {pair}")
                 if pair[0] == pair[1] or pair in scheduled_pairs:
                     raise RuntimeError(f"Invalid or duplicate matchup: {pair}")
                 scheduled_pairs.add(pair)
@@ -191,9 +228,16 @@ def run(seasons, nteams, seed, out):
                         raise RuntimeError(f"Double-booked program: {slot}")
                     weekly_slots.add(slot)
                     scheduled_counts[team] += 1
-            expected_games = min(12, nteams - 1)
+            expected_games = min(12, len(active) - 1)
             wrong = {t: scheduled_counts[t] for t in names
                      if scheduled_counts[t] != expected_games}
+            report.setdefault("schedule_preflight", {})[str(year)] = {
+                "active_programs": len(active), "requested_per_program": expected_games,
+                "scheduled_games": len(season.schedule),
+                "expected_games": len(active)*expected_games//2,
+                "wrong_quota": wrong,
+            }
+            checkpoint()
             if wrong:
                 raise RuntimeError(f"Schedule quota mismatch (expected {expected_games}): {wrong}")
             start=snapshot(season.teams)
@@ -212,16 +256,17 @@ def run(seasons, nteams, seed, out):
                 raise RuntimeError("Duplicate player identities: "
                                    +json.dumps(duplicate_identities,sort_keys=True))
             if expected_rosters is not None:
-                # Compare actual roster entries rather than a dictionary
-                # keyed by player ID, which can conceal duplicate identities.
-                actual={t:sorted(p.name for p in team.players) for t,team in season.teams.items()}
+                # Compare actual roster identities, names and positions rather
+                # than a dictionary that can conceal duplicate entries.
+                actual={t:sorted((p.player_id, p.name, p.position) for p in team.players)
+                        for t,team in season.teams.items()}
                 if actual!=expected_rosters:
                     differences={}
                     for t in sorted(set(actual) | set(expected_rosters)):
                         got=Counter(actual.get(t, []))
                         want=Counter(expected_rosters.get(t, []))
                         if got != want:
-                            differences[t]={"missing":dict(want-got),"extra":dict(got-want)}
+                            differences[t]={"missing":list((want-got).items()),"extra":list((got-want).items())}
                     raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
                                        +json.dumps(differences,sort_keys=True))
             staff=staff_ids(dyn)
@@ -247,7 +292,15 @@ def run(seasons, nteams, seed, out):
                 if g.completed and id(g) not in measured:
                     measured.add(id(g))
                     measure_game(g,year,groups,packages,season.teams,changes,None,dyn._team_installations)
-            units={t:deepcopy(r["defense"]) for t,r in dyn._team_installations.items()}
+            regular_count = sum(g.completed and bool(g.full_result) for g in season.schedule)
+            playoff_count = sum(g.completed and bool(g.full_result) for g in season.playoff_bracket)
+            if regular_count != len(season.schedule) or regular_count != len(active)*expected_games//2:
+                raise RuntimeError("Regular-season full-game count does not match schedule")
+            if playoff_count != payload["playoff_size"] - 1 or not season.champion:
+                raise RuntimeError("Incomplete playoff or missing champion")
+            if len(measured) != regular_count + playoff_count:
+                raise RuntimeError("Game measurement ledger does not reconcile")
+            units={t:deepcopy(r["defense"]) for t,r in dyn._team_installations.items() if t in active}
             installed=Counter(p["package_id"] for u in units.values() for p in u["packages"])
             roster_moves=[]
             if prev_rosters:
@@ -280,6 +333,8 @@ def run(seasons, nteams, seed, out):
                 for key in ("eligible", "selected", "secondary_selected"):
                     bucket[key + "_calls"] = packages[pid].get(key, 0)
             fit=roster_fit(season,dyn._team_installations)
+            if fit:
+                raise RuntimeError(f"Installed packages violate roster fit: {fit}")
             item={"year":year,"regular_games":sum(g.completed for g in season.schedule),
                   "playoff_games":sum(g.completed for g in season.playoff_bracket),
                   "champion":season.champion,"schedule_counts":{t:sum(t in (g.home_team,g.away_team) for g in season.schedule) for t in names},
@@ -288,6 +343,8 @@ def run(seasons, nteams, seed, out):
                   "defensive_adoption_funnel":{k:dict(v) for k,v in funnel.items()},
                   "roster_fit_mismatches":fit,"roster_moves":roster_moves,
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
+            item["active_programs"] = len(active)
+            item["retired_programs"] = sorted(retired)
             report["years"].append(item)
             checkpoint()
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],
@@ -325,13 +382,20 @@ def run(seasons, nteams, seed, out):
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
             expected_pipeline=dyn._hs_pipeline.save_state() if dyn._hs_pipeline else None
+            expected_dispersal=list(dyn._pending_retired_dispersal)
+            if expected_dispersal:
+                raise RuntimeError(f"Unexpected pending retirements after season: {expected_dispersal}")
             saved_rosters=deepcopy(dyn._next_season_rosters)
-            expected_rosters={t:sorted((r["first_name"]+" "+r["last_name"]) for r in rows)
+            if set(saved_rosters) != active:
+                raise RuntimeError(f"Offseason saved roster program mismatch: extra={sorted(set(saved_rosters)-active)}, missing={sorted(active-set(saved_rosters))}")
+            expected_rosters={t:sorted((r.get("player_id", ""), r["first_name"]+" "+r["last_name"], r["position"]) for r in rows)
                               for t,rows in saved_rosters.items()}
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
                 raise RuntimeError("Application DB roundtrip lost installation, staff or roster")
             loaded_pipeline=loaded._hs_pipeline.save_state() if loaded._hs_pipeline else None
+            if loaded._pending_retired_dispersal != expected_dispersal or set(loaded.retired_programs) != retired:
+                raise RuntimeError("Application DB roundtrip lost program retirement state")
             if loaded_pipeline != expected_pipeline:
                 raise RuntimeError("Application DB roundtrip lost high school pipeline state")
             # Reload into the live session via the actual endpoint and continue.
@@ -356,7 +420,8 @@ if __name__=="__main__":
     p.add_argument("--teams",type=int,default=16)
     p.add_argument("--seed",type=int,default=20261124)
     p.add_argument("--out",default="reports/dynasty-calibration")
+    p.add_argument("--national",action="store_true",help="Use all actual college program files and default conference alignment")
     a=p.parse_args()
-    if a.teams<16 or a.teams%4 or a.seasons<2:
-        p.error("Use at least 16 teams divisible by four and at least two seasons")
-    run(a.seasons,a.teams,a.seed,Path(a.out))
+    if a.seasons<2 or (not a.national and (a.teams<16 or a.teams%4)):
+        p.error("Use at least two seasons; reduced leagues need at least 16 teams divisible by four")
+    run(a.seasons,a.teams,a.seed,Path(a.out),national=a.national)

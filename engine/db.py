@@ -1381,6 +1381,7 @@ def serialize_dynasty(dynasty) -> dict:
     # Program registry: custom (added) programs + retired (frozen) program names.
     data["custom_programs"] = list(getattr(dynasty, "custom_programs", []) or [])
     data["retired_programs"] = list(getattr(dynasty, "retired_programs", []) or [])
+    data["pending_retired_dispersal"] = list(dynasty._pending_retired_dispersal)
 
     # Career tracker (alumni / hall-of-fame data)
     tracker = getattr(dynasty, 'career_tracker', None)
@@ -1481,6 +1482,7 @@ def deserialize_dynasty(data: dict):
 
     dynasty.custom_programs = list(data.get("custom_programs", []) or [])
     dynasty.retired_programs = list(data.get("retired_programs", []) or [])
+    dynasty._pending_retired_dispersal = list(data.get("pending_retired_dispersal", []) or [])
 
     # Career tracker (alumni / hall-of-fame data)
     if data.get("career_tracker"):
