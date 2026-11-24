@@ -257,6 +257,39 @@ def _carryover(side: str, unit: dict, new_card: Any, staff: dict, previous_staff
     return min(CARRYOVER_CAP, fam)
 
 
+def _package_preference_score(side: str, family: str, card: Any):
+    """Use the same preference calculation for selection and diagnostics."""
+    from engine import playbook_catalog as pc
+    bias = _offense_bias(card) if side == "offense" else {}
+
+    def score(pid):
+        pkg = pc.get_package(pid)
+        s = 0.0
+        for key, tag_field in _PACKAGE_TAGS.items():
+            s += sum(bias.get(key, {}).get(t, 0.0) for t in pkg.get(tag_field, []))
+        if side == "defense":
+            from engine.defensive_commitments import PRESS_PACKAGES, COVER_PACKAGES, WALL_PACKAGES
+            defense = _profile(card).get("defense", {})
+            pressure = float(defense.get("pressure_bias", 0.0))
+            support = float(defense.get("run_support_bias", 0.0))
+            focus = defense.get("coverage_focus", "")
+            if pid in PRESS_PACKAGES:
+                s += pressure
+            elif pid in COVER_PACKAGES:
+                s -= pressure
+                s += .04 if focus in ("deep", "intermediate", "perimeter") else 0.0
+            elif pid in WALL_PACKAGES:
+                s += support
+            # Keep the program's native book a meaningful consideration.
+            if pkg["origin_family"] == family:
+                s += .06
+        if pkg["origin_family"] == family:
+            s += 0.01   # tie break toward the home book's own packages
+        return s
+
+    return score
+
+
 def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
                      year: Optional[int]) -> None:
     """Keep what still fits this book and roster; let a new coordinator add
@@ -277,32 +310,7 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
     coach_id = _coach_id(card)
     already_by_coach = sum(1 for p in kept if p.get("installed_by") == coach_id)
     if coach_id and already_by_coach < PACKAGES_PER_COORDINATOR:
-        bias = _offense_bias(card) if side == "offense" else {}
-
-        def score(pid):
-            pkg = pc.get_package(pid)
-            s = 0.0
-            for key, tag_field in _PACKAGE_TAGS.items():
-                s += sum(bias.get(key, {}).get(t, 0.0) for t in pkg.get(tag_field, []))
-            if side == "defense":
-                from engine.defensive_commitments import PRESS_PACKAGES, COVER_PACKAGES, WALL_PACKAGES
-                defense = _profile(card).get("defense", {})
-                pressure = float(defense.get("pressure_bias", 0.0))
-                support = float(defense.get("run_support_bias", 0.0))
-                focus = defense.get("coverage_focus", "")
-                if pid in PRESS_PACKAGES:
-                    s += pressure
-                elif pid in COVER_PACKAGES:
-                    s -= pressure
-                    s += .04 if focus in ("deep", "intermediate", "perimeter") else 0.0
-                elif pid in WALL_PACKAGES:
-                    s += support
-                # Keep the program's native book a meaningful consideration.
-                if pkg["origin_family"] == family:
-                    s += .06
-            if pkg["origin_family"] == family:
-                s += 0.01   # tie break toward the home book's own packages
-            return s
+        score = _package_preference_score(side, family, card)
 
         ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: (-score(pid), pid))
         if side == "offense":
@@ -312,6 +320,56 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
                          "installed_by": coach_id, "installed_year": year})
     kept.sort(key=lambda p: (-p.get("familiarity", 0.0), p["package_id"]))
     unit["packages"] = kept[:MAX_PACKAGES]
+
+
+def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict:
+    """Explain package adoption without changing the saved unit or call weights.
+
+    This is a snapshot, not a reconstruction of a past installation decision.
+    Scores are the current ranking inputs; retained familiarity and available
+    slots can explain why a higher-scoring package is not installed.
+    """
+    from engine import playbook_catalog as pc
+    from engine.game_engine import DEFENSE_STYLES
+    family = unit.get("family", "")
+    installed = {p["package_id"]: p for p in unit.get("packages", [])}
+    all_ids = sorted({p["package_id"] for scheme in DEFENSE_STYLES
+                      for p in pc.list_compatible_packages("defense", scheme)})
+    fits = {p["package_id"]: p for p in pc.packages_for_roster(
+        "defense", family, team_stats)}
+    score = _package_preference_score("defense", family, card)
+    callable_now = evaluable_situations()
+    rows = {}
+    for pid in all_ids:
+        fit = fits.get(pid)
+        compatible = fit is not None
+        personnel_ok = bool(fit and fit["meets_personnel"])
+        callable_tag = bool(fit and set(fit["situation_tags"]) & callable_now)
+        record = installed.get(pid)
+        rows[pid] = {
+            "compatible": compatible,
+            "personnel_ok": personnel_ok,
+            "missing_personnel": fit["missing_personnel"] if fit else [],
+            "callable": callable_tag,
+            "preference_score": round(score(pid), 6) if compatible else None,
+            "installed": record is not None,
+            "familiarity": record.get("familiarity") if record else None,
+            "installed_by_current_dc": bool(record and
+                record.get("installed_by") == _coach_id(card)),
+        }
+    eligible = sorted((pid for pid, row in rows.items()
+                       if row["personnel_ok"] and row["callable"]),
+                      key=lambda pid: (-score(pid), pid))
+    for rank, pid in enumerate(eligible, 1):
+        rows[pid]["preference_rank"] = rank
+    return {
+        "family": family,
+        "coach_id": _coach_id(card),
+        "installed_count": len(installed),
+        "current_dc_installed_count": sum(
+            p.get("installed_by") == _coach_id(card) for p in installed.values()),
+        "packages": rows,
+    }
 
 
 def sync_installation(installations: Dict[str, dict], team_name: str, staff: Optional[dict],

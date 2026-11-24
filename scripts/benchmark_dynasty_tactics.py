@@ -231,18 +231,43 @@ def run(seasons, nteams, seed, out):
                         "departures":len(set(previous)-set(rows)),
                         "retained_stamina_delta":average([rows[k]["stamina"]-previous[k]["stamina"] for k in keep]),
                         "retained_tackling_delta":average([rows[k]["tackling"]-previous[k]["tackling"] for k in keep])})
+            from engine.team_installation import (
+                defensive_adoption_snapshot, league_roster_profiles)
+            profiles = league_roster_profiles(season.teams)
+            adoption = {}
+            funnel = defaultdict(Counter)
+            for name, unit in units.items():
+                card = dyn._coaching_staffs.get(name, {}).get("dc")
+                snap = defensive_adoption_snapshot(unit, card, profiles.get(name, {}))
+                adoption[name] = snap
+                for pid, row in snap["packages"].items():
+                    bucket = funnel[pid]
+                    bucket["programs"] += 1
+                    for key in ("compatible", "personnel_ok", "callable", "installed",
+                                "installed_by_current_dc"):
+                        bucket[key] += int(row[key])
+                    bucket["installable"] += int(row["personnel_ok"] and row["callable"])
+                    if row["personnel_ok"] and row["callable"] and not row["installed"]:
+                        bucket["qualified_not_installed"] += 1
+            for pid, bucket in funnel.items():
+                for key in ("eligible", "selected", "secondary_selected"):
+                    bucket[key + "_calls"] = packages[pid].get(key, 0)
             fit=roster_fit(season,dyn._team_installations)
             item={"year":year,"regular_games":sum(g.completed for g in season.schedule),
                   "playoff_games":sum(g.completed for g in season.playoff_bracket),
                   "champion":season.champion,"schedule_counts":{t:sum(t in (g.home_team,g.away_team) for g in season.schedule) for t in names},
                   "dc_changes":sorted(changes),"staff":staff,"first_units":first_units,"end_units":units,
-                  "installed":dict(installed),"roster_fit_mismatches":fit,"roster_moves":roster_moves,
+                  "installed":dict(installed),"defensive_adoption":adoption,
+                  "defensive_adoption_funnel":{k:dict(v) for k,v in funnel.items()},
+                  "roster_fit_mismatches":fit,"roster_moves":roster_moves,
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
             report["years"].append(item)
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],
                 "DC_changes",len(changes),"installed",sum(installed.values()),"package_ids",len(installed),
                 "fit_mismatches",len(fit),"calls",sum(v.get("selected",0) for v in packages.values()),
                 "rush",dict(groups["rush_total"]),"mean_carry",weekly[-1]["mean_carry"],flush=True)
+            for pid, values in sorted(funnel.items()):
+                print("ADOPTION",year,pid,dict(values),flush=True)
             for key,g in sorted(packages.items()):
                 print("PACKAGE",year,key,dict(g),flush=True)
             for key,g in sorted(groups.items()):
