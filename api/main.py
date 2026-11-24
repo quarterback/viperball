@@ -2850,6 +2850,7 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
                 if not getattr(dynasty, "retired_programs", None):
                     dynasty.retired_programs = []
                 dynasty.retired_programs.append(_cand)
+                dynasty._pending_retired_dispersal.append(_cand)
                 for _conf in dynasty.conferences.values():
                     if _cand in _conf.teams:
                         _conf.teams.remove(_cand)
@@ -2866,12 +2867,15 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     retired = set(getattr(dynasty, "retired_programs", []) or [])
+    from engine.roster_continuity import retired_dispersal_sources
+    dispersal_sources = retired_dispersal_sources(
+        retired, dynasty._pending_retired_dispersal, next_rosters)
     if retired:
-        # Don't delete a retired program's non-graduating players — randomly
+        # Don't delete a newly retired program's non-graduating players — randomly
         # reassign them to active teams (free-agent dispersal). Coaches stay
         # attached to the frozen program (preserved, not deleted).
         leftovers = []
-        for rt in retired:
+        for rt in dispersal_sources:
             rteam = teams.get(rt)
             if rteam:
                 for p in rteam.players:
@@ -2969,6 +2973,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         _status["auto_retired"] = auto_retired
     if next_rosters:
         dynasty._next_season_rosters = None
+    dynasty._pending_retired_dispersal = [
+        t for t in dynasty._pending_retired_dispersal if t not in dispersal_sources]
     return _status
 
 
@@ -3072,8 +3078,11 @@ def retire_program(session_id: str, req: ProgramRequest):
     dynasty = _require_dynasty(session)
     if not hasattr(dynasty, "retired_programs") or dynasty.retired_programs is None:
         dynasty.retired_programs = []
+    if req.team == dynasty.coach.team_name:
+        raise HTTPException(status_code=400, detail="Cannot retire the human-coached program")
     if req.team not in dynasty.retired_programs:
         dynasty.retired_programs.append(req.team)
+        dynasty._pending_retired_dispersal.append(req.team)
     for conf in dynasty.conferences.values():
         if req.team in conf.teams:
             conf.teams.remove(req.team)
@@ -3092,6 +3101,7 @@ def restore_program(session_id: str, req: ProgramRequest):
     if req.team in retired:
         retired.remove(req.team)
     dynasty.retired_programs = retired
+    dynasty._pending_retired_dispersal = [t for t in dynasty._pending_retired_dispersal if t != req.team]
     conf = req.conference or (next(iter(dynasty.conferences), None))
     if conf:
         if conf not in dynasty.conferences:
@@ -3187,6 +3197,8 @@ def dynasty_advance(session_id: str):
 
     dynasty._nil_programs = {}
     for team_name in dynasty.team_histories:
+        if team_name in (getattr(dynasty, "retired_programs", []) or []):
+            continue
         prestige = dynasty.team_prestige.get(team_name, 50)
         state = ""
         for conf in dynasty.conferences.values():
@@ -3850,8 +3862,9 @@ def offseason_portal_resolve(session_id: str):
     rng = random.Random(dynasty.current_year + 11)
     team_regions = dynasty._estimate_team_regions()
 
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
     for team_name in dynasty.team_histories:
-        if team_name == human_team:
+        if team_name == human_team or team_name in retired:
             continue
         prestige = dynasty.team_prestige.get(team_name, 50)
         nil_prog = dynasty._nil_programs.get(team_name)
@@ -3866,6 +3879,10 @@ def offseason_portal_resolve(session_id: str):
             rng=rng,
         )
 
+    # Discard stale offers from programs frozen since the board was created.
+    for entry in portal.entries:
+        entry.offers = [t for t in entry.offers if t not in retired]
+        entry.nil_offers = {t: v for t, v in entry.nil_offers.items() if t not in retired}
     portal_result = portal.resolve_all(
         team_prestige=dynasty.team_prestige,
         team_regions=team_regions,
@@ -4048,8 +4065,9 @@ def offseason_recruiting_resolve(session_id: str):
     for tn, cards in player_cards.items():
         team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
 
+    retired = set(getattr(dynasty, "retired_programs", []) or [])
     for team_name in dynasty.team_histories:
-        if team_name == human_team:
+        if team_name == human_team or team_name in retired:
             continue
         prestige = dynasty.team_prestige.get(team_name, 50)
         nil_prog = dynasty._nil_programs.get(team_name)
@@ -4080,7 +4098,7 @@ def offseason_recruiting_resolve(session_id: str):
         boards[team_name] = board
         all_nil[team_name] = nil
 
-    recruiting_prestige = dict(dynasty.team_prestige)
+    recruiting_prestige = {t: dynasty.team_prestige.get(t, 50) for t in boards}
     dq_boosts_off = offseason.get("dq_boosts", {})
     recruit_boost = dq_boosts_off.get("recruiting", 0)
     if recruit_boost > 0 and human_team in recruiting_prestige:
