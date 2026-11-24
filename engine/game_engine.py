@@ -212,6 +212,9 @@ V2_ENGINE_CONFIG = {
     # Penalty level.  1.0 gave about 14 accepted flags and 135 yards per team
     # per game, more than twice the NCAA's 6 (Action Network, 2020 to 2024).
     "penalty_rate_scale": 1.0,
+    # Share of the rush contest's pressure that ends in a sack (see the kick
+    # pass rush check).  Pressure itself is unchanged.
+    "sack_rate_scale": 0.55,
     "penalty_bad_weather_scale": 1.2,
     "penalty_heat_scale": 1.1,
 }
@@ -12467,7 +12470,11 @@ class ViperballEngine:
         # One rush contest: sack, non-sack hurry, or clean release. The
         # hurry band shares the same protection/release probability as sacks.
         rush_roll = random.random()
+        # The contest decides pressure; sack_rate_scale decides how much of
+        # it ends in a sack.  Unscaled, 12.5% of kick passes were sacks (about
+        # twice the 6 to 7% of dropbacks in football) with pressure on 32%.
         hurry_threshold = min(0.75, sack_base_rate * 2.5)
+        sack_base_rate *= V2_ENGINE_CONFIG.get("sack_rate_scale", 1.0)
         for committed in rush_plan["rushers"]:
             self.drain_player_energy(committed, "lineman")
             if (self._active_dc_call().get("package_id") == "predator_exhaustion_press"):
