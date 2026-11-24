@@ -409,6 +409,8 @@ def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict
     return {
         "family": family,
         "coach_id": _coach_id(card),
+        "coverage_focus": defense.get("coverage_focus"),
+        "read_focus": list(defense.get("read_focus") or ()),
         "installed_count": len(installed),
         "current_dc_installed_count": sum(
             p.get("installed_by") == _coach_id(card) for p in installed.values()),
