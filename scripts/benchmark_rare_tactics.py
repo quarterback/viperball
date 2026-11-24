@@ -95,8 +95,15 @@ class Study:
             self.probe(engine, formation, "controlled_tired_offense", energy=65)
         if self.case == "exhaustion" and context["drive_play_index"] <= 3:
             self.probe(engine, formation, "controlled_moderate_offense", energy=78)
+        # Compare defender readiness at identical offensive energy and
+        # source states; these are enriched replays, not natural calls.
+        if self.case == "exhaustion" and "early_down" in tags:
+            for oe in (65, 72):
+                for de in (90, 65, 50):
+                    self.probe(engine, formation, f"relative_{oe}_{de}",
+                               energy=oe, defense_energy=de)
 
-    def probe(self, engine, formation, scenario, energy=None):
+    def probe(self, engine, formation, scenario, energy=None, defense_energy=None):
         if self.taken[scenario] >= self.cap or self.per_game[scenario] >= 4:
             return
         n = self.taken[scenario]
@@ -113,6 +120,9 @@ class Study:
                 if energy is not None:
                     for p in clone.home_team.players:
                         p.game_energy = float(energy)
+                if defense_energy is not None:
+                    for p in clone.away_team.players:
+                        p.game_energy = float(defense_energy)
                 clone.probe_package_mode = "off" if arm == "off" else None
                 if arm == "on":
                     clone._defensive_package_rng["away"] = AlwaysActivate()
@@ -141,6 +151,18 @@ class Study:
                 if rush:
                     summarize_rush(g, rush)
                     g["intended_rushers"] += rush["intended_rusher_count"]
+                    for field in ("rusher_energy", "blocker_energy", "rush_skill",
+                                  "protection_skill", "sack_probability",
+                                  "completion_before", "package_coverage_delta",
+                                  "coverage_cost"):
+                        value = rush.get(field)
+                        if value is not None:
+                            g[field + "_observations"] += 1
+                            g[field + "_milli"] += round(1000 * value)
+                    if rush.get("rusher_energy") is not None and rush.get("blocker_energy") is not None:
+                        g["relative_energy_observations"] += 1
+                        g["relative_energy_milli"] += round(1000 * (
+                            rush["rusher_energy"] - rush["blocker_energy"]))
                 results[arm] = (play.yards_gained, int(rush.get("pressure", False)),
                                 int(rush.get("completed", False)), before-after)
             base = "2" if self.case == "overload" else "off"
@@ -208,7 +230,11 @@ def report(result):
                   "released_completion",rate("completions",attempts-g.get("sack",0)),
                   "rushers",rate("rushers",attempts),
                   "energy_loss",round(g.get("defense_energy_loss_milli",0)/n/1000,3),
-                  "explosive",rate("explosives",n))
+                  "explosive",rate("explosives",n),
+                  "rusher_energy",rate("rusher_energy_milli",1000*g.get("rusher_energy_observations",0)),
+                  "blocker_energy",rate("blocker_energy_milli",1000*g.get("blocker_energy_observations",0)),
+                  "sack_probability",rate("sack_probability_milli",1000*g.get("sack_probability_observations",0)),
+                  "coverage_cost",rate("coverage_cost_milli",1000*g.get("coverage_cost_observations",0)))
         for key,g in sorted(data["paired"].items()):
             n = g["pairs"]
             print("PAIR",key,"n",n, "yards_delta",round(g["yards_delta"]/n,3),
