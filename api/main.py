@@ -207,7 +207,6 @@ _stats_app.include_router(stats_router)
 
 # Serve generated pixel-art face images at /stats/static/faces/<player_id>.png
 from starlette.staticfiles import StaticFiles as _StaticFiles
-from starlette.exceptions import HTTPException as _StarletteHTTPException
 _STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "stats_site", "static")
 os.makedirs(os.path.join(_STATIC_DIR, "faces"), exist_ok=True)
 _stats_app.mount("/static", _StaticFiles(directory=_STATIC_DIR), name="stats-static")
@@ -218,34 +217,21 @@ app.mount("/stats", _stats_app)
 from api.saves_api import router as _saves_router
 app.include_router(_saves_router)
 
-# ─── Serve the React SPA at /app (strangler migration target) ───
-# Built by the Docker web stage to web/dist (base="/app/"). A 404 inside the
-# mount falls back to index.html so client-side routes (/app/league, …) work.
-class _SPAStaticFiles(_StaticFiles):
-    async def get_response(self, path, scope):
-        # Starlette's StaticFiles RAISES HTTPException(404) for missing paths
-        # (it does not return a 404 response), so deep links / hard refreshes on
-        # client-side routes (/app/dq, /app/league, …) must catch the exception
-        # and fall back to index.html — checking response.status_code misses it.
-        try:
-            response = await super().get_response(path, scope)
-        except _StarletteHTTPException as exc:
-            if exc.status_code == 404:
-                return await super().get_response("index.html", scope)
-            raise
-        if response.status_code == 404:
-            return await super().get_response("index.html", scope)
-        return response
+# ─── /app was the React workbench, retired 2026-11; send old links to /stats ───
+_APP_REDIRECTS = {
+    "league": "/stats/college/", "dynasty": "/stats/dynasty/", "pro": "/stats/pro/",
+    "wvl": "/stats/wvl/", "international": "/stats/international/", "fiv": "/stats/international/",
+    "saves": "/stats/saves", "my-team": "/stats/my-team/", "recruiting": "/stats/dynasty/",
+    "game-sim": "/stats/game-sim", "compare": "/stats/compare", "export": "/stats/export",
+    "dq": "/stats/college/",
+}
 
-_SPA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web", "dist")
-if os.path.isdir(_SPA_DIR):
-    @app.get("/app", include_in_schema=False)
-    def _app_redirect():
-        return RedirectResponse("/app/", status_code=301)
-    app.mount("/app", _SPAStaticFiles(directory=_SPA_DIR, html=True), name="spa")
-    logging.getLogger("viperball.api").info("React SPA mounted at /app")
-else:
-    logging.getLogger("viperball.api").info("React SPA not built (web/dist missing) — /app disabled")
+
+@app.get("/app", include_in_schema=False)
+@app.get("/app/{rest:path}", include_in_schema=False)
+def _retired_app(rest: str = ""):
+    return RedirectResponse(_APP_REDIRECTS.get(rest.split("/", 1)[0], "/stats/"), status_code=301)
+
 
 TEAMS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "teams")
 

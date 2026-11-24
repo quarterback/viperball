@@ -47,5 +47,5 @@ below is checked.
 - [x] Export
 
 ### Removal
-- [ ] Delete `web/`, the Node stage in `Dockerfile`, the `/app` mount in `api/main.py`
-- [ ] Redirect `/app/*` to `/stats/`
+- [x] Delete `web/`, the Node stage in `Dockerfile`, the `/app` mount in `api/main.py`
+- [x] Redirect `/app/*` to `/stats/`

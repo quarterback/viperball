@@ -440,6 +440,35 @@
 </div>
 {% endif %}
 
+{# ── Installation: what the program has learned of its coordinators' systems ── #}
+{% if installation and (installation.offense or installation.defense) %}
+{% macro inst_bar(label, v) %}
+<div class="inst-bar"><span>{{ label }}</span><span class="inst-track"><span style="width:{{ ((v or 0) * 100) | round | int }}%"></span></span><span class="inst-pct">{{ ((v or 0) * 100) | round | int }}%</span></div>
+{% endmacro %}
+<style>
+.inst-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 28px; }
+.inst-bar { display: grid; grid-template-columns: 1fr 140px 44px; gap: 10px; align-items: center; font-size: 14px; margin: 6px 0; }
+.inst-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.inst-track span { display: block; height: 100%; background: var(--accent); }
+.inst-pct { text-align: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.inst-note { font-size: 13px; color: var(--fg-dim); margin: 8px 0 12px; }
+</style>
+<h2>Installation</h2>
+<div class="inst-grid">
+{% for side, title in [('offense', 'Offense'), ('defense', 'Defense')] %}{% set u = installation[side] %}
+{% if u %}
+<div>
+  <h3>{{ title }}: {{ (u.family or '') | replace('_', ' ') | title }}{% if u.signature %}, {{ u.signature | replace('_', ' ') | title }}{% endif %}</h3>
+  {{ inst_bar("Knows the coordinator's system", u.familiarity) }}
+  {{ inst_bar("Knows the base book", u.family_familiarity) }}
+  <p class="inst-note">{{ u.seasons_together }} season{{ '' if u.seasons_together == 1 else 's' }} together. The coordinator's tendencies show at {{ ((u.execution_factor or 0) * 100) | round | int }}% strength.{% if u.vestigial %} Old habits: {% for v in u.vestigial %}{{ v.signature | replace('_', ' ') | title }} ({{ ((v.weight or 0) * 100) | round | int }}%){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}</p>
+  {% if u.packages %}{% for pk in u.packages %}{{ inst_bar(pk.name, pk.familiarity) }}{% endfor %}{% else %}<p class="inst-note">No packages installed.</p>{% endif %}
+</div>
+{% endif %}
+{% endfor %}
+</div>
+{% endif %}
+
 {# ── Academic Profile ── #}
 {% if academics and academics.median_gpa %}
 <div>

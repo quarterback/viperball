@@ -15,14 +15,14 @@ router = APIRouter()
 # ─── Deprecated: /stats recruiting hub ───────────────────────────
 # This recruiting flow was only meant to be an editor but ended up recreating
 # a parallel, disconnected recruiting pool (changes here never landed on rosters
-# in the running game). Recruiting editing/assignment now lives in the app
-# (viperball.fly.dev/app — Dynasty → offseason), operating on the live session.
+# in the running game). Recruiting editing and assignment live on the dynasty
+# hub (/stats/dynasty/{sid}/), operating on the live session.
 # Registered before the routes below so it shadows the whole /recruiting/* tree.
 @router.api_route("/recruiting", methods=["GET", "POST"], include_in_schema=False)
 @router.api_route("/recruiting/", methods=["GET", "POST"], include_in_schema=False)
 @router.api_route("/recruiting/{rest:path}", methods=["GET", "POST"], include_in_schema=False)
 def _recruiting_deprecated(rest: str = ""):
-    return RedirectResponse("/app/dynasty", status_code=307)
+    return RedirectResponse("/stats/dynasty/", status_code=307)
 
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -1136,6 +1136,14 @@ def export_page(request: Request):
     ))
 
 
+def _installation_for(season, team_name):
+    try:
+        from api.main import _team_installation_summary
+        return _team_installation_summary(season, team_name) or None
+    except Exception:
+        return None
+
+
 def _season_portal(session_id):
     from api.main import season_portal_get
     try:
@@ -2157,6 +2165,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         season_history=season_history,
         academics=academics,
         team_chemistry=team_chemistry,
+        installation=_installation_for(season, team_name),
         phase=sess.get("phase"),
     ))
 
