@@ -8,6 +8,7 @@ on:
       - engine/defensive_commitments.py
       - data/playbooks/packages.json
       - scripts/benchmark_defensive_packages.py
+      - scripts/benchmark_rare_tactics.py
       - .github/workflows/engine-integrated-calibration.yml
   workflow_dispatch:
 jobs:
@@ -18,12 +19,27 @@ jobs:
       PYTHONHASHSEED: "0"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - name: Combined engine smoke and calibration
-        run: python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -q '^scripts/benchmark_rare_tactics.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integrated-defense
+          path: reports/integrated-defense/
+; then
+            python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense
+          else
+            python scripts/benchmark_defensive_packages.py --games 24 --out reports/integrated-defense
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: integrated-defense
