@@ -5837,6 +5837,10 @@ class ViperballEngine:
                         description=f"BONUS POSSESSION — {bonus_team_name} gets an extra drive after the interception",
                         fatigue=round(stamina, 1),
                     )
+                    # Synthetic markers must carry the live score; otherwise
+                    # box-score consumers see an artificial reset to 0-0.
+                    bonus_play.home_score_after = self.state.home_score
+                    bonus_play.away_score_after = self.state.away_score
                     self.play_log.append(bonus_play)
 
                 _is_bonus = getattr(self, '_next_drive_is_bonus', False)
@@ -5997,6 +6001,8 @@ class ViperballEngine:
                 description=f"{ot_label} — {self.home_team.name} {self.state.home_score}, {self.away_team.name} {self.state.away_score}",
                 fatigue=round(stamina, 1),
             )
+            ot_play.home_score_after = self.state.home_score
+            ot_play.away_score_after = self.state.away_score
             self.play_log.append(ot_play)
 
             # Run the OT quarter like a normal quarter
@@ -12219,7 +12225,9 @@ class ViperballEngine:
                         raw_fp = max(1, 100 - int_spot)
                         int_return = max(0, int(random.gauss(35, 18)))
                         new_fp = min(100, raw_fp + int_return)
-                        kicker.game_kick_pass_interceptions += 1
+                        # This turnover comes on the lateral AFTER a
+                        # completed kick pass. Do not also charge a
+                        # kick-pass interception to the Zeroback.
 
                         if new_fp >= 100:
                             self.state.field_position = 25
@@ -15068,8 +15076,12 @@ class ViperballEngine:
         return impacts.get(self.viper_position, 1.0)
 
     def generate_game_summary(self) -> Dict:
-        home_plays = [p for p in self.play_log if p.possession == "home"]
-        away_plays = [p for p in self.play_log if p.possession == "away"]
+        # Attribute the action to the team at the snap. Some return and
+        # interception paths change possession before constructing Play.
+        home_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "home"]
+        away_plays = [p for p in self.play_log
+                      if (getattr(p, "snap_possession", None) or p.possession) == "away"]
 
         home_stats = self.calculate_team_stats(home_plays)
         away_stats = self.calculate_team_stats(away_plays)
@@ -15093,9 +15105,26 @@ class ViperballEngine:
             stats["total_yards"] = rush + kp
             stats["yards_per_play"] = round(stats["total_yards"] / max(1, stats["total_plays"]), 2)
             stats["rushing_carries"] = sum(p.game_rush_carries for p in team.players)
+            # The final player counters incorporate catch outcomes, sack
+            # accounting and PEN-01 nullifications. Do not infer catches
+            # from a broad play-result label that includes non-catches.
+            stats["kick_passes_attempted"] = sum(p.game_kick_passes_thrown for p in team.players)
+            stats["kick_passes_completed"] = sum(p.game_kick_passes_completed for p in team.players)
+            stats["kick_pass_interceptions"] = sum(p.game_kick_pass_interceptions for p in team.players)
+            # Both kicker and target receive a personal KP TD credit;
+            # team touchdowns must count the scoring event only once.
+            stats["kick_pass_tds"] = sum(
+                1 for play in self.play_log
+                if (getattr(play, "snap_possession", None) or play.possession)
+                   == ("home" if team is self.home_team else "away")
+                and play.play_type == "kick_pass" and play.result == "touchdown"
+            )
 
         _reconcile_yards(home_stats, self.home_team)
         _reconcile_yards(away_stats, self.away_team)
+        # Official scores for the same ledger used by scoring profiles.
+        home_stats["official_score"] = self.state.home_score
+        away_stats["official_score"] = self.state.away_score
 
         away_turnovers = len([p for p in away_plays if p.fumble and p.result == "fumble"])
         home_turnovers = len([p for p in home_plays if p.fumble and p.result == "fumble"])
@@ -15708,7 +15737,7 @@ class ViperballEngine:
         kick_pass_tds = [p for p in kick_passes if p.result == "touchdown"]
         kick_pass_ints = [p for p in kick_passes if p.result in ("kick_pass_intercepted", "int_return_td")]
         kick_pass_yards = sum(p.yards_gained for p in kick_pass_completions)
-        lateral_ints = [p for p in laterals if p.result == "lateral_intercepted"]
+        lateral_ints = [p for p in plays if p.result == "lateral_intercepted"]
 
         kick_plays = [p for p in plays if p.play_type in ["punt", "drop_kick", "place_kick"]]
         kick_percentage = round(len(kick_plays) / max(1, total_plays) * 100, 1)

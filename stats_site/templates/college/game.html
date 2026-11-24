@@ -310,7 +310,10 @@
       ('Drop Kicks', 'dk_made', 'dk_pct'),
       ('Place Kicks', 'pk_made', 'pk_pct'),
       ('Return TDs', 'return_tds', 'return_pct'),
-      ('Bonus Scoring', 'bonus_scores', 'bonus_pct'),
+      ('Safeties', 'safeties', 'safety_pct'),
+      ('Pindowns', 'pindowns', 'pindown_pct'),
+      ('Bells', 'bells', 'bell_pct'),
+      ('Other / unclassified', 'other_scores', 'other_pct'),
     ] %}
     {% if asp.get(count_key, 0) > 0 or hsp.get(count_key, 0) > 0 %}
     <tr>
@@ -322,6 +325,12 @@
     {% endfor %}
   </tbody>
 </table>
+{% if asp.get('bonus_scores', 0) or hsp.get('bonus_scores', 0) %}
+<p class="hint">Bonus possessions converted (already included above): {{ game.away_team }} {{ asp.get('bonus_scores', 0) }}, {{ game.home_team }} {{ hsp.get('bonus_scores', 0) }}.</p>
+{% endif %}
+{% if asp.get('score_consistent') == false or hsp.get('score_consistent') == false %}
+<p class="hint">Score audit warning: the finalized play log does not fully reconcile with the official final score. Check the game event ledger.</p>
+{% endif %}
 {% endif %}
 
 {# ══════════════════════════════════════════════════════════
