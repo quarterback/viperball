@@ -13134,7 +13134,7 @@ class ViperballEngine:
                     players_involved=[player_label(punter), player_label(playmaker)],
                     yards_gained=fake_gain,
                     result=result,
-                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — {result.upper()}!",
+                    description=f"FAKE PUNT! {ftag} takes it {fake_gain} yards — {result.replace('_', ' ').upper()}!",
                     fatigue=round(stamina, 1),
                 )
             else:
