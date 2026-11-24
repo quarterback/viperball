@@ -41,6 +41,8 @@ jobs:
         run: python scripts/benchmark_rush_delta.py --games 40 --seed 20261124 --out reports/rush-delta-integrated.json
       - name: VAL-03 national scheduled-league first-week audit
         run: python scripts/benchmark_national_engine.py --full-season --seed 20261124 --out reports/national-integrated.json
+      - name: STI-VAL five-scheme integrated full-game special-teams study
+        run: python scripts/benchmark_special_teams_integrated.py --games 20 --seed 20261124 --out reports/st-integrated.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -48,6 +50,7 @@ jobs:
           path: |
             reports/rush-delta-integrated.json
             reports/national-integrated.json
+            reports/st-integrated.json
           if-no-files-found: warn
           retention-days: 90
 

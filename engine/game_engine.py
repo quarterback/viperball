@@ -6909,7 +6909,8 @@ class ViperballEngine:
                     # Possession changes — opponent gets the ball
                     self.state.possession = "away" if drive_team == "home" else "home"
                     if final_play.result == "pindown":
-                        self.state.field_position = max(1, min(5, 100 - fp))
+                        # Per RULES.md, the receiving side restarts at 25.
+                        self.state.field_position = 25
                     else:
                         self.state.field_position = max(1, 100 - fp)
                     self.state.down = 1
@@ -7304,7 +7305,7 @@ class ViperballEngine:
             # and leaves 6th down for a second try, while a miss on 6th is a
             # turnover. Go for it instead on short yardage.
             if (not dk_futile and dk_success >= 0.55
-                    and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4) - 4 * territory_bias)):
+                    and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4) + 4 * territory_bias)):
                 return PlayType.DROP_KICK
 
             # Stalled outside snap kick range but inside field goal range:
@@ -9931,6 +9932,29 @@ class ViperballEngine:
         self._st_count(event["kicking_side"], event["kind"] + ":" + play.result)
         play.special_teams_event = dict(event)
         self._st_event = None
+
+    def _st_blocker(self, team):
+        """Select one available specialist from this side's on-field defense."""
+        unavailable = self._unavailable_in_game(team)
+        candidates = [p for p in self._defense_players(team)
+                      if p.name not in unavailable]
+        if not candidates:
+            candidates = [p for p in team.players if p.name not in unavailable]
+        eligible = [p for p in candidates
+                    if p.position in ("Defensive Line", "Keeper", "Wingback", "Viper")
+                    or p.archetype == "diving_wing"]
+        pool = eligible or candidates
+        if not pool:
+            return None
+        weights = [(max(1.0, p.speed*.35 + p.tackling*.35 +
+                       getattr(p, "awareness", 75)*.30)) *
+                   (1.30 if p.archetype == "diving_wing" else 1.0) *
+                   (1.10 if getattr(p, "game_st_role", "") == "STARTER" else 1.0) *
+                   self.player_fatigue_modifier(p) for p in pool]
+        blocker = random.choices(pool, weights=weights, k=1)[0]
+        if self._st_event is not None:
+            self._st_event["blocker"] = player_label(blocker)
+        return blocker
 
     def _st_return_factor(self, team):
         return self._st_preferences(team).get("return_aggression", 0.0)
@@ -13168,7 +13192,7 @@ class ViperballEngine:
         receiving_team = self.get_defensive_team()
         block_prob = self.calculate_block_probability(kick_type="punt")
         if random.random() < block_prob:
-            # BLOCKED PUNT!
+            st_blocker = self._st_blocker(receiving_team)
             kicking_team = self.state.possession
             block_distance = random.randint(-8, -2)  # Negative = loss
 
@@ -13183,7 +13207,7 @@ class ViperballEngine:
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                 def_team = receiving_team
-                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+                blocker = st_blocker or max(self._defense_players(def_team), key=lambda p: p.speed)
                 btag = player_tag(blocker)
 
                 return Play(
@@ -13210,7 +13234,7 @@ class ViperballEngine:
                     stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
                     def_team = receiving_team
-                    blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+                    blocker = st_blocker or max(self._defense_players(def_team), key=lambda p: p.speed)
                     btag = player_tag(blocker)
 
                     return Play(
@@ -13628,10 +13652,16 @@ class ViperballEngine:
         dk_block_prob = max(0.0, min(0.06, dk_block_prob))
 
         if random.random() < dk_block_prob:
-            blocker = dw_blocker if dw_blocker else max(self._defense_players(def_team), key=lambda p: p.speed)
+            kicker.game_kick_attempts += 1
+            kicker.game_dk_attempts += 1
+            blocker = dw_blocker if dw_blocker else self._st_blocker(def_team)
+            if blocker is None:
+                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+            self._st_event["blocker"] = player_label(blocker)
             btag = player_tag(blocker)
             if random.random() < 0.70:
                 self.change_possession()
+                self.add_score(0.5)  # Bell for recovery of blocked live kick.
                 block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
                 self.state.field_position = 100 - block_spot
                 self.state.down = 1
@@ -13648,7 +13678,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        description=f"{ptag} drop kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9 (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
                 else:
@@ -13660,7 +13690,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        description=f"{ptag} drop kick BLOCKED by {btag}! Defense recovers at {self.state.field_position} (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
             else:
@@ -13954,15 +13984,19 @@ class ViperballEngine:
         # SPECIAL TEAMS CHAOS: Check for blocked kick FIRST
         block_prob = self.calculate_block_probability(kick_type="kick")
         if random.random() < block_prob:
-            # BLOCKED KICK!
+            kicker.game_kick_attempts += 1
+            kicker.game_pk_attempts += 1
             def_team = self.get_defensive_team()
-            blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
+            blocker = self._st_blocker(def_team)
+            if blocker is None:
+                blocker = max(self._defense_players(def_team), key=lambda p: p.speed)
             btag = player_tag(blocker)
 
             # 70% defense recovers, 30% offense recovers
             if random.random() < 0.70:
                 # Defense recovers - chance for return TD or short field
                 self.change_possession()
+                self.add_score(0.5)  # Bell for recovery of blocked live kick.
                 # Ball is behind LOS
                 block_spot = max(1, min(99, self.state.field_position - random.randint(3, 10)))
                 self.state.field_position = 100 - block_spot  # Flip for receiving team
@@ -13982,7 +14016,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} place kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9",
+                        description=f"{ptag} place kick BLOCKED by {btag}! RETURNED FOR TOUCHDOWN! +9 (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
                 else:
@@ -13994,7 +14028,7 @@ class ViperballEngine:
                         players_involved=[player_label(kicker), player_label(blocker)],
                         yards_gained=-block_spot,
                         result=PlayResult.BLOCKED_KICK.value,
-                        description=f"{ptag} place kick BLOCKED by {btag}! Defense recovers at {self.state.field_position}",
+                        description=f"{ptag} place kick BLOCKED by {btag}! Defense recovers at {self.state.field_position} (+½ bell)",
                         fatigue=round(stamina, 1),
                     )
             else:
@@ -16102,9 +16136,12 @@ class ViperballEngine:
         successful_laterals = sum(1 for p in laterals if not p.fumble)
 
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
-        drop_kicks_attempted = [p for p in plays if p.play_type == "drop_kick"]
+        # Accepted live-ball fouls can wipe out a kick, restoring player
+        # counters. The official team attempts must exclude that snap too.
+        official_kick = lambda p: not (p.penalty and p.penalty.nullified)
+        drop_kicks_attempted = [p for p in plays if p.play_type == "drop_kick" and official_kick(p)]
         place_kicks = [p for p in plays if p.play_type == "place_kick" and p.result == "successful_kick"]
-        place_kicks_attempted = [p for p in plays if p.play_type == "place_kick"]
+        place_kicks_attempted = [p for p in plays if p.play_type == "place_kick" and official_kick(p)]
         touchdowns = [p for p in plays if p.result == "touchdown"]
         punt_return_tds = [p for p in plays if p.result == "punt_return_td"]
         int_return_tds = [p for p in plays if p.result == "int_return_td"]
@@ -16112,7 +16149,7 @@ class ViperballEngine:
         fumbles_lost = [p for p in plays if p.fumble and p.result == "fumble"]
         turnovers_on_downs = [p for p in plays if p.result == "turnover_on_downs"]
         pindowns = [p for p in plays if p.result == "pindown"]
-        punts = [p for p in plays if p.play_type == "punt"]
+        punts = [p for p in plays if p.play_type == "punt" and official_kick(p)]
         chaos_recoveries = [p for p in plays if p.result == "chaos_recovery"]
         kick_passes = [p for p in plays if p.play_type == "kick_pass"]
         kick_pass_completions = [p for p in kick_passes if p.result in ("gain", "first_down", "touchdown")]
