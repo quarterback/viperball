@@ -66,39 +66,13 @@
   </div>
   {% endif %}
   {% if champion %}
-  <div style="margin-top: 8px;">
-    <button onclick="archiveSeason()" id="archive-btn" style="background: var(--accent); color: var(--bg); border: 1px solid var(--accent); padding: 6px 16px; font-family: inherit; font-size: 12px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Archive This Season</button>
-    <span id="archive-status" style="margin-left: 8px; font-size: 11px; color: var(--fg-dim);"></span>
-  </div>
-  <script>
-  async function archiveSeason() {
-    const btn = document.getElementById('archive-btn');
-    const status = document.getElementById('archive-status');
-    btn.disabled = true;
-    status.textContent = 'Archiving...';
-    try {
-      const resp = await fetch('/archives/college/{{ session_id }}', { method: 'POST' });
-      const data = await resp.json();
-      if (resp.ok) {
-        status.style.color = 'var(--green)';
-        status.textContent = 'Archived! View in Archives tab.';
-        btn.textContent = 'Archived';
-      } else {
-        status.style.color = 'var(--red)';
-        status.textContent = data.detail || 'Archive failed';
-        btn.disabled = false;
-      }
-    } catch (e) {
-      status.style.color = 'var(--red)';
-      status.textContent = 'Network error';
-      btn.disabled = false;
-    }
-  }
-  </script>
-  {% else %}
-  <div style="margin-top: 4px; font-size: 11px; color: var(--fg-dim);">
-    Complete the season (bowls &amp; championship) to unlock the archive button on this page.
-  </div>
+  <form method="post" action="/stats/do" style="margin-top:8px">
+    <input type="hidden" name="_path" value="/archives/college/{{ session_id }}">
+    <input type="hidden" name="_back" value="/stats/college/{{ session_id }}/">
+    <input type="hidden" name="_next" value="/stats/archives/{archive_key}/">
+    <input type="hidden" name="_ok" value="Season archived">
+    <button class="btn-small" type="submit">Archive this season</button>
+  </form>
   {% endif %}
 </div>
 

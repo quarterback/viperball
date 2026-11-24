@@ -17,7 +17,7 @@ below is checked.
 - [x] New season: conference alignment editor
 - [x] In-season portal: commit a player to a team
 - [x] Player edit, player add, player move, team rename and team details
-- [ ] Archive a finished season (stats site has a fetch button already; move to a form)
+- [x] Archive a finished season (stats site has a fetch button already; move to a form)
 
 ### Saves
 - [x] One list of every save (`/api/saves`): open, fork, rename, tag, delete
@@ -29,10 +29,10 @@ below is checked.
 
 ### My Team
 - [x] Already on the stats site (retention lock, portal bid/advance, sim, run it back)
-- [ ] Finalize (check against `/sessions/{sid}/my-team/finalize`)
+- [x] Finalize (check against `/sessions/{sid}/my-team/finalize`)
 
 ### Pro leagues
-- [ ] Start a league, sim week, sim all
+- [x] Start a league, sim week, sim all
 
 ### WVL
 - [ ] Create, sim week, sim all, advance season, import graduates

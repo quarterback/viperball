@@ -13,9 +13,33 @@
   <div class="subtitle">
     {{ status.get('phase', '?') | replace('_', ' ') | title }}
     &middot; Week {{ status.get('current_week', '?') }}
-    {% if status.get('champion') %} &middot; <span class="stat-elite">Champion: {{ status.champion }}</span>{% endif %}
+    {% if status.get('champion') %} &middot; <span class="stat-elite">Champion: {{ status.champion_name or status.champion }}</span>{% endif %}
   </div>
 </div>
+
+{% set ph = status.get('phase') %}
+{% if not status.get('champion') %}
+<div class="run-bar">
+  {% if ph == 'regular_season' and status.current_week < status.total_weeks %}
+  <span class="run-phase">Week {{ status.current_week }} of {{ status.total_weeks }}</span>
+  {% for what, label in [('sim-week', 'Sim week'), ('sim-all', 'Sim rest of season')] %}
+  <form class="inline-form" method="post" action="/stats/do">
+    <input type="hidden" name="_path" value="/api/pro/{{ league }}/{{ session_id }}/{{ what }}">
+    <input type="hidden" name="_back" value="/stats/pro/{{ league }}/{{ session_id }}/">
+    <button class="{{ 'btn-run' if loop.first else 'btn-small' }}" type="submit">{{ label }}</button>
+  </form>
+  {% endfor %}
+  {% else %}
+  <span class="run-phase">{{ 'Regular season over' if ph == 'regular_season' else 'Playoffs' }}</span>
+  <form class="inline-form" method="post" action="/stats/do">
+    <input type="hidden" name="_path" value="/api/pro/{{ league }}/{{ session_id }}/playoffs">
+    <input type="hidden" name="_back" value="/stats/pro/{{ league }}/{{ session_id }}/">
+    <input type="hidden" name="_next" value="/stats/pro/{{ league }}/{{ session_id }}/playoffs">
+    <button class="btn-run" type="submit">{{ 'Start playoffs' if ph == 'regular_season' else 'Play next round' }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
 
 <div class="tabs">
   <a href="/stats/pro/{{ league }}/{{ session_id }}/" class="active">Standings</a>

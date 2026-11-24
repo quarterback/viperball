@@ -4060,8 +4060,10 @@ async def college_data_upload(request: Request, session_id: str):
 @router.get("/pro/", response_class=HTMLResponse)
 def pro_index(request: Request):
     sessions = _find_all_pro_sessions()
+    from engine.pro_league import ALL_LEAGUE_CONFIGS
+    leagues = [(k, c.league_name) for k, c in ALL_LEAGUE_CONFIGS.items()]
     return templates.TemplateResponse("pro/index.html", _ctx(
-        request, section="pro", sessions=sessions,
+        request, section="pro", sessions=sessions, leagues=leagues,
     ))
 
 
@@ -4450,6 +4452,7 @@ def pro_playoffs(request: Request, league: str, session_id: str):
         request, section="pro", league=league, session_id=session_id,
         bracket=bracket,
         champion=season.champion,
+        champion_name=season.teams[season.champion].name if season.champion in season.teams else None,
         phase=season.phase,
         league_name=season.config.league_name,
     ))

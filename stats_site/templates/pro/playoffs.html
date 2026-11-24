@@ -25,13 +25,21 @@
 <div class="page-header">
   <h1>{{ league_name }} &mdash; PLAYOFFS</h1>
   {% if champion %}
-  <div class="subtitle"><span class="stat-elite">Champion: {{ champion }}</span></div>
+  <div class="subtitle"><span class="stat-elite">Champion: {{ champion_name or champion }}</span></div>
   {% elif phase == 'regular_season' %}
   <div class="subtitle">Playoffs have not started yet</div>
   {% else %}
   <div class="subtitle">Playoffs in progress</div>
   {% endif %}
 </div>
+
+{% if phase == 'playoffs' and not champion %}
+<form class="run-bar" method="post" action="/stats/do">
+  <input type="hidden" name="_path" value="/api/pro/{{ league }}/{{ session_id }}/playoffs">
+  <input type="hidden" name="_back" value="/stats/pro/{{ league }}/{{ session_id }}/playoffs">
+  <button class="btn-run" type="submit">Play next round</button>
+</form>
+{% endif %}
 
 <div class="tabs">
   <a href="/stats/pro/{{ league }}/{{ session_id }}/">Standings</a>
