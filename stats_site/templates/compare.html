@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Compare Runs — Viperball Stats{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Compare Runs
+</div></div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Compare Runs</h1>
+  <div class="subtitle">Line up seasons side by side and see which teams swing the most between them</div>
+{% set tool = "compare" %}
+<div class="tabs">
+  <a href="/stats/game-sim" {% if tool == 'sim' %}class="active"{% endif %}>Game Sim</a>
+  <a href="/stats/compare" {% if tool == 'compare' %}class="active"{% endif %}>Compare Runs</a>
+  <a href="/stats/export" {% if tool == 'export' %}class="active"{% endif %}>Export</a>
+</div>
+</div>
+
+{% if sessions %}
+<form method="get" action="/stats/compare" class="setup-form" style="max-width:900px">
+  <div style="display:flex;flex-wrap:wrap;gap:6px 20px">
+  {% for s in sessions %}
+    <label style="display:flex;gap:6px;align-items:center;font-weight:400">
+      <input type="checkbox" name="run" value="{{ s.session_id }}" {% if s.session_id in picked %}checked{% endif %}>
+      {{ s.name }} <span style="color:var(--fg-dim)">({{ s.games_played }}/{{ s.total_games }} games{% if s.champion %}, {{ s.champion }}{% endif %})</span>
+    </label>
+  {% endfor %}
+  </div>
+  <div><button class="btn-run" type="submit">Compare</button></div>
+</form>
+{% else %}
+<div class="empty">No seasons running. <a href="/stats/college/new">Start one</a>.</div>
+{% endif %}
+
+{% if rows %}
+<div class="table-scroll"><table>
+  <thead><tr><th>Team</th><th>Conf</th>
+    {% for r in runs %}<th class="num">{{ r.name }} #{{ loop.index }}</th>{% endfor %}
+    <th class="num">Win swing</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr><td>{{ row.team }}</td><td>{{ row.conference }}</td>
+    {% for r in runs %}{% set rec = row.runs.get(r.sid) %}<td class="num">{% if rec %}{{ rec[0] }}-{{ rec[1] }}{% else %}&mdash;{% endif %}</td>{% endfor %}
+    <td class="num"><span class="{{ 'stat-elite' if row.spread >= 3 else '' }}">{{ row.spread }}</span></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

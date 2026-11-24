@@ -41,10 +41,10 @@ below is checked.
 - [x] New cycle, sim stage, continental sim all
 
 ### Other workbench pages
-- [ ] Game Sim (single game)
-- [ ] Compare runs
+- [x] Game Sim (single game)
+- [x] Compare runs
 - [ ] DraftyQueenz picks and parlays
-- [ ] Export
+- [x] Export
 
 ### Removal
 - [ ] Delete `web/`, the Node stage in `Dockerfile`, the `/app` mount in `api/main.py`

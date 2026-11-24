@@ -2,12 +2,19 @@
 {% block title %}{{ game.away_team }} @ {{ game.home_team }} — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
+{% if oneoff %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/game-sim">Game Sim</a><span class="sep">/</span>Box Score
+</div></div>
+{% else %}
 <div class="breadcrumb"><div class="container wide">
   <a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">Season</a><span class="sep">/</span>{% if bowl_name %}{{ bowl_name }}{% elif is_playoff %}<a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>{% else %}<a href="/stats/college/{{ session_id }}/schedule?week={{ week }}">Week {{ week }}</a>{% endif %}<span class="sep">/</span>Box Score
 </div></div>
+{% endif %}
 {% endblock %}
 
 {% block content %}
+{% if oneoff %}<style>.oneoff-game a[href^="/stats/college/"] { pointer-events: none; color: inherit; text-decoration: none; }</style><div class="oneoff-game">{% endif %}
 
 {% if stadium_url %}
 <div class="stadium-bg"><img src="{{ stadium_url }}" alt=""></div>
@@ -22,7 +29,7 @@
   </div>
   <div class="box-score-vs">
     <div>FINAL</div>
-    <div>{% if bowl_name %}{{ bowl_name }}{% elif is_playoff %}Playoff{% else %}Week {{ week }}{% endif %}</div>
+    <div>{% if oneoff %}One-off game{% elif bowl_name %}{{ bowl_name }}{% elif is_playoff %}Playoff{% else %}Week {{ week }}{% endif %}</div>
     {% if bowl_name %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">BOWL</span>{% endif %}
     {% if is_playoff %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">PLAYOFF</span>{% endif %}
     {% if game.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
@@ -1033,4 +1040,5 @@
 </div>
 {% endif %}
 
+{% if oneoff %}</div>{% endif %}
 {% endblock %}

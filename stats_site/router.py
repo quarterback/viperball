@@ -1023,6 +1023,119 @@ async def college_new_submit(request: Request):
     return RedirectResponse(f"/stats/college/{sid}/", status_code=303)
 
 
+# ─── One-off game simulator, run comparison, export ──────────────────────────
+
+_ONEOFF_GAMES: dict = {}
+
+
+@router.get("/game-sim", response_class=HTMLResponse)
+def game_sim_page(request: Request):
+    from api.main import get_available_teams, WEATHER_CONDITIONS
+    teams = sorted(get_available_teams(), key=lambda t: t.get("name", ""))
+    weather = [(k, v.get("label", k)) for k, v in WEATHER_CONDITIONS.items()]
+    recent = [
+        {"id": gid, "home": g["home_team"], "away": g["away_team"],
+         "home_score": g["home_score"], "away_score": g["away_score"]}
+        for gid, g in reversed(list(_ONEOFF_GAMES.items()))
+    ]
+    return templates.TemplateResponse("game_sim.html", _ctx(
+        request, section="tools", teams=teams, weather=weather, recent=recent,
+    ))
+
+
+@router.post("/game-sim")
+async def game_sim_run(request: Request):
+    import uuid
+    from urllib.parse import quote
+    from starlette.responses import RedirectResponse
+    from api.main import simulate, SimulateRequest
+    form = await request.form()
+    home, away = form.get("home"), form.get("away")
+    if not home or not away or home == away:
+        return RedirectResponse("/stats/game-sim?err=" + quote("Pick two different teams"), status_code=303)
+    seed = _form_int(form, "seed", 0)
+    try:
+        res = await simulate(SimulateRequest(home=home, away=away, seed=seed or None,
+                                             weather=form.get("weather") or "clear"))
+    except HTTPException as e:
+        return RedirectResponse("/stats/game-sim?err=" + quote(str(e.detail)), status_code=303)
+    fs = res.get("final_score", {})
+    gid = uuid.uuid4().hex[:8]
+    _ONEOFF_GAMES[gid] = {
+        "week": 0, "completed": True,
+        "home_team": fs.get("home", {}).get("team", home),
+        "away_team": fs.get("away", {}).get("team", away),
+        "home_score": fs.get("home", {}).get("score"),
+        "away_score": fs.get("away", {}).get("score"),
+        "has_full_result": True, "full_result": res,
+    }
+    while len(_ONEOFF_GAMES) > 25:
+        _ONEOFF_GAMES.pop(next(iter(_ONEOFF_GAMES)))
+    return RedirectResponse(f"/stats/game-sim/{gid}", status_code=303)
+
+
+@router.get("/game-sim/{game_id}", response_class=HTMLResponse)
+def game_sim_result(request: Request, game_id: str):
+    game = _ONEOFF_GAMES.get(game_id)
+    if not game:
+        raise HTTPException(404, "That game is gone. Sim another one.")
+    fr = game["full_result"]
+    _normalize_box_score_stats(fr)
+    analysis_text = None
+    try:
+        from analyze_game import analyze_game_data
+        analysis_text = analyze_game_data(fr)
+    except Exception:
+        pass
+    return templates.TemplateResponse("college/game.html", _ctx(
+        request, section="tools", session_id="", oneoff=True,
+        game=game, week=0, game_idx=0, bowl_name=None, is_playoff=False,
+        analysis_text=analysis_text,
+        stadium_url=_stadium_url_for(game["home_team"]),
+        benchmarks=None,
+    ))
+
+
+@router.get("/compare", response_class=HTMLResponse)
+def compare_runs(request: Request):
+    api = _get_api()
+    sessions = _find_all_sessions()
+    picked = [sid for sid in request.query_params.getlist("run") if sid in api["sessions"]]
+    runs, rows = [], {}
+    for sid in picked:
+        season = api["require_season"](api["get_session"](sid))
+        runs.append({"sid": sid, "name": getattr(season, "name", sid[:6])})
+        for st in api["serialize_standings"](season):
+            team = st.get("team_name")
+            row = rows.setdefault(team, {"team": team, "conference": st.get("conference", ""), "runs": {}})
+            row["runs"][sid] = (st.get("wins", 0), st.get("losses", 0))
+    table = []
+    for row in rows.values():
+        wins = [w for w, _ in row["runs"].values()]
+        row["spread"] = (max(wins) - min(wins)) if len(wins) > 1 else 0
+        table.append(row)
+    table.sort(key=lambda r: (-r["spread"], r["team"]))
+    return templates.TemplateResponse("compare.html", _ctx(
+        request, section="tools", sessions=sessions, picked=picked, runs=runs, rows=table,
+    ))
+
+
+def _archive_rows():
+    list_fn, _ = _get_archives()
+    try:
+        return [{"key": r["save_key"], "label": r.get("label") or r["save_key"],
+                 "size": r.get("data_size")} for r in (list_fn() if list_fn else [])]
+    except Exception:
+        return []
+
+
+@router.get("/export", response_class=HTMLResponse)
+def export_page(request: Request):
+    return templates.TemplateResponse("export.html", _ctx(
+        request, section="tools", sessions=_find_all_sessions(), archives=_archive_rows(),
+    ))
+
+
 def _season_portal(session_id):
     from api.main import season_portal_get
     try:
@@ -3908,6 +4021,67 @@ def college_awards(request: Request, session_id: str):
 
 # ── DRAFTYQUEENZ ─────────────────────────────────────────────────────────
 
+_DQ_SLOTS = [("VP", "Viper"), ("BALL1", "Ball carrier 1"), ("BALL2", "Ball carrier 2"), ("KP", "Keeper"), ("FLEX", "Flex")]
+
+
+def _dq_board(session_id, sess, season, pos):
+    """This week's betting board and fantasy contest for the DQ page."""
+    from api.main import dq_get_odds, dq_get_roster, dq_fantasy_pool
+    mgr = sess.get("dq_manager")
+    open_weeks = sorted({g.week for g in season.schedule if not g.completed})
+    week = open_weeks[0] if open_weeks else None
+    contest = mgr.weekly_contests.get(week) if (mgr and week) else None
+    board = {"week": week, "started": contest is not None, "bankroll": mgr.bankroll.balance if mgr else 0,
+             "slots": _DQ_SLOTS, "pos": pos,
+             "to_settle": sorted(w for w, c in mgr.weekly_contests.items()
+                                 if not c.resolved and (week is None or w < week)) if mgr else []}
+    if contest is not None:
+        board["odds"] = dq_get_odds(session_id, week)["odds"]
+        board["contest"] = contest.to_dict()
+        board["resolved"] = contest.resolved
+        roster = dq_get_roster(session_id, week)
+        board["fantasy"] = roster
+        if roster.get("entered"):
+            pool = dq_fantasy_pool(session_id, week)
+            full = pool.get("pool", [])
+            board["positions"] = sorted({(p["position"], p["position_name"]) for p in full})
+            board["pool"] = sorted((p for p in full if not pos or p["position"] == pos),
+                                   key=lambda p: -(p.get("projected") or 0))[:80]
+            board["salary_cap"] = pool.get("salary_cap")
+    return board
+
+
+@router.post("/college/{session_id}/dq/slip")
+async def dq_slip(request: Request, session_id: str):
+    """Place every bet picked on the board, either as singles or as one parlay."""
+    from urllib.parse import quote
+    from starlette.responses import RedirectResponse
+    from api.main import dq_place_pick, dq_place_parlay, DQPickRequest, DQParlayRequest, DQParlayLeg
+    form = await request.form()
+    back = f"/stats/college/{session_id}/draftyqueenz"
+    week = _form_int(form, "week", 0)
+    stake = _form_int(form, "stake", 0)
+    picks = []
+    for k, v in form.multi_items():
+        if k.startswith("bet_") and v:
+            typ, idx, sel = v.split("|", 2)
+            picks.append((typ, int(idx), sel))
+    if not picks:
+        return RedirectResponse(back + "?err=" + quote("Pick at least one bet"), status_code=303)
+    try:
+        if form.get("as") == "parlay":
+            dq_place_parlay(session_id, week, DQParlayRequest(
+                legs=[DQParlayLeg(pick_type=t, game_idx=i, selection=s) for t, i, s in picks], amount=stake))
+            msg = f"{len(picks)} leg parlay placed"
+        else:
+            for t, i, sel in picks:
+                dq_place_pick(session_id, week, DQPickRequest(pick_type=t, game_idx=i, selection=sel, amount=stake))
+            msg = f"{len(picks)} bet{'s' if len(picks) != 1 else ''} placed"
+    except HTTPException as e:
+        return RedirectResponse(back + "?err=" + quote(str(e.detail)), status_code=303)
+    return RedirectResponse(back + "?ok=" + quote(msg), status_code=303)
+
+
 @router.get("/college/{session_id}/draftyqueenz", response_class=HTMLResponse)
 def college_draftyqueenz(request: Request, session_id: str):
     api = _get_api()
@@ -3947,6 +4121,7 @@ def college_draftyqueenz(request: Request, session_id: str):
                 total_lost += parlay.amount
 
     season = api["require_season"](sess)
+    board = _dq_board(session_id, sess, season, request.query_params.get("pos") or "")
 
     return templates.TemplateResponse("college/draftyqueenz.html", _ctx(
         request, section="college", session_id=session_id,
@@ -3957,6 +4132,7 @@ def college_draftyqueenz(request: Request, session_id: str):
         net=total_won - total_lost,
         has_dq=True,
         season_name=getattr(season, "name", "Season"),
+        board=board,
     ))
 
 
