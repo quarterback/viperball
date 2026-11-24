@@ -36,15 +36,15 @@ The React workbench at `/app` is retired ([PR #336](https://github.com/quarterba
 
 ## Next integrated engine workstream — special teams, penalties and injuries (November 24 UTC)
 
-Owner: ChatGPT engine track. Start from current main; no stats-site redesign. Preserve canonical rules and existing defensive commitments. One combined implementation and outcome study; no new per-feature CI or test suite.
+**Status (November 24):** every item below is merged; see the findings snapshot for PRs. Owner: ChatGPT engine track. Start from current main; no stats-site redesign. Preserve canonical rules and existing defensive commitments. One combined implementation and outcome study; no new per-feature CI or test suite.
 
 | ID | Priority | Status | Scope and acceptance |
 |---|---|---|---|
-| PEN-01 | P0 | OPEN | Correct pre-snap attribution, possession and scoring on accepted/declined live-ball fouls; first-down distance, kick-pass auto-first, penalty enforcement spot and replayed downs. Reconcile official play/player/drive stats; retain legitimate physical fatigue/injury events. |
-| ST-01 | P1 | OPEN | Audit the five existing ST schemes and saved STC preferences; connect bounded coordinator decisions to legal punt/score/return/block/fake choices. Distinguish scheme from coach, quantify strengths and concessions. |
-| ST-02 | P1 | OPEN | Special teams personnel and matchup diversity: select actual eligible kicker/returner/coverage/rush players once per event; consistent block, muff, return and fake consequences, injury substitutions and field position. Verify drop vs place kick, missed-kick returns, pindowns and rouge rules. |
-| INJ-01 | P0 | OPEN | Explicit participant-team attribution; consistent fatigue risk for offense and defense, actual special teams/rush exposure, no duplicate checks, reliable substitutions and season/dynasty persistence. |
-| STI-VAL | P1 | OPEN | Combined matched full games across five ST schemes, coach profiles, roster depth, weather and fatigue; targeted rare-state replays for accepted/declined flags on scores/turnovers/kicks, depleted units and injury replacements; existing regression suite once. Report official scoring, possession, kick/penalty/injury denominators and player credit reconciliation. |
+| PEN-01 | P0 | DONE ([#350](https://github.com/quarterback/viperball/pull/350), spot errors and return fouls [#352](https://github.com/quarterback/viperball/pull/352)) | Correct pre-snap attribution, possession and scoring on accepted/declined live-ball fouls; first-down distance, kick-pass auto-first, penalty enforcement spot and replayed downs. Reconcile official play/player/drive stats; retain legitimate physical fatigue/injury events. |
+| ST-01 | P1 | DONE ([#354](https://github.com/quarterback/viperball/pull/354), [#356](https://github.com/quarterback/viperball/pull/356)) | Audit the five existing ST schemes and saved STC preferences; connect bounded coordinator decisions to legal punt/score/return/block/fake choices. Distinguish scheme from coach, quantify strengths and concessions. |
+| ST-02 | P1 | DONE ([#354](https://github.com/quarterback/viperball/pull/354), [#356](https://github.com/quarterback/viperball/pull/356)) | Special teams personnel and matchup diversity: select actual eligible kicker/returner/coverage/rush players once per event; consistent block, muff, return and fake consequences, injury substitutions and field position. Verify drop vs place kick, missed-kick returns, pindowns and rouge rules. |
+| INJ-01 | P0 | DONE ([#350](https://github.com/quarterback/viperball/pull/350)) | Explicit participant-team attribution; consistent fatigue risk for offense and defense, actual special teams/rush exposure, no duplicate checks, reliable substitutions and season/dynasty persistence. |
+| STI-VAL | P1 | DONE ([#356](https://github.com/quarterback/viperball/pull/356), 3,000 game benchmark [#358](https://github.com/quarterback/viperball/pull/358)) | Combined matched full games across five ST schemes, coach profiles, roster depth, weather and fatigue; targeted rare-state replays for accepted/declined flags on scores/turnovers/kicks, depleted units and injury replacements; existing regression suite once. Report official scoring, possession, kick/penalty/injury denominators and player credit reconciliation. |
 
 Initial code evidence: game_engine.py select_kick_decision, _check_penalties, _should_decline_penalty, _apply_pre_snap_penalty, _apply_during_play_penalty, _apply_post_play_penalty, simulate_punt/drop_kick/place_kick and check_in_game_injury/check_defender_injury. Penalty attribution currently reads mutable possession after resolution; offensive accepted during-play rollback restores only field/down/distance, not score/possession/credits. Several enforcement paths do not update remaining distance, and kick-pass catalog is missing from auto-first lookup. Defensive injury path omits offensive fatigue adjustment; existing injury call sites lack explicit special teams exposure. ST_SCHEMES already defines Iron Curtain, Lightning Returns, Block Party, Chaos Unit and Aces; coach_tactics.py persists field_position_bias and return_aggression but needs runtime audit. Muff and return paths independently select returners; check consistency before changing rates. Do not add generic success bonuses or arbitrary injury/penalty frequency targets. Findings are code inspection, not benchmark evidence.
 
@@ -100,9 +100,12 @@ The parallel implementation specification is
 | DEF-06 | P1 | DONE ([merged #326](https://github.com/quarterback/viperball/pull/326)) | 2,048 full-matrix and 1,024 weather games; [conditional results](aar_2026-11-23_def06_full_defense_matrix.md), no blanket balance target |
 | DEF-07 | P1 | PARTIAL / MERGED | Resolved pressure, hurry and sack outcomes with named on-field rush assignments; 600-game calibration completed |
 | WEA-01 | P2 | INVESTIGATE | Isolate rain-related turnovers, fatigue and explosive gains; no scoring increase established |
-| DEL-01 | P1 | OPEN | Counterfactual Delta Yards analysis, including comeback impact |
-| DEL-02 | P1 | OPEN | Consolidate conflicting delta, kill, and points-per-drive definitions |
-| DEL-03 | P2 | BLOCKED on DEL-02 and UI-01 | Make Delta Yards legible in game and season reporting |
+| DEL-01 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | Matched on/off restart study; one national seed, 40 matches per condition; Delta Yards stays as is |
+| DEL-02 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | One Delta Yards definition across engine, metrics, DYE and DTW; points per drive from real scores |
+| DEL-03 | P2 | OPEN (DEL-02 done; box score Delta rows in [#360](https://github.com/quarterback/viperball/pull/360)) | Make Delta Yards legible in game and season reporting |
+| DEF-08 | P1 | DONE ([#355](https://github.com/quarterback/viperball/pull/355)) | Lead rusher chosen among committed rushers; median leader share 54.6%. Physical sack rate still 13.1% of rush attempts |
+| BOX-01 | P1 | DONE ([#351](https://github.com/quarterback/viperball/pull/351)) | Scoring ledger and team/player box score totals reconcile |
+| AN-01, DTW-01, EPA-01 | P1 | DONE ([#360](https://github.com/quarterback/viperball/pull/360)) | Scoring value by Delta bucket, 55 to 45 DTW band, EPA scope; outcome conditioned EP model still research |
 | ROST-01 | P1 | PARTIAL (merged #323) | Continue talent/work-rate ladder through recruiting, transfers and HS careers |
 | ROST-02 | P1 | PARTIAL (merged #328) | Game roles now assigned after final scheme overrides; remaining style-specific role scoring and scheme/roster consistency audit open |
 | FAT-01 | P1 | PARTIAL (merged #323) | Work rate and line rotations landed; coach-sensitive depth/season validation still open |
@@ -111,7 +114,7 @@ The parallel implementation specification is
 | VAL-01 | P0 | PARTIAL (PR #323) | Regression/benchmark suite and live verification |
 | VAL-02 | P1 | DONE ([merged #331](https://github.com/quarterback/viperball/pull/331)) | Cross-process roster/schedule/game seeds reconciled; [139-test audit](aar_2026-11-23_merge_stack_and_val02.md). Coach/market unseeded defaults remain separate follow-up |
 | RULE-01 | P2 | OPEN | Rulebook/version/terminology reconciliation |
-| OPS-01 | P2 | OPEN | Repair obsolete tests and close deploy/test gaps |
+| OPS-01 | P2 | PARTIAL (November 24 queue status PR) | Root scripts test_season.py, test_dynasty.py, test_recruiting.py and test_wvl.py run again; live Fly deploy and build SHA still unverified |
 | CCH-03 | P1 | DONE ([merged #332](https://github.com/quarterback/viperball/pull/332)) | DC pre-snap alignment/blitz and read-focus decisions; [AAR](aar_2026-11-23_cch03_defensive_coordinator_tactics.md), paired 320-game control, integrated in #334 | 
 | CCH-04 | P1 | DONE ([merged #334](https://github.com/quarterback/viperball/pull/334)) | Team package familiarity, OC situational choices, coordinator turnover and dynasty continuity; DC familiarity scaling; [joint AAR](aar_2026-11-23_cch03_cch04_reconciliation.md) and 174 passing tests. Original #333 superseded; #329 archived |
 

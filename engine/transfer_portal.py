@@ -621,20 +621,24 @@ def estimate_prestige_from_roster(roster: list) -> int:
         if isinstance(p, dict):
             # Raw team JSON player dict
             stats = p.get("stats", {})
-            avg_stat = sum(stats.values()) / max(1, len(stats)) if stats else 70
+            avg_stat = sum(stats.values()) / max(1, len(stats)) if stats else 35
             overalls.append(avg_stat)
             potentials.append(p.get("potential", 3))
         else:
             # PlayerCard or Player object
-            overalls.append(getattr(p, "overall", 70))
+            overalls.append(getattr(p, "overall", 35))
             potentials.append(getattr(p, "potential", 3))
 
     avg_ovr = sum(overalls) / len(overalls)
     avg_pot = sum(potentials) / len(potentials)
 
-    # Scale: OVR maps roughly linearly to prestige across the full 0-100 range.
+    # Same map as engine.game_engine._derive_prestige_from_roster on the
+    # current rating scale: team average overall runs about 18 (weakest),
+    # 35 (median) and 59 (strongest), so 35 -> 50 and each point is 1.9.
+    # The old map (0.9 x overall) predates the November 2026 rescale and
+    # put every program between 22 and 47.
     # Potential gives a small bonus (3.0 avg → 0, 5.0 avg → +10)
-    ovr_score = avg_ovr * 0.9
+    ovr_score = 50 + (avg_ovr - 35) * 1.9
     pot_bonus = max(0, (avg_pot - 3.0)) * 5.0
 
     return max(10, min(99, int(ovr_score + pot_bonus)))

@@ -403,19 +403,19 @@ def test_roster_prestige_estimation():
         )
 
     # Elite roster
-    elite_roster = [make_card(90, 5) for _ in range(10)]
+    elite_roster = [make_card(55, 5) for _ in range(10)]
     elite_pres = estimate_prestige_from_roster(elite_roster)
-    print(f"  Elite roster (OVR ~90, 5★ pot): prestige {elite_pres}")
+    print(f"  Elite roster (OVR ~55, 5★ pot): prestige {elite_pres}")
 
     # Average roster
-    avg_roster = [make_card(73, 3) for _ in range(10)]
+    avg_roster = [make_card(35, 3) for _ in range(10)]
     avg_pres = estimate_prestige_from_roster(avg_roster)
-    print(f"  Average roster (OVR ~73, 3★ pot): prestige {avg_pres}")
+    print(f"  Average roster (OVR ~35, 3★ pot): prestige {avg_pres}")
 
     # Weak roster
-    weak_roster = [make_card(63, 2) for _ in range(10)]
+    weak_roster = [make_card(20, 2) for _ in range(10)]
     weak_pres = estimate_prestige_from_roster(weak_roster)
-    print(f"  Weak roster (OVR ~63, 2★ pot): prestige {weak_pres}")
+    print(f"  Weak roster (OVR ~20, 2★ pot): prestige {weak_pres}")
 
     assert elite_pres > avg_pres > weak_pres, (
         f"Expected elite > avg > weak: {elite_pres} > {avg_pres} > {weak_pres}"
@@ -425,11 +425,11 @@ def test_roster_prestige_estimation():
 
     # Works with raw team JSON format (dicts with "stats" and "potential")
     dict_roster = [
-        {"stats": {"speed": 80, "stamina": 80, "kicking": 80}, "potential": 4},
-        {"stats": {"speed": 75, "stamina": 75, "kicking": 75}, "potential": 3},
+        {"stats": {"speed": 45, "stamina": 45, "kicking": 45}, "potential": 4},
+        {"stats": {"speed": 40, "stamina": 40, "kicking": 40}, "potential": 3},
     ]
     dict_pres = estimate_prestige_from_roster(dict_roster)
-    print(f"  Dict roster (avg ~78, 3.5★ pot): prestige {dict_pres}")
+    print(f"  Dict roster (avg ~42, 3.5★ pot): prestige {dict_pres}")
     assert 10 <= dict_pres <= 99
 
     # Empty roster
