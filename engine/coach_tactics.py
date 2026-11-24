@@ -391,3 +391,22 @@ def defensive_read_allocation(tactics: Dict[str, Any], family_category: str) -> 
     # Two-of-four categories are typically favored. A focused read has the
     # same *size* as the missed-read concession, not a blanket read boost.
     return (0.04 if family_category in focus else -0.04) * auth
+
+
+def resolve_special_teams_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Read the saved STC profile without changing the coach or scheme."""
+    if not staff or staff.get("stc") is None:
+        return {}
+    coach = staff["stc"]
+    profile = ensure_coach_tactical_profile(coach)
+    prefs = profile.get("special_teams", {})
+    hc = staff.get("head_coach")
+    delegation = (ensure_coach_tactical_profile(hc).get("head_coach", {})
+                  .get("delegation", 0.5) if hc else 1.0)
+    authority = max(0.4, min(1.0, 0.4 + 0.6 * float(delegation)))
+    return {
+        "coach_id": coach.coach_id,
+        "authority": authority,
+        "field_position_bias": max(-0.5, min(0.5, float(prefs.get("field_position_bias", 0)))) * authority,
+        "return_aggression": max(-0.5, min(0.5, float(prefs.get("return_aggression", 0)))) * authority,
+    }
