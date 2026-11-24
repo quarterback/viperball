@@ -37,6 +37,8 @@ jobs:
         run: python -m pytest tests/ -q
       - name: BOX-01 full-game accounting smoke
         run: python scripts/benchmark_boxscore_reconciliation.py --games 8 --seed 20261124
+      - name: Analytics score value and DTW separation smoke
+        run: python scripts/benchmark_analytics_clarity.py --games 12 --seed 20261124
       - name: DEF-08 and DEL-01 paired full-engine smoke
         run: python scripts/benchmark_rush_delta.py --games 40 --seed 20261124 --out reports/rush-delta-integrated.json
       - name: VAL-03 national scheduled-league first-week audit
