@@ -34,7 +34,7 @@ Consider a team leading by 12 in the third quarter. Their Delta Yards penalty is
 
 **Score selectively** — take the snap kick (5 points) or the field goal (3 points) when available, but don't risk turnovers chasing the 9-point touchdown. The theory: maintain a comfortable lead without maximizing the Delta Yards penalty, keeping field position manageable.
 
-**Control possession** — run the clock with a Ground & Pound tempo, bleed time, and accept that drives may stall without scoring. The theory: deny the trailing team possessions entirely. You can't come back if you never get the ball.
+**Control possession** — run the clock with a Ground Control tempo, bleed time, and accept that drives may stall without scoring. The theory: deny the trailing team possessions entirely. You can't come back if you never get the ball.
 
 **Pin and punt** — flip to a Rouge Hunt mentality, using deep punts for pindown points (1 pt each) while keeping the lead stable. The theory: score in small increments that grow the lead slowly without dramatically worsening the Delta Yards penalty, while also forcing the opponent into terrible field position.
 
@@ -64,7 +64,7 @@ The Thermostat is the most sophisticated countermeasure because it requires real
 
 When the lead drops toward 10, the offense opens up: more kick passes, more Viper jets, higher kick_mode_aggression. When the lead climbs past 18, the offense throttles down: more dive options, slower tempo, willing to punt rather than risk turnovers.
 
-The Thermostat depends on the Time-of-Possession model. A Ball Control or Ground & Pound offense burning 34-38 seconds per play in Thermostat mode can consume enormous amounts of clock while the lead sits in the target range. The trailing team gets fewer possessions, and the ones they do get face the full weight of the defensive adaptation systems (Solved Puzzle, halftime DC re-roll, defensive prestige tiers).
+The Thermostat depends on the Time-of-Possession model. A Ball Control or Ground Control offense burning 34-38 seconds per play in Thermostat mode can consume enormous amounts of clock while the lead sits in the target range. The trailing team gets fewer possessions, and the ones they do get face the full weight of the defensive adaptation systems (Solved Puzzle, halftime DC re-roll, defensive prestige tiers).
 
 **Ideal for:** Gameday Managers with high composure and adaptability. Triple Threat and Balanced offenses that can shift between run-heavy and kick-heavy play calling. Disciplinarian coaching staffs that minimize turnovers.
 
@@ -78,7 +78,7 @@ This is the most conservative countermeasure and it trades offensive production 
 
 The vulnerability: the Vault can stall and create punting situations, which give the opponent better field position than Delta Yards would. A team that goes three-and-out in Vault mode actually *helps* the trailing team by giving them the ball at midfield instead of forcing them to earn it from their own territory.
 
-**Ideal for:** Disciplinarians with high rotations (fatigue resistance for the defense during long drives). Ground & Pound and Ball Control offenses. Teams with Reliable player archetypes who minimize variance.
+**Ideal for:** Disciplinarians with high rotations (fatigue resistance for the defense during long drives). Ground Control and Ball Control offenses. Teams with Reliable player archetypes who minimize variance.
 
 ### The Counterpunch
 
@@ -120,7 +120,7 @@ A `lead_management_profile` on each head coach, generated from existing attribut
 
 **Thermostat tendency** scales with `composure_tendency` + `adaptability`. Gameday Managers with Balanced or Triple Threat offenses trend here.
 
-**Vault tendency** scales with inverse `risk_tolerance` + `rotations` attribute. Disciplinarians with Ground & Pound or Ball Control offenses trend here.
+**Vault tendency** scales with inverse `risk_tolerance` + `rotations` attribute. Disciplinarians with Ground Control or Ball Control offenses trend here.
 
 **Counterpunch tendency** scales with `player_trust` + `variance_tolerance`. Motivators and Players' Coaches with Chain Gang or Lateral Spread offenses trend here.
 
@@ -128,7 +128,7 @@ A `lead_management_profile` on each head coach, generated from existing attribut
 
 The coaching AI would evaluate the lead state each drive and apply the countermeasure profile as a modifier to existing play-selection weights, tempo decisions, and kick_mode_aggression thresholds. A coach with a strong Thermostat tendency might reduce kick_mode_aggression by 20% when the lead exceeds their target band. A coach with Avalanche tendency might *increase* aggression as the lead grows, leaning into breakaway plays that can score from deep in their own territory.
 
-The beauty of this approach is that it layers on top of every existing system without replacing anything. Offensive styles still drive play-family weights. Personality sliders still modulate individual decisions. The countermeasure profile simply adds a lead-aware envelope around those decisions, creating the kind of coaching diversity where two Ground & Pound teams with identical roster talent play completely differently when leading by 15 in the third quarter.
+The beauty of this approach is that it layers on top of every existing system without replacing anything. Offensive styles still drive play-family weights. Personality sliders still modulate individual decisions. The countermeasure profile simply adds a lead-aware envelope around those decisions, creating the kind of coaching diversity where two Ground Control teams with identical roster talent play completely differently when leading by 15 in the third quarter.
 
 ## The Bigger Picture
 

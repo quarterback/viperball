@@ -107,7 +107,7 @@ COACHING_BACKGROUNDS = [
 
 # Coaching philosophies (these will match team identities)
 PHILOSOPHIES = {
-    'ground_pound': "Ground-based power attack using all 6 downs",
+    'ground_control': "Ground-based power attack using all 6 downs",
     'lateral_spread': "Multiple lateral chains and perimeter speed",
     'boot_raid': "Snap kick-heavy air raid with the foot",
     'ball_control': "Conservative, mistake-free football",
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     print("\n1. Female head coach:")
-    coach1 = generate_coach_name(gender='female', team_philosophy='ground_pound')
+    coach1 = generate_coach_name(gender='female', team_philosophy='ground_control')
     print(json.dumps(coach1, indent=2))
 
     print("\n2. Male head coach:")

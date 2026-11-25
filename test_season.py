@@ -56,7 +56,7 @@ def main():
             "defense_style": "pressure_defense"
         },
         "Marquette": {
-            "offense_style": "ground_pound",
+            "offense_style": "ground_control",
             "defense_style": "run_stop_defense"
         },
         "Butler": {

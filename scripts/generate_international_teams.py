@@ -43,7 +43,7 @@ STAT_KEYS = [
 YEAR_LABELS = ["Rookie", "2nd Year", "3rd Year", "Veteran", "Veteran", "Veteran"]
 
 OFFENSE_STYLES = [
-    "ground_pound", "lateral_spread", "boot_raid", "ball_control", "ghost",
+    "ground_control", "lateral_spread", "boot_raid", "ball_control", "ghost",
     "stampede", "chain_gang", "slick_n_slide", "balanced", "east_coast",
     "shock_and_awe", "six_shooter", "quick_strike", "mousetrap", "mismatch",
     "ironclad",

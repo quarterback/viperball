@@ -94,7 +94,7 @@ PRESIDENT_ARCHETYPES = {
         "recruiting_eye_range": (50, 70),
         "staff_hiring_range": (60, 80),
         "salary_range": (3, 6),
-        "coaching_style_bias": ["ball_control", "ground_pound", "chain_gang"],
+        "coaching_style_bias": ["ball_control", "ground_control", "chain_gang"],
     },
     "innovator": {
         "label": "Innovator",
@@ -762,7 +762,8 @@ def president_set_team_style(
     offense = rng.choice(style_bias)
 
     # Defense: somewhat independent of archetype
-    defenses = ["swarm", "blitz_pack", "shadow", "fortress", "predator", "drift", "chaos", "lockdown"]
+    defenses = ["swarm", "blitz_pack", "shadow", "fortress", "predator", "drift", "chaos", "lockdown",
+                "keeper_hunt", "rotation"]
     defense = rng.choice(defenses)
 
     st_schemes = ["iron_curtain", "lightning_returns", "block_party", "chaos_unit", "aces"]

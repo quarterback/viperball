@@ -61,7 +61,7 @@ The fast sim is the League Hub's default. Other gaps:
   all). A season's assigned schemes live in `Season.style_configs`, which only the full
   engine reads. The fast sim's own tables also use names that don't exist in the engine
   (`air_raid`, `smashmouth`, `west_coast`, `bend_no_break`); only `balanced`,
-  `ground_pound` and `swarm` overlap.
+  `ground_control` and `swarm` overlap.
 - **Pindown value differs.** The fast sim scores a pindown as 0.5 points; the full engine and
   the README score it as 1.
 - **Speed no longer justifies it.** The full engine ran 200 games in about 10 seconds. A

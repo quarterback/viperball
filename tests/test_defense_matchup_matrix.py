@@ -48,10 +48,10 @@ def test_stable_seed_ignores_defense_in_paired_context():
     )
 
 
-def test_all_128_matchups_and_32_formation_defense_cells_exist():
+def test_all_160_matchups_and_40_formation_defense_cells_exist():
     from engine.game_engine import FORMATION_VS_DEFENSE, OFFENSE_VS_DEFENSE_MATCHUP
     assert len(OFFENSE_STYLES) == 16
-    assert len(DEFENSE_STYLES) == 8
+    assert len(DEFENSE_STYLES) == 10  # DEF-12 added Keeper Hunt and Rotation
     assert set(OFFENSE_VS_DEFENSE_MATCHUP) == {
         (off, scheme) for off in OFFENSE_STYLES for scheme in DEFENSE_STYLES
     }

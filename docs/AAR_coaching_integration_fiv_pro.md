@@ -19,7 +19,7 @@ After the V2.7 lead management countermeasure system was implemented, coaching e
 
 The FIV gap was especially frustrating: Phase 4 of international team building calls `generate_coaching_staff()` to create full 4-person staffs (HC, OC, DC, STC) with personality sliders, classifications, and all attributes. Then `_play_match()` creates a ViperballEngine and simply... doesn't pass them in. The coaches exist. They're just sitting in a drawer.
 
-The pro league gap was structural: `fast_sim_game()` is a statistical model (~1-5ms per game vs ~1-3s for the full engine) designed for spectator-mode simulation. It has no coaching parameters at all. No CoachCard objects, no personality sliders, no gameday modifiers. Every air_raid team and every ground_pound team ran through the same scoring formula with the same variance.
+The pro league gap was structural: `fast_sim_game()` is a statistical model (~1-5ms per game vs ~1-3s for the full engine) designed for spectator-mode simulation. It has no coaching parameters at all. No CoachCard objects, no personality sliders, no gameday modifiers. Every air_raid team and every ground_control team ran through the same scoring formula with the same variance.
 
 ---
 
@@ -115,7 +115,7 @@ COACHING_FLAVOR = {
     "tempo":          (1.07, 1.20),
     "power_spread":   (1.04, 1.10),
     # Grinding / conservative styles → lower scoring, tighter outcomes
-    "ground_pound":   (0.93, 0.75),
+    "ground_control":   (0.93, 0.75),
     "smashmouth":     (0.91, 0.70),
     "triple_option":  (0.95, 0.80),
     # Balanced / methodical → close to neutral, slightly tighter

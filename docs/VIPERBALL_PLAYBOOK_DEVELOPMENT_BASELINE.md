@@ -109,7 +109,7 @@ The foundation. Seven run play families, each with distinct risk/reward:
 
 **Breakaway system:** Any run gaining 5+ yards has a chance to trigger a breakaway (additional 15–85 yards). The chance scales by play family — Viper Jet has 30% explosive chance, Dive Option has 14%.
 
-**Carrier selection** is archetype-driven. A Ground & Pound team feeds the Halfback on dives and powers. A Ghost team sends the Viper on jets and counters.
+**Carrier selection** is archetype-driven. A Ground Control team feeds the Halfback on dives and powers. A Ghost team sends the Viper on jets and counters.
 
 ### Pillar 2: The Kick Pass
 
@@ -174,7 +174,7 @@ Each style is a dict containing: play family weights, kick_pass_weights (sub-fam
 
 ### The Original 9
 
-**Ground & Pound** — Heavy run, all 6 downs. Dives and powers. Low tempo, low lateral risk. Kick passes are rare play-action Quick Kicks. Formation: mostly Tight/Heavy.
+**Ground Control** — Heavy run, all 6 downs. Dives and powers. Low tempo, low lateral risk. Kick passes are rare play-action Quick Kicks. Formation: mostly Tight/Heavy.
 
 **Lateral Spread** — Constant lateral chains. High variance, high reward. Kick-Lateral is a core weapon. Bell rates high both directions. Formation: mostly Spread.
 
@@ -223,7 +223,7 @@ Each offensive style has matchup multipliers against each defensive style. These
 
 | | Base | Pressure | Contain | Run-Stop | Coverage |
 |---|---|---|---|---|---|
-| Ground & Pound | 1.00 | 1.05 | 0.92 | 0.78 | 1.12 |
+| Ground Control | 1.00 | 1.05 | 0.92 | 0.78 | 1.12 |
 | Lateral Spread | 1.00 | 1.08 | 0.78 | 1.15 | 0.90 |
 | Boot Raid | 1.00 | 0.95 | 1.05 | 1.10 | 0.88 |
 | Ball Control | 1.00 | 1.02 | 0.95 | 0.82 | 1.08 |

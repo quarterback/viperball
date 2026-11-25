@@ -50,7 +50,7 @@ def derive_coaching_style_from_position(position: str) -> Dict[str, any]:
         return {
             'offensive_specialty': 'Decision-making and option execution',
             'coaching_strength': 'Play calling and game management',
-            'philosophy_tendency': 'ground_pound',
+            'philosophy_tendency': 'ground_control',
             'risk_tolerance': 'medium',
             'teaching_focus': 'Reads and decision trees'
         }
@@ -59,7 +59,7 @@ def derive_coaching_style_from_position(position: str) -> Dict[str, any]:
         return {
             'offensive_specialty': 'Running game and ball carrying',
             'coaching_strength': 'Physical play and toughness',
-            'philosophy_tendency': 'ground_pound',
+            'philosophy_tendency': 'ground_control',
             'risk_tolerance': 'conservative',
             'teaching_focus': 'Fundamentals and physicality'
         }

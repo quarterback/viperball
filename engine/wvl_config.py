@@ -262,17 +262,17 @@ COUNTRY_STYLE_TENDENCIES: Dict[str, Dict] = {
         "st_schemes": ["aces", "lightning_returns"],
     },
     "England": {
-        "offense_styles": ["ground_pound", "chain_gang", "boot_raid"],
+        "offense_styles": ["ground_control", "chain_gang", "boot_raid"],
         "defense_styles": ["fortress", "blitz_pack"],
         "st_schemes": ["iron_curtain", "block_party"],
     },
     "Italy": {
-        "offense_styles": ["ball_control", "chain_gang", "ground_pound"],
+        "offense_styles": ["ball_control", "chain_gang", "ground_control"],
         "defense_styles": ["lockdown", "fortress", "shadow"],
         "st_schemes": ["iron_curtain", "aces"],
     },
     "Germany": {
-        "offense_styles": ["stampede", "ground_pound", "boot_raid"],
+        "offense_styles": ["stampede", "ground_control", "boot_raid"],
         "defense_styles": ["blitz_pack", "swarm", "predator"],
         "st_schemes": ["block_party", "iron_curtain"],
     },
@@ -292,12 +292,12 @@ COUNTRY_STYLE_TENDENCIES: Dict[str, Dict] = {
         "st_schemes": ["lightning_returns", "chaos_unit"],
     },
     "Scotland": {
-        "offense_styles": ["ground_pound", "stampede", "chain_gang"],
+        "offense_styles": ["ground_control", "stampede", "chain_gang"],
         "defense_styles": ["fortress", "blitz_pack"],
         "st_schemes": ["iron_curtain", "block_party"],
     },
     "Wales": {
-        "offense_styles": ["boot_raid", "chain_gang", "ground_pound"],
+        "offense_styles": ["boot_raid", "chain_gang", "ground_control"],
         "defense_styles": ["fortress", "blitz_pack"],
         "st_schemes": ["iron_curtain", "aces"],
     },
@@ -307,7 +307,7 @@ COUNTRY_STYLE_TENDENCIES: Dict[str, Dict] = {
         "st_schemes": ["chaos_unit", "block_party"],
     },
     "Greece": {
-        "offense_styles": ["ball_control", "chain_gang", "ground_pound"],
+        "offense_styles": ["ball_control", "chain_gang", "ground_control"],
         "defense_styles": ["lockdown", "fortress"],
         "st_schemes": ["iron_curtain", "aces"],
     },

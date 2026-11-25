@@ -19,7 +19,7 @@ from engine.game_engine import WEATHER_CONDITIONS
 # ── Tooltip dictionaries (shared across pages) ──
 
 OFFENSE_TOOLTIPS = {
-    "ground_pound": "Grind 20 yards, punch it in. Heavy dive/power runs using all 6 downs. Old-school power football.",
+    "ground_control": "Grind 20 yards, punch it in. Heavy dive/power runs using all 6 downs. Old-school power football.",
     "lateral_spread": "Stretch the defense with 2-4 lateral chains. High-variance, big-play offense. Risky but devastating.",
     "boot_raid": "Air Raid with the foot. Get to the Launch Pad (opp 40-45), then fire snap kicks. Kick-heavy.",
     "ball_control": "Conservative, mistake-free football. Take the 3-point place kick when available. Win 24-21.",
@@ -38,6 +38,8 @@ DEFENSE_TOOLTIPS = {
     "predator": "Gambles for turnovers — jumps routes, forces fumbles. Creates takeaways constantly, but gives up explosives when the gamble fails.",
     "drift": "Soft zone — bend but don't break. Prevents explosives and big plays, but gives up 4-5 yards on every carry. Death by paper cuts.",
     "chaos": "Stunts, disguises, and line shifts every snap. Wrecks blocking assignments, but when the offense adjusts, it's wide open.",
+    "keeper_hunt": "Pressures every kick: more blocks and rushed snap kicks, so taking the five gets less reliable. The rushers it commits give up conversions.",
+    "rotation": "Substitutes aggressively so defenders stay fresh. Blunts tempo and late game collapse, but rotating bodies costs a little on every snap.",
     "lockdown": "Shutdown kick pass coverage — blankets receivers. Forces you to grind on the ground, but power runs bulldoze the light box.",
     "base_defense": "Solid fundamentals, no major weaknesses. Balanced approach to all play types.",
     "pressure_defense": "Aggressive blitzing and disruption. Forces fumbles but vulnerable to explosive lateral plays.",

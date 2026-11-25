@@ -28,23 +28,23 @@ PHILOSOPHY_TO_OFFENSE = {
     "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe",
                    "six_shooter"],
     "lateral_heavy": ["lateral_spread", "chain_gang", "ghost", "quick_strike", "mismatch"],
-    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide", "ironclad"],
-    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast",
+    "ground_and_pound": ["ground_control", "ball_control", "slick_n_slide", "ironclad"],
+    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_control", "east_coast",
                "mousetrap", "mismatch", "six_shooter"],
     "air_raid": ["shock_and_awe", "boot_raid", "east_coast", "quick_strike"],
-    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide",
+    "possession": ["east_coast", "ball_control", "ground_control", "slick_n_slide",
                    "ironclad", "mousetrap"],
 }
 
 _STYLE_PREVALENCE = {
-    "ground_pound": 1.8,
+    "ground_control": 1.8,
     "ironclad": 0.7, "six_shooter": 0.7, "quick_strike": 0.7, "mousetrap": 0.7, "mismatch": 0.6,
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
-    "aggressive": ["blitz_pack", "predator", "chaos"],
-    "balanced": ["swarm", "fortress", "drift", "lockdown"],
-    "conservative": ["drift", "fortress", "lockdown", "swarm"],
+    "aggressive": ["blitz_pack", "predator", "chaos", "keeper_hunt"],
+    "balanced": ["swarm", "fortress", "drift", "lockdown", "rotation"],
+    "conservative": ["drift", "fortress", "lockdown", "swarm", "rotation"],
 }
 
 IDENTITY_STYLE_TO_ST = {
@@ -143,7 +143,7 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
             w += (speed - 84) * 0.2
         elif c == "slick_n_slide" and speed >= 83:
             w += (speed - 80) * 0.12
-        elif c == "ground_pound" and defense >= 78:
+        elif c == "ground_control" and defense >= 78:
             w += (defense - 75) * 0.1
         elif c == "ball_control":
             w += 0.2
@@ -153,7 +153,7 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
             w += (kick_pow - 75) * 0.10 + (speed - 83) * 0.08
         elif c == "balanced":
             w += 0.3
-        # OFF-PHIL-01: the touchdown first Ground & Pound is a common
+        # OFF-PHIL-01: the touchdown first Ground Control is a common
         # philosophy; the five newly listed styles are niche choices.
         w *= _STYLE_PREVALENCE.get(c, 1.0)
         weights.append(max(0.1, w))
@@ -227,7 +227,7 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
 
 def get_scheme_label(offense: str, defense: str) -> str:
     offense_labels = {
-        "ground_pound": "Ground & Pound",
+        "ground_control": "Ground Control",
         "lateral_spread": "Lateral Spread",
         "boot_raid": "Boot Raid",
         "ball_control": "Ball Control",
@@ -248,6 +248,8 @@ def get_scheme_label(offense: str, defense: str) -> str:
         "drift": "Drift",
         "chaos": "Chaos",
         "lockdown": "Lockdown",
+        "keeper_hunt": "Keeper Hunt",
+        "rotation": "Rotation",
     }
     off_label = offense_labels.get(offense, offense)
     def_label = defense_labels.get(defense, defense)

@@ -22,7 +22,7 @@ These are simulated outcomes for one attacking roster and two defending rosters.
 
 **Main matrix:** 16 current offensive styles × 8 defensive schemes × 4 deliberately forced offensive formations × 2 defensive roster strengths × 2 mirrored home/away assignments × 1 replication = **2,048 full-engine games**. Each offense–defense pairing has 16 game observations, and each defense has 256. All primary games use clear weather and neutral-site settings.
 
-**Weather test:** 4 selected offenses (Boot Raid, Ground & Pound, Chain Gang, Shock & Awe) × 8 defenses × 2 forced formations (Split, Spread) × 2 defending roster strengths × 2 home/away assignments × 2 weather conditions (clear/rain) × 2 repetitions = **1,024 more games**.
+**Weather test:** 4 selected offenses (Boot Raid, Ground Control, Chain Gang, Shock & Awe) × 8 defenses × 2 forced formations (Split, Spread) × 2 defending roster strengths × 2 home/away assignments × 2 weather conditions (clear/rain) × 2 repetitions = **1,024 more games**.
 
 In both experiments the focal attacking team and the two defending rosters are the same freshly generated synthetic CVL teams. They were selected under `seed=20261123` and `PYTHONHASHSEED=0`:
 
@@ -83,7 +83,7 @@ Attacking points per attacking possession, by offense (rows) and defense (column
 | Chain Gang | 3.37 | 3.62 | 3.16 | 3.32 | 3.33 | 3.41 | 3.56 | 3.36 |
 | East Coast | 4.20 | 4.07 | 3.89 | 4.01 | 3.92 | 4.36 | 4.23 | 3.94 |
 | Ghost | 4.08 | 3.85 | 3.53 | 3.55 | 3.40 | 3.76 | 3.46 | 3.63 |
-| Ground & Pound | 3.57 | 3.84 | 3.83 | 3.78 | 3.77 | 3.48 | 3.89 | 3.73 |
+| Ground Control | 3.57 | 3.84 | 3.83 | 3.78 | 3.77 | 3.48 | 3.89 | 3.73 |
 | Ironclad | 3.90 | 4.00 | 3.53 | 3.56 | 3.40 | 3.97 | 3.77 | 3.82 |
 | Lateral Spread | 3.69 | 3.59 | 3.64 | 3.86 | 3.44 | 3.50 | 3.64 | 3.38 |
 | Mismatch | 3.75 | 3.84 | 3.81 | 3.83 | 3.47 | 3.69 | 3.48 | 3.89 |
@@ -134,7 +134,7 @@ Rain increases the observed turnover burden and energy cost in this controlled s
 
 ```sh
 PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py --seed 20261123 --reps 1 --out reports/def06
-PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py --seed 20261123 --reps 2 --offenses boot_raid,ground_pound,chain_gang,shock_and_awe --formations split,spread --weathers clear,rain --out reports/def06-weather
+PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py --seed 20261123 --reps 2 --offenses boot_raid,ground_control,chain_gang,shock_and_awe --formations split,spread --weathers clear,rain --out reports/def06-weather
 python -m pytest tests/test_defense_matchup_matrix.py -q
 python -m pytest tests/ -q
 ```

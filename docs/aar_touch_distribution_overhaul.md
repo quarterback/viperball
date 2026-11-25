@@ -21,8 +21,8 @@ The spread-the-love system was suppressing star player performance. LEAD backs a
 - Now: LEAD and COMPLEMENT backs are classified as "designated" and skip ceiling/decay entirely. Only rotation players are managed by spread-the-love. Stars eat until fatigue (energy system) naturally slows them down.
 
 ### B. Forced Carry Percentages Increased
-- LEAD forced share raised from 35→54% (balanced), up to 62% (ground_pound)
-- COMPLEMENT raised from 14→20% (balanced), up to 22% (ground_pound)
+- LEAD forced share raised from 35→54% (balanced), up to 62% (ground_control)
+- COMPLEMENT raised from 14→20% (balanced), up to 22% (ground_control)
 - Combined LEAD+COMP forced share: ~74% of carries on run-heavy teams
 
 ### C. LEAD/COMPLEMENT Always in Carrier Pool
@@ -41,7 +41,7 @@ The spread-the-love system was suppressing star player performance. LEAD backs a
 - Minimum weight floor: 0.03 → 0.02
 
 ### F. Starter Ceiling/Rotation Ceiling Raised
-- Starter ceilings raised ~25% across all styles (balanced 24→30, ground_pound 30→38)
+- Starter ceilings raised ~25% across all styles (balanced 24→30, ground_control 30→38)
 - Rotation ceilings lowered slightly (balanced 9→8) to further concentrate touches on stars
 
 ## 3. SUPPORTING CHANGES

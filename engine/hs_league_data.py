@@ -1248,8 +1248,13 @@ HS_MASCOTS = [
 # ──────────────────────────────────────────────
 
 HS_OFFENSE_STYLES = [
-    "balanced", "ground_pound", "triple_option", "smashmouth", "tempo",
+    "balanced", "ground_control", "triple_option", "smashmouth", "tempo",
+    "lateral_spread", "chain_gang",
 ]
+# The lateral chain offenses come from the sport's older, rugby like game,
+# before kick passing took over. They have mostly faded from college but
+# still run at a lot of high schools.
+HS_OFFENSE_WEIGHTS = [3, 3, 2, 2, 2, 2.5, 2.5]
 
 HS_DEFENSE_STYLES = [
     "swarm", "zone", "man_press", "blitz_heavy",
