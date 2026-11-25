@@ -169,7 +169,8 @@ def generate_coach_tactical_profile(coach: Any) -> Dict[str, Any]:
                                     + player_trust * 0.20)), 3)
 
     role = str(getattr(coach, "role", "") or "")
-    if role not in ("head_coach", "oc", "dc", "stc"):
+    from .coach_roles import ALL_ROLES
+    if role not in ALL_ROLES:
         raise ValueError("Unknown coach role: " + role)
     return {
         "version": PROFILE_VERSION,
