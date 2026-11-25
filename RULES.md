@@ -1,5 +1,7 @@
 # Viperball Official Rulebook (v2.0)
 
+**Current documentation:** November 25, 2026. The playing rules and penalty catalog remain unchanged by the analytics and box-score accounting updates. [College competition rules](COLLEGE_RULES.md) cover league format; [analytics](ANALYTICS.md) covers stat attribution and models. A statistical correction is not a playing-rule change.
+
 This is the full rulebook. The README carries the same rules in shorter form, and the two
 must agree. When the engine and this book disagree, the disagreement is a bug in one of
 them. `tests/test_rules_doc.py` checks the numbers in this book against the engine.

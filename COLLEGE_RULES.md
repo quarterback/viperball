@@ -5,7 +5,7 @@ how the CVL runs its competition.
 
 ## League
 
-- 205 women's college programs in 17 conferences, from the 9 team Border Conference to the
+- The supplied configuration has 205 women's college programs in 17 conferences, from the 9 team Border Conference to the
   16 team Big Ten and Pac-16.
 - Programs are drawn from schools across the United States, many without a college football
   team.
@@ -16,6 +16,7 @@ how the CVL runs its competition.
 - A season needs an even number of programs. If the count is odd when a dynasty season
   starts, Coast Guard is retired, or Merchant Marine if Coast Guard is the human's program.
 - Regular season ties stand.
+- Schedule construction validates requested quotas and protects conference/rivalry constraints. An impossible request must not be treated as a fulfilled schedule.
 
 ## Postseason
 
@@ -31,6 +32,10 @@ how the CVL runs its competition.
 - 36 player game day roster. Every player is eligible on any down.
 - Players play both ways. The Viper and the flankers form two way midfield lines (RULES.md
   §13).
+
+## Dynasty and feeder
+
+The college dynasty follows actual school/player cohorts through the high-school feeder, recruiting, transfer and development cycles. The high-school regular-season quick model is separate from full college gameplay. Coaching contracts, retirement, position assignments and installations progress annually. See [FEATURES.md](FEATURES.md) and [COACHING_SPEC.md](COACHING_SPEC.md). These are simulation systems, not additional playing rules.
 
 ## Version history
 

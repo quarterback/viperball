@@ -1,5 +1,7 @@
 # WEA-02: a fuller weather model
 
+> **Implemented design record.** WEA-02 is implemented; see [current weather AAR](aar_2026-11-25_wea02_weather_model.md) and [rulebook](../RULES.md). The old-state description below is historical; season/team splits remain outstanding.
+
 **Priority:** P1. **Status:** open. **Replaces:** WEA-01, which only asked to isolate rain effects.
 
 ## What the game does now
