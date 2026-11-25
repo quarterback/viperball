@@ -262,6 +262,11 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
             if dyn.current_year != year:
                 raise RuntimeError("Wrong dynasty year")
             active = set(season.teams)
+            from engine.coach_school_continuity import planned_schools
+            for team, config in planned_schools(dyn, year).items():
+                if team in active and team != human:
+                    if any(season.style_configs[team].get(k) != v for k,v in config.items()):
+                        raise RuntimeError(f"Recruiting school plan not used at season opening: {team}")
             retired = set(getattr(dyn, "retired_programs", []) or [])
             if national and index == 0:
                 auto_retired = setup.get("auto_retired")
@@ -506,10 +511,20 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 original = {k:v for k,v in profile.items() if k != "learning"}
                 if updated != original:
                     raise RuntimeError(f"Coach base signature changed during employment transition: {cid}")
-                from engine.coach_learning import LIMIT, STEP
+                from engine.coach_learning import LIMIT, STEP, MENTOR_LIMIT, MENTOR_STEP
                 for key in ("kick_mix", "pressure"):
                     if abs(learning.get(key,0)) > LIMIT + 1e-6 or abs(learning.get(key,0)-prior.get(key,0)) > STEP + 1e-6:
                         raise RuntimeError(f"Unbounded tactical adaptation: {cid}/{key}")
+                    m = learning.get("mentorship", {}).get(key, 0)
+                    old_m = prior.get("mentorship", {}).get(key, 0)
+                    if abs(m) > MENTOR_LIMIT + 1e-6 or abs(m-old_m) > MENTOR_STEP + 1e-6:
+                        raise RuntimeError(f"Unbounded coaching-tree inheritance: {cid}/{key}")
+            mentorship = dyn.coaching_history[year+1].get("mentorship", [])
+            school_plan = planned_schools(dyn, year+1)
+            if len({e["coach_id"] for e in mentorship}) != len(mentorship):
+                raise RuntimeError("Duplicate mentorship season credit")
+            if set(school_plan) != active - {human}:
+                raise RuntimeError("Missing CPU school continuity plans")
             career_events = dyn.coaching_history[year+1].get("career_development", [])
             if len(career_events) != len(before_coaches) or len({e["team"]+"|"+e["role"] for e in career_events}) != len(before_coaches):
                 raise RuntimeError("Career evidence ledger must cover each prior staff slot once")
@@ -551,11 +566,24 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 dyn._estimate_team_regions().get(human,"midwest"),
                 scholarships=max(0,COLLEGE_ROSTER_TARGET-len(human_roster)),
                 nil_budget=nil.recruiting_pool,rng=random.Random(seed+year),
-                current_roster=[{"position":p.position} for p in human_roster])
+                current_roster=[{"position":p.position} for p in human_roster],
+                coaching_staff=dyn._coaching_staffs.get(human),
+                style_config=season.style_configs.get(human))
             off["recruit_board"],off["nil_offers"]=board,offers
             recruiting=post(base+"/offseason/recruiting/resolve")
             signed_ids = {r.recruit_id for recruits in (dyn._pending_signed_recruits or {}).values()
                           for r in recruits}
+            from engine.coach_recruiting_fit import recruiting_preferences, recruiting_fit, MAX_FIT
+            fit_values = []
+            for team, recruits in (dyn._pending_signed_recruits or {}).items():
+                if team == human:
+                    continue
+                prefs = recruiting_preferences(dyn._coaching_staffs.get(team), school_plan.get(team))
+                for recruit in recruits:
+                    if not recruit.is_walkon:
+                        fit_values.append(recruiting_fit(recruit, prefs))
+            if any(abs(v) > MAX_FIT + 1e-6 for v in fit_values):
+                raise RuntimeError("Unbounded recruit targeting fit")
             post(base+"/offseason/complete")
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
@@ -617,7 +645,11 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 "coach_career_continuity":{"retained":len(retained_coaches),
                     "departed":len(set(before_coaches)-set(after_coaches)),
                     "new":len(set(after_coaches)-set(before_coaches)),
-                    "development_events":len(coach_events), "career_evidence":career_events},
+                    "development_events":len(coach_events), "career_evidence":career_events,
+                    "mentorship_events":mentorship, "planned_schools":school_plan,
+                    "signed_recruit_fit":{"count":len(fit_values),
+                        "mean":round(average(fit_values),5) if fit_values else None,
+                        "positive":sum(v>0 for v in fit_values), "negative":sum(v<0 for v in fit_values)}},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),
