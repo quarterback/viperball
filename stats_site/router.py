@@ -6184,24 +6184,9 @@ def _get_or_create_pipeline(sess, sid):
         from engine.recruiting import HSRecruitingPipeline
 
         dynasty = sess.get("dynasty")
-        if dynasty and hasattr(dynasty, "_hs_pipeline") and dynasty._hs_pipeline:
-            # Re-seed if recruits have no interest data (pipeline from before seeding code)
-            _pipe = dynasty._hs_pipeline
-            _needs_seed = False
-            for _g, _prList in _pipe.classes.items():
-                if _prList and not _prList[0].recruit.offers and not _prList[0].recruit.top_schools:
-                    _needs_seed = True
-                break
-            if _needs_seed:
-                from engine.recruiting import seed_recruiting_interest
-                season = sess.get("season")
-                _tnames = list(season.teams.keys()) if season and hasattr(season, "teams") else []
-                if _tnames:
-                    import random as _seed_rng
-                    _tp = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
-                    for _g, _prList in _pipe.classes.items():
-                        seed_recruiting_interest(_prList, _tnames, team_prestige=_tp, rng=_seed_rng.Random(hash(sid) + hash(_g)))
-            return _pipe
+        if dynasty:
+            from engine.college_feeder import ensure_college_feeder
+            return ensure_college_feeder(dynasty)
 
         # Check for a session-level pipeline (season-only mode)
         pipeline = sess.get("_hs_pipeline")
