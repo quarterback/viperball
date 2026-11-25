@@ -68,12 +68,6 @@ def pipeline_from_league(league, size_per_class, team_names, prestige=None, prev
         rows, new_rows = [], []
         for pid, team, player in selected:
             recruit = hs_player_to_recruit(player, team)
-            # Stable, seeded scouting/academic metadata for new prospects.
-            bio = random.Random(f"hs-academic:{pid}")
-            recruit.field_intelligence = max(25,min(95,round(bio.gauss(player.awareness,10))))
-            recruit.coachability = max(25,min(95,round(bio.gauss(60,14))))
-            recruit.gpa = round(max(1.5,min(4.0,bio.gauss(3,.45))),2)
-            recruit.sat_score = max(600,min(1600,round(bio.gauss(1050,150)/10)*10))
             if pid in old:
                 prospect = deepcopy(old[pid])
                 # Preserve scouting, academic and recruiting history; copy
@@ -135,17 +129,20 @@ def ensure_college_feeder(dynasty, year=None, team_names=None, size_per_class=No
     return pipeline
 
 
-def advance_college_feeder(dynasty, year, team_names=None, size_per_class=None):
+def advance_college_feeder(dynasty, year, team_names=None, size_per_class=None, *, include_reserve=False):
     """Graduate exactly the tracked seniors, advance the competition once."""
     retired = set(getattr(dynasty,"retired_programs",[]) or [])
     names = [t for t in (team_names if team_names is not None else dynasty.team_histories) if t not in retired]
     size = size_per_class or max(300,len(names)*12)
     old = ensure_college_feeder(dynasty,year-1,names,size)
     graduates = [deepcopy(p.recruit) for p in old.classes["12th"]]
+    tracked = {r.recruit_id for r in graduates}
+    reserve = [hs_player_to_recruit(p,t) for t in dynasty._hs_league.teams.values()
+               for p in t.seniors if p.player_id not in tracked] if include_reserve else []
     league = _isolated_sim(advance_hs_league(dynasty._hs_league,year,
                                             rng=random.Random(f"hs-development:{year}")))
     new = pipeline_from_league(league,size,names,dynasty.team_prestige,previous=old)
     if {r.recruit_id for r in graduates} & set(competition_index(league)):
         raise ValueError("High school graduate remained in active competition")
     dynasty._hs_league, dynasty._hs_pipeline = league,new
-    return graduates
+    return (graduates,reserve) if include_reserve else graduates
