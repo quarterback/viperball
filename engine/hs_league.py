@@ -225,6 +225,9 @@ def generate_hs_team(
     for i, pos in enumerate(HS_ROSTER_TEMPLATE):
         yr = years[i] if i < len(years) else rng.choice(HS_YEAR_ORDER)
         p = _generate_hs_player(pos, yr, state, school_name, rng)
+        used = {other.number for other in players}
+        if p.number in used:
+            p.number = next(n for n in range(1, 100) if n not in used)
         players.append(p)
 
     return HSTeam(
@@ -440,10 +443,10 @@ def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
         else:
             away_score += 5
     for team, side in ((home, "home"), (away, "away")):
-        by_name = {ps.get("name"): ps for ps in result.get("player_stats", {}).get(side, [])}
+        by_id = {ps.get("player_id"): ps for ps in result.get("player_stats", {}).get(side, [])}
         for p in team.players:
             p.season_games += 1
-            ps = by_name.get(p.name)
+            ps = by_id.get(p.player_id)
             if not ps:
                 continue
             p.season_yards += int(ps.get("yards", 0) or 0)
@@ -722,6 +725,9 @@ def advance_hs_league(
         for index, pos in enumerate(fill_positions[:slots_needed]):
             p = _generate_hs_player(pos, "Freshman", team.state, team.school_name, rng)
             p.player_id = hs_player_id(key, new_year, index)
+            used = {other.number for other in returning}
+            if p.number in used:
+                p.number = next(n for n in range(1, 100) if n not in used)
             returning.append(p)
 
         # Reset team record
