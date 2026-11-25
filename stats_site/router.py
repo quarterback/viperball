@@ -2202,8 +2202,9 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     if isinstance(card, dict):
         card = CoachCard.from_dict(card)
 
+    from engine.coach_roles import POSITION_LABELS
     role_label = {"head_coach": "Head Coach", "oc": "Offensive Coordinator",
-                  "dc": "Defensive Coordinator", "stc": "Special Teams Coordinator"}.get(coach_role, coach_role)
+                  "dc": "Defensive Coordinator", "stc": "Special Teams Coordinator"}.get(coach_role, POSITION_LABELS.get(coach_role,coach_role))
 
     from engine.coach_career import ensure as coach_career, active_management, caller, seeks_hc, requires_calls
     staff_dict = {role: CoachCard.from_dict(c) if isinstance(c,dict) else c for role,c in staff_dict.items() if c}
