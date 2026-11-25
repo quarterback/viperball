@@ -133,15 +133,15 @@ def _open_edit_player_dialog(player_name: str, dynasty, team_key: str):
 def _render_setup(container):
     with container:
         with ui.element("div").classes("w-full").style(
-            "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); padding: 32px; border-radius: 12px;"
+            "background: var(--vb-surface-2); padding: 32px; border-radius: 12px;"
         ):
-            ui.label("Women's Viperball League").classes("text-3xl font-bold text-white")
+            ui.label("Women's Viperball League").classes("text-3xl font-semibold text-white")
             ui.label("Galactic Premiership").classes("text-lg text-indigo-200")
 
         # Mode selector
         with ui.row().classes("w-full gap-4 mt-4"):
-            with ui.card().classes("flex-1 p-4 cursor-pointer hover:ring-2 ring-blue-400").style(
-                "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);"
+            with ui.card().classes("flex-1 p-4 cursor-pointer ").style(
+                "background: var(--vb-surface-2);"
             ):
                 ui.label("Commissioner Mode").classes("text-lg font-bold text-white")
                 ui.label(
@@ -159,7 +159,7 @@ def _render_setup(container):
                 ).props("no-caps")
 
             with ui.card().classes("flex-1 p-4").style(
-                "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%);"
+                "background: var(--vb-surface-2);"
             ):
                 ui.label("Owner Mode").classes("text-lg font-bold text-white")
                 ui.label(
@@ -283,9 +283,9 @@ def _render_draft(container, dynasty):
 
     with container:
         with ui.element("div").classes("w-full").style(
-            "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 28px; border-radius: 10px;"
+            "background: var(--vb-surface-2); padding: 28px; border-radius: 10px;"
         ):
-            ui.label("Build Your Opening Roster").classes("text-2xl font-bold text-white")
+            ui.label("Build Your Opening Roster").classes("text-2xl font-semibold text-white")
             ui.label(
                 f"Draft players to start your dynasty. Pick 15–30 to form a competitive squad."
             ).classes("text-sm text-blue-200")
@@ -442,11 +442,11 @@ def _render_main(container, state):
 
     with container:
         with ui.element("div").classes("w-full vb-hero-banner").style(
-            "background: linear-gradient(135deg, #312e81 0%, #4338ca 100%); padding: 20px 28px; border-radius: 8px;"
+            "background: var(--vb-surface-2); padding: 20px 28px; border-radius: 8px;"
         ):
             with ui.row().classes("w-full items-center justify-between vb-hero-top"):
                 with ui.column().classes("gap-0"):
-                    ui.label(club_name).classes("text-2xl font-bold text-white")
+                    ui.label(club_name).classes("text-2xl font-semibold text-white")
                     ui.label(f"{tier_name} | Year {dynasty.current_year} | Owner: {dynasty.owner.name}").classes(
                         "text-sm text-indigo-200"
                     )
@@ -1572,7 +1572,7 @@ def _fill_playoffs(containers, dynasty):
                               value=is_owner_tier).classes("w-full mb-2"):
                 if champion_name:
                     with ui.card().classes("w-full p-4 mb-3").style(
-                        "background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px;"
+                        "background: var(--vb-surface-2); border-radius: 8px;"
                     ):
                         with ui.row().classes("items-center gap-3"):
                             ui.icon("emoji_events").classes("text-3xl text-white")
@@ -1683,7 +1683,7 @@ def _render_champions_banner(champions_dict):
             champ_name = club.name if club else champ_key
 
             with ui.card().classes("flex-1 min-w-[200px] p-4 text-center").style(
-                "background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 8px;"
+                "background: var(--vb-surface-2); border-radius: 8px;"
             ):
                 ui.icon("emoji_events").classes("text-2xl text-white")
                 ui.label(champ_name).classes("text-base font-bold text-white")
@@ -2561,9 +2561,9 @@ def _render_offseason_controls(container, dynasty):
 
 def _render_offseason_start(container, dynasty):
     with ui.element("div").classes("w-full").style(
-        "background: linear-gradient(135deg, #92400e 0%, #d97706 100%); padding: 24px; border-radius: 8px;"
+        "background: var(--vb-surface-2); padding: 24px; border-radius: 8px;"
     ):
-        ui.label(f"Year {dynasty.current_year} Offseason").classes("text-2xl font-bold text-white")
+        ui.label(f"Year {dynasty.current_year} Offseason").classes("text-2xl font-semibold text-white")
         ui.label("Process your end-of-season transitions step by step.").classes("text-sm text-amber-100")
 
     cached_graduates = app.storage.user.get("cvl_graduates")
@@ -2638,7 +2638,7 @@ def _render_offseason_step(container, dynasty, data, step_idx):
     total_steps = len(_OFFSEASON_STEPS)
 
     with ui.element("div").classes("w-full").style(
-        "background: linear-gradient(135deg, #92400e 0%, #d97706 100%); padding: 20px 24px; border-radius: 8px;"
+        "background: var(--vb-surface-2); padding: 20px 24px; border-radius: 8px;"
     ):
         with ui.row().classes("w-full items-center justify-between"):
             with ui.column().classes("gap-0"):

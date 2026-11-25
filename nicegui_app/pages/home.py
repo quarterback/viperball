@@ -44,12 +44,11 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
     team_count = len(shared.get("teams", []))
 
     # Hero section
-    with ui.element("div").classes("w-full text-center mt-6 mb-8"):
-        ui.icon("sports_football").classes("text-5xl mb-2").style("color: var(--vb-accent);")
-        ui.label("VIPERBALL SANDBOX").classes(
-            "text-4xl sm:text-5xl font-black tracking-wider"
-        ).style("color: #fff; letter-spacing: 0.1em;")
-        ui.label("Collegiate Viperball League Simulator").classes(
+    with ui.element("div").classes("w-full mt-4 mb-6"):
+        ui.label("Viperball").classes(
+            "text-3xl sm:text-4xl font-semibold"
+        ).style("color: var(--vb-text);")
+        ui.label("Simulate games, manage rosters and build a career").classes(
             "text-sm mt-2"
         ).style("color: var(--vb-text-muted);")
 
@@ -58,8 +57,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "College Season",
             "icon": "sports_football",
-            "gradient": "linear-gradient(135deg, #312e81, #4338ca)",
-            "accent": "#818cf8",
             "nav": "Play",
             "play_tab": "season",
             "desc": "Run a full CVL season with conferences, playoffs, and bowl games.",
@@ -68,8 +65,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "College Dynasty",
             "icon": "school",
-            "gradient": "linear-gradient(135deg, #134e4a, #0d9488)",
-            "accent": "#5eead4",
             "nav": "Play",
             "play_tab": "dynasty",
             "desc": "Multi-season career mode with recruiting, development, and record books.",
@@ -78,8 +73,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "Quick Game",
             "icon": "bolt",
-            "gradient": "linear-gradient(135deg, #78350f, #d97706)",
-            "accent": "#fbbf24",
             "nav": "Play",
             "play_tab": "quick",
             "desc": "Pick two teams. Play one game. Full box scores and play-by-play.",
@@ -88,8 +81,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "Pro Leagues",
             "icon": "stadium",
-            "gradient": "linear-gradient(135deg, #3b0764, #7c3aed)",
-            "accent": "#c4b5fd",
             "nav": "Pro Leagues",
             "desc": "NVL spectator mode — watch pro seasons unfold and bet via DraftyQueenz.",
             "tags": ["NVL", "Spectator", "Betting"],
@@ -97,8 +88,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "WVL Owner Mode",
             "icon": "emoji_events",
-            "gradient": "linear-gradient(135deg, #4c0519, #e11d48)",
-            "accent": "#fda4af",
             "nav": "WVL",
             "desc": "WVL franchise management with promotion, relegation, and finances.",
             "tags": ["Franchise", "Dynasty", "Multi-tier"],
@@ -106,8 +95,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "International",
             "icon": "public",
-            "gradient": "linear-gradient(135deg, #0c4a6e, #0284c7)",
-            "accent": "#7dd3fc",
             "nav": "International",
             "desc": "FIV 5-nation tournament with confederation play and knockouts.",
             "tags": ["FIV", "5 Nations", "Tournament"],
@@ -115,8 +102,6 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         {
             "label": "DraftyQueenz",
             "icon": "casino",
-            "gradient": "linear-gradient(135deg, #064e3b, #059669)",
-            "accent": "#6ee7b7",
             "nav": "Play",
             "play_tab": "dq",
             "desc": "Fantasy betting with salary caps, parlays, and lineup building.",
@@ -130,27 +115,19 @@ def _render_landing(state: UserState, shared: dict, switch_fn):
         for m in _MODES:
             play_tab = m.get("play_tab")
 
-            with ui.element("div").classes("cursor-pointer group").style(
-                f"background: {m['gradient']}; border-radius: 14px; padding: 20px; "
-                f"border: 1px solid rgba(255,255,255,0.08); "
-                f"transition: transform 0.15s, box-shadow 0.15s; "
-            ).on("click", lambda nav=m["nav"], pt=play_tab: switch_fn(nav, play_tab=pt)):
-                with ui.row().classes("items-center gap-3 mb-3"):
-                    ui.icon(m["icon"]).classes("text-2xl").style(f"color: {m['accent']};")
-                    ui.label(m["label"]).classes("text-lg font-bold text-white")
-                ui.label(m["desc"]).classes("text-xs leading-relaxed").style(
-                    "color: rgba(255,255,255,0.7);"
-                )
-                with ui.row().classes("mt-3 gap-2 flex-wrap"):
-                    for tag in m["tags"]:
-                        ui.element("span").classes("text-[10px] font-semibold px-2 py-0.5 rounded-full").style(
-                            f"color: {m['accent']}; background: rgba(255,255,255,0.1); "
-                            f"border: 1px solid rgba(255,255,255,0.15);"
-                        ).text = tag
+            with ui.card().classes("p-4 gap-2").style(
+                "background: var(--vb-surface); border: 1px solid var(--vb-border); border-radius: 8px;"
+            ):
+                with ui.row().classes("items-center gap-2"):
+                    ui.icon(m["icon"], size="18px").style("color: var(--vb-text-muted);")
+                    ui.label(m["label"]).classes("text-lg font-semibold").style("color: var(--vb-text);")
+                ui.label(m["desc"]).classes("text-sm leading-relaxed").style("color: var(--vb-text-muted);")
+                ui.label(" · ".join(m["tags"])).classes("text-xs").style("color: var(--vb-text-dim);")
+                ui.button("Open", on_click=lambda nav=m["nav"], pt=play_tab: switch_fn(nav, play_tab=pt)).props("flat no-caps").style("color: var(--vb-accent);")
 
     # Footer stats
     with ui.row().classes("w-full justify-center mt-10 gap-8"):
-        for label in [f"{team_count} teams", "16 conferences", "CVL Engine v2.5"]:
+        for label in [f"{team_count} college teams"]:
             ui.label(label).classes("text-xs").style("color: var(--vb-text-dim);")
 
 
@@ -186,11 +163,10 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
 
     if champion:
         with ui.element("div").classes("w-full p-4 rounded-xl mb-4").style(
-            "background: linear-gradient(135deg, #78350f, #d97706); "
-            "border: 1px solid rgba(251,191,36,0.3);"
+            "background: var(--vb-surface); border: 1px solid var(--vb-border);"
         ):
             with ui.row().classes("items-center gap-3"):
-                ui.icon("emoji_events").classes("text-3xl").style("color: #fbbf24;")
+                ui.icon("emoji_events", size="18px").style("color: var(--vb-amber);")
                 ui.label(f"National Champions: {champion}").classes(
                     "text-lg font-bold text-white"
                 )
@@ -220,7 +196,7 @@ async def _render_dashboard(state: UserState, shared: dict, switch_fn):
                 f"transition: border-color 0.15s;"
             ).on("click", lambda n=nav: switch_fn(n)):
                 with ui.row().classes("items-center gap-2"):
-                    ui.icon(icon).classes("text-xl").style(f"color: {color};")
+                    ui.icon(icon, size="18px").style("color: var(--vb-text-muted);")
                     ui.label(title).classes("text-base font-bold text-white")
                 ui.label(desc).classes("text-xs mt-1").style("color: var(--vb-text-muted);")
 

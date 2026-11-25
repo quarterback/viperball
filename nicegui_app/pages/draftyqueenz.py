@@ -106,12 +106,12 @@ _DQ_CSS = """
 }
 .dq-tier-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    color: #78350f;
+    background: #78350f;
+    color: #fef3c7;
     font-weight: 700;
     font-size: 0.85rem;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: 4px;
 }
 </style>
 """
