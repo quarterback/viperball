@@ -62,23 +62,11 @@ class HSPlayer:
 
     @property
     def overall(self) -> int:
-        weights = {
-            "Zeroback": (1.2, 1.0, 1.3, 1.0, 0.5, 1.0, 0.6, 1.4, 0.8, 1.2, 1.2),
-            "Viper": (1.4, 1.0, 0.6, 1.3, 0.6, 1.3, 0.7, 1.0, 1.3, 0.4, 0.4),
-            "Halfback": (1.2, 1.1, 0.6, 1.2, 0.7, 1.1, 1.1, 1.0, 1.0, 0.5, 0.5),
-            "Wingback": (1.3, 1.0, 0.6, 1.2, 0.6, 1.2, 0.8, 0.9, 1.1, 0.4, 0.4),
-            "Slotback": (1.2, 1.0, 0.6, 1.3, 0.6, 1.2, 0.9, 1.0, 1.1, 0.4, 0.4),
-            "Offensive Line": (0.7, 1.2, 0.5, 0.8, 1.6, 0.7, 1.6, 0.9, 0.6, 0.3, 0.3),
-            "Defensive Line": (0.8, 1.1, 0.5, 0.8, 1.5, 0.8, 1.5, 1.0, 0.6, 0.3, 0.3),
-            "Keeper": (1.2, 1.0, 0.6, 1.0, 1.3, 1.1, 0.9, 1.3, 0.9, 0.4, 0.4),
-        }
-        w = weights.get(self.position, (1,) * 11)
-        vals = (self.speed, self.stamina, self.kicking, self.lateral_skill,
-                self.tackling, self.agility, self.power, self.awareness,
-                self.hands, self.kick_power, self.kick_accuracy)
-        total_w = sum(w)
-        raw = sum(v * wt for v, wt in zip(vals, w)) / total_w
-        return max(10, min(99, int(raw)))
+        # Identical position-weighted rating used by Recruit and PlayerCard.
+        from engine.player_card import _get_position_weights
+        weights = _get_position_weights(self.position)
+        raw = sum(getattr(self, attr)*weight for attr,weight in weights.items()) / sum(weights.values())
+        return max(10,min(99,int(raw)))
 
 
 # ──────────────────────────────────────────────
