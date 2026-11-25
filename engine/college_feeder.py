@@ -1,6 +1,7 @@
 """Shared high school competition and college recruiting lifecycle."""
 from copy import deepcopy
 import random
+import threading
 
 from engine.hs_league import (
     create_hs_league, simulate_hs_season, advance_hs_league,
@@ -107,7 +108,60 @@ def _isolated_sim(league):
         random.setstate(state)
 
 
+def _backstory_sim(league):
+    """The high school season before a dynasty starts. It happened before the
+    player arrived, so every round runs on the quick model; live seasons
+    (advance_college_feeder) keep full engine title games. The quick model
+    draws only from its own seeded stream, never Python's global one, so this
+    is safe to run on a background thread."""
+    return simulate_hs_season(league, rng=random.Random(f"hs-games:{league.year}"),
+                              engine_rounds=set())
+
+
+# One feeder build at a time. Dynasty creation builds the feeder on a
+# background thread; a page or offseason step that needs it first waits for
+# that build instead of starting a second copy.
+_FEEDER_LOCK = threading.RLock()
+_BUILDS = {}   # id(dynasty) -> background build thread
+
+
+def build_college_feeder_in_background(dynasty, year, team_names, on_done=None):
+    """Build the high school league and recruiting board after the dynasty
+    creation response goes out. on_done(dynasty) runs afterward (the API
+    saves the dynasty again there)."""
+    key = id(dynasty)
+
+    def work():
+        try:
+            with _FEEDER_LOCK:
+                _ensure_college_feeder(dynasty, year, team_names)
+            if on_done:
+                on_done(dynasty)
+        except Exception:
+            pass  # Non-critical: built again on first use or first offseason
+        finally:
+            _BUILDS.pop(key, None)
+
+    t = threading.Thread(target=work, name="college-feeder", daemon=True)
+    _BUILDS[key] = t   # registered before it starts, so no reader can miss it
+    t.start()
+    return t
+
+
+def wait_for_feeder(dynasty):
+    """Block until a background feeder build for this dynasty finishes."""
+    t = _BUILDS.get(id(dynasty))
+    if t is not None and t is not threading.current_thread():
+        t.join()
+
+
 def ensure_college_feeder(dynasty, year=None, team_names=None, size_per_class=None):
+    wait_for_feeder(dynasty)
+    with _FEEDER_LOCK:
+        return _ensure_college_feeder(dynasty, year, team_names, size_per_class)
+
+
+def _ensure_college_feeder(dynasty, year=None, team_names=None, size_per_class=None):
     year = dynasty.current_year if year is None else year
     retired = set(getattr(dynasty,"retired_programs",[]) or [])
     names = [t for t in (team_names if team_names is not None else dynasty.team_histories) if t not in retired]
@@ -117,7 +171,7 @@ def ensure_college_feeder(dynasty, year=None, team_names=None, size_per_class=No
     if league is None:
         # Legacy saves have no durable competition roster. Do not match
         # unrelated synthetic prospects by name; start a new feeder cohort.
-        league = _isolated_sim(create_hs_league(year,rng=random.Random(year)))
+        league = _backstory_sim(create_hs_league(year,rng=random.Random(year)))
         pipeline = None
     if league.year != year:
         raise ValueError(f"High school feeder year {league.year} does not match {year}")
@@ -131,6 +185,13 @@ def ensure_college_feeder(dynasty, year=None, team_names=None, size_per_class=No
 
 def advance_college_feeder(dynasty, year, team_names=None, size_per_class=None, *, include_reserve=False):
     """Graduate exactly the tracked seniors, advance the competition once."""
+    wait_for_feeder(dynasty)
+    with _FEEDER_LOCK:
+        return _advance_college_feeder(dynasty, year, team_names, size_per_class,
+                                       include_reserve=include_reserve)
+
+
+def _advance_college_feeder(dynasty, year, team_names=None, size_per_class=None, *, include_reserve=False):
     retired = set(getattr(dynasty,"retired_programs",[]) or [])
     names = [t for t in (team_names if team_names is not None else dynasty.team_histories) if t not in retired]
     size = size_per_class or max(300,len(names)*12)

@@ -2646,17 +2646,19 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     session["season"] = None
     session["program_archetype"] = req.program_archetype
 
-    # Eagerly initialise the HS league and recruiting pipeline so the
-    # Recruiting Hub on the stats site shows data before the first offseason.
-    try:
-        import random as _rnd
-        from engine.college_feeder import ensure_college_feeder
-        ensure_college_feeder(dynasty, req.starting_year, list(teams.keys()))
-    except Exception:
-        pass  # Non-critical — will be created on first offseason advance
-
     # Persist dynasty to database
     db_save_dynasty(dynasty, save_key=session_id)
+
+    # Build the HS league and recruiting board after the response goes out
+    # (about 7 seconds on a dev machine), then save again. Pages and steps
+    # that need it wait for this build instead of starting another.
+    try:
+        from engine.college_feeder import build_college_feeder_in_background
+        build_college_feeder_in_background(
+            dynasty, req.starting_year, list(teams.keys()),
+            on_done=lambda d: db_save_dynasty(d, save_key=session_id))
+    except Exception:
+        pass  # Non-critical — will be created on first use or first offseason
 
     return _serialize_dynasty_status(session)
 

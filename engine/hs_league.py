@@ -311,7 +311,23 @@ def create_hs_league(year: int, rng: Optional[random.Random] = None) -> HSLeague
 # FAST SIM (ultra-light HS game simulation)
 # ──────────────────────────────────────────────
 
+# Team strength for the season being simulated. Ratings don't change during
+# a season, so simulate_hs_season works each team out once instead of on
+# every game (about 14,000 games' worth of overall ratings).
+_STRENGTH_CACHE: Optional[Dict[int, float]] = None
+
+
 def _hs_team_strength(team: HSTeam) -> float:
+    cache = _STRENGTH_CACHE
+    if cache is not None:
+        hit = cache.get(id(team))
+        if hit is None:
+            hit = cache[id(team)] = _hs_team_strength_uncached(team)
+        return hit
+    return _hs_team_strength_uncached(team)
+
+
+def _hs_team_strength_uncached(team: HSTeam) -> float:
     if not team.players:
         return 30.0
     avail = [p for p in team.players if p.year in ("Junior", "Senior")]
@@ -470,8 +486,10 @@ def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
 
 
 def _hs_game(home: HSTeam, away: HSTeam, rng: random.Random,
-             week: int = 0, playoff_round: str = "") -> HSGameResult:
-    if playoff_round in HS_ENGINE_ROUNDS:
+             week: int = 0, playoff_round: str = "",
+             engine_rounds: Optional[set] = None) -> HSGameResult:
+    rounds = HS_ENGINE_ROUNDS if engine_rounds is None else engine_rounds
+    if playoff_round in rounds:
         return _hs_engine_game(home, away, rng, week=week, playoff_round=playoff_round)
     return _hs_fast_sim(home, away, rng, week=week, playoff_round=playoff_round)
 
@@ -499,8 +517,25 @@ def _round_robin_pairs(teams: List[str]) -> List[Tuple[str, str]]:
     return pairs
 
 
-def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) -> HSLeague:
-    """Run a full HS season: conference play → state → regional → national."""
+def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None,
+                       engine_rounds: Optional[set] = None) -> HSLeague:
+    """Run a full HS season: conference play → state → regional → national.
+
+    Title rounds run on the full engine (HS_ENGINE_ROUNDS) unless
+    engine_rounds says otherwise. Dynasty creation passes an empty set for the
+    season before the dynasty starts, which is backstory: its 101 title games
+    took about 33 seconds on the full engine."""
+    global _STRENGTH_CACHE
+    outer = _STRENGTH_CACHE
+    _STRENGTH_CACHE = {}
+    try:
+        return _simulate_hs_season(league, rng, engine_rounds)
+    finally:
+        _STRENGTH_CACHE = outer
+
+
+def _simulate_hs_season(league: HSLeague, rng: Optional[random.Random],
+                        engine_rounds: Optional[set]) -> HSLeague:
     if rng is None:
         rng = random.Random(league.year)
 
@@ -520,7 +555,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
 
         for i, (h, a) in enumerate(pairs):
             ht, at = team_lookup[h], team_lookup[a]
-            result = _hs_game(ht, at, rng, week=week + i // (len(names) // 2))
+            result = _hs_game(ht, at, rng, engine_rounds=engine_rounds, week=week + i // (len(names) // 2))
             league.schedule.append(result)
 
     # ── 2. Conference championships (top 2 teams by wins) ──
@@ -531,7 +566,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         conf_teams.sort(key=lambda t: (-t.wins, -t.points_for))
         if len(conf_teams) >= 2:
             t1, t2 = conf_teams[0], conf_teams[1]
-            result = _hs_game(t1, t2, rng, week=week, playoff_round="conf_final")
+            result = _hs_game(t1, t2, rng, engine_rounds=engine_rounds, week=week, playoff_round="conf_final")
             league.schedule.append(result)
             champ = team_lookup[result.winner_key]
             champ.conf_champ = True
@@ -547,14 +582,14 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         state_teams.sort(key=lambda t: (-t.wins, -t.points_for))
         bracket = state_teams[:min(4, len(state_teams))]
         if len(bracket) >= 4:
-            r1 = _hs_game(bracket[0], bracket[3], rng, week=week, playoff_round="state_semi")
-            r2 = _hs_game(bracket[1], bracket[2], rng, week=week, playoff_round="state_semi")
+            r1 = _hs_game(bracket[0], bracket[3], rng, engine_rounds=engine_rounds, week=week, playoff_round="state_semi")
+            r2 = _hs_game(bracket[1], bracket[2], rng, engine_rounds=engine_rounds, week=week, playoff_round="state_semi")
             league.schedule.extend([r1, r2])
             f1, f2 = team_lookup[r1.winner_key], team_lookup[r2.winner_key]
-            final = _hs_game(f1, f2, rng, week=week + 1, playoff_round="state_final")
+            final = _hs_game(f1, f2, rng, engine_rounds=engine_rounds, week=week + 1, playoff_round="state_final")
             league.schedule.append(final)
         elif len(bracket) >= 2:
-            final = _hs_game(bracket[0], bracket[1], rng, week=week + 1, playoff_round="state_final")
+            final = _hs_game(bracket[0], bracket[1], rng, engine_rounds=engine_rounds, week=week + 1, playoff_round="state_final")
             league.schedule.append(final)
         else:
             continue
@@ -587,7 +622,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             next_round = []
             for i in range(0, len(regional_contenders) - 1, 2):
                 t1, t2 = regional_contenders[i], regional_contenders[i + 1]
-                result = _hs_game(t1, t2, rng, week=week, playoff_round="regional")
+                result = _hs_game(t1, t2, rng, engine_rounds=engine_rounds, week=week, playoff_round="regional")
                 league.schedule.append(result)
                 next_round.append(team_lookup[result.winner_key])
             if len(regional_contenders) % 2 == 1:
@@ -615,7 +650,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
                 t1, t2 = national_contenders[i], national_contenders[i + 1]
                 rd = ("national_final" if len(national_contenders) == 2 else
                       "national_semi" if len(national_contenders) <= 4 else "national_round")
-                result = _hs_game(t1, t2, rng, week=week, playoff_round=rd)
+                result = _hs_game(t1, t2, rng, engine_rounds=engine_rounds, week=week, playoff_round=rd)
                 league.schedule.append(result)
                 next_round.append(team_lookup[result.winner_key])
             if len(national_contenders) % 2 == 1:

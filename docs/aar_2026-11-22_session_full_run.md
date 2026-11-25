@@ -132,6 +132,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     crash from HS-01: the high school overall added ratings in a different order and rounded
     one point off for 3 of 4,800 players. → `aar_2026-11-25_full_suite_after_merges.md`
 
+32. **Faster dynasty creation** (November 25). 44.5 seconds down to about 1. The pre-dynasty
+    high school season plays on the quick model, and the high school build runs after the
+    response. History years still cost 2 minutes each. → `aar_2026-11-25_dynasty_creation_speed.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
