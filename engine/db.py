@@ -1374,7 +1374,15 @@ def serialize_dynasty(dynasty) -> dict:
         data["hs_pipeline_state"] = pipeline.save_state()
     hs_league = getattr(dynasty, "_hs_league", None)
     if hs_league is not None:
-        data["hs_league_state"] = hs_league.save_state()
+        import base64, zlib
+        # The full national high-school league is much larger than a
+        # recruiting shortlist. Compress it inside the versioned save.
+        state = json.dumps(hs_league.save_state(), separators=(",",":")).encode()
+        data["hs_league_state"] = {"codec":"zlib-json-v1",
+            "data":base64.b64encode(zlib.compress(state, 3)).decode("ascii")}
+    last_pool = getattr(dynasty,"_last_recruit_pool",None)
+    if last_pool:
+        data["last_recruit_pool"] = [asdict(r) for r in last_pool]
 
     # Next-season rosters (persisted by offseason_complete for roster continuity)
     next_rosters = getattr(dynasty, '_next_season_rosters', None)
@@ -1479,7 +1487,14 @@ def deserialize_dynasty(data: dict):
         dynasty._hs_pipeline = HSRecruitingPipeline.from_save_state(data["hs_pipeline_state"])
     if data.get("hs_league_state") is not None:
         from engine.hs_league import HSLeague
-        dynasty._hs_league = HSLeague.from_save_state(data["hs_league_state"])
+        state = data["hs_league_state"]
+        if state.get("codec") == "zlib-json-v1":
+            import base64, zlib
+            state = json.loads(zlib.decompress(base64.b64decode(state["data"])))
+        dynasty._hs_league = HSLeague.from_save_state(state)
+    if data.get("last_recruit_pool") is not None:
+        from engine.recruiting import Recruit
+        dynasty._last_recruit_pool = [Recruit(**r) for r in data["last_recruit_pool"]]
 
     # Next-season rosters (roster continuity across seasons)
     next_rosters = data.get("next_season_rosters")
