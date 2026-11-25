@@ -86,12 +86,17 @@ def instruction(staff, position):
     return {"focus": sum(shares)/len(shares), "weights": weights}
 
 
-def recruiting_multiplier(staff, position):
-    """Small targeting preference from the dedicated specialist."""
-    card = (staff or {}).get(position_role(position))
+def recruiting_multiplier(staff, recruit):
+    """Specialist targeting within a position, capped at +/-3%."""
+    role = position_role(recruit.position)
+    card = (staff or {}).get(role)
     if card is None:
         return 1.
-    return 1 + max(-.03, min(.03, (card.recruiting - 60) / 35 * .03))
+    values = [getattr(recruit,"true_"+a,50) for a in TECHNICAL[role]]
+    technical = sum(values)/len(values)
+    relative = max(-1.,min(1.,(technical-recruit.true_overall)/25.))
+    teaching = max(0.,min(1.,(card.recruiting-25)/70))
+    return 1 + .03*relative*teaching
 
 
 def scouting_error(staff, position, base=3):
@@ -101,10 +106,12 @@ def scouting_error(staff, position, base=3):
     return max(1, base - int(card.development >= 65) - int(card.development >= 85))
 
 
-def retention_bonus(staff):
+def retention_bonus(staff, year=None):
     # Existing portal accepts a team-wide suppression input. Apply a small
     # average across dedicated coaches only, never one stacked bonus per coach.
-    coaches = [c for r,c in (staff or {}).items() if r in POSITION_ROLES]
+    coaches = [c for r,c in (staff or {}).items() if r in POSITION_ROLES
+               and (year is None or (c.career_history and c.career_history[-1].team_name==c.team_name
+                    and c.career_history[-1].year_end==year-1))]
     if not coaches:
         return 0.
     return .025 * sum(max(0.,(c.leadership-50)/45) for c in coaches) / len(POSITION_ROLES)
