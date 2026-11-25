@@ -158,6 +158,12 @@ def decide(name: str, crew, late_close: bool = False, playoff: bool = False,
     outcome is "called", "no_call" (immaterial, let go) or "missed" (material,
     not flagged).
     """
+    from engine.discipline import IMMEDIATE_EJECTION
+    if name in IMMEDIATE_EJECTION:
+        # Serious misconduct is always material; an unseen foul is a miss,
+        # never a discretionary no-call. No late-game omission discount.
+        accuracy = getattr(crew, "accuracy", 0.95) or 0.95
+        return ("called" if rng.random() < min(0.99, accuracy) else "missed"), True
     cls = foul_class(name)
     material_share, see_material, call_immaterial = FOUL_CLASSES[cls]
     material = rng.random() < material_share

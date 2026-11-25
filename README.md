@@ -516,6 +516,8 @@ Enforcement:
 
 ---
 
+Targeting, fighting and throwing a punch require ejection. A second qualifying unsportsmanlike foul in the same game also requires ejection. The ejected player cannot return, even if the penalty yardage is declined; a legal substitute may play. See the full rulebook for qualifying conduct.
+
 ## Officials
 
 A standard CVL officiating crew consists of:
