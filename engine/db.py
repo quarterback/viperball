@@ -1372,6 +1372,9 @@ def serialize_dynasty(dynasty) -> dict:
     pipeline = getattr(dynasty, "_hs_pipeline", None)
     if pipeline is not None:
         data["hs_pipeline_state"] = pipeline.save_state()
+    hs_league = getattr(dynasty, "_hs_league", None)
+    if hs_league is not None:
+        data["hs_league_state"] = hs_league.save_state()
 
     # Next-season rosters (persisted by offseason_complete for roster continuity)
     next_rosters = getattr(dynasty, '_next_season_rosters', None)
@@ -1474,6 +1477,9 @@ def deserialize_dynasty(data: dict):
     if data.get("hs_pipeline_state") is not None:
         from engine.recruiting import HSRecruitingPipeline
         dynasty._hs_pipeline = HSRecruitingPipeline.from_save_state(data["hs_pipeline_state"])
+    if data.get("hs_league_state") is not None:
+        from engine.hs_league import HSLeague
+        dynasty._hs_league = HSLeague.from_save_state(data["hs_league_state"])
 
     # Next-season rosters (roster continuity across seasons)
     next_rosters = data.get("next_season_rosters")
