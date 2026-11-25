@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import random
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
+from copy import deepcopy
+import hashlib
 from typing import Dict, List, Optional, Tuple
 
 from engine.hs_league_data import (
@@ -56,6 +58,7 @@ class HSPlayer:
     season_tackles: int = 0
     season_kicks_made: int = 0
     season_games: int = 0
+    player_id: str = ""
 
     @property
     def overall(self) -> int:
@@ -103,6 +106,10 @@ class HSTeam:
     national_champ: bool = False
 
     @property
+    def key(self) -> str:
+        return f"{self.school_name}_{self.state}"
+
+    @property
     def name(self) -> str:
         return self.school_name
 
@@ -138,6 +145,12 @@ class HSGameResult:
     away_score: float
     week: int = 0
     playoff_round: str = ""
+    home_key: str = ""
+    away_key: str = ""
+
+    @property
+    def winner_key(self) -> str:
+        return self.home_key if self.home_score > self.away_score else self.away_key
 
     @property
     def winner(self) -> str:
@@ -235,6 +248,19 @@ class HSLeague:
     state_champions: Dict[str, str] = field(default_factory=dict)
     region_champions: Dict[str, str] = field(default_factory=dict)
     national_champion: str = ""
+    state_champion_keys: Dict[str, str] = field(default_factory=dict)
+    region_champion_keys: Dict[str, str] = field(default_factory=dict)
+    national_champion_key: str = ""
+
+    def save_state(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_save_state(cls, data: dict):
+        return cls(**{**data, "teams": {k: HSTeam(**{**t,
+            "players": [HSPlayer(**p) for p in t["players"]]})
+            for k,t in data["teams"].items()},
+            "schedule": [HSGameResult(**g) for g in data["schedule"]]})
 
     @property
     def all_seniors(self) -> List[HSPlayer]:
@@ -258,6 +284,11 @@ class HSLeague:
 # LEAGUE CREATION
 # ──────────────────────────────────────────────
 
+def hs_player_id(school_key: str, entry_year: int, slot: int) -> str:
+    digest = hashlib.sha256(f"{school_key}:{entry_year}:{slot}".encode()).hexdigest()[:24]
+    return f"HSR-{entry_year}-{digest}"
+
+
 def create_hs_league(year: int, rng: Optional[random.Random] = None) -> HSLeague:
     """Create the full HS league from all states/conferences."""
     if rng is None:
@@ -270,6 +301,8 @@ def create_hs_league(year: int, rng: Optional[random.Random] = None) -> HSLeague
             for school_name in schools:
                 key = f"{school_name}_{state_code}"
                 team = generate_hs_team(school_name, state_code, conf_name, rng)
+                for index, player in enumerate(team.players):
+                    player.player_id = hs_player_id(key, year - HS_YEAR_ORDER.index(player.year), index)
                 league.teams[key] = team
 
     return league
@@ -352,7 +385,7 @@ def _hs_fast_sim(
     return HSGameResult(
         home=home.name, away=away.name,
         home_score=home_score, away_score=away_score,
-        week=week, playoff_round=playoff_round,
+        week=week, playoff_round=playoff_round, home_key=home.key, away_key=away.key,
     )
 
 
@@ -371,7 +404,7 @@ def _hs_engine_team(team: HSTeam):
     players = []
     for p in team.players:
         players.append(Player(
-            number=p.number, name=p.name, position=p.position,
+            number=p.number, name=p.name, position=p.position, player_id=p.player_id,
             speed=p.speed, stamina=p.stamina, kicking=p.kicking,
             lateral_skill=p.lateral_skill, tackling=p.tackling,
             agility=p.agility, power=p.power, awareness=p.awareness, hands=p.hands,
@@ -428,7 +461,8 @@ def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
     away.points_for += away_score
     away.points_against += home_score
     return HSGameResult(home=home.name, away=away.name, home_score=home_score,
-                        away_score=away_score, week=week, playoff_round=playoff_round)
+                        away_score=away_score, week=week, playoff_round=playoff_round,
+                        home_key=home.key, away_key=away.key)
 
 
 def _hs_game(home: HSTeam, away: HSTeam, rng: random.Random,
@@ -466,7 +500,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
     if rng is None:
         rng = random.Random(league.year)
 
-    team_lookup = {t.name: t for t in league.teams.values()}
+    team_lookup = {t.key: t for t in league.teams.values()}
 
     # ── 1. Conference regular season (round-robin) ──
     week = 1
@@ -477,7 +511,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
     for state_code, conf_name in sorted(all_conferences):
         conf_teams = [t for t in league.teams.values()
                       if t.state == state_code and t.conference == conf_name]
-        names = [t.name for t in conf_teams]
+        names = [t.key for t in conf_teams]
         pairs = _round_robin_pairs(names)
 
         for i, (h, a) in enumerate(pairs):
@@ -495,7 +529,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             t1, t2 = conf_teams[0], conf_teams[1]
             result = _hs_game(t1, t2, rng, week=week, playoff_round="conf_final")
             league.schedule.append(result)
-            champ = team_lookup[result.winner]
+            champ = team_lookup[result.winner_key]
             champ.conf_champ = True
             league.conf_champions[f"{state_code}_{conf_name}"] = result.winner
 
@@ -512,7 +546,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             r1 = _hs_game(bracket[0], bracket[3], rng, week=week, playoff_round="state_semi")
             r2 = _hs_game(bracket[1], bracket[2], rng, week=week, playoff_round="state_semi")
             league.schedule.extend([r1, r2])
-            f1, f2 = team_lookup[r1.winner], team_lookup[r2.winner]
+            f1, f2 = team_lookup[r1.winner_key], team_lookup[r2.winner_key]
             final = _hs_game(f1, f2, rng, week=week + 1, playoff_round="state_final")
             league.schedule.append(final)
         elif len(bracket) >= 2:
@@ -520,9 +554,10 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             league.schedule.append(final)
         else:
             continue
-        champ = team_lookup[final.winner]
+        champ = team_lookup[final.winner_key]
         champ.state_champ = True
         league.state_champions[state_code] = final.winner
+        league.state_champion_keys[state_code] = final.winner_key
 
     # ── 4. Regional championships ──
     week = 300
@@ -530,7 +565,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         # State champs from this region compete
         regional_contenders = []
         for st in region_states:
-            champ_name = league.state_champions.get(st)
+            champ_name = league.state_champion_keys.get(st)
             if champ_name and champ_name in team_lookup:
                 regional_contenders.append(team_lookup[champ_name])
 
@@ -538,6 +573,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
             if regional_contenders:
                 regional_contenders[0].region_champ = True
                 league.region_champions[region_name] = regional_contenders[0].name
+                league.region_champion_keys[region_name] = regional_contenders[0].key
             continue
 
         # Seed by record, run single-elim bracket
@@ -549,7 +585,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
                 t1, t2 = regional_contenders[i], regional_contenders[i + 1]
                 result = _hs_game(t1, t2, rng, week=week, playoff_round="regional")
                 league.schedule.append(result)
-                next_round.append(team_lookup[result.winner])
+                next_round.append(team_lookup[result.winner_key])
             if len(regional_contenders) % 2 == 1:
                 next_round.append(regional_contenders[-1])
             regional_contenders = next_round
@@ -558,11 +594,12 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         champ = regional_contenders[0]
         champ.region_champ = True
         league.region_champions[region_name] = champ.name
+        league.region_champion_keys[region_name] = champ.key
 
     # ── 5. National championship bracket ──
     week = 400
     national_contenders = []
-    for region_name, champ_name in league.region_champions.items():
+    for region_name, champ_name in league.region_champion_keys.items():
         if champ_name in team_lookup:
             national_contenders.append(team_lookup[champ_name])
 
@@ -576,7 +613,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
                       "national_semi" if len(national_contenders) <= 4 else "national_round")
                 result = _hs_game(t1, t2, rng, week=week, playoff_round=rd)
                 league.schedule.append(result)
-                next_round.append(team_lookup[result.winner])
+                next_round.append(team_lookup[result.winner_key])
             if len(national_contenders) % 2 == 1:
                 next_round.append(national_contenders[-1])
             national_contenders = next_round
@@ -585,6 +622,7 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
         champ = national_contenders[0]
         champ.national_champ = True
         league.national_champion = champ.name
+        league.national_champion_key = champ.key
 
     return league
 
@@ -679,6 +717,7 @@ def advance_hs_league(
         for p in team.players:
             if p.year == "Senior":
                 continue  # graduated
+            p = deepcopy(p)
             idx = HS_YEAR_ORDER.index(p.year)
             p.year = HS_YEAR_ORDER[idx + 1]
             # Apply development
@@ -708,8 +747,9 @@ def advance_hs_league(
         while len(fill_positions) < slots_needed:
             fill_positions.append(rng.choice(HS_ROSTER_TEMPLATE))
 
-        for pos in fill_positions[:slots_needed]:
+        for index, pos in enumerate(fill_positions[:slots_needed]):
             p = _generate_hs_player(pos, "Freshman", team.state, team.school_name, rng)
+            p.player_id = hs_player_id(key, new_year, index)
             returning.append(p)
 
         # Reset team record
