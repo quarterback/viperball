@@ -100,8 +100,9 @@ def partition(record,first_season):
 
 def observations(record):
     from engine.analytics_events import label_states
+    methods={r["id"]:sorted({e["method"] for e in r["score_events"]}) for r in record["contract"]["events"]}
     for row in label_states(record["contract"]):
-        yield {**row,"game_id":record["game_id"]}
+        yield {**row,"game_id":record["game_id"],"score_methods":methods.get(row["event_id"],[])}
 
 
 def evaluate_game(record,model):
@@ -115,7 +116,8 @@ def evaluate_game(record,model):
         if pred is None:continue
         p=pred["value"];old=legacy_value(s,2)
         for key in ("all","down:"+str(s["down"]),"field:"+str(int(s["field_position"])//20),
-                    "scheme:"+str(s.get("offense_school")),"support:"+pred["level"]):
+                    "scheme:"+str(s.get("offense_school")),"support:"+pred["level"],
+                    *("scoring_channel:"+m for m in (obs["score_methods"] or ["none"]))):
             b=by_state[key];b["n"]+=1;b["bias"]+=p-y;b["abs_error"]+=abs(p-y);b["sq_error"]+=(p-y)**2
             b["legacy_abs_error"]+=abs(old-y);b["legacy_sq_error"]+=(old-y)**2
             b["predicted"]+=p;b["observed"]+=y
@@ -305,6 +307,19 @@ def sample(games,seed,out,trace_only=False,engine_root=ROOT,raw_baseline=False):
     analyze(paths,out,0)
 
 
+def compare_baselines(old_path,new_path,out):
+    old=json.loads(Path(old_path).read_text());new=json.loads(Path(new_path).read_text())
+    a={g["seed"]:g for g in old["games"]};b={g["seed"]:g for g in new["games"]}
+    matched=[(a[k],b[k]) for k in sorted(a.keys() & b.keys()) if a[k]["roster_fingerprint"]==b[k]["roster_fingerprint"]]
+    def scores(rows):
+        return distribution([g["score"][s] for g in rows for s in ("home","away")])
+    dump(Path(out)/"baseline_comparison.json",{"old_revision":old["revision"],"new_revision":new["revision"],
+        "shared_seeds":len(a.keys() & b.keys()),"matched_rosters":len(matched),
+        "all_old":scores(old["games"]),"all_new":scores(new["games"]),
+        "matched_old":scores([x for x,y in matched]),"matched_new":scores([y for x,y in matched]),
+        "scope":"observed scoreboard distributions only; engine and measurement revisions may differ, not a causal comparison"})
+
+
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--games",type=int,default=48)
@@ -312,6 +327,10 @@ if __name__=="__main__":
     p.add_argument("--out",type=Path,default=Path("reports/advanced-analytics"))
     p.add_argument("--trace-only",action="store_true")
     p.add_argument("--raw-baseline",action="store_true")
+    p.add_argument("--compare-baselines",nargs=2,type=Path)
     p.add_argument("--engine-root",type=Path,default=ROOT)
     args=p.parse_args()
-    sample(args.games,args.seed,args.out,args.trace_only,args.engine_root,args.raw_baseline)
+    if args.compare_baselines:
+        compare_baselines(*args.compare_baselines,args.out)
+    else:
+        sample(args.games,args.seed,args.out,args.trace_only,args.engine_root,args.raw_baseline)
