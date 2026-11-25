@@ -4203,7 +4203,8 @@ def offseason_complete(session_id: str):
             player_cards, offseason.get("recruit_pool", []), dynasty.current_year,
             random.Random(dynasty.current_year + 19))
         history = dynasty.recruiting_history.setdefault(dynasty.current_year, {})
-        history["walkons"] = walkons
+        history["walkons"] = {t:len(rows) for t,rows in walkons.items()}
+        history["walkon_details"] = walkons
         dynasty._pending_signed_recruits = None
         dynasty._next_season_rosters = {t:[c.to_dict() for c in cards]
                                          for t,cards in player_cards.items()}
