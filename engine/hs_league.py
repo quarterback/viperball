@@ -624,26 +624,26 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
 
 def hs_player_to_recruit(player: HSPlayer, team: HSTeam):
     """One authoritative competition player, one persistent recruit ID."""
-    from engine.recruiting import Recruit
+    from engine.recruiting import generate_single_recruit
     from engine.talent import stars_for_level, STAT_KEYS
     if not player.player_id:
         raise ValueError("High school player is missing her persistent identity")
     first, _, last = player.name.partition(" ")
     base_stars = stars_for_level(player.level) if player.level else player.potential
     performance = int(player.season_tds >= 8) + int(player.season_yards >= 500) + int(team.state_champ)
-    # Biographical attributes are generated once per identity, never per year.
-    bio = random.Random(f"hs-bio:{player.player_id}")
-    height = f"5-{bio.randint(4, 11)}"
-    weight = bio.randint(140, 210)
-    return Recruit(
-        recruit_id=player.player_id, first_name=first, last_name=last or first,
-        position=player.position, region=player.region, hometown=player.hometown,
-        high_school=team.school_name, height=height, weight=weight,
-        stars=min(5, max(1, base_stars + int(player.year == "Senior" and performance >= 2))),
-        true_potential=player.potential, true_development=player.development,
-        true_work_rate=player.work_rate,
-        **{"true_"+attr: getattr(player, attr) for attr in STAT_KEYS},
-    )
+    stars = min(5, max(1, base_stars + int(player.year == "Senior" and performance >= 2)))
+    # Reuse the recruit generator's existing academic, biographical and
+    # decision-preference model, seeded by the actual player's identity.
+    # Its synthetic physical attributes and identity are never retained.
+    recruit = generate_single_recruit(player.player_id, position=player.position,
+        stars=stars, region=player.region, rng=random.Random(f"hs-bio:{player.player_id}"))
+    recruit.first_name, recruit.last_name = first, last or first
+    recruit.hometown, recruit.high_school = player.hometown, team.school_name
+    recruit.true_potential, recruit.true_development = player.potential, player.development
+    recruit.true_work_rate = player.work_rate
+    for attr in STAT_KEYS:
+        setattr(recruit, "true_"+attr, getattr(player,attr))
+    return recruit
 
 
 def graduating_class_to_recruits(league: HSLeague):
