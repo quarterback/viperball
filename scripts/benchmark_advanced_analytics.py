@@ -30,7 +30,7 @@ def revision(root=ROOT):
 
 
 def record(game,game_id,season,seed):
-    from engine.analytics_events import build_events,label_states
+    from engine.analytics_events import build_events
     from engine.dtw import calculate_game_dtw
     contract=build_events(game,game_id)
     if not contract.get("available") or not contract.get("score_consistent") or not contract.get("drive_spans_valid"):
@@ -43,12 +43,8 @@ def record(game,game_id,season,seed):
     # One record per game, not per team. Full scores are outcomes only.
     turnover_margin=(st["home"].get("viperball_metrics") or {}).get("to_margin")
     if turnover_margin is None:
-        turnover_margin=0
-        for r in contract["events"]:
-            if r["result"] in ("fumble","kick_pass_intercepted","lateral_intercepted","int_return_td") and not r["nullified"]:
-                a,b=r["before_state"],r["after_state"]
-                if a and b and a["possession"]!=b["possession"]:
-                    turnover_margin+=1 if b["possession"]=="home" else -1
+        from engine.viperball_metrics import calculate_to_margin
+        turnover_margin=calculate_to_margin(game["play_by_play"],"home")
     team_rows={}
     for side in ("home","away"):
         drives=[d for d in game["drive_summary"] if d["team"]==side]
@@ -65,6 +61,7 @@ def record(game,game_id,season,seed):
             "non_drive_points":recon["non_drive_points"],
             "dye":{k:{f:v for f,v in st[side]["dye"][k].items() if f in ("count","points","scores","touchdowns","kicks")}
                    for k in ("penalty_kill","power_play","neutral")},
+            "kick_attempts":{"dk":st[side].get("drop_kicks_attempted",0),"pk":st[side].get("place_kicks_attempted",0)},
             "bonus_drives":sum(bool(d.get("bonus_drive")) for d in drives),
             "bonus_scoring_drives":sum(bool(d.get("bonus_drive")) and d.get("offensive_points",0)>0 for d in drives),
             "scheme":game.get(side+"_style"),"defense":game.get(side+"_defense_style"),
@@ -134,8 +131,11 @@ def evaluate_game(record,model):
             stats["epa_n"]+=1;stats["epa_home"]+=sign*val["epa"]
         if r["action"]:
             stats["decision_n"]+=1
+            stats["action:"+r["action"]+":n"]+=1
             alt=alternatives(model,s,r["action"])
             if alt:
+                stats["action:"+r["action"]+":supported"]+=1
+                stats["action:"+r["action"]+":regret"]+=alt["regret"]
                 stats["alternative_n"]+=1;stats["regret"]+=alt["regret"]
                 if alt["above_continue"] is not None:
                     stats["above_n"]+=1;stats["above_continue"]+=alt["above_continue"]
@@ -182,6 +182,7 @@ def aggregate(records):
                 b=groups[key];b["team_games"]+=1;b["points"]+=t["points"]
                 b["drives"]+=t["drives"];b["drive_points"]+=t["drive_points"];b["non_drive_points"]+=t["non_drive_points"]
                 b["bonus_drives"]+=t["bonus_drives"];b["bonus_scoring_drives"]+=t["bonus_scoring_drives"]
+                for kind,n in t["kick_attempts"].items():b["attempts:"+kind]+=n
                 for m,p in t["channels"].items():b["score:"+m]+=p
                 for u,p in t["units"].items():b["unit:"+u]+=p
                 for k,vals in t["dye"].items():
@@ -208,6 +209,7 @@ def analyze(paths,out,first_season):
     model=fit(row for r in read_corpus(paths) if partition(r,first_season)=="ep_train" for row in observations(r))
     dump(out/"model.json",model)
     counts=Counter();stats=Counter();by_state=defaultdict(Counter);train=[];test=[]
+    heldout_games=[]
     for r in read_corpus(paths):
         split=partition(r,first_season);counts[split]+=1
         if split=="ep_train":continue
@@ -217,6 +219,8 @@ def analyze(paths,out,first_season):
         if split=="dtw_train":train.append(item)
         else:
             test.append(item);stats.update(c)
+            heldout_games.append({"game_id":r["game_id"],"evaluation":eval_,"counts":dict(c),
+                                  "legacy_dtw":r["legacy_dtw"],"outcome":r["outcome"]})
             for k,v in b.items():by_state[k].update(v)
     if not counts["ep_train"] or not counts["dtw_train"] or not counts["test"]:
         raise RuntimeError("Insufficient disjoint corpus splits")
@@ -229,6 +233,7 @@ def analyze(paths,out,first_season):
             "state_model_gate":{"thresholds":{"coverage":.75,"mae":"no worse than matched legacy comparison"},
                 "passed":acceptance,"release":"experimental only; alternative/bonus causal validation not established"},
             "dtw":study(train,test),"national_baselines":aggregate(read_corpus(paths))}
+    dump(out/"heldout_games.json",heldout_games)
     dump(out/"summary.json",report)
     print("ANALYTICS",json.dumps({"split":dict(counts),"coverage":coverage,"holdout":overall,"gate":acceptance,
                                 "alternatives":stats["alternative_n"],"delta":stats["delta_supported"],"bonus":stats["bonus_supported"]},sort_keys=True),flush=True)
@@ -248,7 +253,7 @@ def sample(games,seed,out,trace_only=False,engine_root=ROOT):
         for i in range(games):
             result=ViperballEngine(deepcopy(teams[i%16]),deepcopy(teams[(i+5)%16]),seed=seed+i,neutral_site=True).simulate_game()
             for p in result["play_by_play"]:
-                p.pop("analytics_before",None);p.pop("analytics_terminal_kick",None)
+                p.pop("analytics_before",None);p.pop("analytics_terminal_kick",None);p.pop("analytics_resolution",None)
             payload={k:result[k] for k in ("final_score","play_by_play","drive_summary","stats","player_stats")}
             traces.append(hashlib.sha256(json.dumps(payload,sort_keys=True,default=str).encode()).hexdigest())
         dump(out/"trace.json",traces);return
