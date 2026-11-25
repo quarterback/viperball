@@ -3478,7 +3478,7 @@ def college_alumni_profile(request: Request, session_id: str, player_name: str):
 @router.get("/college/{session_id}/analytics", response_class=HTMLResponse)
 def college_analytics(request: Request, session_id: str, view: str = "", sort: str = "",
                       conference: str = "", team: str = "", opponent: str = "",
-                      scope: str = "all", week: str = "", down: str = "", quarter: str = "",
+                      scope: str = "all", week: str = "", match: str = "", down: str = "", quarter: str = "",
                       zone: str = "", action: str = "", result: str = "", margin: str = "",
                       bucket: str = "", position: str = "", q: str = "", min_n: int = 0,
                       order: str = "desc", page: int = 1, compare: str = "",
@@ -3497,7 +3497,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         raise HTTPException(400, "Unknown analytics view")
     if scope not in ("all","regular","postseason"):scope="all"
     compare="|".join(t for val in request.query_params.getlist("compare") for t in val.split("|") if t)
-    filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,
+    filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,match=match,
                    down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket)
     team_names=sorted(season.teams)
     games=list(games_for(season,session_id))
@@ -3589,7 +3589,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         conferences=conferences,positions=positions,position=position,q=q,min_n=min_n,
         weeks=sorted({g["week"] for g in games}),zones=ZONES,play_types=sorted(play_types),play_results=sorted(play_results),
         coverage=report["coverage"],heatmap=report["heatmap"],leaders=leaders,compare_rows=compare_rows,
-        compare=compare,training={k:v for k,v in training.items() if k!="model"},games_count=len(games),
+        compare=compare,training={k:v for k,v in training.items() if k not in ("model","dtw_model")},games_count=len(games),
         result_count=sum(bool(g["result"]) for g in games),quote=quote,
     ))
 
