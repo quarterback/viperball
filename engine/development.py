@@ -191,10 +191,34 @@ def _clamp(val: int, lo: int = 10, hi: int = 99) -> int:
 # MAIN FUNCTION
 # ──────────────────────────────────────────────
 
+def focus_position_ceiling(ceilings, base_ceilings, instruction):
+    """Redistribute a fraction of the existing gain envelope, not new growth.
+
+    For each attribute keep the non-position coaching allowance intact.
+    Sum of upper bounds is conserved. Limit additional concentration to
+    0.75 points per technical attribute per offseason.
+    """
+    focus = max(0.,min(1.,float(instruction.get("focus",0))))
+    weights = instruction.get("weights",{})
+    available = {k:max(0.,v-base_ceilings[k])*focus for k,v in ceilings.items()}
+    budget = sum(available.values())
+    targets = {k:float(weights.get(k,0)) for k in ceilings if weights.get(k,0)>0}
+    if budget <= 0 or not targets:
+        return dict(ceilings)
+    total = sum(targets.values())
+    added = {k:min(.75,budget*w/total) for k,w in targets.items()}
+    spent = sum(added.values())
+    # Only remove the amount actually reallocated. Excess stays where it
+    # was; conservation holds even if all target caps bind.
+    return {k:v-available[k]*spent/budget+added.get(k,0.) for k,v in ceilings.items()}
+
+
 def apply_offseason_development(
     card: PlayerCard,
     rng: Optional[random.Random] = None,
     dev_boost: float = 0.0,
+    position_allowance: float = 0.0,
+    position_instruction: Optional[dict] = None,
 ) -> DevelopmentEvent | None:
     """
     Apply one offseason of development to a PlayerCard.
@@ -255,6 +279,16 @@ def apply_offseason_development(
         "lateral_skill", "tackling",
     ]
 
+    ceilings = {attr: max(float(gains[attr][0]), gains[attr][1] * potential_scale * boost_scale * DEV_GAIN_SCALE)
+                for attr in attrs_to_develop}
+    if position_allowance > 0 and position_instruction:
+        base_boost = max(0., dev_boost - position_allowance)
+        base_scale = 0.6 + (potential - 1) * 0.1 + min(0.4, base_boost / 10.)
+        base_ceilings = {
+            attr:max(float(gains[attr][0]),gains[attr][1]*base_scale*(1+base_boost/16.)*DEV_GAIN_SCALE)
+            for attr in attrs_to_develop}
+        ceilings = focus_position_ceiling(ceilings,base_ceilings,position_instruction)
+
     for attr in attrs_to_develop:
         lo, hi = gains[attr]
         # Gains are drawn as a fraction and rounded at random, so a small
@@ -262,7 +296,7 @@ def apply_offseason_development(
         # down (the old int()) cut a normal player's growth to about half a
         # point a year.  DEV_GAIN_SCALE matches four college years of growth
         # to the class gaps in generated rosters (freshman to senior).
-        scaled_hi = max(float(lo), hi * potential_scale * boost_scale * DEV_GAIN_SCALE)
+        scaled_hi = ceilings[attr]
         raw = rng.uniform(lo, scaled_hi) if scaled_hi > lo else float(lo)
         delta = int(raw // 1) + (1 if rng.random() < raw - (raw // 1) else 0)
 
@@ -390,6 +424,7 @@ def apply_team_development(
     rng: Optional[random.Random] = None,
     dev_boost: float = 0.0,
     position_boosts: Optional[dict] = None,
+    position_instructions: Optional[dict] = None,
 ) -> DevelopmentReport:
     """
     Apply offseason development to a list of PlayerCard objects.
@@ -408,8 +443,10 @@ def apply_team_development(
     report = DevelopmentReport()
 
     for card in players:
+        allowance = (position_boosts or {}).get(card.position,0.0)
         event = apply_offseason_development(card, rng=rng,
-            dev_boost=dev_boost+(position_boosts or {}).get(card.position,0.0))
+            dev_boost=dev_boost+allowance, position_allowance=allowance,
+            position_instruction=(position_instructions or {}).get(card.position))
         if event:
             report.notable_events.append(event)
         report.year_updated[card.full_name] = card.year

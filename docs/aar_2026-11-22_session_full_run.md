@@ -145,6 +145,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     (all 48 to 55% against the field), weekly game plans, coach fingerprints and the fingerprint
     panel. → `aar_2026-11-25_coaching_identity_def12_def13_fp01.md`
 
+35. **Merged #383 and #384** (November 25). Resolved four conflicts by keeping both PRs'
+    recruiting arguments; fixed a NameError #383 put in plain season creation.
+    → `aar_2026-11-25_merge_383_384.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

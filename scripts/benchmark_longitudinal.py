@@ -45,7 +45,8 @@ def coaches(dyn,active):
                 "ever_head_coach":st.get("ever_head_coach",False),
                 "role_years":dict(st.get("role_years",{})),
                 "career_wins":c.career_wins,"career_losses":c.career_losses,
-                "salary":c.contract_salary,"management":dict(st.get("management",{}))}
+                "salary":c.contract_salary,"management":dict(st.get("management",{})),
+                "career_path":dict(st.get("career_path",{})), "former_player_id":c.former_player_id}
     return rows
 
 def roster_rows(teams):
@@ -96,6 +97,10 @@ def career_summary(rows):
         "reputation":stats([r["reputation"] for r in rows.values() if r["reputation"] is not None]),
         "readiness":stats([r["readiness"] for r in rows.values() if r["role"]!="head_coach"]),
         "role_counts":dict(Counter(r["role"] for r in rows.values())),
+        "salary_by_role":{role:stats([r["salary"] for r in rows.values() if r["role"]==role]) for role in sorted({r["role"] for r in rows.values()})},
+        "position_payroll":sum(r["salary"] for r in rows.values() if r["role"].startswith("pos_")),
+        "former_players":sum(bool(r["former_player_id"]) for r in rows.values()),
+        "stc_intents":dict(Counter(r["career_path"].get("intent","unknown") for r in rows.values() if r["role"]=="stc")),
         "tier_counts":dict(Counter(str(r["tier"]) for r in rows.values())),
         "age_75_plus":sum(r["age"]>=75 for r in rows.values()),
         "former_hc_assistants":sum(r["ever_head_coach"] and r["role"]!="head_coach" for r in rows.values()),
@@ -217,6 +222,10 @@ class Study:
         record={"from_year":year,"to_year":year+1,"database_roundtrip":trans["database_roundtrip"],
             "retained":len(set(self.open_coaches)&set(closing)),"departed":len(departed),"new":len(new),
             "role_moves":dict(moves),"hire_reasons":dict(Counter(h.get("reason","unknown") for h in hires)),
+            "alumni_candidates":len(history.get("alumni_candidates",[])),
+            "alumni_available":len(history.get("alumni_available",[])),
+            "alumni_hires":sum(h.get("reason")=="alumni_entry" for h in hires),
+            "position_staff_additions":history.get("position_staff_additions",[]),
             "retirements":len(retired),"retirement_ages":stats([row["age"] for row in retired]),
             "coaching":career_summary(closing),"college_cohort":trans["college_cohort"],
             "development_by_position":{k:stats(v) for k,v in groups.items()}}
@@ -247,10 +256,23 @@ class Study:
                 "overall_change":latest["overall"]-first["overall"],
                 "observed_seasons":len({r["year"] for r in path if r["phase"]=="opening"}),
                 "observed_first_promotion":any(r["role"]=="head_coach" for r in path) and first["role"]!="head_coach",
-                "initial_ever_hc":first["ever_head_coach"],"latest_age":latest["age"]})
+                "initial_ever_hc":first["ever_head_coach"],"latest_age":latest["age"],
+                "observed_roles":sorted({r["role"] for r in path}),
+                "career_path":first["career_path"],"former_player_id":first["former_player_id"],
+                "seasons_by_role":dict(Counter(r["role"] for r in path if r["phase"]=="opening"))})
         write(self.out/"coach_trajectories.json",{"trajectories":trajectories,"paths":dict(self.coach_paths)})
         write(self.out/"program_trajectories.json",dict(self.program_paths))
         self.summary["observed_coaches"]=len(trajectories)
+        coordinators=[r for r in trajectories if {"oc","dc"} & set(r["observed_roles"])]
+        crossover=[r for r in coordinators if {"oc","dc"}<=set(r["observed_roles"])]
+        stcs=[r for r in trajectories if r["first_role"]=="stc"]
+        self.summary["career_paths"]={"coordinator_exposure":len(coordinators),
+            "oc_dc_crossover":len(crossover), "oc_dc_crossover_rate":len(crossover)/max(1,len(coordinators)),
+            "initial_stcs":len(stcs),"stc_only":sum(r["observed_roles"]==["stc"] for r in stcs),
+            "stc_to_oc_dc":sum(bool({"oc","dc"} & set(r["observed_roles"])) for r in stcs),
+            "stc_to_hc":sum("head_coach" in r["observed_roles"] for r in stcs),
+            "position_to_coordinator":sum(r["first_role"].startswith("pos_") and bool({"oc","dc","stc"} & set(r["observed_roles"])) for r in trajectories),
+            "alumni_coaches":sum(bool(r["former_player_id"]) for r in trajectories)}
         self.summary["ability_change_by_tier"]={str(t):stats([r["overall_change"] for r in trajectories
             if r["tier"]==t and r["observed_seasons"]>=5]) for t in (1,2,3)}
         self.summary["first_observed_promotions"]=sum(r["observed_first_promotion"] and not r["initial_ever_hc"] for r in trajectories)

@@ -2056,6 +2056,7 @@ def auto_recruit_team(
     current_roster: Optional[List[Dict]] = None,
     coaching_staff: Optional[Dict] = None,
     style_config: Optional[Dict[str, str]] = None,
+    position_staff: Optional[Dict] = None,
 ) -> Tuple[RecruitingBoard, Dict[str, float]]:
     """
     Auto-recruit for a CPU team. Returns the board and NIL offers dict.
@@ -2090,6 +2091,7 @@ def auto_recruit_team(
     # Resolve the calling staff once, not for every prospect.
     from engine.coach_recruiting_fit import recruiting_preferences, recruiting_fit
     preferences = recruiting_preferences(coaching_staff, style_config)
+    from engine.position_staff import recruiting_multiplier
     # Score each recruit for this team
     scored: List[Tuple[float, Recruit]] = []
     for recruit in available:
@@ -2119,7 +2121,8 @@ def auto_recruit_team(
         # Overall desirability
         base = recruit.stars * 20 + recruit.true_overall * 0.3
         fit = recruiting_fit(recruit, preferences)
-        score = base * star_match * geo * need_mult * (1 + fit) + rng.uniform(-5, 5)
+        score = (base * star_match * geo * need_mult * (1 + fit)
+                 * recruiting_multiplier(position_staff, recruit) + rng.uniform(-5, 5))
         scored.append((score, recruit))
 
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -2159,6 +2162,7 @@ def run_full_recruiting_cycle(
     hs_pool: Optional[List[Recruit]] = None,
     team_coaching_staffs: Optional[Dict[str, Dict]] = None,
     team_style_configs: Optional[Dict[str, Dict[str, str]]] = None,
+    team_position_staffs: Optional[Dict[str, Dict]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle with phased signing.
@@ -2209,6 +2213,7 @@ def run_full_recruiting_cycle(
                 current_roster=roster,
                 coaching_staff=(team_coaching_staffs or {}).get(team),
                 style_config=(team_style_configs or {}).get(team),
+                position_staff=(team_position_staffs or {}).get(team),
             )
             boards[team] = board
             all_nil[team] = nil

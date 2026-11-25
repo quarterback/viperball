@@ -1118,8 +1118,13 @@ def calculate_coach_salary(
     from .coach_career import reputation, veteran_premium
     role = target_role or card.role
     base = int(base * (1 + (reputation(card)-50)*.004))
+    from .coach_roles import POSITION_ROLES, experience
+    from .coach_career import ensure
     if role == "head_coach":
         base = int(base * 1.25)
+    elif role in POSITION_ROLES:
+        years = experience(card,role,ensure(card))
+        base = int(base * (.45 + min(.45, years*.0225)))
     else:
         base = int(base * (1 + .18*veteran_premium(card)))
 
@@ -1289,8 +1294,11 @@ def generate_coach_card(
             break
 
     # ── age / experience ──────────────────────
+    from .coach_roles import POSITION_ROLES
     if role == "head_coach":
         age = rng.randint(40, 65)
+    elif role in POSITION_ROLES:
+        age = rng.randint(25, 55)
     else:
         age = rng.randint(32, 58)
     years_exp = max(1, age - 25 - rng.randint(0, 5))
@@ -2041,51 +2049,22 @@ def apply_coach_development(
 # contract/salary adjusts.
 
 def get_acceptable_roles(card: CoachCard) -> List[str]:
-    """
-    Return all roles a coach would consider accepting.
-
-    Every coach can move between HC and coordinator roles — it's not
-    a permanent designation.  A fired HC might take a coordinator
-    job to stay in the game; a coordinator with high HC meter
-    wants an HC gig.
-
-    Rules:
-    - HCs accept: head_coach + their original coordinator role
-      (inferred from hc_affinity) + any role if desperate (fired).
-    - Coordinators accept: their current role, head_coach (if
-      wants_hc), and adjacent coordinator roles (30% each).
-    """
+    """Stable career preferences and earned role qualifications."""
+    from .coach_career import ensure, seeks_hc, management
+    from .coach_roles import ALL_ROLES, qualifies, POSITION_ROLES
+    state = ensure(card)
     roles = [card.role]
-
-    if card.role == "head_coach":
-        # Former HCs can take coordinator roles
-        # Their hc_affinity hints at where they'd fit best
-        from .coach_career import management
-        specialty = management(card).get("specialty")
-        if specialty in ("oc","dc","stc"):
-            roles.append(specialty)
-        elif card.hc_affinity == "defensive_mind":
-            if "dc" not in roles:
-                roles.append("dc")
-        elif card.hc_affinity == "offensive_mind":
-            if "oc" not in roles:
-                roles.append("oc")
-        elif card.hc_affinity == "special_teams_guru":
-            if "stc" not in roles:
-                roles.append("stc")
-        else:
-            # Balanced: pick one coordinator role
-            for r in ("oc", "dc"):
-                if r not in roles:
-                    roles.append(r)
-                    break
-    else:
-        # Coordinators
-        from .coach_career import seeks_hc
-        if seeks_hc(card):
-            if "head_coach" not in roles:
-                roles.append("head_coach")
-
+    if card.role != "head_coach" and seeks_hc(card):
+        roles.append("head_coach")
+    for role in ALL_ROLES:
+        if role in roles or role == "head_coach":
+            continue
+        if card.role == "head_coach" and role == management(card).get("specialty"):
+            roles.append(role)
+        elif qualifies(card,role,state):
+            # Experienced coordinators consider a return to position coaching
+            # only when on the open market, not as an automatic promotion.
+            roles.append(role)
     return roles
 
 

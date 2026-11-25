@@ -507,16 +507,18 @@ def record_game(rec: Optional[dict]) -> None:
         u["vestigial"] = vest
 
 
-def advance_offseason(rec: Optional[dict], year: Optional[int] = None) -> None:
+def advance_offseason(rec: Optional[dict], year: Optional[int] = None, staff: Optional[dict] = None) -> None:
     """A season together: familiarity grows, old habits fade."""
     if not rec:
         return
+    from engine.position_staff import installation_growth
     for side in ("offense", "defense"):
         u = rec[side]
+        teaching = installation_growth(staff,side,year)
         if u.get("coach_id"):
             u["seasons_together"] = u.get("seasons_together", 0) + 1
             u["familiarity"] = round(_clamp(u.get("familiarity", 0.0) + SEASON_GROWTH), 3)
-        u["family_familiarity"] = round(_clamp(u.get("family_familiarity", 0.0) + SEASON_GROWTH), 3)
+        u["family_familiarity"] = round(_clamp(u.get("family_familiarity", 0.0) + SEASON_GROWTH + teaching), 3)
         u["games_together"] = 0
         for p in u.get("packages", []):
             p["familiarity"] = round(_clamp(p.get("familiarity", 0.0) + PACKAGE_SEASON_GROWTH), 3)
@@ -526,7 +528,8 @@ def advance_offseason(rec: Optional[dict], year: Optional[int] = None) -> None:
             if v["weight"] >= VESTIGE_FLOOR:
                 vest.append(v)
         u["vestigial"] = vest
-    rec.setdefault("history", []).append({"year": year, "event": "offseason"})
+    rec.setdefault("history", []).append({"year": year, "event": "offseason",
+        "position_instruction": {side:round(installation_growth(staff,side,year),4) for side in ("offense","defense")}})
     rec["history"] = rec["history"][-40:]
 
 

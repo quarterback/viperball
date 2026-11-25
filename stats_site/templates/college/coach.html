@@ -71,8 +71,15 @@
 <tr><td>Seeking head jobs</td><td>{{ "Yes" if seeking_hc else "No" }}</td></tr>
 {% if former_hc %}<tr><td>Previous head coach</td><td>Yes; {{ "requires play-calling authority" if requires_calls else "specialist" }}</td></tr>{% endif %}
 {% endif %}
-{% for key,label in [("head_coach","Head coach"),("oc","Offensive coordinator"),("dc","Defensive coordinator"),("stc","Special teams coordinator")] %}
+{% set path = coach.career_development.get('career_path',{}) %}
+{% if path %}
+<tr><td>Career preference</td><td>{{ path.get('intent','')|replace('_',' ')|title }}{% if path.get('secondary') %} · secondary {{ path.get('secondary')|upper }}{% endif %}</td></tr>
+{% if role.startswith('pos_') %}<tr><td>Advancement preference</td><td>{{ path.get('position_advancement','teaching')|title }}</td></tr>{% endif %}
+{% endif %}
+{% for key,label in [("head_coach","Head coach"),("oc","Offensive coordinator"),("dc","Defensive coordinator"),("stc","Special teams coordinator"),("pos_zb","Zerobacks"),("pos_backs","Backs & Vipers"),("pos_ol","Offensive line"),("pos_dl","Defensive line"),("pos_coverage","Keepers & coverage"),("pos_kicks","Kicking & returns")] %}
+{% if not key.startswith('pos_') or role_years.get(key,0) or role==key %}
 <tr><td>Recorded years — {{ label }}</td><td>{{ role_years.get(key,0) }}</td></tr>
+{% endif %}
 {% endfor %}
 </tbody></table>
 <p style="font-size:11px;color:var(--fg-dim)">Recorded role years count observed career seasons; older aggregate records may not specify a role. Reputation measures market standing, not coaching skill.</p>

@@ -1302,8 +1302,6 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
             style_configs[tname] = dict(ai_configs.get(
                 tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
             ))
-            if tname != dynasty.coach.team_name:
-                style_configs[tname].update(next_schools.get(tname, {}))
 
     pinned = None
     if req.pinned_matchups:
@@ -2900,6 +2898,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
                 team_name=team_name, prestige=prestige, year=dynasty.current_year, rng=staff_rng,
                 all_team_names=all_team_names,
             )
+    from engine.position_staff import ensure_position_staff
+    ensure_position_staff(dynasty._coaching_staffs,dynasty.team_prestige,dynasty.current_year,teams)
 
     season = create_season(
         f"{dynasty.current_year} CVL Season",
@@ -3240,9 +3240,11 @@ def dynasty_advance(session_id: str):
     portal = TransferPortal(year=year)
     # Graduates have exhausted college eligibility; do not sell a transfer
     # that will disappear at finalization.
+    from engine.position_staff import retention_bonus as position_retention_bonus
     populate_portal(portal, {t:[c for c in cards if c.year != "Graduate"]
                              for t,cards in offseason_player_cards.items()},
-                    team_records, rng=rng, team_prestige=dynasty.team_prestige)
+                    team_records, rng=rng, team_prestige=dynasty.team_prestige,
+                    coaching_retention={t:position_retention_bonus(s,year) for t,s in dynasty._coaching_staffs.items()})
 
     # The same actual HS seniors shown on the scouting board enter college.
     from engine.college_feeder import advance_college_feeder
@@ -3476,6 +3478,10 @@ def dynasty_coaching_history(session_id: str):
             "teams_with_changes": len(changes),
             "marketplace_summary": data.get("portal_summary",summary),
             "portal_hires": data.get("portal_hires",[]),
+            "position_staff_additions": data.get("position_staff_additions",[]),
+            "position_evaluations": data.get("position_evaluations",{}),
+            "alumni_candidates": len(data.get("alumni_candidates",[])),
+            "alumni_available": data.get("alumni_available",[]),
             "retirements": [{k:v for k,v in row.items() if k!="card"} | {"name":row.get("card",{}).get("first_name","")+" "+row.get("card",{}).get("last_name","")} for row in data.get("retirements",[])],
         }
 
@@ -3902,7 +3908,10 @@ def offseason_recruiting_scout(session_id: str, req: ScoutRequest):
         raise HTTPException(status_code=400, detail="Invalid recruit index")
 
     recruit = recruit_pool[req.recruit_index]
-    result = recruit_board.scout(recruit, level=req.level)
+    from engine.position_staff import scouting_error
+    dynasty = _require_dynasty(session)
+    staff = dynasty._coaching_staffs.get(dynasty.coach.team_name,{})
+    result = recruit_board.scout(recruit, level=req.level, scouting_error=scouting_error(staff,recruit.position))
     if result is None:
         raise HTTPException(status_code=400, detail="Not enough scouting points")
 
@@ -4393,6 +4402,7 @@ def _serialize_coach_card(card) -> dict:
         "hc_readiness": card.hc_meter,
         "market_reputation": career["reputation"],
         "role_years": dict(career["role_years"]),
+        "career_path": dict(career.get("career_path",{})),
         "former_head_coach": career["ever_head_coach"] and card.role != "head_coach",
         "requires_play_calling": requires_calls(card,card.role),
         "management_profile": active_management(card),
@@ -4420,10 +4430,14 @@ def season_coaching_staff_get(session_id: str, team: Optional[str] = Query(None)
     from engine.coaching import compute_dev_aura
     from engine.coach_career import caller
     aura = compute_dev_aura(staff)
+    from engine.position_staff import coverage
+    from engine.coach_roles import POSITION_ROLES
 
     return {
         "team": team_name,
         "staff": serialized,
+        "position_assignments": coverage(staff),
+        "position_payroll": sum(c.contract_salary for r,c in staff.items() if r in POSITION_ROLES),
         "play_callers": {role: selected.coach_id for role in ("oc","dc","stc")
                          if (selected := caller(staff,role)) is not None},
         "dev_aura": round(aura, 4),
@@ -4438,7 +4452,8 @@ def season_coaching_pool_generate(session_id: str):
     session = _get_session(session_id)
     season = _require_season(session)
 
-    from engine.coaching import generate_coach_card, ROLES
+    from engine.coaching import generate_coach_card
+    from engine.coach_roles import ALL_ROLES, POSITION_ROLES
 
     human_teams = session.get("human_teams", [])
     human_team = human_teams[0] if human_teams else ""
@@ -4449,8 +4464,8 @@ def season_coaching_pool_generate(session_id: str):
     rng = random.Random()
     pool = []
     # Generate 5 candidates per role (HC, OC, DC, STC) = 20 total
-    for role in ROLES:
-        for _ in range(5):
+    for role in ALL_ROLES:
+        for _ in range(3 if role in POSITION_ROLES else 5):
             card = generate_coach_card(
                 role=role, team_name="", prestige=rng.randint(max(20, prestige - 20), min(95, prestige + 15)),
                 year=2026, rng=rng,
@@ -4497,16 +4512,32 @@ def season_coaching_hire(session_id: str, req: CoachHireRequest):
     if target is None:
         raise HTTPException(status_code=404, detail="Coach not found in pool")
 
-    from engine.coaching import ROLES
-    if req.role not in ROLES:
+    from engine.coach_roles import ALL_ROLES, POSITION_ROLES
+    from engine.coaching import get_acceptable_roles
+    if req.role not in ALL_ROLES:
         raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
 
+    if req.role in POSITION_ROLES or target.role in POSITION_ROLES:
+        if req.role not in get_acceptable_roles(target):
+            raise HTTPException(status_code=400,detail="Coach is not qualified for that assignment.")
     # Set the coach on the team
     from engine.coach_career import appoint, requires_calls, active_management
     staffs = session.get("coaching_staffs", season.coaching_staffs)
     hc = staffs.get(human_team,{}).get("head_coach")
     if requires_calls(target,req.role) and active_management(hc).get("retained_call") == req.role:
         raise HTTPException(status_code=400,detail="This former head coach requires play-calling authority.")
+    if req.role in POSITION_ROLES:
+        from engine.position_staff import desired_positions, position_salary
+        from engine.transfer_portal import estimate_prestige_from_roster
+        dynasty = session.get("dynasty")
+        prestige = (dynasty.team_prestige.get(human_team,50) if dynasty else
+                    estimate_prestige_from_roster(season.teams[human_team].players))
+        if req.role not in staffs.get(human_team,{}) and req.role not in desired_positions(prestige):
+            raise HTTPException(status_code=400,detail="This program has not funded that dedicated assignment.")
+        target.contract_salary = position_salary(target,prestige,random.Random(),req.role)
+        target.contract_years_remaining = 2
+        target.contract_buyout = target.contract_salary
+        target.year_signed = getattr(dynasty,"current_year",2026)
     target.team_name = human_team
     appoint(target,req.role)
     if human_team not in staffs:
@@ -4514,6 +4545,8 @@ def season_coaching_hire(session_id: str, req: CoachHireRequest):
     old_coach = staffs[human_team].get(req.role)
     staffs[human_team][req.role] = target
     season.coaching_staffs = staffs
+    if session.get("dynasty") is not None:
+        session["dynasty"]._coaching_staffs[human_team] = staffs[human_team]
 
     # Remove from pool
     pool.remove(target)
