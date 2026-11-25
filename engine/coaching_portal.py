@@ -847,12 +847,9 @@ def run_coaching_match(
                 vacancies.add((team_name, role))
                 portal.add_vacancy(team_name, role)
 
-    for (team_name, role), coach_id in sorted(matches.items()):
-        entry = coach_lookup.get(coach_id)
-        if entry is None:
-            continue
-
+    def install_match(team_name, role, entry):
         coach = entry.coach
+        coach_id = coach.coach_id
         # Set up the new contract
         contract_years = rng.randint(2, 4) if role != "head_coach" else rng.randint(3, 5)
         from .coach_career import appoint, reputation
@@ -886,19 +883,36 @@ def run_coaching_match(
             "previous_role": previous_role,
             "reputation": reputation(coach),
             "reason": entry.reason,
+            "former_player_id": coach.former_player_id,
             "salary": salary,
             "years": contract_years,
             "development": coach.development,
             "overall": coach.overall,
         })
 
-    # The original matching is not rerun: accepted jobs remain accepted.
+    for (team_name, role), coach_id in sorted(matches.items()):
+        entry = coach_lookup.get(coach_id)
+        if entry is not None:
+            install_match(team_name,role,entry)
+
+    # Preserve accepted matches. Fill newly open or unmatched slots from
+    # qualified, currently unemployed portal candidates before generating.
+    from .coach_career import requires_calls, active_management
+    active_ids = {c.coach_id for staff in coaching_staffs.values() for c in staff.values()}
     for team_name, role in sorted(vacancies):
         if role in coaching_staffs.get(team_name, {}):
             continue
-        # Keep the existing generated-fill fallback. It is explicit in the
-        # hire ledger, including for positions opened by a promotion.
         prestige = team_prestige.get(team_name, 40)
+        hc = coaching_staffs.get(team_name,{}).get("head_coach")
+        candidates = [entry for entry in portal.get_by_role(role)
+                      if entry.coach_id not in active_ids and not (
+                          requires_calls(entry.coach,role) and active_management(hc).get("retained_call")==role)]
+        if candidates:
+            entry = max(candidates,key=lambda e: _team_score_coach(e.coach,role,prestige,rng))
+            install_match(team_name,role,entry)
+            active_ids.add(entry.coach_id)
+            continue
+        # Generate a replacement only when no compatible free agent remains.
         fill = generate_coach_card(
             role=role, team_name=team_name, prestige=max(20, prestige - 15),
             year=year, rng=rng,
