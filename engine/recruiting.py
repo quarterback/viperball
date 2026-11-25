@@ -2055,6 +2055,7 @@ def auto_recruit_team(
     rng: Optional[random.Random] = None,
     current_roster: Optional[List[Dict]] = None,
     coaching_staff: Optional[Dict] = None,
+    style_config: Optional[Dict[str, str]] = None,
 ) -> Tuple[RecruitingBoard, Dict[str, float]]:
     """
     Auto-recruit for a CPU team. Returns the board and NIL offers dict.
@@ -2088,7 +2089,7 @@ def auto_recruit_team(
 
     # Resolve the calling staff once, not for every prospect.
     from engine.coach_recruiting_fit import recruiting_preferences, recruiting_fit
-    preferences = recruiting_preferences(coaching_staff)
+    preferences = recruiting_preferences(coaching_staff, style_config)
     # Score each recruit for this team
     scored: List[Tuple[float, Recruit]] = []
     for recruit in available:
@@ -2157,6 +2158,7 @@ def run_full_recruiting_cycle(
     team_portal_gains: Optional[Dict[str, int]] = None,
     hs_pool: Optional[List[Recruit]] = None,
     team_coaching_staffs: Optional[Dict[str, Dict]] = None,
+    team_style_configs: Optional[Dict[str, Dict[str, str]]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle with phased signing.
@@ -2206,6 +2208,7 @@ def run_full_recruiting_cycle(
                 rng=rng,
                 current_roster=roster,
                 coaching_staff=(team_coaching_staffs or {}).get(team),
+                style_config=(team_style_configs or {}).get(team),
             )
             boards[team] = board
             all_nil[team] = nil
