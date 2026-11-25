@@ -1,0 +1,150 @@
+{
+  "matchups": 3000,
+  "metrics": {
+    "fav_win": {
+      "on": 0.6473,
+      "off": 0.641,
+      "diff": 0.0063,
+      "ci95": [
+        -0.014,
+        0.0267
+      ]
+    },
+    "margin": {
+      "on": 20.0142,
+      "off": 28.0558,
+      "diff": -8.0417,
+      "ci95": [
+        -8.7919,
+        -7.3109
+      ]
+    },
+    "within9": {
+      "on": 0.2457,
+      "off": 0.1757,
+      "diff": 0.07,
+      "ci95": [
+        0.05,
+        0.0903
+      ]
+    },
+    "within5": {
+      "on": 0.1447,
+      "off": 0.101,
+      "diff": 0.0437,
+      "ci95": [
+        0.027,
+        0.0607
+      ]
+    },
+    "ot": {
+      "on": 0.0,
+      "off": 0.0,
+      "diff": 0.0,
+      "ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "points": {
+      "on": 101.3708,
+      "off": 98.2925,
+      "diff": 3.0783,
+      "ci95": [
+        2.1712,
+        4.0814
+      ]
+    },
+    "lead_changes": {
+      "on": 2.226,
+      "off": 1.781,
+      "diff": 0.445,
+      "ci95": [
+        0.3507,
+        0.534
+      ]
+    },
+    "comeback9": {
+      "on": 0.4113,
+      "off": 0.343,
+      "diff": 0.0683,
+      "ci95": [
+        0.047,
+        0.09
+      ]
+    },
+    "comeback18": {
+      "on": 0.1167,
+      "off": 0.0937,
+      "diff": 0.023,
+      "ci95": [
+        0.009,
+        0.0373
+      ]
+    },
+    "q4_trailer_wins": {
+      "on": 0.1383,
+      "off": 0.094,
+      "diff": 0.0443,
+      "ci95": [
+        0.0287,
+        0.0603
+      ]
+    }
+  },
+  "winner_flipped_rate": 0.3257,
+  "win_logit_per_strength_point": {
+    "on": 0.0929,
+    "off": 0.0943
+  },
+  "fav_win_by_strength_gap": {
+    "0-2": {
+      "games": 532,
+      "on": 0.5658,
+      "off": 0.5113
+    },
+    "2-5": {
+      "games": 740,
+      "on": 0.5757,
+      "off": 0.5757
+    },
+    "5-10": {
+      "games": 948,
+      "on": 0.6203,
+      "off": 0.6392
+    },
+    "10-99": {
+      "games": 780,
+      "on": 0.8038,
+      "off": 0.7936
+    }
+  },
+  "restarts": {
+    "count": 44204,
+    "mean_abs_shift_yards": 11.75,
+    "share_at_floor_1": 0.0909,
+    "share_at_ceiling_80": 0.0083,
+    "share_boosted": 0.5622,
+    "share_penalized": 0.3378
+  },
+  "drive_value": {
+    "score_restarts_delta_on": {
+      "drives": 44204,
+      "points_per_yard": 0.0343,
+      "ci95": [
+        0.0327,
+        0.0361
+      ],
+      "mean_points": 2.726
+    },
+    "all_drives_start_1_to_50": {
+      "drives": 125579,
+      "points_per_yard": 0.0285,
+      "ci95": [
+        0.0267,
+        0.03
+      ],
+      "mean_points": 2.592
+    }
+  }
+}
