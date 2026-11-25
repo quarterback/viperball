@@ -189,3 +189,19 @@ def available_alumni(history, year, staffs):
             used.add(cid)
             result.append(card)
     return result
+
+
+def installation_growth(staff, side, year):
+    """At most .02 added to existing base-book offseason familiarity.
+
+    Requires a completed season with this program; no game-day modifier.
+    """
+    roles = [r for r in POSITION_ROLES if POSITION_DISCIPLINE[r]==("oc" if side=="offense" else "dc")]
+    total = 0.
+    for role in roles:
+        card = (staff or {}).get(role)
+        if card and card.career_history:
+            stop = card.career_history[-1]
+            if stop.team_name==card.team_name and (year is None or stop.year_end==year):
+                total += max(0.,min(1.,(card.development-50)/45))
+    return .02*total/max(1,len(roles))
