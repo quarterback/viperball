@@ -128,6 +128,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 30. **Merged #378** (November 25). Coach learning, workload and defensive XI; no conflicts.
     → `aar_2026-11-25_merge_pr378.md`
 
+31. **Full suite after the merges** (November 25). Everything passes. Fixed a High School page
+    crash from HS-01: the high school overall added ratings in a different order and rounded
+    one point off for 3 of 4,800 players. → `aar_2026-11-25_full_suite_after_merges.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
