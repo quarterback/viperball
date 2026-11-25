@@ -1,5 +1,7 @@
 # Viperball UI Architecture Redesign
 
+> **Historical design/case-study record.** Use [current documentation](docs/README.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for current behavior. The original findings below are preserved.
+
 ## Status: Phase 1 Implemented
 
 The NiceGUI app (`nicegui_app/`) has been restructured with visible IA and UI improvements.
