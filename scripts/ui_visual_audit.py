@@ -39,20 +39,26 @@ def run():
         client.post(base+"/season",json={"name":"UI verification season","ai_seed":20261125,
             "human_teams":[names[0]],"games_per_team":12,"playoff_size":4,"bowl_count":0,
             "conferences":{"East":names[:8],"West":names[8:]}}).raise_for_status()
+        client.post(base+"/season/portal/skip").raise_for_status()
         result=client.post(base+"/season/simulate-week",json={})
         result.raise_for_status()
         week=result.json()["week"]
         prefix=f"/stats/college/{sid}"
         pages={"home":"/stats/","season":prefix+"/",
+            "schedule":prefix+"/schedule?week="+str(week),
             "team":prefix+"/team/"+quote(names[0],safe=""),
             "coach":prefix+"/coach/"+quote(names[0],safe="")+"/head_coach",
             "game":prefix+"/game/"+str(week)+"/0",
             "luck":prefix+"/luck","my-team":"/stats/my-team/"}
         report=[]
         with sync_playwright() as pw:
-            browser=pw.chromium.launch()
-            for theme,width,height in [("viperball",1440,960),("viperball",390,844),("bloomberg",1440,960)]:
-                context=browser.new_context(viewport={"width":width,"height":height},device_scale_factor=1)
+            configs=[("chromium","viperball",1440,960),("chromium","viperball",390,844),
+                ("chromium","bloomberg",1440,960),("webkit","viperball",320,700),
+                ("webkit","viperball",390,844),("webkit","sand",430,932)]
+            for engine,theme,width,height in configs:
+                browser=getattr(pw,engine).launch()
+                context=browser.new_context(viewport={"width":width,"height":height},device_scale_factor=1,
+                    is_mobile=width<=768,has_touch=width<=768)
                 context.add_init_script("localStorage.setItem('vb-theme',"+json.dumps(theme)+")")
                 def route_request(route):
                     request=route.request
@@ -71,16 +77,49 @@ def run():
                     page.locator("h1").first.wait_for()
                     page.evaluate("document.fonts.ready")
                     assert page.locator("html").get_attribute("data-theme")==theme
-                    page.screenshot(path=str(out/f"{label}-{theme}-{width}.png"),full_page=False)
+                    page.screenshot(path=str(out/f"{label}-{engine}-{theme}-{width}.png"),full_page=False)
                     overflow=page.evaluate("Math.max(0,document.documentElement.scrollWidth-window.innerWidth)")
-                    report.append({"page":label,"theme":theme,"viewport":width,"horizontal_overflow_px":overflow})
+                    report.append({"page":label,"browser":engine,"theme":theme,"viewport":width,"horizontal_overflow_px":overflow})
+                    if label in ("season","schedule") and width<=768:
+                        assert overflow<=1,(label,engine,width,overflow)
+                        nav=page.locator(".mobile-section-nav").first
+                        assert nav.is_visible()
+                        assert nav.bounding_box()["height"]<=50
+                        assert nav.get_by_role("link",name="Overview",exact=True).is_visible()
+                        assert nav.get_by_role("link",name="Schedule",exact=True).is_visible()
+                        active=nav.locator('a[aria-current="page"]').first
+                        assert active.is_visible()
+                        assert active.inner_text()==("Schedule" if label=="schedule" else "Overview")
+                        assert not page.locator(".tabs-wrapper.has-mobile-sections > .tabs").first.is_visible()
+                        nav.locator("summary").click()
+                        assert nav.get_by_role("link",name="Players",exact=True).is_visible()
+                        assert nav.get_by_role("link",name="Data",exact=True).count()==1
+                        page.keyboard.press("Escape")
+                        assert not nav.locator("details").evaluate("(el)=>el.open")
+                        assert "games played" not in page.locator(".page-header").first.inner_text()
+                    if label=="schedule" and width<=768:
+                        row=page.locator(".matchup-row").first
+                        assert row.is_visible()
+                        for selector in (".matchup-away",".matchup-away-score",".matchup-home",".matchup-home-score",".matchup-box"):
+                            cell=row.locator(selector)
+                            assert cell.is_visible(),selector
+                            box=cell.bounding_box()
+                            assert box["x"]>=0 and box["x"]+box["width"]<=width+1,(selector,box,width)
+                        assert row.locator(".matchup-away").bounding_box()["y"] < row.locator(".matchup-home").bounding_box()["y"]
+                        assert abs(row.locator(".matchup-away-score").bounding_box()["x"]-row.locator(".matchup-home-score").bounding_box()["x"])<=1
+                        assert row.locator(".matchup-box a").get_attribute("href").startswith(prefix+"/game/")
+                        assert page.locator("#schedule-week").input_value()==str(week)
+                        page.locator("#schedule-week").select_option("0")
+                        page.locator(".schedule-filter button").click()
+                        page.wait_for_url("**/schedule?week=0")
+                        assert page.locator("#schedule-week").input_value()=="0"
                     if label=="home":
                         header=page.locator("th.sortable").first
                         header.focus()
                         page.keyboard.press("Enter")
                         assert header.get_attribute("aria-sort") in ("ascending","descending")
                 context.close()
-            browser.close()
+                browser.close()
         (out/"observations.json").write_text(json.dumps(report,indent=2))
 
 if __name__=="__main__":

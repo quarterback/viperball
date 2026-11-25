@@ -24,11 +24,11 @@
       <td role="cell" class="matchup-away">
         <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
       </td>
-      <td role="cell" aria-label="Away score" class="num matchup-away-score {% if scored and g.away_score > g.home_score %}score-win{% elif scored and g.away_score == g.home_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.away_score }}{% else %}&mdash;{% endif %}</td>
+      <td role="cell" class="num matchup-away-score {% if scored and g.away_score > g.home_score %}score-win{% elif scored and g.away_score == g.home_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.away_score }}{% else %}&mdash;{% endif %}</td>
       <td role="cell" class="matchup-home">
         <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
       </td>
-      <td role="cell" aria-label="Home score" class="num matchup-home-score {% if scored and g.home_score > g.away_score %}score-win{% elif scored and g.home_score == g.away_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.home_score }}{% else %}&mdash;{% endif %}</td>
+      <td role="cell" class="num matchup-home-score {% if scored and g.home_score > g.away_score %}score-win{% elif scored and g.home_score == g.away_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.home_score }}{% else %}&mdash;{% endif %}</td>
       <td role="cell" class="matchup-box">
         {% if g.completed %}<a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}" aria-label="Box score: {{ g.away_team }} at {{ g.home_team }}">Box score</a>{% else %}<span class="matchup-pending">Scheduled</span>{% endif %}
       </td>

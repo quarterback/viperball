@@ -24,7 +24,7 @@
     {% endif %}
     {% if phase == 'regular' %}
       <button class="btn-run" name="what" value="week">{{ icon("play") }}Simulate week {{ current_week + 1 }}</button>
-      <button name="what" value="rest">{{ icon("forward") }}Simulate season</button>
+      <button name="what" value="rest">{{ icon("forward") }}Simulate remaining games</button>
       {% if dynasty %}<a href="/stats/dynasty/{{ session_id }}/" style="margin-left:8px">Dynasty</a>{% endif %}
     {% elif phase == 'portal' %}
       <button class="btn-run" name="what" value="skip_portal">{{ icon("flag") }}Start the season</button>
