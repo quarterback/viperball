@@ -16,6 +16,7 @@ Updated November 25, 2026. Baseline main a6f1660a96a87934651cfcb76bd91ecdc50b89f
 | DTW-02 | Audit/recalibration | Implemented offline symmetric recalibration and ablations; no public DTW change until evidence reviewed |
 | AN-03 | National statistical baselines | Implemented national corpus/reporting and historical comparison harness; actual outputs pending |
 | AN-VAL | Integrated release gate | Implemented CI gates and two-seed national study; acceptance outstanding |
+| AN-UI | Viperball analytics portal | Implemented 13 college views, grouped/raw queries, model coverage, comparisons, CSV and game navigation in #385; UI/engine acceptance pending ([portal AAR](aar_2026-11-25_analytics_portal.md)) |
 | VAL-07 | Combined main / long dynasty | Open; 10/20/30-season runs after #383/#384, compare VAL-06 cohort growth, actual STC careers, crossovers, salaries, generated fills, alumni, fit and schedule |
 | UI-VAL | Browser regression | Open; #384 browser wait timed out; verify merged main; preserve mobile changes |
 | UI-01 / DEL-03 | Remaining game/team/season reporting | Partial; scoring/drive/game-plan/fingerprint displays shipped; audit remaining halftime, weather splits and career/analytics presentation against live surfaces |
