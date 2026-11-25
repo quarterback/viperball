@@ -125,6 +125,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 29. **Merged the open PRs, second round** (November 25). #371 through #377 marked ready and
     merged with no conflicts. → `aar_2026-11-25_merge_open_prs_round2.md`
 
+30. **Merged #378** (November 25). Coach learning, workload and defensive XI; no conflicts.
+    → `aar_2026-11-25_merge_pr378.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
