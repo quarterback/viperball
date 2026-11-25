@@ -6,6 +6,7 @@ from engine.coach_tactics import ensure_coach_tactical_profile
 def card(role="oc"):
     return CoachCard(coach_id="learning-"+role,first_name="Test",last_name="Coach",
         gender="female",age=40,role=role,classification="scheme_master",
+        instincts=70,leadership=70,composure=70,rotations=60,development=65,recruiting=65,
         personality_sliders={"adaptability":100,"stubbornness":0})
 
 def season(c, n=6):

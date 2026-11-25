@@ -5342,6 +5342,19 @@ class ViperballEngine:
         return sum(scale_rating(p.overall) * self.player_fatigue_modifier(p)
                    for p in line) / max(1, len(line))
 
+    def _rotation_preference(self, team, unit):
+        """Bounded rest preference from HC and relevant coordinator, neutral without staff."""
+        staff = getattr(self, "_home_coaching_staff" if team is self.home_team else "_away_coaching_staff", None) or {}
+        hc = staff.get("head_coach")
+        coordinator = staff.get("oc" if unit == "offense" else "dc")
+        if unit == "midfield":
+            cards = [c for c in (staff.get("oc"), staff.get("dc")) if c is not None]
+            coord = sum(getattr(c, "rotations", 60) for c in cards) / len(cards) if cards else 60
+        else:
+            coord = getattr(coordinator, "rotations", 60)
+        rotation = .6 * getattr(hc, "rotations", 60) + .4 * coord
+        return max(-1., min(1., (rotation - 60.) / 35.))
+
     def _rotate_midfield(self, team, hard_out, ride):
         """Coach's line changes for one team. Lines change together and can
         change at any time, including during a live turnover."""
@@ -5361,7 +5374,8 @@ class ViperballEngine:
         back = cfg.get("back", 90)
         energy = lambda l: sum(p.game_energy for p in l) / max(1, len(l))
         wr = sum(scale_rating(p.work_rate_rating) for p in line) / max(1, len(line))
-        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w
+        preference = self._rotation_preference(team, "midfield")
+        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w + 6 * preference
         in_transition = getattr(self, "_transition_side", None) == sk
         if in_transition:
             out_mark -= V2_ENGINE_CONFIG.get("live_change_tired_margin", 3)
@@ -5372,7 +5386,7 @@ class ViperballEngine:
         elif energy(line) < out_mark:
             # Roll to the next line in order that is rested and good enough
             # to play about as well as the tired line does right now.
-            accept = self._line_strength(line) * (1.0 - cfg.get("rest", 0.10))
+            accept = self._line_strength(line) * (1.0 - max(0., cfg.get("rest", 0.10) + .04 * preference))
             order = [(cur + k) % len(lines) for k in range(1, len(lines))]
             for i in order:
                 cand = lines[i]
@@ -5448,14 +5462,19 @@ class ViperballEngine:
                 lineup = self._lineup(team, unavail, side)
                 on_names = {p.name for p, _ in lineup}
                 swaps = {}
+                preference = self._rotation_preference(team, side)
                 for p, group in sorted(lineup, key=lambda x: x[0].game_energy):
-                    if group not in profiles:
+                    # Re-evaluate after each accepted change: one backup cannot fill two slots.
+                    unavail = hard_out | resting
+                    current = self._lineup(team, unavail, side)
+                    on_names = {a.name for a, _ in current}
+                    if p.name not in on_names or group not in profiles:
                         continue
                     prof = profiles[group]
                     if swaps.get(group, 0) >= prof.get("max_swaps", 1):
                         continue
                     wr = scale_rating(p.work_rate_rating)
-                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w
+                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w + 6 * preference
                     if p.game_energy >= out_mark:
                         continue
                     if p.position == "Zeroback" and self._is_last_kicker(team, p, unavail | {p.name}):
@@ -5464,7 +5483,7 @@ class ViperballEngine:
                     # starter does right now? "rest" is how much worse the
                     # coach accepts to save the starter for later.
                     tired_now = scale_rating(p.overall) * self.player_fatigue_modifier(p)
-                    accept = tired_now * (1.0 - prof.get("rest", 0.05))
+                    accept = tired_now * (1.0 - max(0., prof.get("rest", 0.05) + .04 * preference))
                     need = max(60.0, min(prof["back"] - 10, p.game_energy + 25), p.game_energy + 12)
                     cands = [(b, 1.0) for b in self._group_members(team, group)]
                     if group in COVER_FOR:
@@ -5476,6 +5495,16 @@ class ViperballEngine:
                     if not backups:
                         continue
                     resting.add(p.name)
+                    self._lineup_cache = {}
+                    proposed = self._lineup(team, hard_out | resting, side)
+                    proposed_names = {a.name for a, _ in proposed}
+                    qualified = {b.name for b in backups}
+                    if (len(proposed_names) < len(on_names) or p.name in proposed_names
+                            or not (proposed_names - on_names) <= qualified
+                            or not (proposed_names - on_names)):
+                        resting.discard(p.name)
+                        self._lineup_cache = {}
+                        continue
                     p.game_shifts += 1
                     swaps[group] = swaps.get(group, 0) + 1
                     self._lineup_cache = {}
@@ -5505,7 +5534,8 @@ class ViperballEngine:
                 if p.name not in on_names:
                     stam_rec = max(0.6, scale_rating(getattr(p, "stamina", 35)) / 75.0)
                     p.game_energy = min(100.0, p.game_energy + rest * stam_rec)
-        self._rotate_shifts()
+        # The charged lineup must remain in place through this snap. Changes
+        # occur before the next play, after all previous exposure is resolved.
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
@@ -8759,6 +8789,7 @@ class ViperballEngine:
         self._pending_transition = None
         self._fast_break = None
         self._lineup_cache = {}
+        self._rotate_shifts()
         # Do not leak a prior call onto a kick or penalty snap.
         self._active_offensive_plan = None
         self._offensive_plan_event = None
@@ -16125,7 +16156,8 @@ class ViperballEngine:
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
                                p.game_kick_pass_receptions > 0 or
                                p.game_blocks > 0 or p.game_pancakes > 0 or
-                               p.game_plays_involved > 0)
+                               p.game_plays_involved > 0 or p.game_offensive_snaps > 0 or
+                               p.game_defensive_snaps > 0)
                 if has_activity:
                     role_label = getattr(p, 'game_role', 'DEPTH')
                     recv_role = getattr(p, 'game_role_recv', 'DEPTH')
@@ -16218,7 +16250,9 @@ class ViperballEngine:
             return [{"name": p.name, "position": p.position,
                      "energy_start": round(p.game_energy_start, 1),
                      "energy_end": round(p.game_energy, 1),
-                     "snaps": p.game_field_snaps}
+                     "snaps": p.game_field_snaps, "shifts": p.game_shifts,
+                     "offensive_snaps": p.game_offensive_snaps,
+                     "defensive_snaps": p.game_defensive_snaps}
                     for p in team.players
                     if p.game_field_snaps > 0]
 
@@ -16229,6 +16263,9 @@ class ViperballEngine:
                                 "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
                          for side in ("home", "away")},
                 "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+                "rotation_preference": {side: {unit: round(self._rotation_preference(team, unit),3)
+                    for unit in ("offense","defense","midfield")}
+                    for side,team in (("home",self.home_team),("away",self.away_team))},
                 "line_changes": dict(getattr(self, "_mid_line_state", {}).get("changes", {"home": 0, "away": 0})),
                 "caught_changing": dict(getattr(self, "_mid_line_state", {}).get("caught", {"home": 0, "away": 0})),
             },
