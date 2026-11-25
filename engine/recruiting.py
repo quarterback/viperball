@@ -2054,6 +2054,7 @@ def auto_recruit_team(
     nil_budget: float = 500_000.0,
     rng: Optional[random.Random] = None,
     current_roster: Optional[List[Dict]] = None,
+    coaching_staff: Optional[Dict] = None,
 ) -> Tuple[RecruitingBoard, Dict[str, float]]:
     """
     Auto-recruit for a CPU team. Returns the board and NIL offers dict.
@@ -2085,6 +2086,9 @@ def auto_recruit_team(
     # Filter available recruits (not yet committed)
     available = [r for r in pool if r.committed_to is None and not r.signed]
 
+    # Resolve the calling staff once, not for every prospect.
+    from engine.coach_recruiting_fit import recruiting_preferences, recruiting_fit
+    preferences = recruiting_preferences(coaching_staff)
     # Score each recruit for this team
     scored: List[Tuple[float, Recruit]] = []
     for recruit in available:
@@ -2113,7 +2117,8 @@ def auto_recruit_team(
 
         # Overall desirability
         base = recruit.stars * 20 + recruit.true_overall * 0.3
-        score = base * star_match * geo * need_mult + rng.uniform(-5, 5)
+        fit = recruiting_fit(recruit, preferences)
+        score = base * star_match * geo * need_mult * (1 + fit) + rng.uniform(-5, 5)
         scored.append((score, recruit))
 
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -2151,6 +2156,7 @@ def run_full_recruiting_cycle(
     team_portal_losses: Optional[Dict[str, int]] = None,
     team_portal_gains: Optional[Dict[str, int]] = None,
     hs_pool: Optional[List[Recruit]] = None,
+    team_coaching_staffs: Optional[Dict[str, Dict]] = None,
 ) -> Dict[str, object]:
     """
     Run a complete recruiting cycle with phased signing.
@@ -2199,6 +2205,7 @@ def run_full_recruiting_cycle(
                 nil_budget=nil_budgets.get(team, 500_000.0),
                 rng=rng,
                 current_roster=roster,
+                coaching_staff=(team_coaching_staffs or {}).get(team),
             )
             boards[team] = board
             all_nil[team] = nil
