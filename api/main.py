@@ -4029,6 +4029,8 @@ def offseason_recruiting_resolve(session_id: str):
     for tn, cards in player_cards.items():
         team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
 
+    previous_season = dynasty.seasons.get(year - 1)
+    team_style_configs = getattr(previous_season, "style_configs", {}) or {}
     retired = set(getattr(dynasty, "retired_programs", []) or [])
     for team_name in player_cards:
         if team_name == human_team or team_name in retired:
@@ -4051,6 +4053,7 @@ def offseason_recruiting_resolve(session_id: str):
             rng=rng,
             current_roster=team_rosters.get(team_name),
             coaching_staff=(dynasty._coaching_staffs or {}).get(team_name),
+            style_config=team_style_configs.get(team_name),
         )
         boards[team_name] = board
         all_nil[team_name] = nil
