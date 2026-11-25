@@ -1821,6 +1821,13 @@ class Penalty:
     # (dead ball foul after the play).  Empty when declined.
     enforcement: str = ""
     nullified: bool = False
+    player_name: str = ""
+    player_id: str = ""
+    misconduct_count: int = 0
+    ejection: bool = False
+    ejection_reason: str = ""
+    substitute: str = ""
+    discipline_recorded: bool = False
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -4199,6 +4206,9 @@ class ViperballEngine:
         self.in_game_injuries: List = []       # InGameInjuryEvent objects
         self._home_injured_in_game: set = set()
         self._away_injured_in_game: set = set()
+        self._ejected = {"home": set(), "away": set()}
+        self._discipline = {"home": {}, "away": {}}
+        self.ejection_log = []
 
         # --- Coaching substitution state ---
         # Benched players are temporarily removed from play selection
@@ -5362,10 +5372,16 @@ class ViperballEngine:
             return self._home_injured_in_game
         return self._away_injured_in_game
 
+    def _ejected_names(self, team) -> set:
+        return self._ejected[self._side_key(team)]
+
+    def _hard_out(self, team) -> set:
+        return self._injured_in_game(team) | self._ejected_names(team)
+
     def _unavailable_in_game(self, team) -> set:
         """Return set of player names unavailable (injured, benched, or
         resting between shifts)."""
-        return (self._injured_in_game(team) | self._benched_names(team)
+        return (self._hard_out(team) | self._benched_names(team)
                 | self._shift_resting(team))
 
     def _shift_resting(self, team) -> set:
@@ -5392,7 +5408,7 @@ class ViperballEngine:
             return skill
         # Fallback: any available players
         fallback = [p for p in team.players if p.name not in unavailable]
-        return fallback[:8] if fallback else team.players[:8]
+        return fallback[:8] if fallback else [p for p in team.players if p.name not in self._ejected_names(team)][:8]
 
     def _offense_all(self, team):
         """Return all offensive players including OL."""
@@ -5407,7 +5423,7 @@ class ViperballEngine:
             return off
         # Fallback: any available player (avoids returning injured/benched)
         fallback = [p for p in team.players if p.name not in unavailable]
-        return fallback[:8] if fallback else team.players[:8]
+        return fallback[:8] if fallback else [p for p in team.players if p.name not in self._ejected_names(team)][:8]
 
     def _credit_snap_counts(self):
         """Credit offensive and defensive snap counts to all on-field players."""
@@ -5461,6 +5477,7 @@ class ViperballEngine:
         cache = getattr(self, "_lineup_cache", None)
         if cache is None:
             cache = self._lineup_cache = {}
+        unavail = set(unavail) | self._ejected_names(team)
         key = (id(team), side, frozenset(unavail))
         if key in cache:
             return cache[key]
@@ -5537,7 +5554,7 @@ class ViperballEngine:
         cache = getattr(self, "_mid_lines_cache", None)
         if cache is None:
             cache = self._mid_lines_cache = {}
-        hard = frozenset(n for n in unavail if n not in self._shift_resting(team))
+        hard = frozenset(n for n in unavail if n not in self._shift_resting(team)) | frozenset(self._ejected_names(team))
         key = (id(team), hard)
         if key in cache:
             return cache[key]
@@ -5695,7 +5712,7 @@ class ViperballEngine:
         self._lineup_cache = {}
         for side_key, team in (("home", self.home_team), ("away", self.away_team)):
             resting = self._shift_rest[side_key]
-            hard_out = self._injured_in_game(team) | self._benched_names(team)
+            hard_out = self._hard_out(team) | self._benched_names(team)
             if V2_ENGINE_CONFIG.get("midfield_lines_enabled", False):
                 self._rotate_midfield(team, hard_out, ride)
 
@@ -5800,7 +5817,7 @@ class ViperballEngine:
             return defs
         # Fallback: any available player on defense side
         fallback = [p for p in team.players if p.name not in unavailable]
-        return fallback[:5] if fallback else team.players[:5]
+        return fallback[:5] if fallback else [p for p in team.players if p.name not in self._ejected_names(team)][:5]
 
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
@@ -8172,6 +8189,49 @@ class ViperballEngine:
             return None
         return PlayType.PUNT
 
+    def _record_discipline(self, play: Play) -> None:
+        """Finalize one called foul after the physical play, independent of yardage."""
+        from engine.discipline import misconduct_kind
+        penalty = play.penalty
+        if penalty is None or penalty.discipline_recorded:
+            return
+        penalty.discipline_recorded = True
+        team = self.home_team if penalty.on_team == "home" else self.away_team
+        matches = [p for p in team.players if (p.name == penalty.player_name if penalty.player_name else player_tag(p) == penalty.player)]
+        if len(matches) != 1:
+            return
+        player = matches[0]
+        penalty.player_name = player.name
+        penalty.player_id = player.player_id
+        row = self._discipline[penalty.on_team].setdefault(player.name, {"player": player.name, "player_id": player.player_id, "tag": player_tag(player), "flags": 0, "accepted": 0, "unsportsmanlike": 0, "ejected": False})
+        row["flags"] += 1
+        row["accepted"] += int(not penalty.declined)
+        kind = misconduct_kind(penalty.name)
+        if kind == "conduct":
+            row["unsportsmanlike"] += 1
+        penalty.misconduct_count = row["unsportsmanlike"]
+        if kind != "immediate" and not (kind == "conduct" and row["unsportsmanlike"] >= 2):
+            return
+        if row["ejected"]:
+            return
+        side = "offense" if penalty.on_team == (getattr(self, "_snap_possession", None) or play.possession) else "defense"
+        before = self._lineup(team, self._unavailable_in_game(team), side)
+        role = next((role for p, role in before if p is player), None)
+        self._ejected_names(team).add(player.name)
+        self._shift_resting(team).discard(player.name)
+        self._lineup_cache = {}
+        self._mid_lines_cache = {}
+        row["ejected"] = penalty.ejection = True
+        penalty.ejection_reason = penalty.name if kind == "immediate" else "Second unsportsmanlike foul"
+        after = self._lineup(team, self._unavailable_in_game(team), side)
+        before_names = {p.name for p, _ in before}
+        replacement = next((p for p, group in after if group == role and p.name not in before_names), None)
+        penalty.substitute = player_label(replacement) if replacement else ""
+        self.ejection_log.append({"team": team.name, "side": penalty.on_team, "player": player.name, "player_id": player.player_id, "tag": player_tag(player), "position": player.position, "quarter": play.quarter, "time_remaining": play.time, "play_number": play.play_number, "foul": penalty.name, "reason": penalty.ejection_reason, "substitute": penalty.substitute or None, "declined": penalty.declined})
+        play.description += f" | EJECTED: {player_label(player)} ({penalty.ejection_reason})"
+        if penalty.substitute:
+            play.description += f" — replacement {penalty.substitute}"
+
     def _check_penalties(self, phase: str, play_type: str = "run") -> Optional[Penalty]:
         if phase == "during_play":
             if play_type in ("lateral_chain",):
@@ -8208,8 +8268,10 @@ class ViperballEngine:
         rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_bad_weather_scale", 1.2) - 1.0) * bad
         rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1) - 1.0) * heat
 
+        from engine.discipline import misconduct_kind, occurrence_multiplier
         for pen_def in penalties:
-            prob = pen_def["prob"] * rate_scale
+            kind = misconduct_kind(pen_def["name"])
+            prob = pen_def["prob"] * rate_scale * occurrence_multiplier(kind)
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
 
@@ -8228,8 +8290,15 @@ class ViperballEngine:
                 elif on_side == "defense":
                     pen_pool = self._defense_players(team_obj)
                 else:
-                    pen_pool = team_obj.players[:10]
-                player = random.choice(pen_pool)
+                    pen_pool = self._offense_all(team_obj) if team_name == snap_side else self._defense_players(team_obj)
+                pen_pool = [p for p in pen_pool if p.name not in self._ejected_names(team_obj)]
+                if not pen_pool:
+                    continue
+                if kind:
+                    from engine.discipline import offender_weight
+                    player = random.choices(pen_pool, weights=[offender_weight(p) for p in pen_pool], k=1)[0]
+                else:
+                    player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
                 # ── Officials: call, no call or missed call ──
@@ -8271,6 +8340,8 @@ class ViperballEngine:
                     yards=pen_def["yards"],
                     on_team=team_name,
                     player=ptag,
+                    player_name=player.name,
+                    player_id=player.player_id,
                     phase=phase,
                     auto_first=bool(pen_def.get("auto_first", False)),
                     loss_of_down=bool(pen_def.get("loss_of_down", False)),
@@ -8282,7 +8353,7 @@ class ViperballEngine:
         # coach doesn't see that flag — they just see a penalty and
         # decide whether to challenge based on their own judgment.
         if random.random() < self.referee_crew.phantom_flag_rate:
-            phantom_penalties = penalties
+            phantom_penalties = [p for p in penalties if not misconduct_kind(p["name"])]
             if phantom_penalties:
                 pen_def = random.choice(phantom_penalties)
                 if random.random() < 0.5 + self.referee_crew.home_favor * 0.3:
@@ -8291,7 +8362,10 @@ class ViperballEngine:
                     team_name = snap_side
 
                 team_obj = self.home_team if team_name == "home" else self.away_team
-                pen_pool = team_obj.players[:10]
+                pen_pool = self._offense_all(team_obj) if team_name == snap_side else self._defense_players(team_obj)
+                pen_pool = [p for p in pen_pool if p.name not in self._ejected_names(team_obj)]
+                if not pen_pool:
+                    return None
                 player = random.choice(pen_pool)
                 ptag = player_tag(player)
 
@@ -8311,6 +8385,8 @@ class ViperballEngine:
                     yards=pen_def["yards"],
                     on_team=team_name,
                     player=ptag,
+                    player_name=player.name,
+                    player_id=player.player_id,
                     phase=phase,
                     blown_call=True,  # Only the engine knows this
                     auto_first=bool(pen_def.get("auto_first", False)),
@@ -9140,6 +9216,7 @@ class ViperballEngine:
         play.defenders_involved = list(self._play_defenders)
         play.snap_lineup = self._snap_lineup
         self._check_exposure_injuries(play)
+        self._record_discipline(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
         play.possession_origin = self._drive_origin
         play.possession_snap_index = self._possession_snap_count
@@ -10902,9 +10979,9 @@ class ViperballEngine:
             if on:
                 return random.choice(on)
         eligible = [p for p in team.players if p.position in
-                    ("Keeper", "Defensive Line")]
+                    ("Keeper", "Defensive Line") and p.name not in self._unavailable_in_game(team)]
         if not eligible:
-            eligible = team.players
+            eligible = [p for p in team.players if p.name not in self._unavailable_in_game(team)]
         return random.choice(eligible) if eligible else None
 
     def _calculate_punt_return_yards(self, returner, returning_team, punting_team) -> int:
@@ -11009,7 +11086,7 @@ class ViperballEngine:
                 return {"dl":dl,"keeper":kp,"db":db,"all":[p for p,_ in lineup]}
         dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
         kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
-        all_eligible = dl + kp or [p for p in def_team.players if p.name not in injured][:6] or def_team.players[:5]
+        all_eligible = dl + kp or [p for p in def_team.players if p.name not in injured][:6] or [p for p in def_team.players if p.name not in self._ejected_names(def_team)][:5]
         return {"dl":dl,"keeper":kp,"db":[],"all":all_eligible}
 
     def select_run_tackler(self, def_team, play_family=None):
@@ -11735,7 +11812,7 @@ class ViperballEngine:
         if not eligible:
             eligible = [p for p in def_team.players if p.name not in injured][:6]
         if not eligible:
-            eligible = def_team.players[:5]
+            eligible = [p for p in def_team.players if p.name not in self._ejected_names(def_team)][:5]
 
         if subfamily == KickPassSubFamily.BOMB:
             # Deep safety — speed is everything
@@ -13152,7 +13229,7 @@ class ViperballEngine:
         if rush_outcome == "sack":
             sack_yards = random.randint(3, 8)
             # The rusher we already matched in the H2H gets the sack credit
-            sacker = rusher if rusher else sack_def_team.players[0]
+            sacker = rusher if rusher else self._defense_players(sack_def_team)[0]
             sacker.game_sacks += 1
             sacker.game_tackles += 1
             self._credit_defender(sacker)
@@ -15007,8 +15084,7 @@ class ViperballEngine:
 
     def get_available_players(self, team: Team, top_n: int = 8) -> List:
         """Return top_n players from team who are not injured in this game."""
-        injured = (self._home_injured_in_game if team == self.home_team
-                   else self._away_injured_in_game)
+        injured = self._hard_out(team)
         available = [p for p in team.players if p.name not in injured]
         return available[:top_n]
 
@@ -15063,7 +15139,7 @@ class ViperballEngine:
 
         from engine.injuries import find_substitute, InGameInjuryEvent
         sub, is_oop = find_substitute(
-            team.players, player, set(), injured_set
+            team.players, player, set(), injured_set | self._ejected_names(team)
         )
 
         event = InGameInjuryEvent(
@@ -15293,7 +15369,7 @@ class ViperballEngine:
         benched[player.name] = {"reason": reason, "duration": duration, "drive_count": 0}
 
         # Find the backup who replaces them
-        injured = self._injured_in_game(team)
+        injured = self._hard_out(team)
         excluded = injured | set(benched.keys())
         same_pos = [p for p in team.players if p.position == player.position
                     and p.name not in excluded]
@@ -15358,7 +15434,7 @@ class ViperballEngine:
             just_returned = set()
         for team in (self.home_team, self.away_team):
             benched = self._home_benched if team == self.home_team else self._away_benched
-            injured = self._injured_in_game(team)
+            injured = self._hard_out(team)
             already_out = injured | set(benched.keys()) | just_returned
 
             # ── 1. Blowout protection: graduated backup rotation ──
@@ -16232,6 +16308,9 @@ class ViperballEngine:
             _stats["penalties"] = len(_accepted)
             _stats["penalty_yards"] = sum(f.yards for f in _accepted)
             _stats["penalties_declined"] = len(_flags) - len(_accepted)
+            _stats["ejections"] = sum(f.ejection for f in _flags)
+            _stats["unsportsmanlike_fouls"] = sum(r["unsportsmanlike"] for r in self._discipline[_side].values())
+            _stats["penalties_by_type"] = {name: sum(f.name == name for f in _accepted) for name in sorted({f.name for f in _accepted})}
 
         def _reconcile_yards(stats, team):
             rush = sum(p.game_rushing_yards for p in team.players)
@@ -16599,7 +16678,8 @@ class ViperballEngine:
                                p.game_blocks > 0 or p.game_pancakes > 0 or
                                p.game_plays_involved > 0 or p.game_offensive_snaps > 0 or
                                p.game_defensive_snaps > 0)
-                if has_activity:
+                discipline = self._discipline[self._side_key(team)].get(p.name, {})
+                if has_activity or discipline:
                     role_label = getattr(p, 'game_role', 'DEPTH')
                     recv_role = getattr(p, 'game_role_recv', 'DEPTH')
                     zb_style = getattr(p, 'game_zb_style', '')
@@ -16619,6 +16699,10 @@ class ViperballEngine:
                         "tag": player_tag(p),
                         "name": p.name,
                         "player_id": p.player_id,
+                        "penalty_flags": discipline.get("flags", 0),
+                        "penalties": discipline.get("accepted", 0),
+                        "unsportsmanlike_fouls": discipline.get("unsportsmanlike", 0),
+                        "ejected": discipline.get("ejected", False),
                         "role": combined_role,
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "rush_rank": p.game_rush_rank,
@@ -16779,6 +16863,8 @@ class ViperballEngine:
                 for e in self.in_game_injuries
             ],
             "coaching_substitutions": self._substitution_log,
+            "ejections": list(self.ejection_log),
+            "player_discipline": {side: list(rows.values()) for side, rows in self._discipline.items()},
             # ── V2: Engine metadata ──
             "v2_engine": {
                 "contest_model": V2_ENGINE_CONFIG.get("contest_model", "v1_sigmoid"),
@@ -17132,6 +17218,12 @@ class ViperballEngine:
                 "phase": play.penalty.phase,
                 "enforcement": play.penalty.enforcement or None,
                 "nullified": play.penalty.nullified or None,
+                "player_name": play.penalty.player_name or None,
+                "player_id": play.penalty.player_id or None,
+                "misconduct_count": play.penalty.misconduct_count,
+                "ejection": play.penalty.ejection,
+                "ejection_reason": play.penalty.ejection_reason or None,
+                "substitute": play.penalty.substitute or None,
             }
         return d
 
