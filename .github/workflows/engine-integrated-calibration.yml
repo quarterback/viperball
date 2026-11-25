@@ -12,6 +12,10 @@ on:
       - scripts/benchmark_offensive_packages.py
       - scripts/benchmark_dynasty_tactics.py
       - scripts/benchmark_longitudinal.py
+      - engine/season.py
+      - stats_site/router.py
+      - stats_site/templates/college/coach.html
+      - stats_site/templates/college/team.html
       - scripts/benchmark_national_dynasty.py
       - engine/db.py
       - engine/dynasty.py

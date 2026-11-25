@@ -18,3 +18,7 @@ Appointments are observed role changes, not unique first promotions. 20-year stu
 - Schedule repair fallback: allow unscheduled same-conference edge below cap or exchange an unprotected large-conference game for two cross-conference games when ordinary repair cannot fill deficits. Small conference round robins and pinned/rivalry matches protected. No schedule guarantee until rerun.
 
 Runtime and outcome effects of changes pending; rerun 32-team study and long trajectories. No new scoring targets.
+
+## Presentation and validation continuation
+
+Existing college team and coach pages now show market reputation, actual play callers, former-HC status, recorded role experience, readiness, active leadership profile and annual reputation/expectation evidence without showing hidden development rates. Coaching history API exposes hires and retirement summaries; fixed incorrect hc.name reference. Retirement cards persist in coaching history but dedicated historical coach directory and persistent unemployed pool remain out of scope. Observer records retirement counts/ages and rejects a retired coach still employed. Focused tests cover retirement bounds, portal exclusion and staffing/continuity preferences. Large-conference repair protects existing minimum eight conference games on removed-edge endpoints. Rerun all long jobs and existing regressions; production deployment must be separately verified after merge.

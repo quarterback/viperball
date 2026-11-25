@@ -416,7 +416,7 @@
 <h2>Coaching Staff</h2>
 <table>
   <thead>
-    <tr><th>Role</th><th>Name</th><th class="num">OVR</th><th>Style</th><th>Composure</th><th class="num">W-L</th><th class="num">Win%</th></tr>
+    <tr><th>Role</th><th>Name</th><th class="num">OVR</th><th class="num">Reputation</th><th>Calls</th><th>Style</th><th>Composure</th><th class="num">W-L</th><th class="num">Win%</th></tr>
   </thead>
   <tbody>
   {% for c in coaching_staff %}
@@ -424,6 +424,8 @@
     <td><span class="tag {% if c.role == 'head_coach' %}stat-elite{% endif %}">{{ c.role_label }}</span></td>
     <td>{% if c.face_src %}<img src="{{ c.face_src }}" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">{% endif %}<a href="/stats/college/{{ session_id }}/coach/{{ team_name }}/{{ c.role }}">{{ c.name }}</a></td>
     <td class="num {% if c.overall >= 80 %}stat-elite{% elif c.overall >= 65 %}stat-good{% endif %}">{{ '%.0f'|format(c.overall) }}</td>
+    <td class="num">{{ c.reputation }}</td>
+    <td style="font-size:11px;">{{ c.calls|join(", ") if c.calls else "—" }}{% if c.former_hc %} <span class="tag">Former HC</span>{% endif %}</td>
     <td style="font-size:11px;">{{ c.classification_label }}</td>
     <td style="font-size:11px;">{{ c.composure_label }}</td>
     <td class="num" style="font-size:11px;">{{ c.career_wins }}-{{ c.career_losses }}</td>

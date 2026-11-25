@@ -1929,10 +1929,13 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
             pass
 
     # ── Coaching staff for this team ──
+    from engine.coach_career import ensure as coach_career, caller
     coaching_staff = []
     staff_dict = (season.coaching_staffs or {}).get(team_name, {})
     if staff_dict:
         from engine.coaching import CoachCard
+        staff_dict = {role: CoachCard.from_dict(c) if isinstance(c,dict) else c for role,c in staff_dict.items() if c}
+        callers = {role:caller(staff_dict,role) for role in ("oc","dc","stc")}
         for role in ["head_coach", "oc", "dc", "stc"]:
             card = staff_dict.get(role)
             if not card:
@@ -1946,6 +1949,9 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
                 "overall": round(card.visible_score, 1),
                 "classification_label": card.classification_label,
                 "composure_label": card.composure_label,
+                "reputation": round(coach_career(card)["reputation"]),
+                "former_hc": coach_career(card)["ever_head_coach"] and role!="head_coach",
+                "calls": [k.upper() for k,c in callers.items() if c and c.coach_id==card.coach_id],
                 "career_wins": card.career_wins, "career_losses": card.career_losses,
                 "win_pct": round(card.win_percentage, 3),
                 "championships": card.championships,
@@ -2198,6 +2204,11 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     role_label = {"head_coach": "Head Coach", "oc": "Offensive Coordinator",
                   "dc": "Defensive Coordinator", "stc": "Special Teams Coordinator"}.get(coach_role, coach_role)
 
+    from engine.coach_career import ensure as coach_career, active_management, caller, seeks_hc, requires_calls
+    staff_dict = {role: CoachCard.from_dict(c) if isinstance(c,dict) else c for role,c in staff_dict.items() if c}
+    career = coach_career(card)
+    callers = {role:caller(staff_dict,role) for role in ("oc","dc","stc")}
+    calling_roles = [role.upper() for role,c in callers.items() if c and c.coach_id==card.coach_id]
     # Career history
     career_history = []
     for stop in (card.career_history or []):
@@ -2252,6 +2263,11 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
         request, section="college", session_id=session_id,
         coach=card, team_name=team_name, role=coach_role, role_label=role_label,
         career_history=career_history, coaching_tree=coaching_tree,
+        career_evidence=list(reversed(career.get("history",[]))),
+        career_reputation=round(career["reputation"]), role_years=career.get("role_years",{}),
+        former_hc=career["ever_head_coach"] and coach_role!="head_coach",
+        management_profile=active_management(card), calling_roles=calling_roles,
+        seeking_hc=seeks_hc(card), requires_calls=requires_calls(card,coach_role),
         season_record=season_record, coach_awards=coach_awards,
         sliders=sliders,
         postseason_apps=postseason_apps, postseason_wins=postseason_wins,

@@ -397,3 +397,8 @@ Implementation in PR #378, pending candidate validation. [Design report](PRD_CCH
 ### VAL-06 — Longitudinal coaching and roster studies
 
 [Study design and AAR](aar_2026-11-25_val06_longitudinal_coaching_rosters.md). Three independent full-engine reduced-league trajectories, with 5/10/20/30-year milestones. Observer only; no new gameplay tuning. Follow-up requires actual results before staffing/continuity changes.
+
+
+### CCH-10 — Leadership follow-up after VAL-06
+
+[Longitudinal findings and implementation AAR](aar_2026-11-25_val06_cch10_leadership_followup.md). 20- and 30-season baseline runs passed; 32-program schedule gate failed. Retirement, staffing preference, succession familiarity, schedule repair and coaching stats-site presentation implemented; integrated rerun and deployment pending.

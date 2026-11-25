@@ -1843,7 +1843,8 @@ class Season:
                                 u,v=old.home_team,old.away_team
                                 pair=tuple(sorted((u,v)))
                                 if (not old.is_conference_game or pair in protected or a in (u,v) or b in (u,v)
-                                        or len(self.conferences.get(self.team_conferences.get(u),[]))<=MAX_CONFERENCE_GAMES+1):
+                                        or len(self.conferences.get(self.team_conferences.get(u),[]))<=MAX_CONFERENCE_GAMES+1
+                                        or min(conf_game_counts[u],conf_game_counts[v])<=MAX_CONFERENCE_GAMES-1):
                                     continue
                                 for x,y in ((u,v),(v,u)):
                                     if not (_can_add(a,x) and _can_add(b,y)):

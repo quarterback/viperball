@@ -195,6 +195,10 @@ class Study:
         closing=coaches(dyn,active)
         history=dyn.coaching_history[year+1]
         hires=history.get("portal_hires",[])
+        retired=history.get("retirements",[])
+        retired_ids={row["coach_id"] for row in retired}
+        if retired_ids & set(closing):
+            raise RuntimeError("Retired coach still employed")
         moves=Counter()
         for hire in hires:
             origin=hire.get("previous_role")
@@ -213,11 +217,13 @@ class Study:
         record={"from_year":year,"to_year":year+1,"database_roundtrip":trans["database_roundtrip"],
             "retained":len(set(self.open_coaches)&set(closing)),"departed":len(departed),"new":len(new),
             "role_moves":dict(moves),"hire_reasons":dict(Counter(h.get("reason","unknown") for h in hires)),
+            "retirements":len(retired),"retirement_ages":stats([row["age"] for row in retired]),
             "coaching":career_summary(closing),"college_cohort":trans["college_cohort"],
             "development_by_position":{k:stats(v) for k,v in groups.items()}}
         self.summary["transitions"].append(record)
         write(self.out/f"{year}-transition.json",{"closing_coaches":closing,
             "departed":sorted(departed),"new":sorted(new),"hires":hires,
+            "retirements":[{k:v for k,v in row.items() if k!="card"} for row in retired],
             "career_evidence":history.get("career_development",[]),
             "attribute_changes":history.get("development",[]),"summary":record})
         self.milestones()
