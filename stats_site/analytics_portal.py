@@ -17,6 +17,10 @@ VIEWS = {
     "compare":"Team compare", "player_compare":"Player compare", "glossary":"Glossary",
 }
 ZONES = ("Own 1–19","Own 20–39","40–59","Opp 40–21","Opp 20–1")
+PLAY_GROUPS={"raw":"Individual plays","team":"Possession team","opponent":"Opponent","down":"Down","zone":"Field zone","action":"Play type","family":"Play family","result":"Outcome","margin":"Score state","bucket":"Drive context","offense_school":"Offensive school","defense_school":"Defensive school","week":"Week"}
+DRIVE_GROUPS={k:v for k,v in PLAY_GROUPS.items() if k not in ("down","action","family")}
+DRIVE_GROUPS.update(raw="Individual drives",origin="Possession origin")
+SPLIT_COLS=[("split","Split"),("n","Observations"),("yards","Total yds"),("yards_per","Yds/obs"),("points","Total pts"),("points_per","Pts/obs"),("ep_n","EP n"),("expected","Mean EP"),("epa_n","EPA n"),("epa","Mean EPA")]
 ACTIONS = ("continue","drop_kick","place_kick","punt")
 METHODS = ("rush_td","lateral_td","kp_td","return_td","dk","pk","safety","pindown","bell","other")
 COLS = {
@@ -38,6 +42,7 @@ COLS = {
            ("candidate","Research xW"),("candidate_n","Research G"),("matched_legacy","Matched DTW xW")],
     "plays":[("week","Week"),("team","Possession"),("opponent","Opponent"),("quarter","Q"),("clock","Clock"),
              ("down","Down"),("distance","To go"),("field","Yard line"),("action","Play"),("result","Result"),
+             ("family","Family"),("offense_school","Offense"),("defense_school","Defense"),("pressure","Pressure"),
              ("yards","Yds"),("points","Net pts"),("expected","Exp net"),("epa","EPA"),("description","Play description")],
     "drives":[("week","Week"),("team","Team"),("opponent","Opponent"),("quarter","Q"),("field","Start"),
               ("bucket","Context"),("origin","Origin"),("plays","Plays"),("yards","Yds"),("result","Result"),
@@ -175,9 +180,14 @@ def heldout_model(g,training):
 def play_matches(row,filters):
     if filters.get("q") and row.get("description") is not None:
         if filters["q"].casefold() not in " ".join(str(row.get(k,"")) for k in ("team","opponent","description","result")).casefold():return False
-    for key in ("down","quarter","zone","action","result","margin","bucket"):
+    for key in ("down","quarter","zone","action","result","margin","bucket","family","offense_school","defense_school","distance_band","pressure","origin"):
         if filters.get(key) not in (None,"") and str(row.get(key))!=str(filters[key]):return False
     return True
+
+
+def distance_band(distance):
+    if distance is None:return None
+    return "short" if distance<=3 else "medium" if distance<=10 else "long"
 
 
 def play_rows(g,contract,training,filters,conferences):
@@ -200,6 +210,11 @@ def play_rows(g,contract,training,filters,conferences):
              "quarter":r["quarter"],"clock":r["clock"],"down":s.get("down",p.get("down")),
              "distance":s.get("yards_to_go",p.get("yards_to_go")),"field":fp,"zone":zone(fp),
              "action":p.get("play_type"),"result":r["result"],"yards":p.get("yards"),"points":sign*r["net_home"],
+             "family":p.get("play_family"),"offense_school":g["result"].get(side+"_style"),
+             "defense_school":g["result"].get(("away" if side=="home" else "home")+"_defense_style"),
+             "distance_band":distance_band(s.get("yards_to_go",p.get("yards_to_go"))),
+             "pressure":("yes" if p["rush_event"].get("pressure") else "no") if p.get("rush_event") is not None else None,
+             "origin":r.get("restart"),
              "description":p.get("description",""),"bucket":r.get("delta_bucket"),
              "margin":"leading" if diff>0 else "trailing" if diff<0 else "tied","expected":None,"epa":None}
         if not play_matches(row,filters):continue
@@ -234,6 +249,7 @@ def drive_rows(g,contract,training,filters,conferences):
              "quarter":d.get("quarter"),"field":d.get("start_yard_line"),"zone":zone(d.get("start_yard_line")),
              "bucket":bucket,"origin":d.get("possession_origin"),"plays":d.get("plays"),"yards":d.get("yards"),
              "result":d.get("result"),"points":d.get("offensive_points"),"expected":None,"delta_value":None,"bonus_value":None,
+             "offense_school":fr.get(side+"_style"),"defense_school":fr.get(("away" if side=="home" else "home")+"_defense_style"),
              "td_or_kick":scored if ev else None,
              "delta_eligible":bool(new_possession and s.get("origin")=="score_restart"),
              "bonus_eligible":bool(new_possession and (s.get("bonus_active") or s.get("bonus_recipient") in ("home","away")))}
@@ -256,6 +272,16 @@ def build_report(games,view,filters,conferences,training=None):
     """Filter first; aggregate counts and denominators from actual records."""
     training=training or {"model":None,"cutoff":None,"train_games":0,"reason":"No model requested."}
     groups=defaultdict(Counter);rows=[];heat=defaultdict(Counter);coverage=Counter()
+    group=filters.get("group","raw")
+    split_groups=defaultdict(Counter)
+    def collect(row):
+        if group=="raw":
+            rows.append(row);return
+        key=row.get(group)
+        b=split_groups[key];b["n"]+=1
+        for field in ("yards","points","expected","epa"):
+            v=safe_number(row.get(field))
+            if v is not None:b[field]+=v;b[field+"_n"]+=1
     for g in matching_games(games,filters):
         fr=g["result"]
         coverage["games"]+=1
@@ -268,12 +294,13 @@ def build_report(games,view,filters,conferences,training=None):
         model=heldout_model(g,training)
         if view=="plays":
             for p in play_rows(g,contract,training,filters,conferences):
-                rows.append(p)
+                collect(p)
                 if p["down"] in range(1,7) and p["zone"] is not None:
                     h=heat[(p["down"],p["zone"])];h["n"]+=1;h["pts"]+=p["points"]
             continue
         if view=="drives":
-            rows.extend(drive_rows(g,contract,training,filters,conferences));continue
+            for d in drive_rows(g,contract,training,filters,conferences):collect(d)
+            continue
         if view in ("delta",):
             for d in drive_rows(g,contract,training,filters,conferences):
                 b=groups[(d["team"],d["bucket"])]
@@ -300,7 +327,12 @@ def build_report(games,view,filters,conferences,training=None):
                 side=s["possession"];team=g[side]
                 diff=(s["home_score"]-s["away_score"])*(1 if side=="home" else -1)
                 row={"down":s["down"],"quarter":s["quarter"],"zone":zone(s["field_position"]),"action":r["action"],
-                     "result":r["result"],"bucket":r["delta_bucket"],"margin":"leading" if diff>0 else "trailing" if diff<0 else "tied"}
+                     "result":r["result"],"bucket":r["delta_bucket"],"margin":"leading" if diff>0 else "trailing" if diff<0 else "tied",
+                     "family":p.get("play_family"),"offense_school":fr.get(side+"_style"),
+                     "defense_school":fr.get(("away" if side=="home" else "home")+"_defense_style"),
+                     "distance_band":distance_band(s.get("yards_to_go")),
+                     "pressure":("yes" if p["rush_event"].get("pressure") else "no") if p.get("rush_event") is not None else None,
+                     "origin":r.get("restart")}
                 if not play_matches(row,filters):continue
                 if view=="expected":
                     if not model:continue
@@ -390,6 +422,13 @@ def build_report(games,view,filters,conferences,training=None):
                          "papg":ratio(b["against"],b["games"]),"drives":b["drives"],"ppd":ratio(b["drive_points"],b["drives"]),
                          "opp_ppd":ratio(b["opp_drive_points"],b["opp_drives"]),"turnover_margin":b["turnover_margin"],
                          "kick_pct":ratio(b["made"],b["kicks"],100)})
+    if view in ("plays","drives") and group!="raw":
+        for key,b in split_groups.items():
+            label=ZONES[key] if group=="zone" and isinstance(key,int) and 0<=key<len(ZONES) else str(key).replace("_"," ").title() if key is not None and group not in ("team","opponent") else key or "Unknown"
+            rows.append({"split":label,"group_key":key,"n":b["n"],"yards":b["yards"] if b["yards_n"] else None,
+                         "yards_per":ratio(b["yards"],b["yards_n"]),"points":b["points"] if b["points_n"] else None,
+                         "points_per":ratio(b["points"],b["points_n"]),"ep_n":b["expected_n"],"expected":ratio(b["expected"],b["expected_n"]),
+                         "epa_n":b["epa_n"],"epa":ratio(b["epa"],b["epa_n"])})
     grid=[[{"n":heat[(d,z)]["n"],"value":ratio(heat[(d,z)]["pts"],heat[(d,z)]["n"]) if heat[(d,z)]["n"]>=10 else None}
            for z in range(5)] for d in range(1,7)]
     return {"rows":rows,"coverage":dict(coverage),"heatmap":grid}
