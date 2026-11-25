@@ -105,7 +105,7 @@
  ('ZBR / VPR','Legacy position-specific rating composites for Zerobacks and Vipers.'),
  ('WPA','Legacy player play-value metric from the existing player aggregation. Do not equate it to the experimental exchange EPA.'),
  ('Peer percentiles','Rank within the selected season peer set using midpoint ranks for ties. Lower points allowed and opponent PPD rank higher. At least three peers required.'),
- ('Missing records','A dash means unavailable, not zero. Older games can have score and play records without the new state snapshots. Support and audited counts are displayed.')] %}
+ ('Missing records','A dash means unavailable, not zero. Model values require enough observed games and matching states. Support and audited counts are displayed.')] %}
  <article><h3>{{ name }}</h3><p>{{ desc }}</p></article>{% endfor %}
 </div>
 {% endif %}
@@ -132,15 +132,24 @@
  <label>Games<select name="scope">{% for k,v in [('all','All games'),('regular','Regular season'),('postseason','Postseason')] %}<option value="{{ k }}" {% if filters.scope==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
  <label>Week<select name="week"><option value="">Any week</option>{% for w in weeks %}<option value="{{ w }}" {% if filters.week==w|string %}selected{% endif %}>{{ w }}</option>{% endfor %}</select></label>
  {% if view in ("plays","drives","expected","decisions","delta") %}
+ {% if group_options %}<label>Group by<select name="group">{% for k,label in group_options.items() %}<option value="{{ k }}" {% if group==k %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
  {% if view not in ("drives","delta") %}<label>Down<select name="down"><option value="">Any down</option>{% for d in range(1,7) %}<option value="{{ d }}" {% if filters.down==d|string %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></label>{% endif %}
  <label>Quarter<select name="quarter"><option value="">Any period</option>{% for d in range(1,10) %}<option value="{{ d }}" {% if filters.quarter==d|string %}selected{% endif %}>{{ d if d<=4 else "OT " ~ (d-4) }}</option>{% endfor %}</select></label>
  <label>Field zone<select name="zone"><option value="">Any field zone</option>{% for z in zones %}<option value="{{ loop.index0 }}" {% if filters.zone==loop.index0|string %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></label>
  {% if view not in ("drives","delta") %}<label>Play type<select name="action"><option value="">All types</option>{% for p in play_types %}<option value="{{ p }}" {% if filters.action==p %}selected{% endif %}>{{ p|replace('_',' ')|title }}</option>{% endfor %}</select></label>{% endif %}
+ {% if view not in ("drives","delta") %}
+ <label>Play family<select name="family"><option value="">All families</option>{% for k in families %}<option value="{{ k }}" {% if filters.family==k %}selected{% endif %}>{{ k|replace("_"," ")|title }}</option>{% endfor %}</select></label>
+ <label>Distance to go<select name="distance_band"><option value="">Any distance</option>{% for k,label in [("short","1–3 yards"),("medium","4–10 yards"),("long","11+ yards")] %}<option value="{{ k }}" {% if filters.distance_band==k %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+ <label>Pass rush pressure<select name="pressure"><option value="">Any pressure state</option><option value="yes" {% if filters.pressure=="yes" %}selected{% endif %}>Pressured</option><option value="no" {% if filters.pressure=="no" %}selected{% endif %}>Not pressured</option></select></label>
+ {% endif %}
+ <label>Offensive school<select name="offense_school"><option value="">All schools</option>{% for k in offense_schools %}<option value="{{ k }}" {% if filters.offense_school==k %}selected{% endif %}>{{ k|replace("_"," ")|title }}</option>{% endfor %}</select></label>
+ <label>Defensive school<select name="defense_school"><option value="">All schools</option>{% for k in defense_schools %}<option value="{{ k }}" {% if filters.defense_school==k %}selected{% endif %}>{{ k|replace("_"," ")|title }}</option>{% endfor %}</select></label>
+ <label>Possession origin<select name="origin"><option value="">Any origin</option>{% for k in origins %}<option value="{{ k }}" {% if filters.origin==k %}selected{% endif %}>{{ k|replace("_"," ")|title }}</option>{% endfor %}</select></label>
  <label>Outcome<select name="result"><option value="">Any outcome</option>{% for p in play_results %}<option value="{{ p }}" {% if filters.result==p %}selected{% endif %}>{{ p|replace('_',' ')|title }}</option>{% endfor %}</select></label>
  <label>Score state<select name="margin"><option value="">Any margin</option>{% for m in ('leading','tied','trailing') %}<option value="{{ m }}" {% if filters.margin==m %}selected{% endif %}>{{ m|title }}</option>{% endfor %}</select></label>
  <label>Drive context<select name="bucket"><option value="">Any context</option>{% for k in ('neutral','power_play','penalty_kill','bonus') %}<option value="{{ k }}" {% if filters.bucket==k %}selected{% endif %}>{{ k|replace('_',' ')|title }}</option>{% endfor %}</select></label>
  {% endif %}
- {% if view not in ("compare","plays","drives") %}<label>Min. sample<input type="number" name="min_n" min="0" value="{{ min_n }}"></label>{% endif %}
+ {% if view!="compare" and (view not in ("plays","drives") or group!="raw") %}<label>Min. sample<input type="number" name="min_n" min="0" value="{{ min_n }}"></label>{% endif %}
  {% if view!="compare" %}<label>Search<input name="q" value="{{ q }}" placeholder="Name or result"></label>{% endif %}
  {% endif %}
  <button class="primary" type="submit">Apply filters</button><a class="vba-btn" href="{{ base }}?view={{ view }}">Reset</a>
@@ -151,6 +160,7 @@
  {% if view=="decisions" %}Observed action comparisons are not causal recommendations.{% elif view=="delta" %}Context values are conditional contrasts, not the causal value of another possession.{% endif %}
 </div>
 {% endif %}
+{% if view in ("plays","drives") and group!="raw" %}<p class="vba-muted">Grouped results use count-weighted averages over matching observations. Select a split to inspect its individual records.</p>{% endif %}
 {% if view=="scoring" %}<p class="vba-muted">Score totals use completed records; scoring channels are limited to audited games. Unavailable attribution is not a zero.</p>{% endif %}
 {% if view=="players" %}<p class="vba-muted">Whole-season player totals, with at least five touches or ten plays involved. Game-situation filters are available in Play finder.</p>{% endif %}
 {% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability. Research xW is a distinct retrospective alignment model, fitted on separate earlier games and evaluated on later games only. {% if training.get("dtw_train_games",0)>=30 %}Candidate training sample: {{ training.dtw_train_games }} games.{% else %}Insufficient disjoint training support for candidate estimates.{% endif %}</p>{% endif %}
@@ -166,7 +176,7 @@
 <p class="vba-muted">Points from the possession side's perspective. Cells require at least 10 matching observations; n is the number represented. Each cell links to that split.</p>
 <div class="vba-heat-wrap">
 <div class="vba-heat-row"><span class="vba-axis">Down</span><div class="vba-heat">{% for z in zones %}<div class="vba-heat-cell">{{ z }}</div>{% endfor %}</div></div>
-{% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}" {% if cell.value is not none %}style="--intensity:{{ [35,5+cell.value|abs*6]|min }}%"{% endif %}><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
+{% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,group="raw" if view=="plays" else "",page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}" {% if cell.value is not none %}style="--intensity:{{ [35,5+cell.value|abs*6]|min }}%"{% endif %}><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
 </div>
 {% endif %}
 {% if cols %}
@@ -182,6 +192,7 @@
 {% if val is none %}—
 {% elif key=="team" or key=="opponent" %}<a href="/stats/college/{{ session_id }}/team/{{ quote(val,safe='') }}">{{ val }}</a>
 {% elif key=="name" and view=="players" %}<a href="/stats/college/{{ session_id }}/player/{{ quote(r.team,safe='') }}/{{ quote(val,safe='') }}">{{ val }}</a>
+{% elif key=="split" and group!="raw" and r.group_key is not none %}<a href="{{ url(**{group:r.group_key|string,"group":"raw","page":1}) }}">{{ val }}</a>
 {% elif key=="week" and 'idx' in r %}<a href="/stats/college/{{ session_id }}/game/{{ r.week }}/{{ r.idx }}">W{{ val }}</a>
 {% elif key in ("action","result","bucket","origin") %}{{ val|string|replace('_',' ')|title }}
 {% elif val is number %}{{ "%.3f"|format(val) if val is float else val }}
