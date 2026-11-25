@@ -65,7 +65,15 @@ class HSPlayer:
         # Identical position-weighted rating used by Recruit and PlayerCard.
         from engine.player_card import _get_position_weights
         weights = _get_position_weights(self.position)
-        raw = sum(getattr(self, attr)*weight for attr,weight in weights.items()) / sum(weights.values())
+        # Sum in the same order as Recruit.true_overall and PlayerCard.overall.
+        # Floating point addition depends on order, and a sum that lands on
+        # 46.999 instead of 47.0 truncates to a different overall.
+        order = ("speed", "stamina", "kicking", "lateral_skill", "tackling", "agility",
+                 "power", "awareness", "hands", "kick_power", "kick_accuracy")
+        raw = 0.0
+        for attr in order:
+            raw = raw + getattr(self, attr) * weights[attr]
+        raw = raw / sum(weights.values())
         return max(10,min(99,int(raw)))
 
 
