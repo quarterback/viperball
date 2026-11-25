@@ -469,8 +469,16 @@ def run(seasons, nteams, seed, out, *, national=False):
                 w,l = played_records[old_team]
                 if (c.age, c.seasons_coached, c.career_wins, c.career_losses) != (age+1,seasons_coached+1,wins+w,losses+l):
                     raise RuntimeError(f"Coach season credit mismatch: {cid}")
-                if ensure_coach_tactical_profile(c) != profile:
-                    raise RuntimeError(f"Coach signature changed during employment transition: {cid}")
+                updated = deepcopy(ensure_coach_tactical_profile(c))
+                learning = updated.pop("learning", {})
+                prior = profile.get("learning", {})
+                original = {k:v for k,v in profile.items() if k != "learning"}
+                if updated != original:
+                    raise RuntimeError(f"Coach base signature changed during employment transition: {cid}")
+                from engine.coach_learning import LIMIT, STEP
+                for key in ("kick_mix", "pressure"):
+                    if abs(learning.get(key,0)) > LIMIT + 1e-6 or abs(learning.get(key,0)-prior.get(key,0)) > STEP + 1e-6:
+                        raise RuntimeError(f"Unbounded tactical adaptation: {cid}/{key}")
             coach_events = dyn.coaching_history[year+1].get("development", [])
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")

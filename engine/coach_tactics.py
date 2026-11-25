@@ -244,13 +244,14 @@ def resolve_offensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
         hc_profile = ensure_coach_tactical_profile(hc)
         delegation = hc_profile.get("head_coach", {}).get("delegation", 0.5)
         authority = max(0.40, min(0.95, 0.40 + 0.60 * float(delegation)))
+    from .coach_learning import offense_bias
     return {
         "coach_id": oc.coach_id,
         "signature": profile.get("identity", {}).get("offense_interpretation", ""),
         "featured_position": profile.get("offense", {}).get("featured_position", ""),
         "authority": round(authority, 3),
         "formation_bias": dict(profile.get("offense", {}).get("formation_bias", {})),
-        "family_bias": dict(profile.get("offense", {}).get("family_bias", {})),
+        "family_bias": offense_bias(profile),
         "kick_pass_bias": dict(profile.get("offense", {}).get("kick_pass_bias", {})),
     }
 
@@ -322,11 +323,12 @@ def resolve_defensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
         authority = max(0.4, min(0.95, 0.4 + 0.6 * delegation))
     focus = tuple(x for x in defense.get("read_focus", ())
                   if x in DEFENSIVE_READ_CATEGORIES)
+    from .coach_learning import pressure_bias
     return {
         "coach_id": dc.coach_id,
         "signature": profile.get("identity", {}).get("defense_interpretation", ""),
         "authority": round(authority, 3),
-        "pressure_bias": max(-0.15, min(0.15, float(defense.get("pressure_bias", 0.0)))),
+        "pressure_bias": pressure_bias(profile),
         "run_support_bias": max(-0.15, min(0.15, float(defense.get("run_support_bias", 0.0)))),
         "coverage_focus": str(defense.get("coverage_focus", "")),
         "aggression": max(0.0, min(1.0, float((dc.personality_sliders or {}).get("aggression", 50))/100)),

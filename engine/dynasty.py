@@ -1260,6 +1260,8 @@ class Dynasty:
         _DEFENSE_POS = {"Defensive Line", "Keeper"}
 
         development_events = []
+        tactical_learning = []
+        from engine.coach_learning import adapt
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
             if sr is None:
@@ -1300,6 +1302,10 @@ class Dynasty:
                         rng=rng,
                     )
 
+                # Learn from the completed season before any employment moves.
+                lesson = adapt(card, role, team_name, prev_year, self.seasons.get(prev_year))
+                if lesson is not None:
+                    tactical_learning.append(lesson)
                 # All coaches develop their attributes each offseason
                 deltas = apply_coach_development(card, tw, tl, rng=rng)
                 development_events.append({"coach_id": card.coach_id, "team": team_name,
@@ -1343,6 +1349,7 @@ class Dynasty:
             "portal_summary": coaching_portal.get_summary(),
             "portal_hires": coaching_portal.hires,
             "development": development_events,
+            "tactical_learning": tactical_learning,
         }
         result["coaching"] = self.coaching_history[year]
         return result["coaching"]
