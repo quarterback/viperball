@@ -791,7 +791,7 @@ class CoachCard:
             CoachCareerStop.from_dict(s)
             for s in d.get("career_history", [])
         ]
-        return cls(
+        card = cls(
             coach_id=d["coach_id"],
             first_name=d["first_name"],
             last_name=d["last_name"],
@@ -839,6 +839,12 @@ class CoachCard:
             growth=d.get("growth", 50),
             tactical_profile=d.get("tactical_profile", {}),
         )
+        # Explicit saved chemistry scores are authoritative, including 50.
+        # Only missing legacy fields should receive constructor backfill.
+        for key in ("message", "standard", "growth"):
+            if key in d:
+                setattr(card, key, d[key])
+        return card
 
 
 # ──────────────────────────────────────────────
