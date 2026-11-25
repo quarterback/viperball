@@ -39,3 +39,78 @@ def test_unattributed_games_do_not_teach():
     c=card()
     s=season(card("dc"))
     assert observe(s,"A",c,"oc")["games"] == 0
+
+
+def test_mentor_influence_requires_shared_season_and_survives_moves():
+    from engine.coach_learning import learn_from_mentor, mentor_bias, MENTOR_LIMIT, MENTOR_STEP
+
+    pupil, mentor = card("oc"), card("head_coach")
+    mentor.career_development["management"]["specialty"] = "oc"
+    profile = ensure_coach_tactical_profile(pupil)
+    source = ensure_coach_tactical_profile(mentor)
+    profile["offense"]["family_bias"]["kick_pass"] = -.08
+    source["offense"]["family_bias"]["kick_pass"] = .14
+    identity = profile["identity"].copy()
+    assert learn_from_mentor(pupil, mentor, "oc", "A", 2026) is None
+    pupil.coaching_tree.append({"coach_id": mentor.coach_id, "team_name": "A",
+                                "year_start": 2026, "year_end": 2035})
+    assert learn_from_mentor(pupil, mentor, "oc", "B", 2026) is None
+    assert learn_from_mentor(pupil, mentor, "dc", "A", 2026) is None
+    event = learn_from_mentor(pupil, mentor, "oc", "A", 2026)
+    assert 0 < event["after"] <= MENTOR_STEP
+    assert learn_from_mentor(pupil, mentor, "oc", "A", 2026) is None
+    for year in range(2027, 2036):
+        learn_from_mentor(pupil, mentor, "oc", "A", year)
+    assert 0 < mentor_bias(profile, "kick_mix") <= MENTOR_LIMIT
+    assert profile["identity"] == identity
+    assert offense_bias(profile)["kick_pass"] > -.08
+    pupil.team_name = "B"
+    loaded = CoachCard.from_dict(pupil.to_dict())
+    assert ensure_coach_tactical_profile(loaded) == profile
+    assert learn_from_mentor(loaded, mentor, "oc", "B", 2036) is None
+
+
+def test_stubborn_coach_retains_identity_under_mentorship():
+    from engine.coach_learning import learn_from_mentor, mentor_bias
+    pupil, mentor = card("dc"), card("head_coach")
+    pupil.personality_sliders["stubbornness"] = 100
+    mentor.career_development["management"]["specialty"] = "dc"
+    pupil.coaching_tree.append({"coach_id": mentor.coach_id, "team_name": "A",
+                                "year_start": 2026, "year_end": 2026})
+    event = learn_from_mentor(pupil, mentor, "dc", "A", 2026)
+    assert event["before"] == event["after"] == 0
+    assert mentor_bias(pupil.tactical_profile, "pressure") == 0
+
+
+def test_school_fit_changes_equal_quality_cpu_recruit_rankings():
+    from engine.coach_recruiting_fit import ATTRS, MAX_FIT, recruiting_fit, recruiting_preferences
+    from engine.recruiting import auto_recruit_team
+
+    def prospect(name, specialized, stars=3):
+        return SimpleNamespace(
+            recruit_id=name, position="Zeroback", region="midwest", stars=stars,
+            true_overall=70, committed_to=None, signed=False, offers=[],
+            **{"true_" + k: 90 if k in specialized else 50 for k in ATTRS})
+
+    class NoNoise:
+        def uniform(self, lo, hi):
+            return (lo + hi) / 2
+
+    def targets(school):
+        recruits = [prospect("runner", {"awareness", "agility", "hands"}),
+                    prospect("kicker", {"kicking", "kick_power", "kick_accuracy"})]
+        board, nil = auto_recruit_team("A", recruits, 60, "midwest",
+            scholarships=1, rng=NoNoise(), style_config={"offense_style": school})
+        return board.offered, nil
+
+    ground, ground_nil = targets("ground_pound")
+    vertical, vertical_nil = targets("shock_and_awe")
+    assert ground[0] == "runner" and "runner" in ground_nil
+    assert vertical[0] == "kicker" and "kicker" in vertical_nil
+    r = prospect("kicker", {"kicking", "kick_power", "kick_accuracy"})
+    assert recruiting_fit(r, recruiting_preferences(None)) == 0
+    assert abs(recruiting_fit(r, recruiting_preferences(None, {"offense_style":"shock_and_awe"}))) <= MAX_FIT
+    # Fit cannot displace a much higher star prospect with otherwise equal context.
+    board, _ = auto_recruit_team("A", [r, prospect("five_star", {"awareness", "agility", "hands"}, 5)],
+        80, "midwest", rng=NoNoise(), style_config={"offense_style":"shock_and_awe"})
+    assert board.offered[0] == "five_star"
