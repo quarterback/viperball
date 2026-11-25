@@ -11,6 +11,8 @@ MIN_GAMES = 6
 MIN_ARM = 30
 LIMIT = .06
 STEP = .015
+MENTOR_LIMIT = .025
+MENTOR_STEP = .005
 RUN = {"dive_option", "power", "sweep_option", "speed_option", "counter", "draw", "viper_jet"}
 
 def clamp(v, limit):
@@ -95,7 +97,8 @@ def adapt(card, role, team, year, season):
 
 def offense_bias(profile):
     base = dict(profile.get("offense",{}).get("family_bias",{}))
-    delta = clamp(float(profile.get("learning",{}).get("kick_mix",0)), LIMIT)
+    state = profile.get("learning", {})
+    delta = clamp(float(state.get("kick_mix", 0)), LIMIT) + mentor_bias(profile, "kick_mix")
     if delta:
         base["kick_pass"] = clamp(base.get("kick_pass",0)+delta,.20)
         for family in sorted(RUN):
@@ -104,4 +107,52 @@ def offense_bias(profile):
 
 def pressure_bias(profile):
     return clamp(float(profile.get("defense",{}).get("pressure_bias",0))+
-                 clamp(float(profile.get("learning",{}).get("pressure",0)), LIMIT),.15)
+                 clamp(float(profile.get("learning",{}).get("pressure",0)), LIMIT) +
+                 mentor_bias(profile, "pressure"), .15)
+
+
+def mentor_bias(profile, key):
+    return clamp(float(profile.get("learning", {}).get("mentorship", {}).get(key, 0)), MENTOR_LIMIT)
+
+
+def learn_from_mentor(card, mentor, role, team, year):
+    """Learn a small tactical tendency after a verified shared season.
+
+    Only the HC's relevant specialty is passed down, never their identity,
+    rating, or learned performance bonus. Keep the apprentice's own
+    season-evidence learning distinct from this exposure.
+    """
+    from engine.coach_tactics import ensure_coach_tactical_profile
+    from engine.coach_career import management, slider
+    if mentor is None or card.coach_id == mentor.coach_id or role not in ("oc", "dc"):
+        return None
+    if management(mentor).get("specialty") != role:
+        return None
+    if not any(
+        x.get("coach_id") == mentor.coach_id and x.get("team_name") == team
+        and x.get("year_start", year + 1) <= year <= x.get("year_end", year - 1)
+        for x in card.coaching_tree
+    ):
+        return None
+    profile = ensure_coach_tactical_profile(card)
+    source = ensure_coach_tactical_profile(mentor)
+    learning = profile.setdefault("learning", {})
+    lineage = learning.setdefault("mentorship", {})
+    if lineage.get("last_year", -1) >= year:
+        return None
+    key = "kick_mix" if role == "oc" else "pressure"
+    before = mentor_bias(profile, key)
+    if role == "oc":
+        own = float(profile["offense"]["family_bias"].get("kick_pass", 0))
+        target = float(source["offense"]["family_bias"].get("kick_pass", 0))
+    else:
+        own = float(profile["defense"].get("pressure_bias", 0))
+        target = float(source["defense"].get("pressure_bias", 0))
+    receptivity = slider(card, "adaptability") * (1 - slider(card, "stubbornness"))
+    shift = clamp((target - own - before) * receptivity * .10, MENTOR_STEP)
+    after = round(clamp(before + shift, MENTOR_LIMIT), 5)
+    event = {"year": year, "team": team, "role": role, "coach_id": card.coach_id,
+             "mentor_id": mentor.coach_id, "key": key, "before": before, "after": after}
+    lineage.update({key: after, "last_year": year,
+                    "history": list(lineage.get("history", []))[-19:] + [event]})
+    return event
