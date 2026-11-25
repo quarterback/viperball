@@ -52,8 +52,9 @@ def test_actual_graduates_and_returning_prospects_are_not_regenerated(monkeypatc
         _hs_league=league,_hs_pipeline=pipeline)
     # Avoid a postseason engine run in this small lifecycle unit test.
     monkeypatch.setattr("engine.college_feeder._isolated_sim",lambda l:l)
-    result = advance_college_feeder(dynasty,2027,["A","B"],12)
+    result,reserve = advance_college_feeder(dynasty,2027,["A","B"],12,include_reserve=True)
     assert {r.recruit_id:asdict(r) for r in result} == grads
+    assert {r.recruit_id for r in reserve} == {pid for pid,(_,p) in old.items() if p.year=="Senior"}-set(grads)
     new = competition_index(dynasty._hs_league)
     assert not (set(grads)&set(new))
     assert set(old)-set(new) == {pid for pid,(_,p) in old.items() if p.year=="Senior"}
@@ -96,3 +97,19 @@ def test_fresh_college_id_collision_repair_never_rewrites_saved_players():
     assert len(set(ids)) == 3
     assert teams["C"].players[0].player_id == "same"
     assert all(pid.startswith("CVL-OPEN-2026-") for pid in ids[:2])
+
+
+def test_walkon_reserve_uses_existing_high_school_identity():
+    from engine.roster_continuity import fill_college_roster_gaps, COLLEGE_DEPTH
+    from engine.recruiting import generate_single_recruit
+    rng = random.Random(34)
+    league = miniature_league()
+    from engine.hs_league import hs_player_to_recruit
+    team, player = next((t,p) for t in league.teams.values() for p in t.seniors)
+    reserve = hs_player_to_recruit(player,team)
+    roster = [generate_single_recruit(f"{pos}-{i}",position=pos,rng=rng).to_player_card("A")
+              for pos,n in COLLEGE_DEPTH.items() for i in range(n-int(pos==player.position))]
+    ledger = fill_college_roster_gaps({"A":roster},[],2027,rng,reserve_pool=[reserve])
+    assert ledger["A"][0]["source"] == "hs_reserve"
+    assert roster[-1].player_id == player.player_id
+    assert roster[-1].overall == player.overall
