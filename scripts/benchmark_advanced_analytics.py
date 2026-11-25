@@ -121,14 +121,21 @@ def evaluate_game(record,model):
             b["predicted"]+=p;b["observed"]+=y
         stats["value_n"]+=1
     prev=None
+    drives=defaultdict(Counter);teams=defaultdict(Counter);examples=[]
     for r in rows:
         s=r["before_state"]
         if s is None:continue
         sign=1 if s["possession"]=="home" else -1
         stats["event_n"]+=1
+        team=teams[s["possession"]]
+        team["events"]+=1
+        drive=drives[r["drive_id"]] if r["drive_id"] is not None else None
+        if drive is not None:drive["events"]+=1
         val=event_epa(model,r)
         if val is not None:
             stats["epa_n"]+=1;stats["epa_home"]+=sign*val["epa"]
+            team["epa_n"]+=1;team["epa"]+=val["epa"]
+            if drive is not None:drive["epa_n"]+=1;drive["epa"]+=val["epa"]
         if r["action"]:
             stats["decision_n"]+=1
             stats["action:"+r["action"]+":n"]+=1
@@ -136,6 +143,9 @@ def evaluate_game(record,model):
             if alt:
                 stats["action:"+r["action"]+":supported"]+=1
                 stats["action:"+r["action"]+":regret"]+=alt["regret"]
+                team["alternative_n"]+=1;team["regret"]+=alt["regret"]
+                if drive is not None:drive["alternative_n"]+=1;drive["regret"]+=alt["regret"]
+                if len(examples)<4:examples.append({"event_id":r["id"],"estimate":alt})
                 stats["alternative_n"]+=1;stats["regret"]+=alt["regret"]
                 if alt["above_continue"] is not None:
                     stats["above_n"]+=1;stats["above_continue"]+=alt["above_continue"]
@@ -145,17 +155,24 @@ def evaluate_game(record,model):
             dec=context_decomposition(model,s,record["contract"]["restart_baseline"],True)
             if dec:
                 stats["delta_supported"]+=1;stats["delta"]+=sign*dec["delta"]
+                team["delta_supported"]+=1;team["delta"]+=dec["delta"]
+                if drive is not None:drive["delta_supported"]+=1;drive["delta"]+=dec["delta"]
                 if abs(dec["interaction_residual"])>1e-8:raise RuntimeError("Nonreconciling Delta decomposition")
         if first and (s.get("bonus_active") or s.get("bonus_recipient") in ("home","away")):
             stats["bonus_n"]+=1
             dec=context_decomposition(model,s,record["contract"]["restart_baseline"])
             if dec:
                 stats["bonus_supported"]+=1;stats["bonus"]+=sign*dec["bonus_context"]
+                team["bonus_supported"]+=1;team["bonus"]+=dec["bonus_context"]
+                if drive is not None:drive["bonus_supported"]+=1;drive["bonus"]+=dec["bonus_context"]
         prev=s
     result={"epa_coverage":stats["epa_n"]/max(1,stats["event_n"]),
             "epa_home_per_event":stats["epa_home"]/stats["epa_n"] if stats["epa_n"] else None,
             "delta_mean":stats["delta"]/stats["delta_n"] if stats["delta_n"] and stats["delta_supported"]==stats["delta_n"] else None,
-            "bonus_mean":stats["bonus"]/stats["bonus_n"] if stats["bonus_n"] and stats["bonus_supported"]==stats["bonus_n"] else None}
+            "bonus_mean":stats["bonus"]/stats["bonus_n"] if stats["bonus_n"] and stats["bonus_supported"]==stats["bonus_n"] else None,
+            "team_estimates":{k:dict(v) for k,v in teams.items()},
+            "drive_estimates":{k:dict(v) for k,v in drives.items()},
+            "alternative_examples":examples}
     return result,stats,by_state
 
 
@@ -209,6 +226,7 @@ def analyze(paths,out,first_season):
     model=fit(row for r in read_corpus(paths) if partition(r,first_season)=="ep_train" for row in observations(r))
     dump(out/"model.json",model)
     counts=Counter();stats=Counter();by_state=defaultdict(Counter);train=[];test=[]
+    heldout_groups=defaultdict(Counter)
     heldout_games=[]
     for r in read_corpus(paths):
         split=partition(r,first_season);counts[split]+=1
@@ -219,6 +237,10 @@ def analyze(paths,out,first_season):
         if split=="dtw_train":train.append(item)
         else:
             test.append(item);stats.update(c)
+            for side,t in r["teams"].items():
+                v=eval_["team_estimates"].get(side,{})
+                for group in ("all","offense:"+str(t["scheme"]),"defense:"+str(t["defense"]), "strength:"+str(t["strength_band"])):
+                    heldout_groups[group].update(v)
             heldout_games.append({"game_id":r["game_id"],"evaluation":eval_,"counts":dict(c),
                                   "legacy_dtw":r["legacy_dtw"],"outcome":r["outcome"]})
             for k,v in b.items():by_state[k].update(v)
@@ -230,6 +252,7 @@ def analyze(paths,out,first_season):
     acceptance=coverage>=.75 and overall.get("mae",math.inf)<=overall.get("legacy_mae",-math.inf)
     report={"version":VERSION,"revision":revision(),"split_counts":dict(counts),"heldout_metrics":rates,
             "heldout_counts":dict(stats),"coverage":coverage,
+            "heldout_team_groups":{k:dict(v) for k,v in heldout_groups.items()},
             "state_model_gate":{"thresholds":{"coverage":.75,"mae":"no worse than matched legacy comparison"},
                 "passed":acceptance,"release":"experimental only; alternative/bonus causal validation not established"},
             "dtw":study(train,test),"national_baselines":aggregate(read_corpus(paths))}
