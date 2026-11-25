@@ -111,6 +111,7 @@
 {% if view not in ("glossary",) %}
 <form class="vba-filter" method="get" action="{{ base }}">
  <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="order" value="{{ order }}"><input type="hidden" name="columns" value="{{ selected_columns|join(',') }}">
+ {% if filters.match %}<input type="hidden" name="match" value="{{ filters.match }}"><span>Game {{ filters.match|int + 1 }} of week {{ filters.week }} · <a href="{{ url(match='') }}">All games that week</a></span>{% endif %}
  {% if view=="compare" %}
  <label>Teams (choose up to 4)<select name="compare" multiple size="5">{% for t in team_names %}<option value="{{ t }}" {% if t in compare.split('|') %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
  {% else %}
