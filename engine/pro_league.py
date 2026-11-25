@@ -660,14 +660,18 @@ class ProLeagueSeason:
                 unavail_home = self.injury_tracker.get_unavailable_names(home.name, week_num)
                 unavail_away = self.injury_tracker.get_unavailable_names(away.name, week_num)
 
-            weather_key = generate_game_weather()
-            weather_label = weather_key.replace("_", " ").title() if weather_key else "Clear"
-            weather_desc = weather_label
+            # WEA-02: weather at the home team's city at this point in the season.
+            from engine.weather import weather_for_team, calendar_month
+            _lg = "wvl" if self.config.league_id.startswith("wvl") else "pro"
+            game_wx = weather_for_team(
+                home, week=week_num, total_weeks=self.total_weeks, league=_lg,
+                month=calendar_month(week_num, self.total_weeks,
+                                     self.config.calendar_start, self.config.calendar_end))
 
             engine = ViperballEngine(
                 home, away,
                 seed=random.randint(1, 1_000_000),
-                weather=weather_key,
+                weather=game_wx,
                 injury_tracker=self.injury_tracker,
                 game_week=week_num,
                 unavailable_home=unavail_home,
@@ -710,7 +714,7 @@ class ProLeagueSeason:
                 "away_name": away.name,
                 "home_score": home_score,
                 "away_score": away_score,
-                "weather": weather_label,
+                "weather": result.get("weather_label", ""),
                 "result": result,
             }
             week_results.append(game_summary)
@@ -1269,9 +1273,13 @@ class ProLeagueSeason:
                     home_team = self.teams.get(matchup["home"]["team_key"])
                     away_team = self.teams.get(matchup["away"]["team_key"])
                     if home_team and away_team:
+                        from engine.weather import weather_for_team
+                        _lg = "wvl" if self.config.league_id.startswith("wvl") else "pro"
                         result = ViperballEngine(
                             home_team, away_team,
                             seed=random.randint(1, 1_000_000),
+                            weather=weather_for_team(home_team, league=_lg,
+                                                     month=self.config.calendar_end),
                             neutral_site=True, is_playoff=True,
                             officiating_level="pro",
                         ).simulate_game()

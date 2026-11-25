@@ -43,10 +43,13 @@
 
 {# ── Weather ── #}
 {% set weather = gr.get('weather', '') %}
-{% if weather and weather|lower not in ('clear', 'none', '') %}
+{% set weather_label = gr.get('weather_label', '') %}
+{% set weather_desc = gr.get('weather_description', '') %}
+{% if weather_label or (weather and weather|lower not in ('clear', 'none', '')) %}
 <div style="margin:10px 0;">
   <span style="color:var(--cyan);">Weather:</span>
-  <span style="color:var(--fg-bright);">{{ weather | replace('_', ' ') | title }}</span>
+  <span style="color:var(--fg-bright);">{{ weather_label or (weather | replace('_', ' ') | title) }}</span>
+  {% if weather_desc %}<span style="color:var(--fg-dim);"> · {{ weather_desc }}</span>{% endif %}
 </div>
 {% endif %}
 

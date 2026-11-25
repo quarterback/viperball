@@ -21,4 +21,9 @@ Six focused tests exercise same-player rating parity, graduation, returning pros
 
 No new coaching adaptation, scoring or package utilization targets. The combined candidate must pass runtime validation before CCH-08. The latest signing pool is saved, not a separate exhaustive archive of every prior HS season. Emergency walk-ons remain possible if the real graduating reserve has no matching position. Standalone noninteractive college roster maintenance and midseason save/resume need separate broader validation; no live-site verification claimed.
 
-Status: implementation committed, candidate CI pending.
+## WEA-02 reconciliation and CI repair
+
+Main advanced to c0c0595d027dc9bc6b881302d21ecd16e5f0025b. Applied all 29 game-engine and one high-school weather patch hunks against the existing candidate with exact unique context; imported all other WEA-02 file revisions. Retain both histories through a merge commit rather than rewriting the 69-commit shared candidate. No changes to WEA-02 rules or HS-01 recruiting policy.
+
+Run 45519790058 failed before executing any tests: the runner lacked pytest. Install pytest in the integrated test job, include weather regression tests and expand the national-validation trigger to feeder, roster, recruiting and weather changes. Reduced and national acceptance remain unverified on this combined head. CCH-08 remains deferred pending successful validation.
+

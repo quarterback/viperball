@@ -321,7 +321,12 @@ class WVLCareerLeague:
             away = self.teams.get(away_key)
             if not home or not away:
                 continue
+            from engine.weather import weather_for_team, calendar_month
             engine = ViperballEngine(home, away, seed=random.randint(1, 1_000_000),
+                                     weather=weather_for_team(
+                                         home, league="wvl",
+                                         month=calendar_month(week_idx + 1, self.total_weeks,
+                                                              "March", "November")),
                                      officiating_level="pro")
             result = engine.simulate_game()
             hs = int(result["final_score"]["home"]["score"])

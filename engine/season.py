@@ -1909,12 +1909,23 @@ class Season:
                     overseas_climate = loc["climate_zone"]
                     break
 
-        season_weather, game_temp = generate_game_weather_full(
-            state=home_state,
-            week=game.week,
-            total_weeks=total_weeks,
-            climate_zone=overseas_climate,
-        )
+        # WEA-02: readings for every period at the real venue. Neutral sites
+        # (overseas classics, later playoff rounds) use the site's place.
+        from engine.weather import weather_for_team
+        _home_obj = home_team
+        _team_state = self.team_states.get(game.home_team)
+        if overseas_climate or (is_postseason and home_state != _team_state):
+            season_weather = weather_for_team(
+                _home_obj, week=game.week, total_weeks=total_weeks, league="college",
+                neutral_state=home_state if not overseas_climate else None,
+                neutral_city=(game.neutral_site_location or "").split(",")[0].strip() or None,
+                climate_zone=overseas_climate)
+        else:
+            if home_state and not getattr(_home_obj, "state", ""):
+                _home_obj.state = home_state
+            season_weather = weather_for_team(_home_obj, week=game.week,
+                                              total_weeks=total_weeks, league="college")
+        game_temp = season_weather.reading(1).temp_f
 
         # ── Full Engine Path ──
         home_style_config = self.style_configs.get(game.home_team, {})
@@ -4024,7 +4035,11 @@ def _history_game(
 
     Returns (winner_name, home_score, away_score).
     """
+    from engine.weather import weather_for_team
+    wx = weather_for_team(teams[home], week=16 if is_playoff else rng.randint(1, 13),
+                          total_weeks=18, league="college", rng=rng)
     result = ViperballEngine(teams[home], teams[away], seed=rng.randint(1, 1_000_000),
+                             weather=wx,
                              neutral_site=is_playoff, is_playoff=is_playoff).simulate_game()
     h_score = result["final_score"]["home"]["score"]
     a_score = result["final_score"]["away"]["score"]
