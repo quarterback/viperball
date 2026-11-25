@@ -1238,6 +1238,8 @@ class Dynasty:
         # Frozen programs keep their staff but do not participate in the carousel.
         active_staffs = {name: staff for name, staff in self._coaching_staffs.items()
                          if name in all_team_names}
+        previous_hc_ids = {team: staff["head_coach"].coach_id
+                           for team, staff in active_staffs.items() if staff.get("head_coach")}
         # CPU teams evaluate and potentially fire coaches
         coaching_changes: Dict[str, list] = {}
         fired_roles: Dict[str, List[str]] = {}
@@ -1265,8 +1267,9 @@ class Dynasty:
 
         development_events = []
         tactical_learning = []
+        mentorship_events = []
         career_events = []
-        from engine.coach_learning import adapt
+        from engine.coach_learning import adapt, learn_from_mentor
         from engine.coach_career import record_season, season_evidence, grow, caller
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
@@ -1326,6 +1329,12 @@ class Dynasty:
                 development_events.append({"coach_id": card.coach_id, "team": team_name,
                     "role": role, "attribute_changes": deltas,
                     "hc_meter_gain": card.hc_meter - meter_before})
+            # Learn only from completed, recorded shared seasons before hires.
+            for role in ("oc", "dc"):
+                if staff.get(role) is not None:
+                    lesson = learn_from_mentor(staff[role], hc_card, role, team_name, prev_year)
+                    if lesson is not None:
+                        mentorship_events.append(lesson)
 
         # Build team records for portal population
         team_records_for_portal: Dict[str, tuple] = {}
@@ -1369,12 +1378,21 @@ class Dynasty:
         )
 
         self._coaching_staffs.update(active_staffs)
+        # Establish the program school before recruiting; do not re-roll it
+        # from a new random seed on the next season opening.
+        from engine.coach_school_continuity import plan_schools
+        from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES
+        previous = getattr(self.seasons.get(prev_year), "style_configs", {}) or {}
+        school_plan = plan_schools(previous, active_staffs, previous_hc_ids,
+                                   human_team, OFFENSE_STYLES, DEFENSE_STYLES)
         self.coaching_history[year] = {
             "changes": coaching_changes,
             "portal_summary": coaching_portal.get_summary(),
             "portal_hires": coaching_portal.hires,
             "development": development_events,
             "tactical_learning": tactical_learning,
+            "mentorship": mentorship_events,
+            "planned_schools": school_plan,
             "career_development": career_events,
             "retirements": retirements,
         }
@@ -1767,6 +1785,8 @@ class Dynasty:
             team_portal_losses=_portal_losses,
             team_portal_gains=_portal_gains,
             hs_pool=hs_recruits,
+            team_coaching_staffs=self._coaching_staffs,
+            team_style_configs={**season.style_configs, **self.coaching_history.get(year, {}).get("planned_schools", {})},
         )
 
         # Store signed recruits for roster maintenance in advance_season()
