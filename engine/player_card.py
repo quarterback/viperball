@@ -659,6 +659,9 @@ class PlayerCard:
             "gpa": self.gpa,
             "sat_score": self.sat_score,
             "academic_risk": self.academic_risk,
+            "transfer_count": self.transfer_count,
+            "loyalty": self.loyalty,
+            "original_stars": self.original_stars,
             "career_totals": {
                 "games": self.career_games,
                 "yards": self.career_yards,
