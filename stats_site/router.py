@@ -3482,9 +3482,11 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
                       zone: str = "", action: str = "", result: str = "", margin: str = "",
                       bucket: str = "", position: str = "", q: str = "", min_n: int = 0,
                       order: str = "desc", page: int = 1, compare: str = "",
-                      columns: str = "", export: str = ""):
+                      columns: str = "", export: str = "", group: str = "", family: str = "",
+                      offense_school: str = "", defense_school: str = "", distance_band: str = "",
+                      pressure: str = "", origin: str = ""):
     from stats_site.analytics_portal import (VIEWS, COLS, DEFAULT_SORT, ZONES, games_for,
-        build_report, fit_session_model, sorted_rows, comparison, player_compare)
+        build_report, fit_session_model, sorted_rows, comparison, player_compare, PLAY_GROUPS, DRIVE_GROUPS, SPLIT_COLS)
     from urllib.parse import urlencode, quote
     import csv
     import io
@@ -3498,8 +3500,12 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
     if scope not in ("all","regular","postseason"):scope="all"
     compare="|".join(t for val in request.query_params.getlist("compare") for t in val.split("|") if t)
     player_ids=request.query_params.getlist("player_id")
+    group_options=PLAY_GROUPS if view=="plays" else DRIVE_GROUPS if view=="drives" else {}
+    group=group if group in group_options else ("team" if group_options else "raw")
     filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,match=match,
-                   down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket,q=q)
+                   down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket,q=q,
+                   family=family,offense_school=offense_school,defense_school=defense_school,distance_band=distance_band,
+                   pressure=pressure,origin=origin,group=group)
     team_names=sorted(season.teams)
     games=list(games_for(season,session_id))
     conferences=sorted(season.conferences)
@@ -3551,10 +3557,10 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         kind="overview" if view=="overview" else view
         report=build_report(games,kind,filters,conf_map,training)
         rows=report["rows"]
-        cols=COLS.get("teams" if view=="overview" else view,[])
-        sort=sort or DEFAULT_SORT.get(view,"ppg")
-        if q:rows=[r for r in rows if q.casefold() in " ".join(str(r.get(k,"")) for k in ("team","opponent","description","result")).casefold()]
-        if min_n and view not in ("plays","drives"):
+        cols=SPLIT_COLS if group_options and group!="raw" else COLS.get("teams" if view=="overview" else view,[])
+        sort=sort or ("n" if group_options and group!="raw" else DEFAULT_SORT.get(view,"ppg"))
+        if q and view not in ("plays","drives"):rows=[r for r in rows if q.casefold() in " ".join(str(r.get(k,"")) for k in ("team","opponent","description","result")).casefold()]
+        if min_n and (view not in ("plays","drives") or group!="raw"):
             rows=[r for r in rows if r.get("games",r.get("n",r.get("drives",r.get("event_n",0))))>=min_n]
     valid={k for k,_ in cols}
     if sort not in valid:sort=next(iter([k for k,_ in cols]),"")
@@ -3562,7 +3568,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
     all_cols=cols
     if columns:
         wanted=set(columns.split(","))
-        selected=[(k,label) for k,label in cols if k in wanted or k in ("name","team","action","bucket","week")]
+        selected=[(k,label) for k,label in cols if k in wanted or k in ("name","team","action","bucket","week","split")]
         if selected:cols=selected
     base=f"/stats/college/{session_id}/analytics"
     params={k:v for k,v in {**filters,"view":view,"sort":sort,"order":order,"position":position,
@@ -3586,13 +3592,18 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
     leaders=rows[:5] if view=="overview" else []
     positions=sorted({p.get("position") for p in _cached_college_player_agg(season) if p.get("position")}) if view=="players" else []
     # Use all completed results for filter choices, not just the selected rows.
-    play_types=set();play_results=set()
+    play_types=set();play_results=set();families=set();offense_schools=set();defense_schools=set();origins=set()
     if view in ("plays","drives","expected","decisions","delta"):
         for g in games:
             fr=g["result"] or {}
+            for side in ("home","away"):
+                if fr.get(side+"_style"):offense_schools.add(fr[side+"_style"])
+                if fr.get(side+"_defense_style"):defense_schools.add(fr[side+"_defense_style"])
             for p in fr.get("drive_summary" if view in ("drives","delta") else "play_by_play",[]):
                 if p.get("play_type"):play_types.add(p["play_type"])
                 if p.get("result"):play_results.add(p["result"])
+                if p.get("play_family"):families.add(p["play_family"])
+                if p.get("possession_origin"):origins.add(p["possession_origin"])
         if view in ("decisions","expected"):play_types={"continue","drop_kick","place_kick","punt"}
     return templates.TemplateResponse("college/analytics_portal.html", _ctx(
         request,section="college",session_id=session_id,season_name=getattr(season,"name","Season"),
@@ -3604,6 +3615,8 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         compare=compare,player_options=player_options,player_ids=player_ids,
         training={k:v for k,v in training.items() if k not in ("model","dtw_model")},games_count=len(games),
         result_count=sum(bool(g["result"]) for g in games),quote=quote,
+        group_options=group_options,group=group,families=sorted(families),offense_schools=sorted(offense_schools),
+        defense_schools=sorted(defense_schools),origins=sorted(origins),
     ))
 
 
