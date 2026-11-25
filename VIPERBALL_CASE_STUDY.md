@@ -1,5 +1,7 @@
 # Viperball: Building a Fictional Sport from Scratch and the Simulation Engine That Plays It
 
+> **Historical design/case-study record.** Use [current documentation](docs/README.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for current behavior. The original findings below are preserved.
+
 **A case study in game design, iterative calibration, and the surprising depth of building something no one's ever seen before.**
 
 ---

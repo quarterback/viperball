@@ -24,7 +24,7 @@ All of these together, in the hands of a writer who assumes you already watch th
 ## PART TWO: THE SPORT (WHAT YOU ACTUALLY NEED TO KNOW)
 
 ### The Field and the Clock
-100-yard field. Four quarters of 10 minutes each. Running clock with stoppages in the final three minutes of each half. 36 players per side, playing both ways — fatigue is a genuine tactical factor late in games.
+100-yard field. Four quarters of 10 minutes each. Running clock with stoppages in the final three minutes of each half. 36 players per game-day roster, 11 on the field, playing both ways — fatigue is a genuine tactical factor late in games.
 
 ### Downs and Possession
 **Six downs to gain 20 yards.** This is not a typo. Six downs, not four. Twenty yards, not ten. This changes everything about how drives feel — they are longer, more grinding, more like rugby phases than American football series. A team can be stuck on 4th-and-12 and still have two more shots at it.
@@ -34,14 +34,11 @@ When a team gains 20 yards, the chains reset. Fail to convert after six downs an
 ### The Ball Moves Like Rugby
 **There is no forward pass.** Full stop. The ball advances by running, kicking, or lateraling — and a lateral can go to any player behind the carrier at the moment of release. This is the structural fact that shapes everything else in the sport.
 
-The kick pass is the primary aerial weapon: the Zeroback drops the ball and kicks it forward to a lead runner. Think of it as a chip over the top in soccer — tactical, directional, a real offensive tool. Short kick passes complete around 65-70% of the time. Medium-range ones are more like 50%. Bombs are low-percentage gambles.
+The kick pass is the primary aerial weapon: the Zeroback drops the ball and kicks it forward to a lead runner. Think of it as a chip over the top in soccer — tactical, directional, a real offensive tool. Short kick passes generally have more attainable completions than deep bombs; report the actual observed rates for the game and season.
 
-### The Three Pillars of Offense
-Every offense in Viperball runs on the same triangle:
+### Offensive philosophy
 
-**Running → Kick Pass → Snap Kick**
-
-You run to set up the kick pass. You kick pass to stretch the field and reach scoring range. When you're in range, you go for the snap kick. Everything flows between those three pillars. A team that's clicking has all three working. A team in trouble is locked out of one of them.
+Running, kick passing, lateral movement and scoring kicks are distinct choices. Ground Control and Stampede pursue touchdowns; Boot Raid, Six Shooter, Ball Control and Ironclad have different kicking and territory priorities. Chain Gang and Lateral Spread rely more heavily on lateral chains. Write about the actual calls, not an assumed universal sequence.
 
 ### Scoring — The Full Hierarchy
 These are exact values and they matter for every sentence you write:
@@ -64,31 +61,19 @@ These are exact values and they matter for every sentence you write:
 ### The Lateral Chain
 Laterals can happen at any time, from any player, to any teammate behind them. A single play can chain through four or five pairs of hands. Each additional lateral compounds the fumble risk.
 
-**The lateral is a spice, not the main course.** Game-to-game offense is running and kick passing. The lateral chain is the circus play, the highlight moment, the thing that makes crowds hold their breath. Don't treat it as routine.
+**Lateral use depends on the school.** Chain Gang and Lateral Spread feature more chains; other schools use them selectively. Describe the observed game.
 
 When the defense recovers a loose ball from a botched lateral, a fumble, or a muffed kick, that's a **Bell** — half a point plus possession. Bells matter. A team that forces three Bells in a game has changed the result.
 
 ### The Bonus Possession (Interception Rule)
-When a team throws an interception — kick pass or lateral — the intercepting team finishes out the original drive (including any return touchdown), and then gets the ball back again. The bonus possession starts from the intercepted team's own 25-yard line.
 
-Think of it like a safety without the kickoff: the team that turned it over concedes whatever happens on the return, and then hands the ball right back. The intercepting team doesn't punt away their advantage — they get to keep attacking.
+An interception may grant the intercepting side a delayed extra possession after its next drive. The bonus starts at its own 20, not the opponent's 25. A pick-six is defensive scoring; follow the actual restart and subsequent possession sequence. A fumble or interception while a bonus is pending or active cancels it and suppresses another bonus. Pending bonuses expire at the half. Cite the actual bonus marker; do not assume every interception produced an extra drive.
 
-This means interceptions are catastrophic in a way they aren't in most sports. A pick-six in football ends at six points. In Viperball, the defense scores nine, then lines up at the 25 to start another drive. One turnover can produce two consecutive scoring drives without the other team touching the ball.
+### Delta Yards
 
-Two cancellation conditions exist: if the intercepting team throws their own interception during the bonus drive, both bonuses cancel. Bonuses don't carry across halves.
+After a score, the receiving team starts at its own 20 minus its score lead, clamped to 1–80. A trailing team receives better field position; a leading team receiving a subsequent restart pays a field-position cost. Positive delta_cost means penalty kill (yards lost); negative means power play (yards gained). A team leading by 30 gives the trailing receiver a start at its own 50. Not every turnover or restart is Delta-adjusted.
 
-**When writing about interceptions, write about the sequence, not just the play.** In the play-by-play, "Lateral Intercepted" followed by "BONUS POSSESSION" are one event — treat them as the single most narratively important sequence in the game unless the data says otherwise. The pick is the beginning of the story, not the end.
-
-### The Delta Yards System
-When a team scores, they receive a field position penalty on their next kickoff proportional to their lead. The bigger the lead, the worse the starting field position they hand the opponent. A team up 30 points might be giving the other side possession at their own 45-yard line to start every drive.
-
-From a coaching standpoint, this is called **lead management**. The leading team's **kill rate** is the percentage of these advantaged possessions they hold scoreless. Their **mess rate** is the gap between what the trailing team scored on those drives versus what they'd normally score. Managing the Delta is a real coaching skill, tracked in box scores like a pitching stat.
-
-**How to translate Delta numbers into narrative tone:**
-- Large negative Delta (e.g. -71): the winning team was managing a lead all game. Write it as a game of attrition and field position.
-- Large positive Delta (e.g. +38): the team was chasing all game. Write it as a comeback attempt, successful or not.
-- High mess rate: the trailing team was converting their Delta advantages. Write the game as a thriller even if the final score looks comfortable.
-- Kill rate 0%: the leading team gave up points on every advantaged drive despite the structural edge. That's a story — they won in spite of their lead management, not because of it.
+Kill rate is the team's TD/made-kick scoring incidence on its own penalty-kill drives; power-play scoring rate uses its own advantaged drives. Mess Rate is the gap between those two rates when both are supported. Report denominators. Do not reverse the sign, treat kill rate as a defensive stop rate, or assume high Mess Rate tells you the game's outcome.
 
 ---
 
@@ -106,41 +91,9 @@ From a coaching standpoint, this is called **lead management**. The leading team
 
 ## PART FOUR: OFFENSIVE AND DEFENSIVE SCHEMES
 
-### Offensive Schemes
-**Lateral Spread** — Ball moves sideways constantly. Multiple receivers, chains as the primary scoring mechanism. High upside, high Bell rate both ways.
+Use the current [school reference](OFFENSE_SCHEMAS.md) for all sixteen offensive schools, ten defensive schools and five special-teams schemes. Ground Control replaces Ground & Pound; the game now includes Keeper Hunt and Rotation. Do not use obsolete school names as current schemes.
 
-**Ghost Formation** — Misdirection built on the Viper. Counter plays, jet sweeps, constant motion. The defense guesses wrong when it's working; stalls spectacularly when it isn't.
-
-**Stampede** — Run at you, run through you. High-volume carries, power runs, grind the clock and the defense. The snap kick is the end result of a long march.
-
-**Slick N Slide** — Speed option, sweeps, run to the perimeter, make the defense chase. Forces coverage of the full field width.
-
-**Boot Raid** — Advance methodically to scoring range (roughly the 55-85 zone), then shift to snap kicks and field goals. The kicker is the closer.
-
-**Ball Control** — Conservative, mistake-free, clock-eating. Dives and powers, no lateral risk, kick it when in range. Lowest fumble rates, lowest drama, wins ugly.
-
-**Chain Gang** — Maximum lateral chains, amplified in close games. Highest Bells both ways. Feast or famine, and spectacular either way.
-
-**Triple Threat** — Old-school single-wing misdirection. Direct snaps, counter draws, three players who can all carry. Defense can't lock onto one threat.
-
-**Balanced** — Reads the defense, takes what's given. No tendency to solve. The hardest to game-plan against.
-
-### Defensive Schemes
-**Fortress** — Physical, gap-discipline run defense. Stops the dive and the power. Can be vulnerable to the perimeter.
-
-**Lockdown** — Focuses on kick pass coverage. Limits big aerial plays. Forces the offense to earn it on the ground.
-
-**Blitz Pack** — Aggressive pressure on the Zeroback. High sack rate, high risk. One broken block and it's a 50-yard run.
-
-**Chaos** — Forces turnovers by crowding lateral chains. High Bell rate forced. Disruptive but can give up yards in chunks.
-
-**Spread Buster** — Wide alignments, defending the perimeter. Stops sweeps and speed options. Susceptible to the interior run.
-
-**Stacked Box** — Eight in the box. Every run play hits a wall. Forces the kick pass to beat you.
-
-**Shadow** — Man-to-man on the Viper at all times. Take her out of the game. Zone behind it.
-
-**Adaptation** — Reads tendencies and adjusts mid-game. Gets stronger as the game progresses. A repetitive offense is feeding this defense information.
+Write about the coach's actual tactical fingerprint, weekly plan, installed packages and game decisions. A school describes philosophy, not a guarantee of success. Compare the observed play mix, finishing decisions, physical rushers, coverage, pressure and fatigue; do not attribute a result to the coach without evidence.
 
 ---
 
@@ -299,19 +252,13 @@ If it reads like a Wikipedia article or a funding pitch, start over.
 
 ## PART TEN: STATS AND WHAT THEY MEAN
 
-| Stat | What it tells you |
-|---|---|
-| Yards/Carry | 8+ is dominant. 5 is solid. Below 4 means the defense is winning at the line. |
-| KP Completion % | 65%+ is efficient. 50% is workable. Below 40% is a rough night or a defense in the Zeroback's face. |
-| Snap Kick attempts | 2+ means the offense was consistently in range. 0 means they never got there or never got open looks. |
-| Delta Yards | Negative = team was leading and paying in field position. Positive = chasing. Large negative = attrition game. |
-| Kill Rate | Percentage of opponent's Delta-advantaged drives held scoreless. 50% is average. 70%+ is lead management excellence. |
-| Mess Rate | The gap between kill rate and the trailing team's actual conversion rate. High mess rate = the comeback pressure was real. |
-| Stop Rate | Percentage of opponent drives ended without a score. 40%+ is a defense that was present. Below 30% is a defense that was losing. |
-| Viper Efficiency | Composite offensive efficiency. 10+ is a great night. Below 6 is a rough one. |
-| Lateral Efficiency | Percentage of chains that succeeded. 70%+ is good. Below 50% is a team losing the ball with its own offense. |
-| Bonus Possessions | Any number above 0 means an interception happened. Check the play-by-play for the full sequence — it's the most important event in the game until proven otherwise. |
+Use [ANALYTICS.md](../ANALYTICS.md) for current definitions and denominators. Compare results to the actual season's reference distribution, not hard-coded historic thresholds.
 
----
+- Separate offensive drive points from non-drive bells, safeties and return touchdowns. Reconcile to the final score.
+- Lateral yards are included in rushing yards; do not add them twice. Lateral interceptions count in defensive interception credit; interception TDs are separate from offensive TDs.
+- Distinguish actual physical pressure, hurries and sacks from called rushers.
+- Positive Delta cost is lost field position; negative is gained. Kill rate is scoring on the team's own disadvantaged drives.
+- Confirm bonus possessions in the event log. A pending bonus may be cancelled.
+- Legacy EPA and DTW are descriptive; experimental exchange values, alternative actions and context contrasts are not causal conclusions.
 
 *When in doubt: commit to the character of the game first. Then tell the reader what mattered.*

@@ -1,5 +1,7 @@
 # Retiring the /app React workbench
 
+> **Historical design/case-study record.** Use [current documentation](docs/README.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for current behavior. The original findings below are preserved.
+
 The stats site (`/stats`, viperball.xyz) becomes the only interface. Its pages
 gain the controls the workbench had, as plain HTML forms that call the same
 API functions in `api/main.py` and redirect back. The `web/` folder, the Node

@@ -1,5 +1,7 @@
 # Lottery Lab — Standalone Repo Spec
 
+> **Historical feature specification.** This records the design at the time of writing; use [current feature guide](FEATURES.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for implemented behavior and current priorities.
+
 A self-contained NBA draft lottery scenario simulator. Build this as its **own repo** — do not try to wedge it into another project. Greenfield. No legacy code to navigate.
 
 ## Why standalone

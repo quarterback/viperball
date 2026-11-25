@@ -1,5 +1,7 @@
 # Plan: Career Archive / Hall of Fame + International Game Integration
 
+> **Historical plan.** The active queue is [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+
 ## Goal
 Let users follow college players after graduation — see their full career arc
 (college stats, international play, retirement) on the stats site. Wire the

@@ -1,10 +1,8 @@
 # Viperball rules
 
-This file used to hold an older copy of the rules. The rules now live in two places that
-agree with each other and with the engine:
+- [Official rulebook](../RULES.md): playing rules and engine penalty catalog.
+- [README](../README.md): abbreviated sport rules and entry point.
+- [College competition rules](../COLLEGE_RULES.md): league, schedule and postseason.
+- [Analytics](../ANALYTICS.md): score attribution, drive accounting and statistics; not rules changes.
 
-- [README.md](../README.md): the rules record, in shorter form.
-- [RULES.md](../RULES.md): the full rulebook, including every penalty the game can call.
-
-The CVL's competition rules (season, conferences, postseason) are in
-[COLLEGE_RULES.md](../COLLEGE_RULES.md).
+Use the [documentation index](README.md) for current references. Dated AARs and old PRDs do not override the rulebook.

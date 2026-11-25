@@ -1,5 +1,7 @@
 # Viperball Web UI Rebuild — Plan
 
+> **Historical design/case-study record.** Use [current documentation](docs/README.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for current behavior. The original findings below are preserved.
+
 > Target: replace the NiceGUI app at `viperball.fly.dev/` with a React + Mantine SPA.
 > The Jinja `/stats/` site and the simulation engine are **not** in scope to rewrite —
 > the SPA consumes the existing FastAPI API.

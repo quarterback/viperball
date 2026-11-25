@@ -1,5 +1,7 @@
 # CVL Ranking Composite: 38 Systems Glossary
 
+> **Current scope:** The composite remains a separate set of ranking methods. Its EPA and efficiency inputs are the existing season-record metrics, not the experimental possession-exchange model. See [analytics](../ANALYTICS.md) and [efficiency glossary](kenpom_glossary.md) for definitions and current limitations. The composite uses available systems; rankings are not a calibrated win probability.
+
 The CVL Ranking Composite runs **38 independent ranking algorithms** against the same season of game results, inspired by Kenneth Massey's college football ranking composite. Each method produces its own 1-to-N team ordering. The composite ranking is the average rank across all methods — and the **variance between systems IS the product**.
 
 A team ranked #3 by every single method is a consensus top team. A team ranked #1 by half the methods and #40 by the other half is the most controversial team in the league. Both facts are interesting.

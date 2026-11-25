@@ -1,86 +1,12 @@
-# Viperball Simulation Sandbox
+# Viperball workspace notes
 
-## Overview
-The Viperball Simulation Sandbox is a browser-accessible platform for Viperball simulation. It contains three core modes: the Collegiate Viperball League (CVL) for women's college play with team management, the NVL (National Viperball League) professional men's league as a spectator-only experience, and the WVL (Women's Viperball League) with full Owner Mode dynasty gameplay including promotion/relegation, free agency, and bankroll management. The platform facilitates detailed simulation and analysis of Viperball game logic, season progression, and professional league tracking. Its purpose is to enhance game development and understanding by providing insights through features like detailed box scores, play-by-play logs, and custom sabermetrics.
+This file directs workspace agents to the current documentation rather than duplicating outdated system specifications.
 
-## User Preferences
-I want iterative development. Ask before making major changes. I prefer detailed explanations.
-- **Snap kick (DK) rate**: NBA 3-pointer philosophy — DK is the premium scoring play. Target: 3.5-4.0 DK per team per game. Specialist teams (kicking_zb archetype or kicking ≥85) should hit 4.5-6+. Non-specialists ~3.0-3.5. Teams should DK almost every time they're in range with a specialist.
-- **Place kick philosophy**: User wants more PK attempts — teams should try field goals instead of punting when drives stall, even from 40+ yards. PK attempts target: 3-5 per team per game. Max FG range: 71 yards. Success rate is secondary to attempt frequency.
-- **Snap kick philosophy**: Drop kicks (snap kicks) should be strongly preferred over place kicks from close range (≤25 yards: why take 3 when you can get 5?). Common at 25-40 yards, plausible at 40-58 yards. Kicking specialists get massive DK preference boosts (2.2x shot play trigger, 1.8x EV multiplier).
-- **Kick passing**: Real offensive weapon, not a prayer. Target completion rate: 55-70% (comparable to rugby kick-pass / NFL pass). Short kicks (≤12 yds) ~75%, medium ~63%, long ~50%, deep ~35%, bomb ~22%. Interceptions only happen on failed completions. YAC potential is high (2-14 base + speed bonus). Kick pass threat creates floor-spacing effect that improves run/lateral efficiency.
-- **Stat variance**: User wants all stat categories to produce a natural low-to-high range across seasons, NOT predictive clustering. Per-game rhythm/intensity factors (0.65-1.35 range) create this variance.
-- **Lateral chain risk**: User wants laterals to be genuinely risky. Target fumble rate ~25% (was 7%). Per-exchange fumble 0.035 with chain-length scaling.
+- Start: [README](README.md), [Quick start](QUICKSTART.md).
+- Product and modes: [FEATURES](FEATURES.md).
+- Engine and rules: [ENGINE_README](ENGINE_README.md), [RULES](RULES.md), [COLLEGE_RULES](COLLEGE_RULES.md).
+- Current architecture: [ARCHITECTURE_STATS_SITE_AND_RECRUITING](ARCHITECTURE_STATS_SITE_AND_RECRUITING.md).
+- Current development queue: [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+- Analytics and coaching: [ANALYTICS](ANALYTICS.md), [COACHING_SPEC](COACHING_SPEC.md).
 
-## System Architecture
-
-### UI/UX Decisions
-The user interface is built with NiceGUI using a 9-section top navigation bar: Play, Pro Leagues, WVL, International, League, My Team, Export, Debug, and Inspector. On mobile (<768px), the nav bar collapses to a hamburger dropdown menu, tab bars show scroll arrows, tables scroll horizontally, and metric cards flex-wrap to fit narrow screens. The CVL system supports up to 4 human-coached teams out of 188 across 16 conferences, with the rest AI-controlled. Dynasty mode has been replaced by the Pro Leagues spectator experience.
-
-### API-First Architecture
-The project utilizes a FastAPI backend as the single source of truth for all simulation logic, with the NiceGUI app acting as a thin display layer that interacts with API endpoints. Game objects are managed in-memory on the FastAPI server, keyed by session IDs. `main.py` launches the unified FastAPI+NiceGUI server on port 5000. A comprehensive set of API endpoints (55+) manages session lifecycle, season operations, roster management, injury tracking, data retrieval, and pro league operations.
-
-### Technical Implementations
-The project maintains a clear separation of concerns:
-- **`engine/`**: Core Python simulation logic.
-- **`engine/pro_league.py`**: ProLeagueSeason/ProLeagueConfig framework for professional leagues.
-- **`api/main.py`**: FastAPI backend.
-- **`ui/api_client.py`**: Typed Python wrapper for API calls.
-- **`nicegui_app/`**: NiceGUI web application.
-- **`data/teams/`**: CVL team configuration in JSON files (188 teams).
-- **`data/nvl_teams/`**: NVL team configuration in JSON files (24 teams, male players).
-- **`data/name_pools/`**: Name pools for player generation (female: `first_names.json`, male: `male_first_names.json`). Male names sourced from real NCAA athlete rosters via ESPN API (1,500+ first names, 2,800+ surnames from 16 top programs including Alabama, Georgia, LSU, Ohio State, Clemson, Notre Dame, etc.).
-- **`main.py`**: Application entry point.
-
-### Pro League System (NVL)
-- **Spectator-only**: No team management, no coaching, no roster moves. Users watch seasons unfold and browse stats.
-- **24 teams across 4 divisions**: East (6), North (6), Central (6), West (6). 5 Canadian franchises.
-- **Male players**: Separate name pool from CVL. Pro-level attributes (65-95 range vs college 40-80).
-- **Fast sim**: All NVL games use `fast_sim_game()` for ~0.14s full-season simulation.
-- **Season structure**: ~22 games per team, divisional opponents 2x + cross-division fills, ~28 weeks.
-- **Playoffs**: Top 3 per division (12 teams), #1 seeds get byes, single-elimination bracket through Wild Card → Divisional → Conference Championship → NVL Championship.
-- **Parameterized framework**: `ProLeagueConfig` dataclass configures any league. Adding international leagues (Eurasian, AfroLeague, Pacific, LigaAmerica, Champions League) requires only config + team data files, not new code.
-- **Season continuity (Phase 2)**: Data model includes `contract` stubs on players and `export_snapshot()` for future season chaining.
-- **API endpoints**: `/api/pro/{league}/new`, `standings`, `schedule`, `sim-week`, `sim-all`, `game/{week}/{matchup}`, `playoffs`, `stats`, `team/{team_key}`, `active`.
-- **UI tabs**: Dashboard (sim controls), Standings (4-division tables), Schedule & Results (week-by-week with box score viewer), Stats Leaders (rushing/kick pass/scoring/total yards), Playoffs (bracket), Teams (roster + season stats + schedule).
-- **Pro Box Scores**: Full-screen maximized dialog with dark header showing score prominently. 5 tabs: Team Stats (HTML table with alternating rows), Offense (Rushing/Kick Passing/Receiving/Laterals sub-tables), Defense (Tkl/TFL/Sck/Hur/INT), Kicking (DK/PK made/attempted + points), Forum Export (monospace ASCII box score with copy-to-clipboard). `_generate_pro_forum_box_score()` creates shareable plain-text box scores for forums/Discord. All player names clickable for player cards.
-- **Player Cards**: Clickable player names throughout all NVL tables (roster, season stats, stat leaders, box scores) open a Pro Football Reference-style player card dialog. Cards show bio info (position, height, weight, hometown, archetype, play style), attribute ratings (OVR + 11 ratings with color-coded tiles), and season stats in tabular format (rushing, kick passing, laterals, defense, drop kicking). Data sourced from `ProLeagueSeason.get_player_card(team_key, player_name)`. Same pattern reusable for CVL.
-
-### WVL Owner Mode System
-- **Full dynasty mode**: Own a club, manage finances, navigate promotion/relegation across a 4-tier pyramid (64 clubs).
-- **64 clubs across 4 tiers**: Tier 1 (16 elite), Tier 2 (16), Tier 3 (16), Tier 4 (16). Promotion/relegation between tiers each season.
-- **Female players**: Separate name pools. Pro-level attributes (45-90 range).
-- **Week-by-week sim**: `sim_week_all_tiers()` simulates one week across all tiers. Fast sim toggle available. Owner's game result highlighted after each week.
-- **Tab-based UI**: Dashboard (sim controls + phase indicator + results), My Team (roster viewer + free agents), Schedule (week picker with box scores), League (all-tier standings with zone coloring), Finances (bankroll, president, investments, history).
-- **Roster management**: `get_owner_roster()`, `cut_player()`, `sign_free_agent()`, `get_available_free_agents()` methods on WVLDynasty. Roster limits: min 30, max 40. FA pool cached in `_fa_pool`.
-- **Owner archetypes**: Patient Builder, Win Now, Moneyball, Sugar Daddy — each with different starting bankroll, patience threshold, and bonuses.
-- **President system**: Hired presidents with acumen, budget management, recruiting eye, staff hiring ratings. Contract terms and firing/hiring flow.
-- **Investment allocation**: 6 categories (Training, Coaching, Stadium, Youth Academy, Sports Science, Marketing) with slider-based allocation and attribute boost effects.
-- **Financial system**: `compute_financials()` calculates revenue (tickets, tier bonus, playoffs), expenses (salaries, president, operations). Bankroll tracking with forced sale risk.
-- **Multi-step offseason wizard**: 8-step interactive flow — Season Recap, Promotion/Relegation, Retirements, Player Import, Free Agency, Development, Investment, Financial Summary. Progress dots, back/next navigation.
-- **CVL graduate import**: Auto-detects CVL graduates cached in `app.storage.user["cvl_graduates"]`. Preview table shows top graduates. Custom JSON import also available.
-- **Engine files**: `engine/wvl_dynasty.py` (WVLDynasty class), `engine/wvl_season.py` (WVLMultiTierSeason), `engine/wvl_free_agency.py` (FA pool/signings), `engine/wvl_owner.py` (financials/presidents), `engine/wvl_config.py` (64 clubs, tiers, rivalries).
-- **UI file**: `nicegui_app/pages/wvl_mode.py` — container-based refresh pattern (container.clear() + re-render) for reliable tab updates.
-- **Data files**: `data/wvl_teams/` (64 club JSON files), `data/wvl_tier_assignments.json` (persisted tier mapping).
-
-### Feature Specifications
-- **Engine Mechanics**: Includes a Style System (9 offense, 5 defense), Play Families, Tempo System, unique Scoring (9pts for Touchdowns), 6-down system, contextual Kicking mechanics (CFL Rouge/Pindown, max FG range 71 yards, DK range 58 yards hard cap), Lateral Risk & Chaos, Fatigue & Breakaways, dynamic Weather System, Penalty System (30+ types), Victory Formation (kneel-down with 35-40s clock burn), and Defensive Timeout Strategy (Q4 trailing defense calls TOs to preserve clock).
-- **Player Archetypes**: 12 archetypes across Zeroback, Viper, and Flanker positions with auto-assignment and stat tracking. ZB Style System classifies Zerobacks (kick_dominant, run_dominant, dual_threat, distributor).
-- **Rating-Driven Touch Distribution**: LEAD/COMPLEMENT backs and ranked receivers (1-5) are exempt from ceiling/decay — their ratings dictate volume. LEAD backs get ~54% forced carry share (style-dependent), COMPLEMENT ~20%. Receivers are ranked by recv_score with rating-weighted target shares. Spread-the-love only manages rotation players. Stars on bad teams still dominate via rating gaps.
-- **Advanced Play Mechanics**: Enhanced Red Zone model, Play-type-specific Carrier Selection, Explosive Run System, Play Signatures, Viper Jet plays, Viper and Defensive Alignment systems, and a detailed Run Fumble System.
-- **Stat Tracking**: Comprehensive per-player and per-game stat tracking, including lateral stats, kick pass stats, special teams, and defensive stats. Lateral yards are counted as rushing yards (the player who gains yards on a lateral gets rushing yard credit). Total yards = rushing + kick pass (no separate lateral component). `lateral_yards` field is retained as a detail stat for breakdown purposes. All box score yardage derives from player stat objects as single source of truth via reconciliation in `generate_game_summary()`. Trick plays and fake punts credit rushing yards on the carrier.
-- **Delta Yards Efficiency (DYE)**: Post-game analytic measuring how the score-differential kickoff system affects each team. Drives are bucketed as penalized (team was leading, started deeper), boosted (trailing, started closer), or neutral (tied). DYE ratio = yards/drive in that bucket vs neutral baseline. DYE > 1.0 means the team outperformed despite/beyond the delta adjustment. Visualized in Analytics tab with metric cards, breakdown table, and grouped bar charts for yards/drive and scoring rate by situation. Season-level DYE accumulates across all games per team (stored in TeamRecord) and surfaces in League Awards/Stats with a net yard impact leaderboard showing most hurt/helped teams. Debug batch tool aggregates DYE across 200 games with "Wins Despite Δ", opponent "cheap" boost scores, and bonus possession impact. Tracks `dye_opponent_boosted_scores` (scores opponents got from the delta system) and `dye_wins_despite_penalty` (games won while being penalized).
-- **Dynamic Roster System**: Generates 36-player rosters, with balanced class years and geographic name pipelines.
-- **Power Index System**: A 100-point ranking system for Power Rankings, playoff selection, and conference standings.
-- **Playoff Selection**: Combines conference champion auto-bids with at-large bids based on Power Index.
-- **Rivalry System**: Allows dual rivalry slots per team with guaranteed annual games and in-game boosts.
-- **DraftyQueenz System**: An integrated fantasy/prediction mini-game for betting, fantasy football, and dynasty boosts. NVL betting is integrated directly into the Pro Leagues Betting tab — users can place winner, spread, and over/under bets on NVL games using the same DQ$ bankroll. Bets resolve automatically when weeks are simulated. Betting history with P/L tracking is shown per-week. No fantasy roster for NVL (predictions only).
-- **Injury-Aware Auto Depth Chart**: Adjusts depth chart for injured players, showing status and sorting by health.
-- **Injury Recovery Variance**: Probabilistic recovery system with early return chances, setbacks, and detailed recovery notes.
-
-## External Dependencies
-- **Python 3.11**: Core programming language.
-- **NiceGUI**: For the interactive web user interface.
-- **FastAPI**: For the RESTful API endpoints.
-- **Plotly**: For charts and data visualizations.
-- **Pandas**: For data manipulation and analysis.
+Run `python main.py` after installing requirements.txt. FastAPI, server-rendered stats-site pages and NiceGUI share one process. Do not assume the old React, desktop or fast-sim paths exist. All new work starts from current main, uses existing regression/benchmark workflows, and records an AAR with code revision, observed results and unresolved limitations. Historic preference/rate targets in older reports are not current mandates.

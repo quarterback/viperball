@@ -1,4 +1,6 @@
 # Objective
+
+> **Historical feature specification.** This records the design at the time of writing; use [current feature guide](../FEATURES.md) and [development plan](DEVELOPMENT_PLAN.md) for implemented behavior and current priorities.
 Upgrade the WVL (Women's Viperball League) from a thin spectator-with-levers experience into a robust Owner Mode dynasty. The current state has the basic framework (bankroll, president hiring, one targeted FA, investment allocation, promotion/relegation), but lacks depth — the owner doesn't have much to actually *do*, the game sim doesn't generate enough detail for engagement, and the UI is sparse compared to the CVL college experience. This session focuses on core feature depth and UI refinement to make WVL feel like a real dynasty mode.
 
 **Current State Assessment:**

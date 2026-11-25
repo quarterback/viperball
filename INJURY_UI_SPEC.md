@@ -1,5 +1,7 @@
 # Injury & Substitution UI Implementation Spec
 
+> **Historical feature specification.** This records the design at the time of writing; use [current feature guide](FEATURES.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for implemented behavior and current priorities.
+
 ## Context
 
 The injury/substitution engine was rebuilt from scratch. The old system tracked injuries but never connected them to gameplay. The new system:

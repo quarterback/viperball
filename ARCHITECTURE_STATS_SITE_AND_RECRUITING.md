@@ -1,155 +1,38 @@
-# Architecture: `viperball.fly.dev` → `viperball.xyz`, the Stats Terminal, and the Recruiting Site
+# Viperball application architecture
 
-> **Why this doc exists:** a reference explanation of how the deployed app, the
-> public stats terminal, and the recruiting section are wired together — written
-> so it can be handed to an agent (or a future me) to understand the
-> architecture/design before building a similar read-only "feed" site (e.g. a
-> juniors tour / recruiting page for the tennis simulation).
+Current reference after the November 2026 UI consolidation. The older two-site/read-only terminal model is superseded by one Python application with league browsing and management in the stats site.
 
----
+## One process, shared data
 
-## One process, two faces
-
-There is **a single Python app** deployed on Fly.io (`app = 'viperball'` in
-`fly.toml`, served on internal port 8080). It is **not** two services.
-`main.py` boots one FastAPI app and then mounts NiceGUI onto it via
-`ui.run_with(fastapi_app, ...)`. So a single uvicorn process serves:
-
-- **NiceGUI** — the interactive *simulator* frontend (Vue under the hood). This
-  is where seasons / dynasties / pro cycles actually get run. Routes registered
-  in `nicegui_app/`.
-- **FastAPI** — the JSON API (`api/main.py`) plus a **mounted sub-app at
-  `/stats`** (`stats_site/`), which is the read-only, server-rendered
-  "Bloomberg-terminal" stats site.
-
-`viperball.fly.dev` and `viperball.xyz` are **the same machine**. The only
-difference is a tiny ASGI middleware in `api/main.py`
-(`DomainRedirectMiddleware`): if the request `Host` is `viperball.xyz` and the
-path is `/`, it 302-redirects to `/stats/`. So `viperball.xyz` is just "the fly
-app, but the front door drops you straight into the stats terminal instead of
-the simulator." `viperball.fly.dev` lands on the NiceGUI sim; `viperball.xyz`
-lands on `/stats/`.
-
-```
-                    one uvicorn process on Fly.io
-   ┌─────────────────────────────────────────────────────────┐
-   │  FastAPI app (api/main.py)                                │
-   │   ├── DomainRedirectMiddleware  (xyz/ → /stats/)          │
-   │   ├── /api/...        JSON sim API                        │
-   │   ├── /stats   ──►  mounted sub-app (stats_site/router.py)│
-   │   │                  Jinja2 server-rendered, no JS framework
-   │   └── Mount("")  ──► NiceGUI sim UI (nicegui_app/)        │
-   └─────────────────────────────────────────────────────────┘
-   viperball.fly.dev → sim UI      viperball.xyz → /stats terminal
+```text
+Browser -> FastAPI (api/main.py)
+             /stats/ -> Jinja2 sub-application -> live session and SQLite
+             /api/   -> simulation / management actions
+             NiceGUI -> remaining interactive pages
+                          |
+                       engine/
+                          |
+                        data/
 ```
 
-### Key files
+main.py imports the FastAPI app, registers NiceGUI routes and mounts NiceGUI. Uvicorn serves main:fastapi_app. The Dockerfile uses Python 3.11 and one worker to preserve in-process session state. The stats router is mounted as a sub-application, so its path prefix and routing precedence matter. Do not restore the retired React app or build a parallel session system.
 
-| Concern | Where |
-|---|---|
-| Process entrypoint (mounts NiceGUI onto FastAPI) | `main.py` |
-| FastAPI app, JSON API, domain redirect, `/stats` mount | `api/main.py` |
-| Stats terminal router (all `/stats/...` routes) | `stats_site/router.py` |
-| Stats terminal templates (Jinja2) | `stats_site/templates/` |
-| Stats terminal nav / themes / shell | `stats_site/templates/base.html` |
-| Sim UI | `nicegui_app/` |
-| Fly deploy config | `fly.toml` |
+stats_site/router.py obtains live API references lazily and uses templates extending base.html. Read-only analytics lives in stats_site/analytics_portal.py. Management POSTs call existing application actions (including season advance and the dynasty hub). The router caches season aggregation against session-season identity and completed-game count. Do not mutate result dictionaries when constructing derived views; maintain explicit missingness and consistent denominator definitions.
 
----
+## Recruiting source of truth
 
-## How data "feeds" from the sim into the stats site
+A dynasty owns its high-school league and its tracked prospects. engine/hs_league.py provides persistent player identity and competition results; engine/college_feeder.py connects the tracked graduating cohort to college recruiting, carries returning prospects, and handles the reserve for walk-ons. The API and standalone offseason path use the same feeder contract. CPU targeting incorporates school/caller fit and funded position teaching; the user controls their recruiting board.
 
-This is the important part, and it's simpler than it looks: **there is no export
-step, no second database call, no HTTP hop.** The stats site reads the
-simulator's **live in-memory state directly**, because they're in the same
-process.
+The former /stats/recruiting tree is deprecated and redirected to /stats/dynasty/. Recruitment actions belong to the live dynasty, not a separately generated recruitment website. High School is a view into the same feeder. Do not create a duplicate recruit for a player who already has an identity.
 
-When you run a season in the NiceGUI sim, the resulting objects live in
-module-level dicts in `api/main.py`: `sessions`, `pro_sessions`, `wvl_sessions`,
-plus FIV (international) cycle state. The stats router pulls them in lazily via
-`_get_api()` (`stats_site/router.py`), which just imports those dicts and the
-serializer functions. Helpers like `_find_all_sessions()`,
-`_get_recruiting_pipeline()`, etc. walk that shared state and hand it to Jinja2
-templates. The router's own docstring says it plainly: *"All data comes from the
-in-memory sessions/pro_sessions/FIV state — no extra HTTP calls."*
+## Storage
 
-So the flow is:
+engine/db.py handles SQLite persistence, game records and saves. Full result data is the evidence for game and season reporting. Live sessions, archives and older incomplete records are different sources; do not fabricate missing play events or attribute points from a final score alone. Current development assumes fresh seasons. Database location is configurable with VIPERBALL_DB_PATH.
 
-```
-sim runs  →  mutates shared in-memory state  →  /stats templates render
-             (sessions / pro_sessions /         whatever is currently in
-              wvl_sessions / FIV)                that state
-```
+## Running and deploying
 
-The terminal "updates in real time as simulations run" for exactly this reason.
+Local: install requirements.txt and run python main.py; default port 5000. Production: Dockerfile runs Uvicorn on port 8080, one worker; fly.toml defines the viperball Fly app, persistent /data volume, rolling strategy and /api/health check. VIPERBALL_BUILD_SHA is included in build provenance. The configured restore URL is for initial database restoration when a persistent database is absent. The machine is configured for manual start/stop; requests do not wake a stopped machine.
 
-Archived / saved seasons additionally come from a DB layer via `_get_archives()`
-/ `_get_all_saved_data()`, for leagues no longer held in memory.
+Verify deployed health and revision, create a fresh season, simulate a week, check game/analytics routes, and test persistence before claiming deployment. No live deployment claim follows from the configuration alone.
 
----
-
-## How the recruiting site specifically works
-
-Recruiting is just one **section** of the `/stats` terminal — same pattern as
-College / Pro / WVL / International. Nav lives in `base.html`; the recruiting
-routes and templates are:
-
-- **Routes** (`stats_site/router.py`), all under `/stats/recruiting/`:
-  - `/recruiting/` → `index.html` (top prospects)
-  - `/recruiting/hs-rankings` → `hs_rankings.html`
-  - `/recruiting/draft-classes` → `draft_classes.html`
-  - `/recruiting/pro-pipeline` → `pro_pipeline.html`
-  - `/recruiting/signing-tracker` → `signing_tracker.html`
-  - `/recruiting/recruit/{recruit_id}` → `recruit_profile.html` (individual
-    profile w/ rankings, shortlist, crystal ball)
-  - `/recruiting/commissioner` → admin view (force-sign etc.)
-- **Templates**: `stats_site/templates/recruiting/*.html`, all extending
-  `base.html`.
-
-The data source is the engine's recruiting pipeline. `_get_recruiting_pipeline()`
-reaches into the active dynasty/session, grabs the `HSRecruitingPipeline` (from
-`engine/recruiting.py`), seeds interest data if missing, and exposes things like
-`pipeline.get_top_prospects(...)`, per-grade classes, offers, and rankings. The
-route handler reshapes those engine objects into plain dicts and the Jinja
-template presents them. Faces are generated pixel-art served from
-`/stats/static/faces/<id>.png` (and a recruit's `recruit_id` becomes their
-`player_id` once they sign, so the same face follows them).
-
-So "presentable format" =
-
-```
-engine produces raw objects  →  stats router is a thin read-only adapter
-                                 that reshapes + ranks them
-                              →  renders Jinja templates in the terminal aesthetic
-```
-
-Zero client-side framework; themes / keyboard shortcuts come free from
-`base.html`.
-
----
-
-## Applying this to the tennis simulation's juniors tour / recruiting page
-
-The pattern to copy is: **keep the simulation as the source of truth, and add a
-thin read-only presentation layer that reads its state and renders server-side
-templates.** Two ways to mirror it:
-
-1. **Same-process (what Viperball does):** mount a stats sub-app/router on the
-   tennis sim's web server; have it import the sim's in-memory state and render
-   Jinja templates. No export, live updates. Best if the tennis sim is already a
-   Python web app.
-2. **Decoupled feed:** if the tennis sim and the public page are separate
-   deployments, have the sim emit JSON (or write to a shared DB), and a small
-   FastAPI + Jinja "terminal" reads that feed. Same presentation layer, but the
-   "feed" is an actual data handoff instead of shared memory.
-
-Either way the design principle is identical to Viperball's recruiting section:
-
-```
-engine objects in  →  thin adapter reshapes / ranks  →  Jinja server-rendered
-                                                          page out, under a
-                                                          /recruiting-style
-                                                          section of a
-                                                          terminal-styled
-                                                          read-only site
-```
+See [stats site routes](docs/stats-site.md), [engine](ENGINE_README.md), [quick start](QUICKSTART.md) and [current plan](docs/DEVELOPMENT_PLAN.md).

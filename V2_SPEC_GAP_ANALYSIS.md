@@ -1,5 +1,7 @@
 # V2 Engine Spec — Gap Analysis
 
+> **Historical design/case-study record.** Use [current documentation](docs/README.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for current behavior. The original findings below are preserved.
+
 **Spec:** VIPERBALL V2 Engine Architecture Specification (Feb 2026)
 **Codebase audit date:** 2026-02-21
 **Audited files:** `engine/game_engine.py`, `engine/coaching.py`, `engine/ai_coach.py`, `engine/season.py`, `engine/nil_system.py`, `engine/dynasty.py`, `viperball_v2/player.py`
