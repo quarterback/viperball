@@ -510,14 +510,15 @@ def _coach_score_team(
     alumni_bonus = 15 if coach.alma_mater == team_name else 0
 
     # HC promotion bonus
-    hc_bonus = 12 if (role == "head_coach" and coach.wants_hc
+    from .coach_career import seeks_hc
+    hc_bonus = 12 if (role == "head_coach" and seeks_hc(coach)
                       and coach.role != "head_coach") else 0
 
     # HC ambition: successful coaches gravitate toward programs that
     # match their ambition level.  They penalise teams far below their
     # perceived worth and slightly prefer teams slightly above it.
     ambition_bonus = 0.0
-    if coach.role == "head_coach" or (role == "head_coach" and coach.wants_hc):
+    if coach.role == "head_coach" or (role == "head_coach" and seeks_hc(coach)):
         ambition = compute_hc_ambition(coach)
         gap = team_prestige - ambition
         # Positive gap = program prestige exceeds ambition → attractive

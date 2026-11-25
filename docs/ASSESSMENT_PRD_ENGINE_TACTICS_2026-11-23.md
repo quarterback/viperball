@@ -387,3 +387,8 @@ _This assessment was compiled from direct repository inspection and the existing
 - CCH-08 implementation: [AAR](aar_2026-11-25_cch08_coach_adaptation.md). Bounded persistent coordinator adaptation; combined acceptance outstanding.
 - FAT-01 implementation: [AAR](aar_2026-11-25_fat01_coach_rotations.md). Stable snap participants, coach-dependent shifts, qualified replacement checks; outcome validation outstanding.
 - DEF-04/05 implementation: [AAR](aar_2026-11-25_def04_def05_participation.md). On-field defensive selection, physical snap ledger and legacy interface deprecation; runtime acceptance outstanding.
+
+
+### November 25 — CCH-09 career and program leadership
+
+Implementation in PR #378, pending candidate validation. [Design report](PRD_CCH09_COACHING_CAREERS_AND_PROGRAM_LEADERSHIP.md) and [implementation AAR](aar_2026-11-25_cch09_coaching_careers.md). Follow-up: 20–30-season career distribution and program growth study; five/ten-season player/roster studies remain outstanding. No scripted career breakthroughs or staff conflict mechanics.

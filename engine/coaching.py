@@ -2230,34 +2230,10 @@ def compute_program_changer_prestige_boost(
 
 
 def compute_hc_ambition(coach: CoachCard) -> int:
-    """
-    Compute the prestige level an HC believes they deserve.
-
-    An HC's ambition is built from their career win percentage plus
-    bonuses from postseason success.  This drives whether the HC seeks
-    a move to a higher-prestige program when their contract expires.
-
-    Formula:
-        base  = win_percentage * 80                            (0-80)
-        + conference_titles * 5                                (up to ~25)
-        + playoff_appearances * 3                              (up to ~15)
-        + playoff_wins * 4          (deeper runs = more wins)  (up to ~20)
-        + championship_appearances * 5                         (up to ~10)
-        + championships * 8                                    (up to ~24)
-
-    Returns:
-        int in [10, 99] — the prestige level this HC expects.
-    """
-    wp = coach.win_percentage
-    base = int(wp * 80)
-
-    base += coach.conference_titles * 5
-    base += coach.playoff_appearances * 3
-    base += coach.playoff_wins * 4
-    base += coach.championship_appearances * 5
-    base += coach.championships * 8
-
-    return max(10, min(99, base))
+    """Desired program prestige, distinct from the desire to be an HC."""
+    from .coach_career import ensure, reputation, clip
+    desire=ensure(coach)["ambition"]
+    return int(clip(reputation(coach)+25*(desire-.5),10,99))
 
 
 def try_hc_contract_extension(
@@ -2406,6 +2382,9 @@ def compute_gameday_modifiers(
         + leadership_raw * 0.25 # organizational discipline
     )
     clock_mgmt = norm(clock_mgmt_raw)
+    from .coach_career import active_management
+    if hc:
+        clock_mgmt = max(0.,min(1.,.85*clock_mgmt+.15*active_management(hc).get("game_management",clock_mgmt)))
     # Sub-archetype bonuses
     sub_arch = hc.sub_archetype if hc else ""
     if sub_arch == "clock_surgeon":
@@ -2636,6 +2615,9 @@ def roll_dc_gameplan(
 
     hc = coaching_staff.get("head_coach")
     dc = coaching_staff.get("dc")
+
+    from .coach_career import caller
+    dc = caller(coaching_staff,"dc")
 
     # DC instincts drive the base center.
     # instincts 25 → center 1.02 (bad DC, slight offense advantage)

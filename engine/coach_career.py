@@ -29,7 +29,7 @@ def ensure(card):
     prior=50+(wp-.5)*35*min(1,n/6)+min(8,getattr(card,"championships",0)*2)
     state={"version":1,"tier":tier,"interest_rate":round(rng.uniform(*{1:(.35,1.),2:(1.,1.8),3:(1.8,2.8)}[tier]),4),
            "role_years":years,"reputation":round(clip(prior,0,100),3),
-           "ambition":round(clip((.55 if getattr(card,"wants_hc",False) else .12)+.30*slider(card,"aggression")+.15*rng.random()),3),
+           "ambition":round(clip((.55 if getattr(card,"wants_hc",False) else .45 if getattr(card,"role","")=="head_coach" else .12)+.30*slider(card,"aggression")+.15*rng.random()),3),
            "ever_head_coach":getattr(card,"role","")=="head_coach" or years["head_coach"]>0,
            "fractional_growth":{},"history":[]}
     card.career_development=state

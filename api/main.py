@@ -4339,6 +4339,8 @@ def _serialize_coach_card(card) -> dict:
     from engine.coaching import CoachCard, CLASSIFICATION_LABELS, HC_AFFINITY_LABELS
     if isinstance(card, dict):
         return card
+    from engine.coach_career import ensure, active_management, seeks_hc, requires_calls
+    career = ensure(card)
     return {
         "coach_id": card.coach_id,
         "name": card.full_name,
@@ -4370,6 +4372,13 @@ def _serialize_coach_card(card) -> dict:
         "personality": card.personality,
         "background": card.background,
         "wants_hc": card.wants_hc,
+        "seeks_hc": seeks_hc(card),
+        "hc_readiness": card.hc_meter,
+        "market_reputation": career["reputation"],
+        "role_years": dict(career["role_years"]),
+        "former_head_coach": career["ever_head_coach"] and card.role != "head_coach",
+        "requires_play_calling": requires_calls(card,card.role),
+        "management_profile": active_management(card),
         "alma_mater": card.alma_mater,
     }
 
@@ -4392,11 +4401,14 @@ def season_coaching_staff_get(session_id: str, team: Optional[str] = Query(None)
         serialized[role] = _serialize_coach_card(card)
 
     from engine.coaching import compute_dev_aura
+    from engine.coach_career import caller
     aura = compute_dev_aura(staff)
 
     return {
         "team": team_name,
         "staff": serialized,
+        "play_callers": {role: selected.coach_id for role in ("oc","dc","stc")
+                         if (selected := caller(staff,role)) is not None},
         "dev_aura": round(aura, 4),
         "dev_aura_max_boost_pct": round(aura * 100, 1),
     }

@@ -4485,6 +4485,8 @@ class ViperballEngine:
             return {}
         return {
             "oc_id": tactics["coach_id"],
+            "play_caller_id": tactics["coach_id"],
+            "employed_oc_id": getattr(((self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}).get("oc"),"coach_id",None),
             "signature": tactics["signature"],
             "authority": tactics["authority"],
             "featured_position": tactics["featured_position"],
@@ -4745,6 +4747,8 @@ class ViperballEngine:
         used = self._dc_tactics_usage[side]
         return {
             "dc_id": tactics["coach_id"], "signature": tactics["signature"],
+            "play_caller_id": tactics["coach_id"],
+            "employed_dc_id": getattr(((self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}).get("dc"),"coach_id",None),
             "authority": tactics["authority"],
             "installation_execution_factor": tactics.get("installation_execution_factor", 1.0),
             "coverage_focus": tactics["coverage_focus"],
