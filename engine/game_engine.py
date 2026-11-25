@@ -6457,6 +6457,7 @@ class ViperballEngine:
             self._away_momentum_plays = 0
 
         drive_team = self.state.possession
+        drive_play_log_start = len(self.play_log)
         drive_start = self.state.field_position
         drive_quarter = self.state.quarter
         drive_delta = self._current_drive_delta
@@ -7115,6 +7116,8 @@ class ViperballEngine:
 
         self.drive_log.append({
             "team": drive_team,
+            "play_log_start": drive_play_log_start,
+            "play_log_end": len(self.play_log),
             "quarter": drive_quarter,
             "start_yard_line": drive_start,
             "possession_origin": self._drive_origin,
@@ -15916,19 +15919,30 @@ class ViperballEngine:
         # Post-game analytic: how much did the delta system help/hurt each team?
         # Splits drives into penalty_kill (leading, delta_cost > 0), power_play (trailing, delta_cost < 0), neutral (tied, delta_cost == 0)
         # Compares yards/drive and scoring rate across buckets.
-        # Calculate scoring value from actual completed drive score changes.
-        # A defensive score on an opponent's drive is not credited as
-        # offensive points to the team that started that drive.
-        prior_scores = {"home": 0.0, "away": 0.0}
+        # Use the same finalized play scoring events as the scoring profile.
+        # Drive spans are explicit so restarts and synthetic markers cannot
+        # transfer points to the next offensive possession.
+        from .box_score_ledger import reconcile_drive_scoring
+        reconciliation = reconcile_drive_scoring(
+            [self.play_to_dict(p) for p in self.play_log], self.drive_log,
+            {"home": self.state.home_score, "away": self.state.away_score},
+        )
         drive_points = {}
-        for drive in self.drive_log:
-            current = {
-                side: float(drive.get(side + "_score_after", prior_scores[side]))
-                for side in ("home", "away")
-            }
-            possessing = drive["team"]
-            drive_points[id(drive)] = max(0.0, current[possessing] - prior_scores[possessing])
-            prior_scores = current
+        drive_methods = {}
+        if reconciliation is not None:
+            per_drive, scoring = reconciliation
+            for drive, methods in zip(self.drive_log, per_drive):
+                points = sum(methods.values())
+                drive["offensive_points"] = points
+                drive_points[id(drive)] = points
+                drive_methods[id(drive)] = methods
+            home_stats["scoring_reconciliation"] = scoring["home"]
+            away_stats["scoring_reconciliation"] = scoring["away"]
+        else:
+            # No auditable play/drive ledger: do not manufacture a total.
+            for drive in self.drive_log:
+                drive_points[id(drive)] = 0.0
+                drive_methods[id(drive)] = {}
         from .epa import calculate_ep
         for side, stats in [("home", home_stats), ("away", away_stats)]:
             side_drives = [d for d in self.drive_log if d.get("team") == side]
@@ -15949,15 +15963,19 @@ class ViperballEngine:
                         "points_vs_start_ep": 0.0, "starting_ep_per_drive": 0.0,
                     }
                 total_yards = sum(d.get("yards", 0) for d in drives)
-                # Score incidence, kick incidence and point value are
-                # deliberately separate. Bells affect point totals but
-                # do not turn a non-scoring drive into a TD or kick.
-                scores = sum(d.get("result") in ("touchdown", "successful_kick")
-                             and drive_points[id(d)] > 0 for d in drives)
-                touchdowns = sum(d.get("result") == "touchdown" and
-                                 drive_points[id(d)] > 0 for d in drives)
-                kicks = sum(d.get("result") == "successful_kick" and
-                            drive_points[id(d)] > 0 for d in drives)
+                # TD/kick incidence comes from the same offensive events
+                # as point totals. A pindown alone is not a TD or made kick.
+                def _td(d):
+                    return any(drive_methods[id(d)].get(m, 0) > 0
+                               for m in ("rush_td", "lateral_td", "kp_td"))
+
+                def _kick(d):
+                    return any(drive_methods[id(d)].get(m, 0) > 0
+                               for m in ("dk", "pk"))
+
+                touchdowns = sum(_td(d) for d in drives)
+                kicks = sum(_kick(d) for d in drives)
+                scores = sum(_td(d) or _kick(d) for d in drives)
                 points = sum(drive_points[id(d)] for d in drives)
                 ep_baseline = sum(calculate_ep(int(d.get("start_yard_line") or 20), 1)
                                   for d in drives)
@@ -15975,10 +15993,8 @@ class ViperballEngine:
                     "touchdown_rate": round(100 * touchdowns / count, 1),
                     "kicks": kicks,
                     "kick_rate": round(100 * kicks / count, 1),
-                    "drop_kicks": sum(d.get("scoring_channel") == "drop_kick"
-                                      and drive_points[id(d)] > 0 for d in drives),
-                    "place_kicks": sum(d.get("scoring_channel") == "place_kick"
-                                       and drive_points[id(d)] > 0 for d in drives),
+                    "drop_kicks": sum(drive_methods[id(d)].get("dk", 0) > 0 for d in drives),
+                    "place_kicks": sum(drive_methods[id(d)].get("pk", 0) > 0 for d in drives),
                     # Compared with the existing fixed starting-position
                     # EP table. It is not an empirical replacement baseline.
                     "points_vs_start_ep": round(points - ep_baseline, 2),
