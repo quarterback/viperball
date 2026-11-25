@@ -1606,7 +1606,7 @@ class Dynasty:
             team_records[team_name] = (rec.get("wins", 5), rec.get("losses", 5))
 
         from engine.position_staff import retention_bonus
-        coaching_retention = {tn:retention_bonus(staff) for tn,staff in self._coaching_staffs.items()}
+        coaching_retention = {tn:retention_bonus(staff,year) for tn,staff in self._coaching_staffs.items()}
         for tn, staff in self._coaching_staffs.items():
             hc = staff.get("head_coach")
             if hc and hasattr(hc, 'classification') and hc.classification == "players_coach":
