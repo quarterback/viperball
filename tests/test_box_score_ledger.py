@@ -96,3 +96,57 @@ def test_turnover_margin_counts_lateral_and_kick_interceptions_once():
     ]
     assert calculate_to_margin(plays, "home") == 1
     assert calculate_to_margin(plays, "away") == -1
+
+
+def test_drive_reconciliation_excludes_bells_safeties_and_return_scores():
+    from engine.box_score_ledger import reconcile_drive_scoring
+    from engine.viperball_metrics import calculate_ppd
+
+    plays = game_plays(
+        ("fumble", "run", "home", "home", 0.5),
+        ("successful_kick", "drop_kick", "home", "home", 5),
+        ("blocked_kick", "place_kick", "away", "home", 9.5),
+        ("pindown", "punt", "home", "home", 1),
+        ("safety", "run", "away", "home", 2),
+        # Overtime marker: no points and no drive.
+        ("overtime", "overtime", "away", "away", 0),
+        ("successful_kick", "place_kick", "away", "away", 3),
+    )
+    drives = [
+        {"team": "home", "play_log_start": 0, "play_log_end": 2, "delta_cost": 0},
+        {"team": "away", "play_log_start": 2, "play_log_end": 3, "delta_cost": -3},
+        {"team": "home", "play_log_start": 3, "play_log_end": 4, "delta_cost": 3},
+        {"team": "away", "play_log_start": 4, "play_log_end": 5, "delta_cost": -3},
+        {"team": "away", "play_log_start": 6, "play_log_end": 7, "delta_cost": 0,
+         "quarter": 5, "bonus_drive": True},
+    ]
+    methods, teams = reconcile_drive_scoring(plays, drives, {"home": 18, "away": 3})
+    assert [sum(m.values()) for m in methods] == [5, 0, 1, 0, 3]
+    home = teams["home"]
+    assert home["drive_points"] == 6
+    assert home["non_drive_points"] == 12
+    assert home["non_drive_by_method"]["bell"] == 1
+    assert home["non_drive_by_method"]["return_td"] == 9
+    assert home["non_drive_by_method"]["safety"] == 2
+    assert all(t["score_consistent"] and t["unreconciled_points"] == 0 for t in teams.values())
+    for d, m in zip(drives, methods):
+        d["offensive_points"] = sum(m.values())
+    assert calculate_ppd(drives, "home") == 3
+    assert calculate_ppd(drives, "away") == 1
+
+
+def test_drive_reconciliation_handles_unassigned_events_and_missing_points():
+    from engine.box_score_ledger import reconcile_drive_scoring
+
+    plays = game_plays(
+        ("pindown", "punt", "away", "away", 1),
+        ("successful_kick", "place_kick", "home", "home", 3),
+    )
+    drives = [{"team": "home", "play_log_start": 1, "play_log_end": 2}]
+    methods, teams = reconcile_drive_scoring(plays, drives, {"home": 3.5, "away": 1})
+    assert methods[0]["pk"] == 3
+    assert teams["away"]["non_drive_by_method"]["pindown"] == 1
+    assert teams["home"]["unreconciled_points"] == 0.5
+    assert not teams["home"]["score_consistent"]
+    assert reconcile_drive_scoring(plays, [{"team": "home"}], {"home": 3, "away": 1}) is None
+    assert reconcile_drive_scoring(plays, drives + drives, {"home": 3, "away": 1}) is None

@@ -15,7 +15,7 @@ METHODS = (
 )
 
 
-def scoring_ledger(plays, final_scores=None):
+def scoring_ledger(plays, final_scores=None, *, events=None):
     """Return per-side counts, actual points and any reconciliation gap.
 
     A play can award a touchdown and a bell (9.5), and its scoring team
@@ -36,7 +36,7 @@ def scoring_ledger(plays, final_scores=None):
                   "score_consistent": True}
            for side in ("home", "away")}
     previous = {"home": 0.0, "away": 0.0}
-    for p in plays:
+    for index, p in enumerate(plays):
         snap = p.get("snap_possession") or p.get("possession")
         typ, result = p.get("play_type"), p.get("result")
         for side in ("home", "away"):
@@ -55,6 +55,8 @@ def scoring_ledger(plays, final_scores=None):
                 nonlocal remaining
                 out[side]["counts"][method] += 1
                 out[side]["points"][method] += points
+                if events is not None:
+                    events.append((index, side, method, points))
                 remaining = round((remaining - points) * 2) / 2
 
             # A defensive recovery may accompany a 9-point return touchdown.
@@ -102,3 +104,57 @@ def scoring_ledger(plays, final_scores=None):
                     float(expected) - previous[side], 1)
                 o["score_consistent"] &= o["unrecorded_points"] == 0
     return out
+
+
+# Offensive scoring methods eligible for a drive bucket. Pindowns count
+# when the kicking side owns the drive; returns, bells and safeties never do.
+DRIVE_METHODS = {"rush_td", "lateral_td", "kp_td", "dk", "pk", "pindown"}
+
+
+def reconcile_drive_scoring(plays, drives, final_scores):
+    """Partition recorded score events by explicit half-open drive log spans.
+
+    Return per-drive method totals and per-team reconciliation. Missing
+    spans or score snapshots are not sufficient for an audited historical box.
+    """
+    events = []
+    ledger = scoring_ledger(plays, final_scores, events=events)
+    if ledger is None:
+        return None
+    owner = {}
+    for i, drive in enumerate(drives):
+        start, end = drive.get("play_log_start"), drive.get("play_log_end")
+        if not (isinstance(start, int) and isinstance(end, int)
+                and 0 <= start <= end <= len(plays)):
+            return None
+        for j in range(start, end):
+            if j in owner:
+                return None
+            owner[j] = i
+
+    per_drive = [{m: 0.0 for m in METHODS} for _ in drives]
+    teams = {side: {
+        "drive_points": 0.0,
+        "non_drive_by_method": {m: 0.0 for m in METHODS},
+        "non_drive_points": 0.0,
+        "final_score": float(final_scores[side]),
+    } for side in ("home", "away")}
+    for index, side, method, points in events:
+        i = owner.get(index)
+        team = teams[side]
+        if (i is not None and drives[i]["team"] == side
+                and method in DRIVE_METHODS):
+            per_drive[i][method] += points
+            team["drive_points"] += points
+        else:
+            team["non_drive_by_method"][method] += points
+            team["non_drive_points"] += points
+
+    for side, team in teams.items():
+        team["unreconciled_points"] = (
+            team["final_score"] - team["drive_points"] - team["non_drive_points"]
+        )
+        team["score_consistent"] = (
+            ledger[side]["score_consistent"] and team["unreconciled_points"] == 0
+        )
+    return per_drive, teams

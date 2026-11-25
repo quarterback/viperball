@@ -30,15 +30,17 @@ from typing import List, Dict, Optional
 def calculate_ppd(drives: List[Dict], team: str) -> float:
     """Actual points scored during own offensive possessions per drive.
 
-    Use the post-drive scoreboard instead of treating every successful
-    scoring kick as 4.2 points. Scores earned while the opponent has a
-    possession (including defensive return touchdowns) are excluded.
+    Prefer audited offensive points from the play ledger, excluding bells,
+    safeties and return touchdowns. Older exports with post-drive score
+    snapshots use the previous possession-based approximation.
     Older archived drives with no score snapshots retain the historical
     approximate fallback and should not be interpreted as exact.
     """
     team_drives = [d for d in drives if d.get("team") == team]
     if not team_drives:
         return 0.0
+    if all(d.get("offensive_points") is not None for d in team_drives):
+        return round(sum(d["offensive_points"] for d in team_drives) / len(team_drives), 2)
     if all(d.get("home_score_after") is not None and
            d.get("away_score_after") is not None for d in drives):
         prev = {"home": 0.0, "away": 0.0}
