@@ -3484,7 +3484,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
                       order: str = "desc", page: int = 1, compare: str = "",
                       columns: str = "", export: str = ""):
     from stats_site.analytics_portal import (VIEWS, COLS, DEFAULT_SORT, ZONES, games_for,
-        build_report, fit_session_model, sorted_rows, comparison)
+        build_report, fit_session_model, sorted_rows, comparison, player_compare)
     from urllib.parse import urlencode, quote
     import csv
     import io
@@ -3497,8 +3497,9 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         raise HTTPException(400, "Unknown analytics view")
     if scope not in ("all","regular","postseason"):scope="all"
     compare="|".join(t for val in request.query_params.getlist("compare") for t in val.split("|") if t)
+    player_ids=request.query_params.getlist("player_id")
     filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,match=match,
-                   down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket)
+                   down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket,q=q)
     team_names=sorted(season.teams)
     games=list(games_for(season,session_id))
     conferences=sorted(season.conferences)
@@ -3508,8 +3509,11 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         training=_cache_get(season,"analytics_portal_training")
         if training is None:
             training=fit_session_model(games)
+            # Only retain the latest model for this season, not each weekly snapshot.
+            for cache_key in list(_season_cache):
+                if cache_key[0]==id(season) and cache_key[-1]=="analytics_portal_training":_season_cache.pop(cache_key,None)
             _cache_set(season,"analytics_portal_training",training)
-    compare_rows=[]
+    compare_rows=[];player_options=[]
     report={"rows":[],"coverage":{},"heatmap":[]}
     if view=="players":
         rows=[dict(p) for p in _cached_college_player_agg(season)
@@ -3526,6 +3530,14 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
               ("yards","Yds"),("yards_per_touch","Y/T"),("tds","TD"),("tackles","Tkl"),("sacks","Sacks"),("kick_att","Kick att"),("kick_made","Kick made")]
         sort="yards_per_touch" if sort=="ypc" else sort or "war"
     elif view=="glossary":
+        rows=[];cols=[]
+    elif view=="player_compare":
+        peers=[dict(p) for p in _cached_college_player_agg(season)
+               if p.get("games_played",0)>0 and (not conference or p.get("conference")==conference)]
+        compare_rows=player_compare(peers,player_ids)
+        player_options=[{"id":json.dumps([p["team"],p["name"]],ensure_ascii=False,separators=(",",":")),
+                         "label":p["name"]+" · "+p["team"]+" · "+p.get("position","")} for p in peers]
+        player_options.sort(key=lambda x:x["label"].casefold())
         rows=[];cols=[]
     elif view=="compare":
         # Compare against the full filtered league, not only selected teams.
@@ -3589,7 +3601,8 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
         conferences=conferences,positions=positions,position=position,q=q,min_n=min_n,
         weeks=sorted({g["week"] for g in games}),zones=ZONES,play_types=sorted(play_types),play_results=sorted(play_results),
         coverage=report["coverage"],heatmap=report["heatmap"],leaders=leaders,compare_rows=compare_rows,
-        compare=compare,training={k:v for k,v in training.items() if k not in ("model","dtw_model")},games_count=len(games),
+        compare=compare,player_options=player_options,player_ids=player_ids,
+        training={k:v for k,v in training.items() if k not in ("model","dtw_model")},games_count=len(games),
         result_count=sum(bool(g["result"]) for g in games),quote=quote,
     ))
 
