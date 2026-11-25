@@ -1653,11 +1653,17 @@ function showToast(msg) {
 
     ths.forEach(function(th, colIdx){
       th.classList.add('sortable');
+      th.setAttribute('tabindex','0');
+      th.setAttribute('aria-sort','none');
+      th.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); th.click(); }
+      });
       th.addEventListener('click', function(){
         var asc = !th.classList.contains('sort-asc');
         // Clear sort classes from all headers
-        ths.forEach(function(h){ h.classList.remove('sort-asc','sort-desc'); });
+        ths.forEach(function(h){ h.classList.remove('sort-asc','sort-desc'); h.setAttribute('aria-sort','none'); });
         th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+        th.setAttribute('aria-sort',asc ? 'ascending' : 'descending');
 
         var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
         rows.sort(function(a, b){
