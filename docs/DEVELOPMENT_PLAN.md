@@ -9,13 +9,13 @@ Updated November 25, 2026. Baseline main a6f1660a96a87934651cfcb76bd91ecdc50b89f
 ## Active work in order
 | ID | Work | Status / acceptance |
 |---|---|---|
-| AN-02 | Versioned score/possession event adapter | Active; reconcile all score channels exactly, explicit unknowns, no gameplay changes |
-| EPA-02 | Empirical state value | Active; reproducible corpus, held-out seeds, uncertainty and legacy comparison |
-| EPA-03 | Legal-action alternative values | Active; observational estimates explicitly noncausal unless paired replay exists; suppress unsupported cells |
-| EPA-04 | Delta/bonus decomposition | Active; fixed perspective, support, interaction residual, no double-counting |
-| DTW-02 | Audit/recalibration | Active; descriptive index remains distinct from retrospective outcome model; ablations and held-out checks |
-| AN-03 | National statistical baselines | Active; weighted denominators, distributions and provenance |
-| AN-VAL | Integrated release gate | Active; existing CI, same-seed invariance, independent national samples; retain legacy stats until accepted |
+| AN-02 | Versioned score/possession event adapter | Implemented v1; score/drive reconciliation, explicit missing attribution and same-seed trace gate pending CI |
+| EPA-02 | Empirical state value | Implemented experimental possession-exchange model and corpus; held-out acceptance pending |
+| EPA-03 | Legal-action alternative values | Implemented observational action comparisons and support gates; causal paired replay and independent acceptance not complete |
+| EPA-04 | Delta/bonus decomposition | Implemented conditional context decomposition; causal entitlement value and calibration not complete |
+| DTW-02 | Audit/recalibration | Implemented offline symmetric recalibration and ablations; no public DTW change until evidence reviewed |
+| AN-03 | National statistical baselines | Implemented national corpus/reporting and historical comparison harness; actual outputs pending |
+| AN-VAL | Integrated release gate | Implemented CI gates and two-seed national study; acceptance outstanding |
 | VAL-07 | Combined main / long dynasty | Open; 10/20/30-season runs after #383/#384, compare VAL-06 cohort growth, actual STC careers, crossovers, salaries, generated fills, alumni, fit and schedule |
 | UI-VAL | Browser regression | Open; #384 browser wait timed out; verify merged main; preserve mobile changes |
 | UI-01 / DEL-03 | Remaining game/team/season reporting | Partial; scoring/drive/game-plan/fingerprint displays shipped; audit remaining halftime, weather splits and career/analytics presentation against live surfaces |
@@ -27,3 +27,5 @@ Updated November 25, 2026. Baseline main a6f1660a96a87934651cfcb76bd91ecdc50b89f
 
 ## Ownership and gates
 Current analytics implementation follows [the detailed analytics contract](analytics_development_plan_2026-11-24.md). Use current main and existing integrated regression workflow; no duplicate feature workflows. Keep legacy EPA, DTW and historical box-score data unchanged until held-out acceptance. Any remaining estimate, missing event attribution, unsupported counterfactual or failed CI check is explicit. No rule or balance changes in analytics. Record code revision, seeds, corpus sizes, tests and failures in the AAR. Future work should update this plan, not rewrite historical AARs.
+
+Implementation details: [advanced analytics AAR](aar_2026-11-25_advanced_analytics.md). The analytics code is a research candidate; current public EPA/DTW remain unchanged. Final acceptance is not equivalent to merging the code.
