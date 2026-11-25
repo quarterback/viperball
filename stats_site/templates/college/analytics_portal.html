@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}Viperball Analytics — {{ season_name }}{% endblock %}
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide"><a href="/stats/">Home</a><span class="sep">/</span><a href="/stats/college/">College</a><span class="sep">/</span><a href="/stats/college/{{ session_id }}/">{{ season_name }}</a><span class="sep">/</span>Analytics</div></div>
+{% endblock %}
+{% block content %}
+<style>
+.vba-header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; padding:18px 0 14px; border-bottom:1px solid var(--border); }
+.vba-kicker { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); }
+.vba-header h1 { font-size:clamp(22px,4vw,33px); margin:2px 0; letter-spacing:-.6px; }
+.vba-header p,.vba-muted { color:var(--fg-dim); font-size:12px; }
+.vba-nav { display:flex; overflow-x:auto; gap:4px; padding:8px 0; border-bottom:1px solid var(--border); margin-bottom:16px; }
+.vba-nav a { white-space:nowrap; padding:7px 11px; font-weight:600; border:1px solid transparent; }
+.vba-nav a[aria-current="page"] { background:var(--bg-alt); border-color:var(--border); border-bottom-color:var(--accent); color:var(--accent); }
+.vba-tools { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin:12px 0 22px; }
+.vba-tool { display:block; min-height:98px; padding:12px; border:1px solid var(--border); background:var(--bg-alt); color:var(--fg); }
+.vba-tool:hover { border-color:var(--accent); text-decoration:none; }
+.vba-tool strong { display:block; color:var(--accent); font-size:14px; margin-bottom:6px; }
+.vba-tool span { color:var(--fg-dim); font-size:11px; }
+.vba-statline { display:grid; grid-template-columns:repeat(auto-fit,minmax(115px,1fr)); gap:8px; margin:12px 0; }
+.vba-statline>div { padding:10px 12px; background:var(--bg-alt); border:1px solid var(--border); }
+.vba-statline strong { display:block; font-size:21px; font-variant-numeric:tabular-nums; }
+.vba-statline span { color:var(--fg-dim); font-size:11px; }
+.vba-filter { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; padding:12px; background:var(--bg-alt); border:1px solid var(--border); margin:12px 0; }
+.vba-filter label { display:flex; flex-direction:column; gap:4px; font-size:11px; min-width:110px; flex:1 1 120px; max-width:250px; }
+.vba-filter input,.vba-filter select { width:100%; min-height:32px; padding:5px; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:2px; font:inherit; }
+.vba-filter select[multiple] { min-height:95px; }
+.vba-filter button,.vba-btn { padding:7px 11px; border:1px solid var(--border); background:var(--bg-alt); color:var(--fg); font:inherit; cursor:pointer; }
+.vba-filter button.primary { background:var(--accent); color:var(--bg-alt); border-color:var(--accent); }
+.vba-section { margin:20px 0 8px; font-size:16px; }
+.vba-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin:12px 0 8px; }
+.vba-table { overflow:auto; max-width:100%; border:1px solid var(--border); }
+.vba-table table { min-width:100%; margin:0; white-space:nowrap; border-collapse:collapse; }
+.vba-table th { background:var(--bg-alt); }
+.vba-table th a { display:block; padding:2px; color:inherit; }
+.vba-table td.long { white-space:normal; min-width:280px; max-width:480px; }
+.vba-table .vba-first { position:sticky; left:0; z-index:1; background:var(--bg-alt); border-right:1px solid var(--border); }
+.vba-heat { display:grid; grid-template-columns:repeat(5,minmax(86px,1fr)); min-width:460px; gap:3px; }
+.vba-heat-cell { min-height:52px; padding:5px; text-align:center; border:1px solid var(--border); background:var(--bg-alt); }
+.vba-heat-cell strong { display:block; font-size:15px; }
+.vba-heat-cell small { color:var(--fg-dim); }
+.vba-heat-cell.pos { border-bottom:3px solid var(--green); }
+.vba-heat-cell.neg { border-bottom:3px solid var(--red); }
+.vba-heat-row { display:flex; align-items:center; gap:8px; margin:3px 0; }
+.vba-heat-row>.vba-heat { flex:1; }
+.vba-heat-row>.vba-axis { width:44px; flex:none; font-size:11px; }
+.vba-heat-wrap { overflow-x:auto; padding-bottom:8px; }
+.vba-scale { min-width:100px; width:100%; height:8px; background:var(--border); position:relative; margin:5px 0; }
+.vba-scale>span { display:block; height:100%; background:var(--accent); }
+.vba-details { padding:10px; border:1px solid var(--border); background:var(--bg-alt); }
+.vba-details summary { cursor:pointer; font-weight:600; }
+.vba-choices { display:flex; flex-wrap:wrap; gap:8px 16px; padding:12px 0; }
+.vba-note { padding:10px 12px; border-left:3px solid var(--accent); background:var(--bg-alt); margin:12px 0; }
+.vba-pager { display:flex; gap:8px; align-items:center; justify-content:flex-end; padding:12px 0; }
+.vba-defs { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; }
+.vba-defs article { padding:12px; background:var(--bg-alt); border:1px solid var(--border); }
+.vba-defs h3 { margin-bottom:5px; font-size:13px; color:var(--accent); }
+@media (max-width:600px){.vba-filter label{max-width:none;min-width:120px}.vba-table .vba-first{position:static}.vba-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.vba-tool{min-height:106px}}
+</style>
+{% set base="/stats/college/" ~ session_id ~ "/analytics" %}
+<div class="vba-header">
+ <div><div class="vba-kicker">Viperball research &amp; statistics</div><h1>Analytics</h1><p>{{ season_name }} · {{ result_count }} completed game records available</p></div>
+ <div><a href="/stats/college/{{ session_id }}/">Season</a> · <a href="/stats/college/{{ session_id }}/team-stats">Team stats</a> · <a href="/stats/college/{{ session_id }}/kenpom">Ratings</a> · <a href="/stats/college/{{ session_id }}/luck">Luck</a></div>
+</div>
+<nav class="vba-nav" aria-label="Analytics navigation">
+ {% for key,label in views.items() %}<a href="{{ base }}?view={{ key }}" {% if view==key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
+{% if view=="overview" %}
+<div class="vba-statline">
+ <div><strong>{{ games_count }}</strong><span>Completed games</span></div>
+ <div><strong>{{ result_count }}</strong><span>Game records available</span></div>
+ <div><strong>{{ coverage.get('audited',0) }}</strong><span>Score-audited games in selection</span></div>
+ <div><strong>{{ coverage.get('new_contract',0) }}</strong><span>Audited games with state snapshots</span></div>
+</div>
+<div class="vba-tools">
+ {% for k,title,desc in [
+ ('players','Player leaderboards','WAR, position ratings, kicking, defense and player profiles.'),
+ ('teams','Team leaderboards','Scoring, offense, defense, possession and special teams.'),
+ ('scoring','Scoring lab','All six scoring channels, return touchdowns and drive reconciliation.'),
+ ('expected','Expected points','Observed and expected net points by field position and down.'),
+ ('decisions','Decision value','Compare supported kick, punt and continue-offense outcomes.'),
+ ('delta','Delta & bonus','Power play, penalty kill, neutral drives and bonus context.'),
+ ('dtw','Deserve to Win','Actual wins, index expected wins and performance components.'),
+ ('plays','Play finder','Search completed plays by down, zone, action and game situation.'),
+ ('drives','Drive finder','Find drives by starting position, origin and outcome.'),
+ ('compare','Team comparison','Peer percentiles for up to four programs.'),
+ ('glossary','Metric glossary','Definitions, denominators, coverage and model limitations.')] %}
+ <a class="vba-tool" href="{{ base }}?view={{ k }}"><strong>{{ title }}</strong><span>{{ desc }}</span></a>
+ {% endfor %}
+</div>
+<h2 class="vba-section">Team leaderboard</h2>
+{% elif view=="glossary" %}
+<h2 class="vba-section">Definitions and data coverage</h2>
+<div class="vba-defs">
+{% for name,desc in [
+ ('Offensive points per drive','Drive-credited points divided by audited drive segments. Non-drive bells, safeties and return touchdowns are excluded.'),
+ ('Scoring channels','Touchdowns 9; snap kicks 5; field goals 3; safeties 2; pindowns 1; bells 0.5. Return touchdowns are attributed separately. Unknown score events are not inferred.'),
+ ('Expected points (experimental)','Mean signed net points through the current and next possession, stopping at the half or overtime period. Earlier weeks train a season-local model; later weeks are evaluated. Minimum 30 observations and 8 games per supported cell.'),
+ ('Expected points added (EPA)','Signed immediate score plus remaining-horizon continuation value minus pre-play value. Rolling exchange EPA is not total scoreboard accounting. Legacy EPA uses a fixed lookup.'),
+ ('Decision value (experimental)','Observed conditional net points among action groups in comparable states. Above continue compares with supported continue-offense observations. Regret compares with the highest supported mean. Neither is causal.'),
+ ('Delta & bonus (experimental)','Sequential context contrast: neutral field without bonus, actual field without bonus, actual bonus state. Not a causal estimate of gaining an extra possession.'),
+ ('Deserve to Win','Legacy descriptive 13-signal index. A 55–45 separation is required for an upset label. Expected wins are sums of index shares, not calibrated win probabilities. Ties count as half a win in this portal.'),
+ ('WAR','Legacy player wins above replacement estimate based on yards above positional replacement and touch volume. It is not the new decision-value estimate.'),
+ ('ZBR / VPR','Legacy position-specific rating composites for Zerobacks and Vipers.'),
+ ('WPA','Legacy player play-value metric from the existing player aggregation. Do not equate it to the experimental exchange EPA.'),
+ ('Peer percentiles','Rank within the selected season peer set using midpoint ranks for ties. Lower points allowed and opponent PPD rank higher. At least three peers required.'),
+ ('Missing records','A dash means unavailable, not zero. Older games can have score and play records without the new state snapshots. Support and audited counts are displayed.')] %}
+ <article><h3>{{ name }}</h3><p>{{ desc }}</p></article>{% endfor %}
+</div>
+{% endif %}
+{% if view not in ("glossary",) %}
+<form class="vba-filter" method="get" action="{{ base }}">
+ <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="order" value="{{ order }}"><input type="hidden" name="columns" value="{{ selected_columns|join(',') }}">
+ {% if view=="compare" %}
+ <label>Teams (choose up to 4)<select name="compare" multiple size="5">{% for t in team_names %}<option value="{{ t }}" {% if t in compare.split('|') %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+ {% else %}
+ <label>Team<select name="team"><option value="">All teams</option>{% for t in team_names %}<option value="{{ t }}" {% if filters.team==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+ {% endif %}
+ <label>Conference<select name="conference"><option value="">All conferences</option>{% for c in conferences %}<option value="{{ c }}" {% if filters.conference==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
+ {% if view=="players" %}
+ <label>Position<select name="position"><option value="">All positions</option>{% for p in positions %}<option value="{{ p }}" {% if position==p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></label>
+ <label>Player search<input name="q" value="{{ q }}" placeholder="Name"></label><label>Min. touches<input type="number" name="min_n" min="0" value="{{ min_n }}"></label>
+ {% else %}
+ {% if view!="compare" %}<label>Opponent<select name="opponent"><option value="">Any opponent</option>{% for t in team_names %}<option value="{{ t }}" {% if filters.opponent==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>{% endif %}
+ <label>Games<select name="scope">{% for k,v in [('all','All games'),('regular','Regular season'),('postseason','Postseason')] %}<option value="{{ k }}" {% if filters.scope==k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+ <label>Week<select name="week"><option value="">Any week</option>{% for w in weeks %}<option value="{{ w }}" {% if filters.week==w|string %}selected{% endif %}>{{ w }}</option>{% endfor %}</select></label>
+ {% if view in ("plays","drives","expected","decisions","delta") %}
+ {% if view not in ("drives","delta") %}<label>Down<select name="down"><option value="">Any down</option>{% for d in range(1,7) %}<option value="{{ d }}" {% if filters.down==d|string %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></label>{% endif %}
+ <label>Quarter<select name="quarter"><option value="">Any period</option>{% for d in range(1,10) %}<option value="{{ d }}" {% if filters.quarter==d|string %}selected{% endif %}>{{ d if d<=4 else "OT " ~ (d-4) }}</option>{% endfor %}</select></label>
+ <label>Field zone<select name="zone"><option value="">Any field zone</option>{% for z in zones %}<option value="{{ loop.index0 }}" {% if filters.zone==loop.index0|string %}selected{% endif %}>{{ z }}</option>{% endfor %}</select></label>
+ {% if view not in ("drives","delta") %}<label>Play type<select name="action"><option value="">All types</option>{% for p in play_types %}<option value="{{ p }}" {% if filters.action==p %}selected{% endif %}>{{ p|replace('_',' ')|title }}</option>{% endfor %}</select></label>{% endif %}
+ <label>Outcome<select name="result"><option value="">Any outcome</option>{% for p in play_results %}<option value="{{ p }}" {% if filters.result==p %}selected{% endif %}>{{ p|replace('_',' ')|title }}</option>{% endfor %}</select></label>
+ <label>Score state<select name="margin"><option value="">Any margin</option>{% for m in ('leading','tied','trailing') %}<option value="{{ m }}" {% if filters.margin==m %}selected{% endif %}>{{ m|title }}</option>{% endfor %}</select></label>
+ <label>Drive context<select name="bucket"><option value="">Any context</option>{% for k in ('neutral','power_play','penalty_kill','bonus') %}<option value="{{ k }}" {% if filters.bucket==k %}selected{% endif %}>{{ k|replace('_',' ')|title }}</option>{% endfor %}</select></label>
+ {% endif %}
+ {% if view not in ("compare","plays","drives") %}<label>Min. sample<input type="number" name="min_n" min="0" value="{{ min_n }}"></label>{% endif %}
+ {% if view!="compare" %}<label>Search<input name="q" value="{{ q }}" placeholder="Name or result"></label>{% endif %}
+ {% endif %}
+ <button class="primary" type="submit">Apply filters</button><a class="vba-btn" href="{{ base }}?view={{ view }}">Reset</a>
+</form>
+{% endif %}
+{% if view in ("expected","decisions","delta","plays","drives") %}
+<div class="vba-note"><strong>Experimental state values.</strong> {% if training.reason %}{{ training.reason }}{% else %}Trained on {{ training.train_games }} audited games through week {{ training.cutoff }}; estimates are shown only for later weeks and supported cells.{% endif %}
+ {% if view=="decisions" %}Observed action comparisons are not causal recommendations.{% elif view=="delta" %}Context values are conditional contrasts, not the causal value of another possession.{% endif %}
+</div>
+{% endif %}
+{% if view=="scoring" %}<p class="vba-muted">Score totals use completed records; scoring channels are limited to audited games. Unavailable attribution is not a zero.</p>{% endif %}
+{% if view=="players" %}<p class="vba-muted">Whole-season player totals, with at least five touches or ten plays involved. Game-situation filters are available in Play finder.</p>{% endif %}
+{% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability.</p>{% endif %}
+{% if view=="compare" %}
+<h2 class="vba-section">Team percentile comparison</h2>
+{% if compare_rows and compare_rows[0].values is defined and compare %}<p class="vba-muted">Peer set uses the selected conference, weeks and game scope. Higher percentile is better. Minimum three peers.</p>
+<div class="vba-table"><table><thead><tr><th>Metric</th><th>Peers</th>{% for v in compare_rows[0]['values'] %}<th>{{ v.team }}</th>{% endfor %}</tr></thead><tbody>
+{% for metric in compare_rows %}<tr><th>{{ metric.metric }}</th><td>{{ metric.peers }}</td>{% for v in metric['values'] %}<td>{% if v.value is not none %}{{ v.value }}{% else %}—{% endif %}{% if v.percentile is not none %}<div class="vba-scale" role="img" aria-label="{{ v.percentile }}th percentile"><span style="width:{{ v.percentile }}%"></span></div><small>{{ v.percentile }} pctile</small>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>{% else %}<p class="vba-muted">Choose teams above to compare their measured performance.</p>{% endif %}
+{% endif %}
+{% if heatmap and view in ("expected","plays") %}
+<h2 class="vba-section">{{ "Expected net points" if view=="expected" else "Immediate net points" }} by down and field zone</h2>
+<p class="vba-muted">Points from the possession side's perspective. Cells require at least 10 matching observations; n is the number represented. Each cell links to that split.</p>
+<div class="vba-heat-wrap">
+<div class="vba-heat-row"><span class="vba-axis">Down</span><div class="vba-heat">{% for z in zones %}<div class="vba-heat-cell">{{ z }}</div>{% endfor %}</div></div>
+{% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}"><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
+</div>
+{% endif %}
+{% if cols %}
+{% if view!="overview" %}<h2 class="vba-section">{{ views[view] }}</h2>{% endif %}
+<div class="vba-toolbar"><span class="vba-muted">{{ total }} matching rows{% if coverage.get('games') is not none %} · {{ coverage.get('with_results',0) }} of {{ coverage.games }} matching games have records{% endif %}</span><a class="vba-btn" href="{{ url(export='csv',page=1) }}">Download CSV</a></div>
+<details class="vba-details"><summary>Customize table columns</summary>
+<form method="get" action="{{ base }}" onsubmit="this.elements.columns.value=Array.from(this.querySelectorAll('input[type=checkbox]:checked')).map(x=>x.value).join(',')">
+{% for k,v in filters.items() %}{% if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
+<input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="order" value="{{ order }}"><input type="hidden" name="position" value="{{ position }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="min_n" value="{{ min_n }}"><input type="hidden" name="columns" value="">
+<div class="vba-choices">{% for k,label in all_cols %}<label><input type="checkbox" value="{{ k }}" {% if not selected_columns or k in selected_columns %}checked{% endif %}> {{ label }}</label>{% endfor %}</div><button class="vba-btn" type="submit">Update columns</button> <a href="{{ url(columns='') }}">Show all</a></form></details>
+<div class="vba-table" style="margin-top:8px"><table><thead><tr>{% for key,label in cols %}<th {% if loop.first %}class="vba-first"{% endif %}><a href="{{ url(sort=key,order='asc' if sort==key and order=='desc' else 'desc',page=1) }}">{{ label }}{% if sort==key %} {{ "▲" if order=="asc" else "▼" }}{% endif %}</a></th>{% endfor %}</tr></thead>
+<tbody>{% for r in rows %}<tr>{% for key,label in cols %}{% set val=r.get(key) %}<td class="{% if loop.first %}vba-first {% endif %}{% if key=='description' %}long{% elif val is number %}num{% endif %}">
+{% if val is none %}—
+{% elif key=="team" or key=="opponent" %}<a href="/stats/college/{{ session_id }}/team/{{ quote(val,safe='') }}">{{ val }}</a>
+{% elif key=="name" and view=="players" %}<a href="/stats/college/{{ session_id }}/player/{{ quote(r.team,safe='') }}/{{ quote(val,safe='') }}">{{ val }}</a>
+{% elif key=="week" and 'idx' in r %}<a href="/stats/college/{{ session_id }}/game/{{ r.week }}/{{ r.idx }}">W{{ val }}</a>
+{% elif key in ("action","result","bucket","origin") %}{{ val|string|replace('_',' ')|title }}
+{% elif val is number %}{{ "%.3f"|format(val)|trim('0')|trim('.') if val is float else val }}
+{% else %}{{ val }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% if not rows %}<p class="vba-note">No matching records or supported estimates. Simulate more games, broaden your filters, or check data coverage in the glossary.</p>{% endif %}
+<div class="vba-pager">{% if page>1 %}<a class="vba-btn" href="{{ url(page=page-1) }}">Previous</a>{% endif %}<span>Page {{ page }} of {{ last }}</span>{% if page<last %}<a class="vba-btn" href="{{ url(page=page+1) }}">Next</a>{% endif %}</div>
+{% endif %}
+{% endblock %}
