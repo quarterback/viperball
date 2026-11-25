@@ -63,13 +63,13 @@ Ron wanted a gridiron style, touchdown first offense: run the ball, use kick pas
 
 Scoring wasn't tuned toward any number.
 
-## Also fixed
+## Also found
 
-**A UI test that was broken on main.** `tests/test_ui_unslop.py` (from #380) tried to simulate a week while the season was still in the transfer portal phase. A season with a human team opens there, and has since #261. The test now skips the portal first.
+**A UI test was failing on main during this run.** `tests/test_ui_unslop.py` (from #380) tried to simulate a week while the season was still in the transfer portal phase. A season with a human team opens there, and has since #261. This run fixed it by skipping the portal first. #381 fixed the same test on main while this run was going, so main's version was kept at rebase.
 
 ## Tests
 
-1. `tests`, `test_wvl.py` and `test_recruiting.py`: 334 passed.
+1. Before rebasing onto #381 and #382, `tests`, `test_wvl.py` and `test_recruiting.py` passed (334). After the rebase, `tests` passed (290).
 2. `test_season.py` runs clean.
 
 ## Not done
