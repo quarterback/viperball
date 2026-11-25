@@ -130,3 +130,23 @@ def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=(
                 card.number = next((n for n in range(1, 100) if n not in numbers), 0)
             numbers.add(card.number)
     return by_team
+
+
+def assign_opening_roster_ids(teams, saved_rosters, year):
+    """Namespace new college players by program, entry season and slot.
+
+    Fresh generator name/suffix IDs can collide across schools. Never
+    change a finalized saved roster's IDs or use names as identity.
+    """
+    import hashlib
+    used = {row.get("player_id") for rows in saved_rosters.values() for row in rows}
+    for name, team in sorted(teams.items()):
+        if name in saved_rosters:
+            continue
+        for i, player in enumerate(team.players):
+            digest = hashlib.sha256(f"{name}:{year}:{i}".encode()).hexdigest()[:24]
+            pid = f"CVL-OPEN-{year}-{digest}"
+            if pid in used:
+                raise ValueError(f"Opening college player identity already exists: {pid}")
+            player.player_id = pid
+            used.add(pid)
