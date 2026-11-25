@@ -13,6 +13,14 @@ on:
       - scripts/benchmark_national_dynasty.py
       - engine/db.py
       - engine/dynasty.py
+      - engine/college_feeder.py
+      - engine/hs_league.py
+      - engine/recruiting.py
+      - engine/roster_continuity.py
+      - engine/player_card.py
+      - api/main.py
+      - tests/test_college_feeder_identity.py
+      - tests/test_scale_cutoffs.py
       - .github/workflows/engine-integrated-calibration.yml
   workflow_dispatch:
     inputs:
@@ -49,6 +57,8 @@ jobs:
           fi
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
       - run: pip install -r requirements.txt
+      - name: College feeder and rating-scale regressions
+        run: python -m pytest -q tests/test_college_feeder_identity.py tests/test_scale_cutoffs.py tests/test_college_cohort_continuity.py
       - name: Combined engine smoke and calibration
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
