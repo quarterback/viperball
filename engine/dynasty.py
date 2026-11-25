@@ -1194,8 +1194,8 @@ class Dynasty:
         # Hires in the coming offseason fold in at the next game
         # (team_installation.sync_installation).
         from engine.team_installation import advance_offseason
-        for _rec in (getattr(self, "_team_installations", None) or {}).values():
-            advance_offseason(_rec, self.current_year)
+        for _team,_rec in (getattr(self, "_team_installations", None) or {}).items():
+            advance_offseason(_rec, self.current_year, self._coaching_staffs.get(_team,{}))
 
     def run_coaching_offseason(self, player_cards: Dict[str, list],
                                rng: Optional[random.Random] = None) -> dict:
@@ -1324,7 +1324,13 @@ class Dynasty:
                 if lesson is not None:
                     tactical_learning.append(lesson)
                 # All coaches develop their attributes each offseason
-                deltas = grow(card,evidence) if event is not None else {}
+                from engine.coach_roles import POSITION_DISCIPLINE
+                mentor = staff.get(POSITION_DISCIPLINE.get(role)) if role in POSITION_DISCIPLINE else None
+                if event is not None and mentor is not None:
+                    history = card.career_development.setdefault("unit_mentors",[])
+                    history.append({"year":prev_year,"team":team_name,"coach_id":mentor.coach_id,"role":mentor.role})
+                    card.career_development["unit_mentors"]=history[-40:]
+                deltas = grow(card,evidence,mentor=mentor) if event is not None else {}
                 development_events.append({"coach_id": card.coach_id, "team": team_name,
                     "role": role, "attribute_changes": deltas,
                     "hc_meter_gain": card.hc_meter - meter_before})
