@@ -200,11 +200,12 @@ def new_installation(team_name: str, staff: Optional[dict], offense_family: str,
                      defense_family: str, year: Optional[int] = None) -> Dict[str, Any]:
     """A program whose current staff is already in place: well installed."""
     staff = staff or {}
+    from engine.coach_career import caller
     return {
         "version": INSTALLATION_VERSION,
         "team": team_name,
-        "offense": _new_unit("offense", offense_family, staff.get("oc"), ESTABLISHED_FAMILIARITY, year),
-        "defense": _new_unit("defense", defense_family, staff.get("dc"), ESTABLISHED_FAMILIARITY, year),
+        "offense": _new_unit("offense", offense_family, caller(staff,"oc"), ESTABLISHED_FAMILIARITY, year),
+        "defense": _new_unit("defense", defense_family, caller(staff,"dc"), ESTABLISHED_FAMILIARITY, year),
         "staff_ids": sorted(_coach_id(c) for c in staff.values() if _coach_id(c)),
         "history": [{"year": year, "event": "tracking_started"}],
     }
@@ -433,13 +434,15 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
     # Reassess eligibility when the actual roster crosses a personnel threshold.
     # Keep learned packages that still fit; do not reset the coordinator.
     from engine.playbook_catalog import roster_tags
+    from engine.coach_career import caller
     current_fit = sorted(roster_tags(team_stats)) if team_stats else None
     team_stats = team_stats or {}
     if rec is None:
         rec = new_installation(team_name, staff, offense_family, defense_family, year)
         for side, key in (("offense", "oc"), ("defense", "dc")):
-            rec[side]["mentors"] = sorted(_mentors(staff.get(key)))
-            _choose_packages(side, rec[side], staff.get(key), team_stats, year)
+            card = caller(staff,key)
+            rec[side]["mentors"] = sorted(_mentors(card))
+            _choose_packages(side, rec[side], card, team_stats, year)
         rec["roster_fit_tags"] = current_fit
         installations[team_name] = rec
         return rec
@@ -448,7 +451,7 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
     prev_ids = list(rec.get("staff_ids", []))
     for side, key, family in (("offense", "oc", offense_family), ("defense", "dc", defense_family)):
         unit = rec[side]
-        card = staff.get(key)
+        card = caller(staff,key)
         changed = False
         if family and unit.get("family") != family:
             rec["history"].append({"year": year, "event": f"{side}_family_change",

@@ -297,14 +297,16 @@ def populate_coaching_portal(
         for role, card in staff.items():
             if role == "head_coach":
                 continue
-            if not card.wants_hc and card.hc_meter < 75:
+            from .coach_career import seeks_hc
+            if not seeks_hc(card):
                 continue
             # Already in portal?
             if any(e.coach_id == card.coach_id for e in portal.entries):
                 continue
             # HC meter 90+ = hot name, always enters pool (if overall ok)
             # HC meter 75-89 = wants it, needs overall 65+ and 30% chance
-            if card.hc_meter >= 90 and card.overall >= 60:
+            from .coach_career import reputation
+            if card.hc_meter >= 75 and (card.overall >= 60 or reputation(card)>=65):
                 entry = CoachingPortalEntry(
                     coach=card,
                     origin_team=team_name,
@@ -313,7 +315,7 @@ def populate_coaching_portal(
                     seeking_roles=["head_coach"],
                 )
                 portal.add_entry(entry)
-            elif card.overall >= 65 and rng.random() < 0.30:
+            elif (card.overall >= 50 or reputation(card)>=60) and rng.random() < 0.35:
                 entry = CoachingPortalEntry(
                     coach=card,
                     origin_team=team_name,
@@ -381,7 +383,8 @@ def _team_score_coach(
     - Development rating — the player dev skill (weight: 20%)
     - Classification fit bonus (weight: 10%)
     """
-    # Overall
+    from .coach_career import reputation, veteran_premium
+    # Market reputation plus role fit; bound overlapping pedigree credit.
     overall_score = coach.overall
 
     # Role-relevant emphasis
@@ -444,7 +447,9 @@ def _team_score_coach(
         + role_score * 0.30
         + dev_score * 0.20
         + cls_bonus
-        + pedigree
+        + min(8,pedigree)*.25
+        + .40*(reputation(coach)-50)
+        + (5*veteran_premium(coach) if role != "head_coach" else 4*veteran_premium(coach))
         + hot_name_bonus
         + noise
     )
@@ -544,6 +549,7 @@ def _build_preference_lists(
     conferences: Optional[Dict[str, List[str]]] = None,
     max_rank: int = 5,
     rng: Optional[random.Random] = None,
+    coaching_staffs: Optional[Dict[str, Dict[str, CoachCard]]] = None,
 ) -> Tuple[
     Dict[Tuple[str, str], List[str]],  # team_prefs: (team, role) -> [coach_ids]
     Dict[str, Dict[Tuple[str, str], float]],  # coach_prefs: coach_id -> {(team, role): score}
@@ -585,6 +591,17 @@ def _build_preference_lists(
             for t in teams:
                 conf_strength[t] = avg_p
 
+    # Former HCs require actual call authority. If the HC job is also
+    # vacant, accepted coordinator appointments constrain the incoming HC.
+    from .coach_career import active_management, requires_calls
+    def eligible(entry, team, role):
+        if not requires_calls(entry.coach,role):
+            return True
+        if "head_coach" in portal.vacancies.get(team,()):
+            return True
+        hc=(coaching_staffs or {}).get(team,{}).get("head_coach")
+        return active_management(hc).get("retained_call") != role
+
     # Build team preference lists
     team_prefs: Dict[Tuple[str, str], List[str]] = {}
     for team_name, roles in portal.vacancies.items():
@@ -593,6 +610,8 @@ def _build_preference_lists(
             # Score each candidate
             scored: List[Tuple[float, str]] = []
             for entry in candidates:
+                if not eligible(entry,team_name,role):
+                    continue
                 score = _team_score_coach(
                     entry.coach, role,
                     team_prestige.get(team_name, 50),
@@ -610,7 +629,7 @@ def _build_preference_lists(
         prefs: Dict[Tuple[str, str], float] = {}
         for team_name, roles in portal.vacancies.items():
             for role in roles:
-                if role not in entry.seeking_roles:
+                if role not in entry.seeking_roles or not eligible(entry,team_name,role):
                     continue
                 # Get roster data
                 all_ovrs, area_ovrs = roster_data.get(team_name, ([], {}))
@@ -761,7 +780,7 @@ def run_coaching_match(
     # Build preference lists
     team_prefs, coach_prefs = _build_preference_lists(
         portal, team_prestige, team_rosters, conferences,
-        max_rank=5, rng=rng,
+        max_rank=5, rng=rng, coaching_staffs=coaching_staffs,
     )
 
     # Run matching
@@ -796,10 +815,12 @@ def run_coaching_match(
         coach = entry.coach
         # Set up the new contract
         contract_years = rng.randint(2, 4) if role != "head_coach" else rng.randint(3, 5)
-        salary = calculate_coach_salary(coach, rng=rng)
+        from .coach_career import appoint, reputation
+        previous_role = coach.role
+        salary = calculate_coach_salary(coach, rng=rng, target_role=role)
 
         coach.team_name = team_name
-        coach.role = role
+        appoint(coach, role)
         coach.contract_salary = salary
         coach.contract_years_remaining = contract_years
         coach.contract_buyout = int(salary * contract_years * 0.5)
@@ -819,6 +840,8 @@ def run_coaching_match(
             "from_team": entry.origin_team,
             "to_team": team_name,
             "role": role,
+            "previous_role": previous_role,
+            "reputation": reputation(coach),
             "reason": entry.reason,
             "salary": salary,
             "years": contract_years,

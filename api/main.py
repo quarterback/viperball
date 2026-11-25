@@ -4473,9 +4473,13 @@ def season_coaching_hire(session_id: str, req: CoachHireRequest):
         raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
 
     # Set the coach on the team
-    target.team_name = human_team
-    target.role = req.role
+    from engine.coach_career import appoint, requires_calls, active_management
     staffs = session.get("coaching_staffs", season.coaching_staffs)
+    hc = staffs.get(human_team,{}).get("head_coach")
+    if requires_calls(target,req.role) and active_management(hc).get("retained_call") == req.role:
+        raise HTTPException(status_code=400,detail="This former head coach requires play-calling authority.")
+    target.team_name = human_team
+    appoint(target,req.role)
     if human_team not in staffs:
         staffs[human_team] = {}
     old_coach = staffs[human_team].get(req.role)
