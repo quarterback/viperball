@@ -1776,6 +1776,7 @@ class Dynasty:
             team_portal_gains=_portal_gains,
             hs_pool=hs_recruits,
             team_coaching_staffs=self._coaching_staffs,
+            team_style_configs=season.style_configs,
         )
 
         # Store signed recruits for roster maintenance in advance_season()
