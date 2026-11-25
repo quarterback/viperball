@@ -363,7 +363,7 @@ clipping, chop blocks, late hits and wedge formations are fouls (see the penalty
 A player who shows signs of a concussion is removed at once and may not return. Officials
 and medical staff decide, regardless of the player's or coach's wishes.
 
-Targeting, fighting and throwing a punch are 15 yard fouls. The game does not eject players.
+Targeting, fighting and throwing a punch are 15-yard fouls with immediate ejection. A player is also ejected for a second qualifying unsportsmanlike foul in the same game (unsportsmanlike conduct, taunting, excessive celebration, provoking ill will or obscene language). Ejections stand even if yardage is declined. The player may not return, including in overtime; a legal substitute may enter. Serious misconduct is always material to officials; missed fouls are possible. No automatic multi-game suspension is prescribed.
 
 ---
 
