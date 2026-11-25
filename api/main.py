@@ -524,7 +524,7 @@ def _ensure_hs_pipeline(dynasty):
 
         prestige = getattr(dynasty, "team_prestige", {}) or {}
         team_names = list(prestige.keys())
-        class_size = max(300, (len(team_names) or 200) * 8)
+        class_size = max(300, (len(team_names) or 200) * 12)
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
             base_seed=year, size_per_class=class_size,
@@ -2683,7 +2683,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
         num_teams = len(teams) or 200
-        _class_size = max(300, num_teams * 8)
+        _class_size = max(300, num_teams * 12)
         _t_names = list(teams.keys())
         _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
         dynasty._hs_pipeline = HSRecruitingPipeline()
@@ -3164,7 +3164,7 @@ def dynasty_advance(session_id: str):
     # DQ decoupled from the sim — no team boosts feed into season advancement.
     dq_team_boosts_map = None
     dynasty.advance_season(season, injury_tracker=tracker, player_cards=player_cards, rng=rng,
-                           dq_team_boosts=dq_team_boosts_map)
+                           dq_team_boosts=dq_team_boosts_map, defer_roster_maintenance=True)
     # Coaching carousel: CPU programs fire and hire through the coaching
     # portal, and every coach ages and develops (CCH-04 turnover needs it).
     coaching_result = dynasty.run_coaching_offseason(player_cards, rng=rng)
@@ -3266,12 +3266,16 @@ def dynasty_advance(session_id: str):
             team_records[team_name] = (5, 5)
 
     portal = TransferPortal(year=year)
-    populate_portal(portal, offseason_player_cards, team_records, rng=rng)
+    # Graduates have exhausted college eligibility; do not sell a transfer
+    # that will disappear at finalization.
+    populate_portal(portal, {t:[c for c in cards if c.year != "Graduate"]
+                             for t,cards in offseason_player_cards.items()},
+                    team_records, rng=rng, team_prestige=dynasty.team_prestige)
 
     # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
     from engine.recruiting import HSRecruitingPipeline
     num_teams = len(season.teams) if hasattr(season, "teams") else 200
-    pool_size = max(300, num_teams * 8)
+    pool_size = max(300, num_teams * 12)
     _t_names = list(season.teams.keys()) if hasattr(season, "teams") else []
     _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
     if dynasty._hs_pipeline is None:
@@ -3289,7 +3293,10 @@ def dynasty_advance(session_id: str):
         # Use pipeline graduates (12th graders) as the recruit pool
         recruit_pool = [g.recruit for g in graduates] if graduates else generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
 
-    recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
+    from engine.roster_continuity import COLLEGE_ROSTER_TARGET
+    continuing_count = sum(c.year != "Graduate" for c in offseason_player_cards.get(human_team, []))
+    recruit_board = RecruitingBoard(team_name=human_team,
+                                     scholarships_available=max(0, COLLEGE_ROSTER_TARGET-continuing_count))
 
     human_nil = dynasty._nil_programs.get(human_team)
     try:
@@ -4060,30 +4067,27 @@ def offseason_recruiting_resolve(session_id: str):
     graduating = offseason.get("graduating", {})
     portal = offseason.get("portal")
 
-    player_cards = offseason.get("player_cards", {})
+    from engine.roster_continuity import projected_rosters, COLLEGE_ROSTER_TARGET
+    try:
+        player_cards = projected_rosters(offseason.get("player_cards", {}), portal)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    recruit_board.scholarships_available = max(0, COLLEGE_ROSTER_TARGET-len(player_cards.get(human_team, [])))
     team_rosters: Dict[str, list] = {}
     for tn, cards in player_cards.items():
         team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
 
     retired = set(getattr(dynasty, "retired_programs", []) or [])
-    for team_name in dynasty.team_histories:
+    for team_name in player_cards:
         if team_name == human_team or team_name in retired:
             continue
         prestige = dynasty.team_prestige.get(team_name, 50)
         nil_prog = dynasty._nil_programs.get(team_name)
         nil_budget = nil_prog.recruiting_pool if nil_prog else 300_000
 
-        portal_adds = 0
-        if portal:
-            portal_adds = sum(1 for e in portal.entries if e.committed_to == team_name)
-        grads = len(graduating.get(team_name, []))
-        portal_losses = 0
-        if portal:
-            portal_losses = sum(
-                1 for e in portal.entries
-                if e.origin_team == team_name and e.committed_to and e.committed_to != team_name
-            )
-        open_spots = max(6, min(12, grads + portal_losses - portal_adds + 4))
+        # Count real vacancies after graduation and confirmed transfers,
+        # not the old minimum six / extra four scholarships formula.
+        open_spots = max(0, COLLEGE_ROSTER_TARGET - len(player_cards.get(team_name, [])))
 
         board, nil = auto_recruit_team(
             team_name=team_name,
@@ -4172,54 +4176,38 @@ def offseason_complete(session_id: str):
     # Apply portal transfers, drop graduates, and add signed recruits to
     # player_cards so dynasty_start_season() rebuilds next year's teams from
     # the developed/promoted rosters instead of loading freshmen from disk.
-    player_cards = offseason.get("player_cards", {})
+    from engine.roster_continuity import projected_rosters, fill_college_roster_gaps
+    try:
+        player_cards = projected_rosters(offseason.get("player_cards", {}), offseason.get("portal"))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     if player_cards:
-        # Apply portal transfers
-        portal = offseason.get("portal")
-        if portal:
-            for entry in portal.entries:
-                if entry.committed_to and entry.origin_team and entry.origin_team != entry.committed_to:
-                    origin_cards = player_cards.get(entry.origin_team, [])
-                    transferred = [c for c in origin_cards if c.full_name == entry.player_name]
-                    player_cards[entry.origin_team] = [
-                        c for c in origin_cards if c.full_name != entry.player_name
-                    ]
-                    dest_cards = player_cards.get(entry.committed_to, [])
-                    dest_cards.extend(transferred)
-                    player_cards[entry.committed_to] = dest_cards
-
-        # Drop graduating seniors so they don't carry over as roster zombies.
-        for team_name, cards in list(player_cards.items()):
-            player_cards[team_name] = [c for c in cards if c.year != "Graduate"]
-
-        # Promote signed recruits to PlayerCards on their new team's roster.
-        # Includes both the AI-resolved signings and any manual in-session
-        # commissioner assignments (offseason['manual_signings']); dedup by id.
-        _added_recruit_ids = set()
-
+        used = {c.player_id for cards in player_cards.values() for c in cards}
         def _land(team_name, recruits):
-            roster = player_cards.setdefault(team_name, [])
+            if team_name not in player_cards:
+                return
+            roster = player_cards[team_name]
             for recruit in recruits:
-                rid = getattr(recruit, "recruit_id", None)
-                if rid and rid in _added_recruit_ids:
+                if recruit.recruit_id in used:
                     continue
-                if rid:
-                    _added_recruit_ids.add(rid)
+                used.add(recruit.recruit_id)
                 roster.append(recruit.to_player_card(team_name))
 
-        signed_recruits = getattr(dynasty, "_pending_signed_recruits", None) or {}
-        for team_name, recruits in signed_recruits.items():
+        for team_name, recruits in (getattr(dynasty, "_pending_signed_recruits", None) or {}).items():
             _land(team_name, recruits)
-        manual_signings = (session.get("offseason") or {}).get("manual_signings", {})
-        for team_name, recruits in manual_signings.items():
+        for team_name, recruits in offseason.get("manual_signings", {}).items():
             _land(team_name, recruits)
-        dynasty._pending_signed_recruits = None
 
-        # Serialize rosters for persistence
-        dynasty._next_season_rosters = {}
-        for team_name, cards in player_cards.items():
-            dynasty._next_season_rosters[team_name] = [c.to_dict() for c in cards]
+        walkons = fill_college_roster_gaps(
+            player_cards, offseason.get("recruit_pool", []), dynasty.current_year,
+            random.Random(dynasty.current_year + 19))
+        history = dynasty.recruiting_history.setdefault(dynasty.current_year, {})
+        history["walkons"] = {t:len(rows) for t,rows in walkons.items()}
+        history["walkon_details"] = walkons
+        dynasty._pending_signed_recruits = None
+        dynasty._next_season_rosters = {t:[c.to_dict() for c in cards]
+                                         for t,cards in player_cards.items()}
 
     session.pop("offseason", None)
     session["phase"] = "setup"

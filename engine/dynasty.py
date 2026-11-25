@@ -541,6 +541,7 @@ class Dynasty:
         player_cards: Optional[Dict[str, list]] = None,
         rng: Optional[random.Random] = None,
         dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
+        defer_roster_maintenance: bool = False,
     ):
         """
         Add a completed season to dynasty history.
@@ -589,7 +590,8 @@ class Dynasty:
                 break
 
         # Pre-compute conference champions and playoff teams once
-        playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
+        playoff_teams = {name for game in season.playoff_bracket
+                         for name in (game.home_team, game.away_team)}
         conf_champs = season.get_conference_champions() if self.conferences else {}
         conf_champ_set = set(conf_champs.values())
 
@@ -691,12 +693,7 @@ class Dynasty:
 
             # Playoff bracket: determine which teams won playoff games
             # and who reached the championship game
-            playoff_teams_set = set()
-            try:
-                playoff_records = season.get_playoff_teams(num_teams=8)
-                playoff_teams_set = {r.team_name for r in playoff_records}
-            except Exception:
-                pass
+            playoff_teams_set = playoff_teams
 
             # Count playoff wins per team from the bracket
             playoff_wins_by_team: Dict[str, int] = {}
@@ -727,10 +724,31 @@ class Dynasty:
 
                 # Season W/L
                 rec = season.standings.get(team_name)
-                if rec:
-                    hc.career_wins += rec.wins
-                    hc.career_losses += rec.losses
-                    hc.seasons_coached += 1
+                if rec is None:
+                    continue
+                from engine.coaching import CoachCareerStop
+                for role, card in staff.items():
+                    card.career_wins += rec.wins
+                    card.career_losses += rec.losses
+                    card.seasons_coached += 1
+                    # Historical totals predate this tracker; only record
+                    # observed seasons. Consecutive stints share a record.
+                    stop = card.career_history[-1] if card.career_history else None
+                    if (stop is None or stop.team_name != team_name or
+                            stop.role != role or stop.year_end not in (None, year - 1)):
+                        stop = CoachCareerStop(year_start=year, year_end=year,
+                                               team_name=team_name, role=role)
+                        card.career_history.append(stop)
+                    stop.year_end = year
+                    stop.wins += rec.wins
+                    stop.losses += rec.losses
+                    stop.championships += int(team_name == season.champion)
+                    if role != "head_coach":
+                        card.championships += int(team_name == season.champion)
+                        card.conference_titles += int(team_name in conf_champ_teams)
+                        card.playoff_appearances += int(team_name in playoff_teams_set)
+                        card.playoff_wins += playoff_wins_by_team.get(team_name, 0)
+                        card.championship_appearances += int(team_name in championship_game_teams)
                 # Championship
                 if team_name == season.champion:
                     hc.championships += 1
@@ -765,7 +783,9 @@ class Dynasty:
                         continue
                     # Check if this HC is already the last entry in the tree
                     tree = card.coaching_tree
-                    if tree and tree[-1].get("coach_id") == hc.coach_id:
+                    if (tree and tree[-1].get("coach_id") == hc.coach_id
+                            and tree[-1].get("team_name") == team_name
+                            and tree[-1].get("year_end") == year - 1):
                         # Same HC — extend year_end
                         tree[-1]["year_end"] = year
                     else:
@@ -794,7 +814,6 @@ class Dynasty:
                 self.coach.championships += 1
 
             # Check if playoff
-            playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
             if self.coach.team_name in playoff_teams:
                 self.coach.playoff_appearances += 1
 
@@ -989,9 +1008,9 @@ class Dynasty:
             for team_name, cards in player_cards.items():
                 team = season.teams.get(team_name)
                 if team:
-                    card_map = {c.full_name: c for c in cards}
+                    card_map = {c.player_id: c for c in cards if c.player_id}
                     for player in team.players:
-                        card = card_map.get(player.name)
+                        card = card_map.get(player.player_id)
                         if card:
                             # The app rebuilds its offseason cards from these players.
                             # Copy developed ratings back before that round trip.
@@ -1026,9 +1045,12 @@ class Dynasty:
         self._record_graduates_in_tracker(season, year)
 
         # Roster maintenance: graduate seniors, add signed recruits + fill gaps
-        signed_recruits = getattr(self, '_pending_signed_recruits', None)
-        self._roster_maintenance(season, rng=rng or random.Random(year + 99), signed_recruits=signed_recruits)
-        self._pending_signed_recruits = None  # consumed
+        if not defer_roster_maintenance:
+            signed_recruits = getattr(self, '_pending_signed_recruits', None)
+            self._roster_maintenance(season, rng=rng or random.Random(year + 99), signed_recruits=signed_recruits)
+            self._pending_signed_recruits = None  # consumed
+        # Interactive API finalizes roster maintenance AFTER signing and
+        # transfer decisions; graduates remain available for the departure ledger.
 
         self._update_rivalry_ledger(season)
 
@@ -1199,49 +1221,37 @@ class Dynasty:
         )
 
         # Initialise coaching staffs if not present
-        all_team_names = list(self.team_histories.keys())
+        retired = set(getattr(self, "retired_programs", []) or [])
+        all_team_names = [name for name in self.team_histories if name not in retired]
         if not self._coaching_staffs:
-            for team_name in self.team_histories:
+            for team_name in all_team_names:
                 prestige = self.team_prestige.get(team_name, 50)
                 self._coaching_staffs[team_name] = generate_coaching_staff(
                     team_name=team_name, prestige=prestige, year=year, rng=rng,
                     all_team_names=all_team_names,
                 )
 
+        # Frozen programs keep their staff but do not participate in the carousel.
+        active_staffs = {name: staff for name, staff in self._coaching_staffs.items()
+                         if name in all_team_names}
         # CPU teams evaluate and potentially fire coaches
         coaching_changes: Dict[str, list] = {}
         fired_roles: Dict[str, List[str]] = {}
 
-        for team_name, staff in list(self._coaching_staffs.items()):
-            if team_name == human_team:
-                continue  # Human decides their own coaching
-            sr = self.team_histories[team_name].season_records.get(prev_year, {})
-            tw = sr.get("wins", 5)
-            tl = sr.get("losses", 5)
-            fire_list = evaluate_coaching_staff(staff, tw, tl, rng=rng)
-            if fire_list:
-                coaching_changes[team_name] = fire_list
-                fired_roles[team_name] = fire_list
-            # Tick contract years and update career stats for ALL coaches
-            for role, card in staff.items():
-                if team_name in fired_roles and role in fired_roles[team_name]:
-                    continue  # fired coaches don't get updated
+        # Career W/L and seasons are credited in advance_season, including
+        # fired coaches. This phase only ages staff and ticks contracts once.
+        for team_name, staff in active_staffs.items():
+            sr = self.team_histories[team_name].season_records.get(prev_year)
+            if sr is None:
+                continue
+            tw, tl = sr.get("wins", 0), sr.get("losses", 0)
+            if team_name != human_team:
+                fire_list = evaluate_coaching_staff(staff, tw, tl, rng=rng)
+                if fire_list:
+                    coaching_changes[team_name] = fire_list
+                    fired_roles[team_name] = fire_list
+            for card in staff.values():
                 card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                card.seasons_coached += 1
-                card.career_wins += tw
-                card.career_losses += tl
-                card.age += 1
-
-        # Update human team coaches too (career stats, age)
-        if human_team in self._coaching_staffs:
-            sr = self.team_histories.get(human_team, TeamHistory(team_name=human_team))
-            hw = sr.season_records.get(prev_year, {}).get("wins", 5)
-            hl = sr.season_records.get(prev_year, {}).get("losses", 5)
-            for role, card in self._coaching_staffs[human_team].items():
-                card.contract_years_remaining = max(0, card.contract_years_remaining - 1)
-                card.seasons_coached += 1
-                card.career_wins += hw
-                card.career_losses += hl
                 card.age += 1
 
         # ── 1c. HC meter advancement + coach attribute development ──
@@ -1249,8 +1259,11 @@ class Dynasty:
         _OFFENSE_POS = {"Zeroback", "Halfback", "Wingback", "Slotback", "Viper", "Offensive Line"}
         _DEFENSE_POS = {"Defensive Line", "Keeper"}
 
-        for team_name, staff in self._coaching_staffs.items():
-            sr = self.team_histories[team_name].season_records.get(prev_year, {})
+        development_events = []
+        for team_name, staff in active_staffs.items():
+            sr = self.team_histories[team_name].season_records.get(prev_year)
+            if sr is None:
+                continue
             tw = sr.get("wins", 5)
             tl = sr.get("losses", 5)
             made_playoff = sr.get("playoff", False)
@@ -1275,6 +1288,7 @@ class Dynasty:
 
             for role, card in staff.items():
                 # Advance HC meter for assistants
+                meter_before = card.hc_meter
                 if role != "head_coach":
                     area_key = role if role in best_in_area else "oc"
                     advance_hc_meter(
@@ -1287,11 +1301,14 @@ class Dynasty:
                     )
 
                 # All coaches develop their attributes each offseason
-                apply_coach_development(card, tw, tl, rng=rng)
+                deltas = apply_coach_development(card, tw, tl, rng=rng)
+                development_events.append({"coach_id": card.coach_id, "team": team_name,
+                    "role": role, "attribute_changes": deltas,
+                    "hc_meter_gain": card.hc_meter - meter_before})
 
         # Build team records for portal population
         team_records_for_portal: Dict[str, tuple] = {}
-        for team_name in self.team_histories:
+        for team_name in all_team_names:
             sr = self.team_histories[team_name].season_records.get(prev_year, {})
             team_records_for_portal[team_name] = (
                 sr.get("wins", 5), sr.get("losses", 5)
@@ -1301,7 +1318,7 @@ class Dynasty:
         coaching_portal = CPortal(year=year)
         populate_coaching_portal(
             coaching_portal,
-            self._coaching_staffs,
+            active_staffs,
             team_records_for_portal,
             self.team_prestige,
             fired_roles=fired_roles,
@@ -1312,7 +1329,7 @@ class Dynasty:
         conf_dict = self.get_conferences_dict() if self.conferences else None
         portal_changes = run_coaching_match(
             coaching_portal,
-            self._coaching_staffs,
+            active_staffs,
             self.team_prestige,
             team_rosters=player_cards,
             conferences=conf_dict,
@@ -1320,10 +1337,12 @@ class Dynasty:
             rng=rng,
         )
 
+        self._coaching_staffs.update(active_staffs)
         self.coaching_history[year] = {
             "changes": coaching_changes,
             "portal_summary": coaching_portal.get_summary(),
             "portal_hires": coaching_portal.hires,
+            "development": development_events,
         }
         result["coaching"] = self.coaching_history[year]
         return result["coaching"]

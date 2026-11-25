@@ -34,6 +34,23 @@ def snapshot(teams):
 def staff_ids(dyn):
     return {t: {role:c.coach_id for role,c in s.items()} for t,s in dyn._coaching_staffs.items()}
 
+def verify_staffs(dyn, active):
+    from engine.coaching import ROLES
+    owners = defaultdict(list)
+    for team in sorted(active):
+        staff = dyn._coaching_staffs.get(team, {})
+        if set(staff) != set(ROLES):
+            raise RuntimeError(f"Incomplete staff at {team}: {sorted(staff)}")
+        for role, card in staff.items():
+            if card.team_name != team or card.role != role:
+                raise RuntimeError(f"Coach employment metadata mismatch: {team}/{role}/{card.coach_id}")
+            owners[card.coach_id].append((team, role))
+    duplicates = {cid: slots for cid, slots in owners.items() if len(slots) > 1}
+    if duplicates:
+        raise RuntimeError("Duplicate active coach employment: " + json.dumps(duplicates))
+    return {c.coach_id: c for team in active for c in dyn._coaching_staffs[team].values()}
+
+
 def add_play(bucket, play):
     bucket["snaps"] += 1
     y = play.get("yards") or 0
@@ -59,6 +76,39 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
         stats = fr["stats"][side]
         if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
             raise RuntimeError(f"Score ledger mismatch for {name}")
+        # Offensive package ledger distinguishes opportunities, calls and
+        # actual matching choices. All are attributed to the snapping side.
+        oc = fr.get("coach_tactics", {}).get(side, {})
+        choices = oc.get("selected", {})
+        expected = {key: Counter() for key in ("packages_eligible", "packages",
+                                               "packages_family_matched", "packages_all_matched")}
+        for play in fr["play_by_play"]:
+            call = play.get("offensive_call") or {}
+            if call.get("offense_side") != side:
+                continue
+            for pid in call.get("eligible", []):
+                expected["packages_eligible"][pid] += 1
+                groups["offense_package:" + pid]["eligible"] += 1
+            pid = call.get("package_id")
+            if not pid:
+                continue
+            if pid not in call["eligible"]:
+                raise RuntimeError("Offensive package selected outside eligibility")
+            expected["packages"][pid] += 1
+            row = groups["offense_package:" + pid]
+            row["selected"] += 1
+            matches = call.get("matches", {})
+            if call.get("family_matched"):
+                expected["packages_family_matched"][pid] += 1
+                row["family_matched"] += 1
+                if matches and all(matches.values()):
+                    expected["packages_all_matched"][pid] += 1
+                    row["all_matched"] += 1
+            if not (play.get("penalty") or {}).get("nullified"):
+                add_play(row, play)
+        for key, counts in expected.items():
+            if Counter(choices.get(key, {})) != counts:
+                raise RuntimeError(f"Offensive package ledger mismatch: {name}/{key}")
         dc = fr["defensive_coach_tactics"][side]
         if not dc:
             raise RuntimeError("Active program without DC decisions: "+name)
@@ -152,9 +202,9 @@ def run(seasons, nteams, seed, out, *, national=False):
         api.TEAMS_DIR=str(league_dir)
         conf={"Calibration East":names[:nteams//2],"Calibration West":names[nteams//2:]}
         human=names[0]
-        c=TestClient(api.app)
+        client=TestClient(api.app)
         def post(path, payload=None):
-            r=c.post(path,json=payload if payload is not None else {})
+            r=client.post(path,json=payload if payload is not None else {})
             if r.status_code>=400:
                 raise RuntimeError(f"{path}: {r.status_code} {r.text[:1200]}")
             return r.json()
@@ -269,6 +319,7 @@ def run(seasons, nteams, seed, out, *, national=False):
                             differences[t]={"missing":list((want-got).items()),"extra":list((got-want).items())}
                     raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
                                        +json.dumps(differences,sort_keys=True))
+            verify_staffs(dyn, active)
             staff=staff_ids(dyn)
             changes={t for t in names if prev_staff and staff[t].get("dc")!=prev_staff[t].get("dc")}
             groups,packages=defaultdict(Counter),defaultdict(Counter)
@@ -316,6 +367,7 @@ def run(seasons, nteams, seed, out, *, national=False):
             profiles = league_roster_profiles(season.teams)
             adoption = {}
             funnel = defaultdict(Counter)
+            focus_funnel = defaultdict(lambda: defaultdict(Counter))
             for name, unit in units.items():
                 card = dyn._coaching_staffs.get(name, {}).get("dc")
                 snap = defensive_adoption_snapshot(unit, card, profiles.get(name, {}))
@@ -327,6 +379,12 @@ def run(seasons, nteams, seed, out, *, national=False):
                                 "installed_by_current_dc"):
                         bucket[key] += int(row[key])
                     bucket["installable"] += int(row["personnel_ok"] and row["callable"])
+                    focus_bucket = focus_funnel[snap.get("coverage_focus") or "unknown"][pid]
+                    focus_bucket["programs"] += 1
+                    focus_bucket["installable"] += int(row["personnel_ok"] and row["callable"])
+                    focus_bucket["installed"] += int(row["installed"])
+                    if row.get("preference_rank") is not None:
+                        focus_bucket["top_two"] += int(row["preference_rank"] <= 2)
                     if row["personnel_ok"] and row["callable"] and not row["installed"]:
                         bucket["qualified_not_installed"] += 1
             for pid, bucket in funnel.items():
@@ -341,10 +399,32 @@ def run(seasons, nteams, seed, out, *, national=False):
                   "dc_changes":sorted(changes),"staff":staff,"first_units":first_units,"end_units":units,
                   "installed":dict(installed),"defensive_adoption":adoption,
                   "defensive_adoption_funnel":{k:dict(v) for k,v in funnel.items()},
+                  "defensive_adoption_by_focus":{focus:{pid:dict(counts) for pid,counts in rows.items()}
+                      for focus,rows in focus_funnel.items()},
                   "roster_fit_mismatches":fit,"roster_moves":roster_moves,
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
             item["active_programs"] = len(active)
             item["retired_programs"] = sorted(retired)
+            # Descriptive rating and depth distributions on the actual new
+            # talent baseline; no target for scoring or roster strength.
+            from engine.player_card import player_to_card
+            ratings = defaultdict(list)
+            depth = Counter()
+            for name, team in season.teams.items():
+                positions = Counter(p.position for p in team.players)
+                for pos, count in positions.items():
+                    depth[pos] += count
+                for p in team.players:
+                    card = player_to_card(p, name)
+                    ratings[str(p.year)].append(card.overall)
+            item["roster_observations"] = {
+                "class_ratings": {k: {"n":len(v), "mean":average(v),
+                    "median":statistics.median(v), "min":min(v), "max":max(v)}
+                    for k,v in ratings.items()},
+                "position_counts":dict(depth),
+                "program_count":len(active),
+            }
+            print("ROSTER",year,json.dumps(item["roster_observations"],sort_keys=True),flush=True)
             report["years"].append(item)
             checkpoint()
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],
@@ -353,10 +433,12 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "rush",dict(groups["rush_total"]),"mean_carry",weekly[-1]["mean_carry"],flush=True)
             for pid, values in sorted(funnel.items()):
                 print("ADOPTION",year,pid,dict(values),flush=True)
+            for focus, rows in sorted(focus_funnel.items()):
+                print("ADOPTION_FOCUS",year,focus,json.dumps({pid:dict(v) for pid,v in rows.items()},sort_keys=True),flush=True)
             for key,g in sorted(packages.items()):
                 print("PACKAGE",year,key,dict(g),flush=True)
             for key,g in sorted(groups.items()):
-                if key.startswith(("cohort:","familiarity:","offense_energy:","defense_energy:","rush_count:")):
+                if key.startswith(("cohort:","familiarity:","offense_energy:","defense_energy:","rush_count:","offense_package:")):
                     print("GROUP",year,key,dict(g),flush=True)
             prev_rosters=start
             prev_staff=staff
@@ -364,23 +446,57 @@ def run(seasons, nteams, seed, out, *, national=False):
             if index+1==seasons:
                 break
             pre=deepcopy(dyn._team_installations)
+            from engine.coach_tactics import ensure_coach_tactical_profile
+            before_coaches = {cid: (c.team_name, c.age, c.seasons_coached, c.career_wins, c.career_losses,
+                                   deepcopy(ensure_coach_tactical_profile(c)))
+                              for cid,c in verify_staffs(dyn, active).items()}
+            played_records = {t: (rec.wins, rec.losses) for t,rec in season.standings.items()}
             adv=post(base+"/dynasty/advance")
+            after_coaches = verify_staffs(dyn, active)
+            retained_coaches = set(before_coaches) & set(after_coaches)
+            for cid in retained_coaches:
+                old_team, age, seasons_coached, wins, losses, profile = before_coaches[cid]
+                c = after_coaches[cid]
+                w,l = played_records[old_team]
+                if (c.age, c.seasons_coached, c.career_wins, c.career_losses) != (age+1,seasons_coached+1,wins+w,losses+l):
+                    raise RuntimeError(f"Coach season credit mismatch: {cid}")
+                if ensure_coach_tactical_profile(c) != profile:
+                    raise RuntimeError(f"Coach signature changed during employment transition: {cid}")
+            coach_events = dyn.coaching_history[year+1].get("development", [])
+            if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
+                raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
             off=sess["offseason"]
+            # Development and graduation may change attributes/class, never
+            # introduce a new college identity before signing/finalization.
+            prior_ids = {pid for roster in start.values() for pid in roster}
+            off_ids = {c.player_id for cards in off["player_cards"].values() for c in cards}
+            if off_ids != prior_ids:
+                raise RuntimeError("Unexpected college identities before recruiting")
+            graduating_ids = {c.player_id for cards in off["player_cards"].values()
+                              for c in cards if c.year == "Graduate"}
+            pool_ratings = [r.true_overall for r in off["recruit_pool"]]
             nil=off["nil_program"]
             budget=nil.annual_budget
             post(base+"/offseason/nil/allocate",{"recruiting_pool":budget*.5,"portal_pool":budget*.3,"retention_pool":budget*.2})
             portal=post(base+"/offseason/portal/resolve")
             # The designated human program uses the same existing AI recruiting
             # helper for its board; no forced signings or manual hires.
+            from engine.roster_continuity import projected_rosters, COLLEGE_ROSTER_TARGET
+            human_roster = projected_rosters(off["player_cards"], off["portal"])[human]
             board,offers=auto_recruit_team(human,off["recruit_pool"],dyn.team_prestige.get(human,50),
-                dyn._estimate_team_regions().get(human,"midwest"),scholarships=8,
+                dyn._estimate_team_regions().get(human,"midwest"),
+                scholarships=max(0,COLLEGE_ROSTER_TARGET-len(human_roster)),
                 nil_budget=nil.recruiting_pool,rng=random.Random(seed+year),
-                current_roster=[{"position":p.position} for p in off["player_cards"].get(human,[])])
+                current_roster=[{"position":p.position} for p in human_roster])
             off["recruit_board"],off["nil_offers"]=board,offers
             recruiting=post(base+"/offseason/recruiting/resolve")
+            signed_ids = {r.recruit_id for recruits in (dyn._pending_signed_recruits or {}).values()
+                          for r in recruits}
             post(base+"/offseason/complete")
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
+            expected_coach_cards = {t:{role:deepcopy(c.to_dict()) for role,c in staff.items()}
+                                    for t,staff in dyn._coaching_staffs.items()}
             expected_pipeline=dyn._hs_pipeline.save_state() if dyn._hs_pipeline else None
             expected_dispersal=list(dyn._pending_retired_dispersal)
             if expected_dispersal:
@@ -388,11 +504,27 @@ def run(seasons, nteams, seed, out, *, national=False):
             saved_rosters=deepcopy(dyn._next_season_rosters)
             if set(saved_rosters) != active:
                 raise RuntimeError(f"Offseason saved roster program mismatch: extra={sorted(set(saved_rosters)-active)}, missing={sorted(active-set(saved_rosters))}")
+            walkon_details = dyn.recruiting_history[year+1].get("walkon_details", {})
+            walkon_ids = {row["player_id"] for rows in walkon_details.values() for row in rows}
+            final_ids = {row["player_id"] for rows in saved_rosters.values() for row in rows}
+            if final_ids != (prior_ids-graduating_ids)|signed_ids|walkon_ids:
+                raise RuntimeError("College roster additions/departures do not reconcile")
+            from engine.roster_continuity import COLLEGE_ROSTER_TARGET
+            if any(len(rows) < COLLEGE_ROSTER_TARGET for rows in saved_rosters.values()):
+                raise RuntimeError("Roster below existing college target after finalization")
             expected_rosters={t:sorted((r.get("player_id", ""), r["first_name"]+" "+r["last_name"], r["position"]) for r in rows)
                               for t,rows in saved_rosters.items()}
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
                 raise RuntimeError("Application DB roundtrip lost installation, staff or roster")
+            actual_coach_cards = {t:{role:c.to_dict() for role,c in staff.items()} for t,staff in loaded._coaching_staffs.items()}
+            if actual_coach_cards != expected_coach_cards:
+                differences = {t:{role:[k for k,v in card.items() if actual_coach_cards.get(t,{}).get(role,{}).get(k) != v]
+                                  for role,card in staff.items() if actual_coach_cards.get(t,{}).get(role) != card}
+                               for t,staff in expected_coach_cards.items() if actual_coach_cards.get(t) != staff}
+                report["coach_save_differences"] = differences
+                checkpoint()
+                raise RuntimeError("Application DB roundtrip lost coaching career or tactical profile: " + json.dumps(differences,sort_keys=True))
             loaded_pipeline=loaded._hs_pipeline.save_state() if loaded._hs_pipeline else None
             if loaded._pending_retired_dispersal != expected_dispersal or set(loaded.retired_programs) != retired:
                 raise RuntimeError("Application DB roundtrip lost program retirement state")
@@ -401,8 +533,15 @@ def run(seasons, nteams, seed, out, *, national=False):
             # Reload into the live session via the actual endpoint and continue.
             post(base+"/dynasty/load?save_key="+sid)
             trans={"from_year":year,"to_year":year+1,"database_roundtrip":True,
+                "coach_career_continuity":{"retained":len(retained_coaches),
+                    "departed":len(set(before_coaches)-set(after_coaches)),
+                    "new":len(set(after_coaches)-set(before_coaches)),
+                    "development_events":len(coach_events)},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
+                "college_cohort":{"graduated":len(graduating_ids),"signed_unique":len(signed_ids),
+                    "walkons":len(walkon_ids),"emergency_walkons":sum(row["source"]=="emergency" for rows in walkon_details.values() for row in rows),
+                    "pool_mean_overall":average(pool_ratings)},
                 "retained_installations":len(expected),"roster_sizes":{t:len(r) for t,r in saved_rosters.items()},
                 "mean_defense_familiarity_before":average([u["defense"]["familiarity"] for u in pre.values()]),
                 "mean_defense_familiarity_after":average([u["defense"]["familiarity"] for u in expected.values()])}

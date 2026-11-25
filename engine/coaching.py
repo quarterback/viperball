@@ -776,6 +776,7 @@ class CoachCard:
             "playoff_appearances": self.playoff_appearances,
             "playoff_wins": self.playoff_wins,
             "championship_appearances": self.championship_appearances,
+            "career_awards": list(self.career_awards),
             "coaching_tree": list(self.coaching_tree),
             "hc_meter": self.hc_meter,
             "message": self.message,
@@ -790,7 +791,7 @@ class CoachCard:
             CoachCareerStop.from_dict(s)
             for s in d.get("career_history", [])
         ]
-        return cls(
+        card = cls(
             coach_id=d["coach_id"],
             first_name=d["first_name"],
             last_name=d["last_name"],
@@ -830,6 +831,7 @@ class CoachCard:
             playoff_appearances=d.get("playoff_appearances", 0),
             playoff_wins=d.get("playoff_wins", 0),
             championship_appearances=d.get("championship_appearances", 0),
+            career_awards=d.get("career_awards", []),
             coaching_tree=d.get("coaching_tree", []),
             hc_meter=d.get("hc_meter", 0),
             message=d.get("message", 50),
@@ -837,6 +839,12 @@ class CoachCard:
             growth=d.get("growth", 50),
             tactical_profile=d.get("tactical_profile", {}),
         )
+        # Explicit saved chemistry scores are authoritative, including 50.
+        # Only missing legacy fields should receive constructor backfill.
+        for key in ("message", "standard", "growth"):
+            if key in d:
+                setattr(card, key, d[key])
+        return card
 
 
 # ──────────────────────────────────────────────
