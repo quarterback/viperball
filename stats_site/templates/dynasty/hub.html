@@ -9,7 +9,7 @@
 {% block content %}
 <div class="page-header">
   <h1>{{ status.dynasty_name }}</h1>
-  <div class="subtitle">{{ c.name }} at {{ c.team }} · {{ status.current_year }} · {{ status.seasons_played }} season{{ '' if status.seasons_played == 1 else 's' }} played · {{ status.team_count }} programs</div>
+  <div class="subtitle">{{ c.name }} at {{ c.team }} · {{ status.current_year }} · {{ status.seasons_played }} season{{ '' if status.seasons_played == 1 else 's' }} played</div>
 </div>
 
 <div class="grid-4" style="margin-bottom:8px">
@@ -136,9 +136,9 @@
 
   {% elif season %}
     <h2>{{ season.name }}</h2>
-    <p>{{ season.games_played }}/{{ season.total_games }} games played{% if season.champion %} · Champion: {{ season.champion }}{% endif %}</p>
+    {% if season.champion %}<p>Champion: {{ season.champion }}</p>{% endif %}
     <div class="run-bar">
-      <a href="/stats/college/{{ session_id }}/"><button class="btn-run" type="button">{{ icon("play") }}Play the season</button></a>
+      <a class="action-link primary" href="/stats/college/{{ session_id }}/">{{ icon("play") }}Play the season</a>
       {% if season.champion %}{{ action('/sessions/' ~ session_id ~ '/dynasty/advance', 'Advance to offseason', here) }}{% endif %}
     </div>
     {% if not season.champion %}<p class="hint" style="color:var(--fg-dim);font-size:13px;margin-top:8px">Finish the season, including the playoffs, to advance.</p>{% endif %}

@@ -1,0 +1,42 @@
+{# Shared matchup layout. One source of score, opponent, metadata and links
+   for desktop and mobile; no alternate data feed or truncated team names. #}
+{% macro matchups(games, session_id) %}
+<div class="matchup-list">
+<table class="matchups" role="table" aria-label="Matchups" data-copy-label="Copy results">
+  <thead role="rowgroup"><tr role="row">
+    <th scope="col" role="columnheader">Week / game</th>
+    <th scope="col" role="columnheader">Away</th>
+    <th scope="col" role="columnheader" class="num">Away score</th>
+    <th scope="col" role="columnheader">Home</th>
+    <th scope="col" role="columnheader" class="num">Home score</th>
+    <th scope="col" role="columnheader">Box score</th>
+  </tr></thead>
+  <tbody role="rowgroup">
+  {% for g in games %}
+    {% set scored = g.completed and g.away_score is not none and g.home_score is not none %}
+    <tr role="row" class="matchup-row">
+      <td role="cell" class="matchup-meta">
+        <span class="matchup-week">{% if g.game_type == 'playoff' %}{{ g.round_label }}{% elif g.game_type == 'bowl' %}{{ g.bowl_name }}{% else %}Week {{ g.week }}{% endif %}</span>
+        {% if g.is_conference_game %}<span class="tag tag-conf">Conf</span>{% endif %}
+        {% if g.is_rivalry_game %}<span class="tag tag-rivalry">Riv</span>{% endif %}
+        {% if g.is_overseas_classic %}<span class="tag">{{ g.neutral_site_location or 'International' }}</span>{% endif %}
+      </td>
+      <td role="cell" class="matchup-away">
+        <a href="/stats/college/{{ session_id }}/team/{{ g.away_team }}">{{ g.away_team }}</a>
+      </td>
+      <td role="cell" class="num matchup-away-score {% if scored and g.away_score > g.home_score %}score-win{% elif scored and g.away_score == g.home_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.away_score }}{% else %}&mdash;{% endif %}</td>
+      <td role="cell" class="matchup-home">
+        <a href="/stats/college/{{ session_id }}/team/{{ g.home_team }}">{{ g.home_team }}</a>
+      </td>
+      <td role="cell" class="num matchup-home-score {% if scored and g.home_score > g.away_score %}score-win{% elif scored and g.home_score == g.away_score %}score-tie{% elif scored %}score-loss{% endif %}">{% if scored %}{{ g.home_score }}{% else %}&mdash;{% endif %}</td>
+      <td role="cell" class="matchup-box">
+        {% if g.completed %}<a href="/stats/college/{{ session_id }}/game/{{ g.week }}/{{ g.week_game_idx }}" aria-label="Box score: {{ g.away_team }} at {{ g.home_team }}">Box score</a>{% else %}<span class="matchup-pending">Scheduled</span>{% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr role="row"><td role="cell" colspan="6" class="matchup-empty">No games in this selection</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}

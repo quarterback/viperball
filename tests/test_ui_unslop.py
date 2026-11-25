@@ -44,19 +44,38 @@ def test_polished_pages_render(tmp_path, monkeypatch):
     client.post(base+"/season",json={"name":"UI verification season","ai_seed":20261125,
         "human_teams":[names[0]],"games_per_team":12,"playoff_size":4,"bowl_count":0,
         "conferences":{"East":names[:8],"West":names[8:]}}).raise_for_status()
-    result=client.post(base+"/season/simulate-week",json={})
-    result.raise_for_status()
-    week=result.json()["week"]
     prefix=f"/stats/college/{sid}"
+    opening=client.get(prefix+"/")
+    opening.raise_for_status()
+    assert "games played" not in opening.text.split('<div class="page-header">',1)[1].split('<div class="tabs">',1)[0]
+    assert "Week 0/" not in opening.text
+    client.post(base+"/season/portal/skip").raise_for_status()
+    ready=client.get(prefix+"/")
+    assert "Simulate week 1" in ready.text
+    result=client.post(base+"/season/simulate-week",json={})
+    assert result.status_code==200,result.text
+    week=result.json()["week"]
     pages={"/stats/":"home-leagues",prefix+"/":"UI verification season",
         prefix+"/team/"+quote(names[0],safe=""):"Coaching Staff",
         prefix+"/game/"+str(week)+"/0":"pbp-row",
         prefix+"/luck":"Actual wins minus expected wins",
+        prefix+"/schedule":"matchup-list",
+        prefix+"/schedule?week="+str(week):"matchup-list",
         "/stats/my-team/":"Offseason Actions"}
     for url, expected in pages.items():
         response=client.get(url)
         assert response.status_code==200, (url,response.status_code,response.text[:400])
         assert expected in response.text, (url,expected)
+    overview=client.get(prefix+"/").text
+    assert "games played" not in overview.split('<div class="page-header">',1)[1].split('<div class="tabs">',1)[0]
+    assert "Simulate week "+str(week+1) in overview
+    game=next(g for g in api.sessions[sid]["season"].schedule if g.week==week and g.completed)
+    filtered=client.get(prefix+"/schedule?week="+str(week)).text
+    assert game.away_team in filtered and game.home_team in filtered
+    assert "matchup-away-score" in filtered and "matchup-home-score" in filtered
+    assert 'value="'+str(week)+'" selected' in filtered
+    assert prefix+"/game/"+str(week)+"/0" in filtered
+    assert "games played" not in client.get("/stats/college/").text
     # A real game keeps the event semantics in the template instead of
     # dark-only inline fills; not dependent on a particular scoring outcome.
     template=(ROOT/"stats_site/templates/college/game.html").read_text()
