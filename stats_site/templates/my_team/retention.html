@@ -24,14 +24,14 @@
 {% if nil %}
 <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
   <div>
-    <span style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Retention Budget</span><br>
+    <span style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Retention Budget</span><br>
     <span style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.retention_remaining) }}</span>
-    <span style="font-size:11px;color:var(--fg-dim);"> / ${{ "{:,.0f}".format(nil.retention_pool) }}</span>
+    <span style="font-size:12px;color:var(--fg-dim);"> / ${{ "{:,.0f}".format(nil.retention_pool) }}</span>
   </div>
   <div style="flex:1;min-width:200px;">
     <div style="background:var(--border);height:8px;"><div style="background:var(--accent);height:100%;width:{{ ((nil.retention_pool - nil.retention_remaining) / nil.retention_pool * 100) if nil.retention_pool > 0 else 0 }}%"></div></div>
   </div>
-  <div style="font-size:11px;color:var(--fg-dim);">{{ retained_count }} retained</div>
+  <div style="font-size:12px;color:var(--fg-dim);">{{ retained_count }} retained</div>
 </div>
 {% endif %}
 
@@ -52,7 +52,7 @@
   {% for r in risks %}
   <tr>
     <td style="font-weight:bold;">{{ r.player_name }}</td>
-    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ r.position }}</span></td>
+    <td><span class="tag tag-pos" style="font-size:12px;padding:1px 5px;">{{ r.position }}</span></td>
     <td class="num {% if r.overall >= 85 %}stat-elite{% elif r.overall >= 70 %}stat-good{% endif %}">{{ r.overall }}</td>
     <td class="num">{% for i in range(r.potential) %}&#9733;{% endfor %}{% for i in range(5 - r.potential) %}&#9734;{% endfor %}</td>
     <td>
@@ -76,8 +76,8 @@
         <input type="hidden" name="session_id" value="{{ session_id }}">
         <input type="hidden" name="player_id" value="{{ r.player_id }}">
         <input type="number" name="amount" value="{{ r.suggested_amount|int }}" min="0" step="1000"
-               style="width:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);padding:2px 4px;font-size:11px;">
-        <button type="submit" style="background:var(--green);color:#000;border:none;padding:3px 10px;cursor:pointer;font-size:11px;font-family:inherit;">Lock</button>
+               style="width:80px;background:var(--bg);color:var(--fg);border:1px solid var(--border);padding:2px 4px;font-size:12px;">
+        <button class="btn-small" type="submit" style="padding:3px 10px;cursor:pointer;font-size:12px;font-family:inherit;">Lock</button>
       </form>
       {% endif %}
     </td>
@@ -90,6 +90,6 @@
 {% endif %}
 
 <div style="margin-top:16px;">
-  <a href="/stats/my-team/portal" style="background:var(--accent);color:#000;padding:8px 20px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Continue to Portal &rarr;</a>
+  <a class="action-link primary" href="/stats/my-team/portal">Continue to portal</a>
 </div>
 {% endblock %}

@@ -118,7 +118,7 @@ def _render_champions_league_card(completed: dict):
     league_names = [snap["league_name"] for snap in completed.values()]
 
     with ui.card().classes("p-5 w-full max-w-2xl").style(
-        "border: 2px solid #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);"
+        "border: 2px solid #f59e0b; background: var(--vb-surface-2);"
     ):
         with ui.row().classes("items-center gap-2 mb-2"):
             ui.icon(meta["icon"]).classes("text-amber-600 text-2xl")
@@ -341,7 +341,7 @@ def _render_league_switcher(all_sessions: dict, active_lid: str):
         return
 
     with ui.element("div").classes("w-full mb-3").style(
-        "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); "
+        "background: var(--vb-surface-2); "
         "border-radius: 8px; padding: 8px 16px;"
     ):
         with ui.row().classes("w-full items-center gap-2 flex-wrap"):
@@ -1596,12 +1596,12 @@ def _show_box_score_dialog(box: dict, season: ProLeagueSeason = None):
     with ui.dialog().props("maximized") as dlg:
         with ui.card().classes("w-full h-full overflow-auto p-0"):
             with ui.element("div").classes("w-full").style(
-                "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 24px 32px;"
+                "background: var(--vb-surface-2); padding: 24px 32px;"
             ):
                 with ui.row().classes("w-full items-center justify-between"):
                     with ui.column().classes("gap-0"):
                         ui.label(f"{box['away_name']} @ {box['home_name']}").classes(
-                            "text-2xl font-bold text-white"
+                            "text-2xl font-semibold text-white"
                         )
                         ui.label(f"Weather: {box.get('weather', 'Clear')}").classes(
                             "text-sm text-slate-300"

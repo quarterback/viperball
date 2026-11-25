@@ -126,7 +126,7 @@
         {% if ac %}
           {{ ac.get('name', '—') }}
           {% if ac.get('classification') %}<span class="tag" style="border-color:var(--fg-dim);color:var(--fg-dim);margin-left:4px;">{{ ac.classification }}</span>{% endif %}
-          {% if ac.get('composure') %}<span style="color:var(--fg-dim);font-size:10px;"> {{ ac.composure }}</span>{% endif %}
+          {% if ac.get('composure') %}<span style="color:var(--fg-dim);font-size:12px;"> {{ ac.composure }}</span>{% endif %}
         {% else %}&mdash;{% endif %}
       </td>
       <td>{{ role_label }}</td>
@@ -134,7 +134,7 @@
         {% if hc %}
           {{ hc.get('name', '—') }}
           {% if hc.get('classification') %}<span class="tag" style="border-color:var(--fg-dim);color:var(--fg-dim);margin-left:4px;">{{ hc.classification }}</span>{% endif %}
-          {% if hc.get('composure') %}<span style="color:var(--fg-dim);font-size:10px;"> {{ hc.composure }}</span>{% endif %}
+          {% if hc.get('composure') %}<span style="color:var(--fg-dim);font-size:12px;"> {{ hc.composure }}</span>{% endif %}
         {% else %}&mdash;{% endif %}
       </td>
     </tr>
@@ -224,19 +224,19 @@
 <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
     <div style="text-align:center;flex:1;">
-      <div style="font-size:11px;color:var(--fg-dim);">{{ game.away_team }}</div>
+      <div style="font-size:12px;color:var(--fg-dim);">{{ game.away_team }}</div>
       <div style="font-size:28px;font-weight:bold;{% if adtw > hdtw %}color:var(--green){% elif adtw < hdtw %}color:var(--fg-dim){% endif %}">{{ '%.1f'|format(adtw * 100) }}%</div>
     </div>
     <div style="text-align:center;flex:0 0 auto;">
-      <div style="font-size:11px;color:var(--fg-dim);">DTW</div>
+      <div style="font-size:12px;color:var(--fg-dim);">DTW</div>
       {% if dtw.get('upset') and ((hdtw > 0.55) or (adtw > 0.55)) %}
-      <div style="font-size:11px;color:var(--yellow);font-weight:bold;">DTW UPSET</div>
+      <div style="font-size:12px;color:var(--yellow);font-weight:bold;">DTW UPSET</div>
       {% elif dtw.get('deserved_winner') == 'toss-up' or (hdtw >= 0.45 and hdtw <= 0.55) %}
-      <div style="font-size:11px;color:var(--fg-dim);">TOO CLOSE</div>
+      <div style="font-size:12px;color:var(--fg-dim);">TOO CLOSE</div>
       {% endif %}
     </div>
     <div style="text-align:center;flex:1;">
-      <div style="font-size:11px;color:var(--fg-dim);">{{ game.home_team }}</div>
+      <div style="font-size:12px;color:var(--fg-dim);">{{ game.home_team }}</div>
       <div style="font-size:28px;font-weight:bold;{% if hdtw > adtw %}color:var(--green){% elif hdtw < adtw %}color:var(--fg-dim){% endif %}">{{ '%.1f'|format(hdtw * 100) }}%</div>
     </div>
   </div>
@@ -254,7 +254,7 @@
 {% if parts %}
 <div style="margin-bottom:16px;padding:12px;border:1px solid var(--border);border-radius:6px;">
   <div style="font-weight:600;margin-bottom:6px;">DTW model components — home minus away</div>
-  <p style="color:var(--fg-dim);font-size:11px;margin:0 0 10px;">
+  <p style="color:var(--fg-dim);font-size:12px;margin:0 0 10px;">
     Signed weighted edges before conversion to 0–100. Positive favors {{ game.home_team }}; negative favors {{ game.away_team }}. A direct turnover-margin adjustment is not part of the model.
   </p>
   <div class="grid-4">
@@ -288,7 +288,7 @@
 </div>
 {% endif %}
 
-<p style="font-size:11px;color:var(--fg-dim);margin-bottom:12px;">
+<p style="font-size:12px;color:var(--fg-dim);margin-bottom:12px;">
   EPA scope: the existing play model compares field position and down using a fixed lookup table. It contains some scoring-play adjustments but does not fully account for defensive or return touchdowns, every bell or pindown, bonus-possession value, or Delta restart effects. Negative EPA can coexist with a win driven by those channels. The points/drive and scoring totals above use the actual game scoreboard instead.
 </p>
 
@@ -310,7 +310,7 @@
     </div>
     {% endfor %}
   </div>
-  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg-dim);margin-top:4px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--fg-dim);margin-top:4px;">
     <span>{{ game.away_team }}: {{ aqs.get('quarters_won', 0) }}/4 Qs won</span>
     <span>{{ game.home_team }}: {{ hqs.get('quarters_won', 0) }}/4 Qs won</span>
   </div>
@@ -345,9 +345,9 @@
     ] %}
     {% if asp.get(count_key, 0) > 0 or hsp.get(count_key, 0) > 0 %}
     <tr>
-      <td class="num">{{ asp.get(count_key, 0) }} <span style="color:var(--fg-dim);font-size:10px;">({{ '%.0f'|format(asp.get(pct_key, 0)) }}%)</span></td>
+      <td class="num">{{ asp.get(count_key, 0) }} <span style="color:var(--fg-dim);font-size:12px;">({{ '%.0f'|format(asp.get(pct_key, 0)) }}%)</span></td>
       <td>{{ label }}</td>
-      <td class="num">{{ hsp.get(count_key, 0) }} <span style="color:var(--fg-dim);font-size:10px;">({{ '%.0f'|format(hsp.get(pct_key, 0)) }}%)</span></td>
+      <td class="num">{{ hsp.get(count_key, 0) }} <span style="color:var(--fg-dim);font-size:12px;">({{ '%.0f'|format(hsp.get(pct_key, 0)) }}%)</span></td>
     </tr>
     {% endif %}
     {% endfor %}
@@ -447,7 +447,7 @@
 
 {# ── Section header macro ── #}
 {% macro section_header(title) %}
-<tr style="border-top:2px solid var(--border)"><td colspan="3" style="color:var(--accent);font-weight:bold;font-size:11px;letter-spacing:1px;padding-top:8px">{{ title }}</td></tr>
+<tr style="border-top:2px solid var(--border)"><td colspan="3" style="color:var(--accent);font-weight:bold;font-size:12px;letter-spacing:0;padding-top:8px">{{ title }}</td></tr>
 {% endmacro %}
 
 {% if tactics %}
@@ -457,7 +457,7 @@
 <style>
 .tac-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 32px; }
 .tac-grid h3 { margin: 4px 0 6px; }
-.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); }
+.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform:none; letter-spacing:0; color: var(--fg-dim); }
 .tac-bar { display: grid; grid-template-columns: 150px 1fr 40px; gap: 10px; align-items: center; font-size: 14px; margin: 4px 0; }
 .tac-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .tac-track span { display: block; height: 100%; background: var(--accent); }
@@ -660,9 +660,9 @@
     <td class="num">{{ hs.get('timeouts_used', 0) }} used / {{ hs.get('timeouts_remaining', 0) }} left</td>
   </tr>
   <tr>
-    <td class="num" style="font-size:10px;">1H: {{ as_.get('timeouts_1h', 0) }} · 2H: {{ as_.get('timeouts_2h', 0) }}</td>
-    <td style="font-size:10px;">By Half</td>
-    <td class="num" style="font-size:10px;">1H: {{ hs.get('timeouts_1h', 0) }} · 2H: {{ hs.get('timeouts_2h', 0) }}</td>
+    <td class="num" style="font-size:12px;">1H: {{ as_.get('timeouts_1h', 0) }} · 2H: {{ as_.get('timeouts_2h', 0) }}</td>
+    <td style="font-size:12px;">By Half</td>
+    <td class="num" style="font-size:12px;">1H: {{ hs.get('timeouts_1h', 0) }} · 2H: {{ hs.get('timeouts_2h', 0) }}</td>
   </tr>
   {% set a_cats = as_.get('timeouts_by_category', {}) %}
   {% set h_cats = hs.get('timeouts_by_category', {}) %}
@@ -672,9 +672,9 @@
   {% for cat in all_cats %}
   {% set cat_label = cat | replace('_', ' ') | title %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ a_cats.get(cat, 0) }}</td>
-    <td style="font-size:10px;">{{ cat_label }}</td>
-    <td class="num" style="font-size:10px;">{{ h_cats.get(cat, 0) }}</td>
+    <td class="num" style="font-size:12px;">{{ a_cats.get(cat, 0) }}</td>
+    <td style="font-size:12px;">{{ cat_label }}</td>
+    <td class="num" style="font-size:12px;">{{ h_cats.get(cat, 0) }}</td>
   </tr>
   {% endfor %}
   {% endif %}
@@ -687,9 +687,9 @@
   {% set hdc = hs.get('down_conversions', {}).get(d, hs.get('down_conversions', {}).get(d|string, {})) %}
   {% if adc.get('attempts', 0) > 0 or hdc.get('attempts', 0) > 0 %}
   <tr>
-    <td class="num {% if adc.get('rate', 0) >= 60 %}stat-good{% elif adc.get('rate', 0) <= 30 and adc.get('attempts', 0) > 0 %}stat-bad{% endif %}">{{ adc.get('converted', 0) }}/{{ adc.get('attempts', 0) }} <span style="color:var(--fg-dim);font-size:10px;">({{ '%.0f'|format(adc.get('rate', 0)) }}%)</span></td>
+    <td class="num {% if adc.get('rate', 0) >= 60 %}stat-good{% elif adc.get('rate', 0) <= 30 and adc.get('attempts', 0) > 0 %}stat-bad{% endif %}">{{ adc.get('converted', 0) }}/{{ adc.get('attempts', 0) }} <span style="color:var(--fg-dim);font-size:12px;">({{ '%.0f'|format(adc.get('rate', 0)) }}%)</span></td>
     <td>{{ d }}th Down Conv.</td>
-    <td class="num {% if hdc.get('rate', 0) >= 60 %}stat-good{% elif hdc.get('rate', 0) <= 30 and hdc.get('attempts', 0) > 0 %}stat-bad{% endif %}">{{ hdc.get('converted', 0) }}/{{ hdc.get('attempts', 0) }} <span style="color:var(--fg-dim);font-size:10px;">({{ '%.0f'|format(hdc.get('rate', 0)) }}%)</span></td>
+    <td class="num {% if hdc.get('rate', 0) >= 60 %}stat-good{% elif hdc.get('rate', 0) <= 30 and hdc.get('attempts', 0) > 0 %}stat-bad{% endif %}">{{ hdc.get('converted', 0) }}/{{ hdc.get('attempts', 0) }} <span style="color:var(--fg-dim);font-size:12px;">({{ '%.0f'|format(hdc.get('rate', 0)) }}%)</span></td>
   </tr>
   {% endif %}
   {% endfor %}
@@ -715,9 +715,9 @@
   {{ stat_row('Adjusted Yards', 'adjusted_yards') }}
   {% if as_.get('delta_drives', 0) > 0 or hs.get('delta_drives', 0) > 0 %}
   <tr>
-    <td class="num">{{ as_.get('delta_scores', 0) }}/{{ as_.get('delta_drives', 0) }}{% if as_.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ as_.kill_rate }}%)</span>{% endif %}</td>
+    <td class="num">{{ as_.get('delta_scores', 0) }}/{{ as_.get('delta_drives', 0) }}{% if as_.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:12px;">({{ as_.kill_rate }}%)</span>{% endif %}</td>
     <td>Delta Scores / Drives (Kill Rate)</td>
-    <td class="num">{{ hs.get('delta_scores', 0) }}/{{ hs.get('delta_drives', 0) }}{% if hs.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:10px;">({{ hs.kill_rate }}%)</span>{% endif %}</td>
+    <td class="num">{{ hs.get('delta_scores', 0) }}/{{ hs.get('delta_drives', 0) }}{% if hs.get('kill_rate') is not none %} <span style="color:var(--fg-dim);font-size:12px;">({{ hs.kill_rate }}%)</span>{% endif %}</td>
   </tr>
   {% endif %}
   {% endif %}
@@ -731,27 +731,27 @@
   {% set hb = hdye.get(bucket, {}) %}
   {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
-    <td style="font-size:10px;">{{ label }}<span style="display:block;color:var(--fg-dim);">Points, not just scoring frequency</span></td>
-    <td class="num" style="font-size:10px;">{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td class="num" style="font-size:12px;">{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td style="font-size:12px;">{{ label }}<span style="display:block;color:var(--fg-dim);">Points, not just scoring frequency</span></td>
+    <td class="num" style="font-size:12px;">{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
   </tr>
   {% endif %}
   {% endfor %}
   <tr>
     {% set a_pp = as_.get('dye', {}).get('power_play', {}) %}
     {% set h_pp = hs.get('dye', {}).get('power_play', {}) %}
-    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(a_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in a_pp else '—' }} EP/start · {{ ('%+.2f'|format(a_pp.points_vs_start_ep)) if 'points_vs_start_ep' in a_pp else '—' }} points vs EP</td>
-    <td style="font-size:10px;">Power Play starting-position EP<br><span style="color:var(--fg-dim);">Static field-position table; not points above replacement</span></td>
-    <td class="num" style="font-size:10px;">{{ ('%.2f'|format(h_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in h_pp else '—' }} EP/start · {{ ('%+.2f'|format(h_pp.points_vs_start_ep)) if 'points_vs_start_ep' in h_pp else '—' }} points vs EP</td>
+    <td class="num" style="font-size:12px;">{{ ('%.2f'|format(a_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in a_pp else '—' }} EP/start · {{ ('%+.2f'|format(a_pp.points_vs_start_ep)) if 'points_vs_start_ep' in a_pp else '—' }} points vs EP</td>
+    <td style="font-size:12px;">Power Play starting-position EP<br><span style="color:var(--fg-dim);">Static field-position table; not points above replacement</span></td>
+    <td class="num" style="font-size:12px;">{{ ('%.2f'|format(h_pp.starting_ep_per_drive)) if 'starting_ep_per_drive' in h_pp else '—' }} EP/start · {{ ('%+.2f'|format(h_pp.points_vs_start_ep)) if 'points_vs_start_ep' in h_pp else '—' }} points vs EP</td>
   </tr>
   {# Mess Rate row #}
   {% set a_mr = as_.get('mess_rate') %}
   {% set h_mr = hs.get('mess_rate') %}
   {% if a_mr is not none or h_mr is not none %}
   <tr>
-    <td class="num" style="font-size:10px;">{{ a_mr if a_mr is not none else '—' }}</td>
-    <td style="font-size:10px;">Mess Rate (PP% − Kill Rate)</td>
-    <td class="num" style="font-size:10px;">{{ h_mr if h_mr is not none else '—' }}</td>
+    <td class="num" style="font-size:12px;">{{ a_mr if a_mr is not none else '—' }}</td>
+    <td style="font-size:12px;">Mess Rate (PP% − Kill Rate)</td>
+    <td class="num" style="font-size:12px;">{{ h_mr if h_mr is not none else '—' }}</td>
   </tr>
   {% endif %}
   {% endif %}
@@ -773,7 +773,7 @@
 {% for side_key, side_label in [('home_defense', game.home_team), ('away_defense', game.away_team)] %}
 {% set m = mods.get(side_key, {}) %}
 {% if m.get('stack_label') %}
-<div style="margin:8px 0;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+<div style="margin:8px 0;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
   <strong style="color:var(--accent)">{{ side_label }} DEF:</strong> <span style="color:var(--yellow)">{{ m.stack_label }}</span>
 </div>
 {% endif %}
@@ -865,7 +865,7 @@
     <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
     <td class="num {% if p.get('all_purpose_yards', 0) >= 120 %}stat-elite{% elif p.get('all_purpose_yards', 0) >= 75 %}stat-good{% endif %}">{{ p.get('all_purpose_yards', 0) }}</td>
     <td class="num">{{ p.get('rushing_yards', 0) }}</td>
-    <td class="num">{% if p.get('kick_pass_receptions', 0) > 0 %}{{ p.get('kick_pass_yards', 0) }} <span style="color:var(--fg-dim);font-size:10px">({{ p.kick_pass_receptions }}rec)</span>{% elif p.get('kick_passes_thrown', 0) > 0 %}{{ p.get('kick_pass_yards', 0) }} <span style="color:var(--fg-dim);font-size:10px">({{ p.kick_passes_completed }}/{{ p.kick_passes_thrown }})</span>{% else %}0{% endif %}</td>
+    <td class="num">{% if p.get('kick_pass_receptions', 0) > 0 %}{{ p.get('kick_pass_yards', 0) }} <span style="color:var(--fg-dim);font-size:12px">({{ p.kick_pass_receptions }}rec)</span>{% elif p.get('kick_passes_thrown', 0) > 0 %}{{ p.get('kick_pass_yards', 0) }} <span style="color:var(--fg-dim);font-size:12px">({{ p.kick_passes_completed }}/{{ p.kick_passes_thrown }})</span>{% else %}0{% endif %}</td>
     <td class="num {% if p.get('tds', 0) > 0 %}stat-elite{% endif %}">{{ p.get('tds', 0) }}</td>
     <td class="num {% if p.get('fumbles', 0) > 0 %}stat-bad{% endif %}">{{ p.get('fumbles', 0) }}</td>
     <td class="num">{{ p.get('laterals_thrown', 0) }}</td>
@@ -1042,7 +1042,7 @@
       </span>
       {% if d.get('bonus_drive') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">BONUS</span>{% endif %}
       {% if d.get('delta_drive') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">DELTA</span>{% endif %}
-      {% if d.get('delta_cost') %}<span style="font-size:10px;color:var(--fg-dim)"> ({{ "%+d"|format(d.delta_cost) }}yd)</span>{% endif %}
+      {% if d.get('delta_cost') %}<span style="font-size:12px;color:var(--fg-dim)"> ({{ "%+d"|format(d.delta_cost) }}yd)</span>{% endif %}
     </td>
   </tr>
   {% endfor %}
@@ -1062,7 +1062,7 @@
 {% for p in pbp %}
 {% if p.quarter not in quarters %}{% if quarters.append(p.quarter) %}{% endif %}{% endif %}
 {% endfor %}
-<div style="margin-bottom:8px;font-size:11px;">
+<div style="margin-bottom:8px;font-size:12px;">
   <strong>Quarter:</strong>
   <a href="#" onclick="document.querySelectorAll('.pbp-row').forEach(r=>r.style.display='');return false;" style="color:var(--accent)">All</a>
   {% for q in quarters|sort %}
@@ -1084,7 +1084,7 @@
   {% set is_score = p.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td') if p.result else false %}
   {% set is_turnover = p.result in ('kick_pass_intercepted', 'lateral_intercepted', 'fumble') if p.result else false %}
   {% set is_penalty = (p.play_type == 'penalty' or p.get('penalty')) %}
-  <tr class="pbp-row" data-q="{{ p.quarter }}" {% if is_score %}style="background:#1a1a00"{% elif is_turnover %}style="background:#1a0000"{% elif is_penalty %}style="background:#1a1a1a"{% endif %}>
+  <tr class="pbp-row{% if is_score %} game-event-score{% elif is_turnover %} game-event-turnover{% elif is_penalty %} game-event-penalty{% endif %}" data-q="{{ p.quarter }}">
     <td class="num">{{ p.quarter }}</td>
     <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
     <td>{% if p.possession == 'home' %}{{ game.home_team[:15] }}{% else %}{{ game.away_team[:15] }}{% endif %}</td>
@@ -1111,7 +1111,7 @@
 {# ── Officials ── #}
 {% set ref = fr.get('referee', {}) if fr else {} %}
 {% if ref and ref.get('name') %}
-<div style="margin:16px 0 8px;font-size:11px;color:var(--fg-dim)">
+<div style="margin:16px 0 8px;font-size:12px;color:var(--fg-dim)">
   <strong>Officials:</strong>
   {% for rname in ref.name.split(', ') %}
   {% if not loop.first %}&middot;{% endif %}

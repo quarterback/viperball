@@ -1,0 +1,33 @@
+name: Interface polish regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'stats_site/**'
+      - 'nicegui_app/**'
+      - 'tests/test_ui_unslop.py'
+      - 'scripts/ui_visual_audit.py'
+      - '.github/workflows/ui-polish.yml'
+  workflow_dispatch:
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements.txt pytest playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Template and page regression
+        run: python -m pytest -q tests/test_ui_unslop.py
+      - name: Browser screenshots and keyboard interaction
+        run: python scripts/ui_visual_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interface-review
+          path: reports/ui-polish/

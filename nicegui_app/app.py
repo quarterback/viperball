@@ -54,7 +54,9 @@ APP_CSS = """
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background-color: var(--vb-bg);
         color: var(--vb-text);
+        font-variant-numeric: tabular-nums;
     }
+    .q-btn:focus-visible, a:focus-visible { outline: 2px solid var(--vb-accent); outline-offset: 2px; }
 
     /* ─── Ambient P5 Background ─── */
     #vb-ambient-bg {
@@ -90,6 +92,7 @@ APP_CSS = """
 
     /* ─── Dark theme overrides for Quasar components ─── */
     .q-card {
+        box-shadow: none !important;
         background: var(--vb-surface) !important;
         color: var(--vb-text) !important;
         border: 1px solid var(--vb-border) !important;
@@ -103,10 +106,10 @@ APP_CSS = """
     .q-table th {
         background: var(--vb-surface-2) !important;
         color: var(--vb-text-muted) !important;
-        font-weight: 700 !important;
-        font-size: 11px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        text-transform: none !important;
+        letter-spacing: 0 !important;
         border-bottom: 1px solid var(--vb-border) !important;
     }
     .q-table td {
@@ -175,7 +178,7 @@ APP_CSS = """
     }
 
     /* ─── Custom classes ─── */
-    .score-big { font-size: 2.8rem; font-weight: 800; text-align: center; line-height: 1; color: #fff; }
+    .score-big { font-size: 2.8rem; font-weight: 600; text-align: center; line-height: 1; color: #fff; }
     .team-name { font-size: 1.05rem; font-weight: 600; text-align: center; color: var(--vb-text-muted); }
     .drive-td { color: var(--vb-green); font-weight: 700; }
     .drive-kick { color: var(--vb-accent); font-weight: 700; }
@@ -490,8 +493,8 @@ def index():
                 "click", lambda: _switch_to("Home")
             ):
                 ui.icon("sports_football").classes("text-lg").style("color: var(--vb-accent);")
-                ui.label("VIPERBALL").classes("text-base font-black tracking-widest").style(
-                    "color: var(--vb-accent-bright); letter-spacing: 0.15em;"
+                ui.label("Viperball").classes("text-base font-semibold").style(
+                    "color: var(--vb-text);"
                 )
 
             # ── Nav buttons ─────────────────────────────────────

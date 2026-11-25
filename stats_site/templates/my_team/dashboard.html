@@ -48,23 +48,23 @@
 {% if nil %}
 <h2>NIL Budget Allocation</h2>
 <div class="grid-3" style="margin-bottom:16px;">
-  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Retention Pool</div>
-    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.retention_pool) }}</div>
-    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.retention_remaining) }} remaining</div>
-    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--accent);height:100%;width:{{ ((nil.retention_pool - nil.retention_remaining) / nil.retention_pool * 100) if nil.retention_pool > 0 else 0 }}%"></div></div>
+  <div class="quiet-panel">
+    <div class="label">Retention Pool</div>
+    <div class="figure">${{ "{:,.0f}".format(nil.retention_pool) }}</div>
+    <div class="detail">${{ "{:,.0f}".format(nil.retention_remaining) }} remaining</div>
+    <div class="meter"><div style="width:{{ ((nil.retention_pool - nil.retention_remaining) / nil.retention_pool * 100) if nil.retention_pool > 0 else 0 }}%"></div></div>
   </div>
-  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Portal Pool</div>
-    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.portal_pool) }}</div>
-    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.portal_remaining) }} remaining</div>
-    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--green);height:100%;width:{{ ((nil.portal_pool - nil.portal_remaining) / nil.portal_pool * 100) if nil.portal_pool > 0 else 0 }}%"></div></div>
+  <div class="quiet-panel">
+    <div class="label">Portal Pool</div>
+    <div class="figure">${{ "{:,.0f}".format(nil.portal_pool) }}</div>
+    <div class="detail">${{ "{:,.0f}".format(nil.portal_remaining) }} remaining</div>
+    <div class="meter"><div style="width:{{ ((nil.portal_pool - nil.portal_remaining) / nil.portal_pool * 100) if nil.portal_pool > 0 else 0 }}%"></div></div>
   </div>
-  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Recruiting Pool</div>
-    <div style="font-size:18px;font-weight:bold;color:var(--fg-bright);">${{ "{:,.0f}".format(nil.recruiting_pool) }}</div>
-    <div style="font-size:11px;color:var(--fg-dim);">${{ "{:,.0f}".format(nil.recruiting_remaining) }} remaining</div>
-    <div style="margin-top:4px;background:var(--border);height:4px;"><div style="background:var(--yellow);height:100%;width:{{ ((nil.recruiting_pool - nil.recruiting_remaining) / nil.recruiting_pool * 100) if nil.recruiting_pool > 0 else 0 }}%"></div></div>
+  <div class="quiet-panel">
+    <div class="label">Recruiting Pool</div>
+    <div class="figure">${{ "{:,.0f}".format(nil.recruiting_pool) }}</div>
+    <div class="detail">${{ "{:,.0f}".format(nil.recruiting_remaining) }} remaining</div>
+    <div class="meter"><div style="width:{{ ((nil.recruiting_pool - nil.recruiting_remaining) / nil.recruiting_pool * 100) if nil.recruiting_pool > 0 else 0 }}%"></div></div>
   </div>
 </div>
 {% endif %}
@@ -72,19 +72,19 @@
 {# ── Action Cards ── #}
 <h2>Offseason Actions</h2>
 <div class="grid-3" style="margin-bottom:24px;">
-  <a href="/stats/my-team/retention" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
-    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">1. Retention</div>
-    <div style="font-size:11px;color:var(--fg-dim);">{{ retention_count }} players at risk of leaving. Lock them down with NIL deals before they hit the portal.</div>
-    {% if retention_count > 0 %}<div style="margin-top:8px;font-size:11px;color:var(--red);">{{ retention_count }} at-risk players</div>{% endif %}
+  <a href="/stats/my-team/retention" class="task-link">
+    <div class="task-title">1. Retention</div>
+    <div class="detail">{{ retention_count }} players at risk of leaving. Offer NIL deals before they enter the portal.</div>
+    {% if retention_count > 0 %}<div style="margin-top:8px;font-size:12px;color:var(--red);">{{ retention_count }} at-risk players</div>{% endif %}
   </a>
-  <a href="/stats/my-team/portal" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
-    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">2. Transfer Portal</div>
-    <div style="font-size:11px;color:var(--fg-dim);">{{ portal_max_rounds }} rounds of competitive bidding. Compete against {{ (pos_counts.values()|list|length) }} CPU programs for portal talent.</div>
-    <div style="margin-top:8px;font-size:11px;color:var(--green);">Round {{ portal_round }}/{{ portal_max_rounds }} &middot; {{ transfer_cap }} transfer slots</div>
+  <a href="/stats/my-team/portal" class="task-link">
+    <div class="task-title">2. Transfer Portal</div>
+    <div class="detail">Bid on players across {{ portal_max_rounds }} portal rounds.</div>
+    <div style="margin-top:8px;font-size:13px;color:var(--fg-dim);">Round {{ portal_round }}/{{ portal_max_rounds }} &middot; {{ transfer_cap }} transfer slots</div>
   </a>
-  <a href="/stats/my-team/finalize" style="display:block;background:var(--bg-alt);border:1px solid var(--border);padding:16px;text-decoration:none;color:inherit;">
-    <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-bottom:4px;">3. Finalize &amp; Simulate</div>
-    <div style="font-size:11px;color:var(--fg-dim);">Lock in your roster and simulate the full season in one click. See standings, stats, and awards.</div>
+  <a href="/stats/my-team/finalize" class="task-link">
+    <div class="task-title">3. Finalize &amp; Simulate</div>
+    <div class="detail">Finalize the roster and simulate the season. View standings, statistics and awards.</div>
   </a>
 </div>
 
@@ -93,9 +93,9 @@
 <h2>Position Needs</h2>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
   {% for pos, need in position_gaps.items() %}
-  <div style="background:var(--bg-alt);border:1px solid var(--red);padding:6px 12px;">
-    <span style="font-size:11px;color:var(--red);font-weight:bold;">{{ pos }}</span>
-    <span style="font-size:10px;color:var(--fg-dim);margin-left:4px;">need {{ need }}</span>
+  <div style="background:var(--bg-alt);border:1px solid var(--border);padding:8px 12px;">
+    <span style="font-size:12px;color:var(--red);font-weight:bold;">{{ pos }}</span>
+    <span style="font-size:12px;color:var(--fg-dim);margin-left:4px;">need {{ need }}</span>
   </div>
   {% endfor %}
 </div>
@@ -121,14 +121,14 @@
     <td style="font-weight:bold;">{% if session_id %}<a href="/stats/college/{{ session_id }}/player/{{ team_name | urlencode }}/{{ p.name | urlencode }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}
       {% if p.awards %}
         {% for a in p.awards %}
-        <br><span style="font-size:9px;color:var(--yellow);">{{ a.award }} ({{ a.year }})</span>
+        <br><span style="font-size:12px;color:var(--yellow);">{{ a.award }} ({{ a.year }})</span>
         {% endfor %}
       {% endif %}
     </td>
-    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td><span class="tag tag-pos" style="font-size:12px;padding:1px 5px;">{{ p.position }}</span></td>
     <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% elif p.overall < 20 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
-    <td style="font-size:11px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:9px;">(last yr)</span>{% endif %}</td>
+    <td style="font-size:12px;">{{ p.year }}{% if p.year == "Senior" or p.year == "Graduate" %} <span style="color:var(--fg-dim);font-size:12px;">(last yr)</span>{% endif %}</td>
     <td class="num">{{ p.speed }}</td>
     <td class="num">{{ p.power }}</td>
     <td class="num">{{ p.agility }}</td>
@@ -139,7 +139,7 @@
     <td class="num">{{ p.career_games if p.career_games else "—" }}</td>
     <td class="num">{{ p.career_yards if p.career_yards else "—" }}</td>
     <td class="num">{{ p.career_tds if p.career_tds else "—" }}</td>
-    <td style="font-size:10px;color:var(--fg-dim);">
+    <td style="font-size:12px;color:var(--fg-dim);">
       {% if p.prev_team %}
         <span style="color:var(--accent);">Transfer from {{ p.prev_team }}</span>
       {% elif p.year == "Freshman" %}

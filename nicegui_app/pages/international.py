@@ -834,12 +834,12 @@ def _show_team_roster_dialog(nation_code: str):
             with ui.card().classes("w-full h-full overflow-auto p-0"):
                 # Header
                 with ui.element("div").classes("w-full").style(
-                    "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 24px 32px;"
+                    "background: var(--vb-surface-2); padding: 24px 32px;"
                 ):
                     with ui.row().classes("w-full items-center justify-between"):
                         with ui.column().classes("gap-0"):
                             ui.label(f"{nation_info.get('name', nation_code)} ({nation_code})").classes(
-                                "text-2xl font-bold text-white"
+                                "text-2xl font-semibold text-white"
                             )
                             ui.label(
                                 f"Tier: {nation_info.get('tier', '?').title()} | "
@@ -1147,12 +1147,12 @@ def _show_fiv_box_score_dialog(match_data: dict):
         with ui.card().classes("w-full h-full overflow-auto p-0"):
             # ── Dark gradient header (NVL style) ──
             with ui.element("div").classes("w-full").style(
-                "background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 24px 32px;"
+                "background: var(--vb-surface-2); padding: 24px 32px;"
             ):
                 with ui.row().classes("w-full items-center justify-between"):
                     with ui.column().classes("gap-0"):
                         ui.label(f"{away_name} @ {home_name}").classes(
-                            "text-2xl font-bold text-white"
+                            "text-2xl font-semibold text-white"
                         )
                         comp = match_data.get("competition", "").replace("_", " ").title()
                         stage = match_data.get("stage", "").replace("_", " ").title()

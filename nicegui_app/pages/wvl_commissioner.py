@@ -98,10 +98,10 @@ def render_commissioner_section():
 def _render_setup():
     with ui.element("div").classes("w-full max-w-2xl mx-auto"):
         with ui.element("div").classes("w-full").style(
-            "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); "
+            "background: var(--vb-surface-2); "
             "padding: 32px; border-radius: 12px; margin-bottom: 24px;"
         ):
-            ui.label("WVL Commissioner Mode").classes("text-3xl font-bold text-white")
+            ui.label("WVL Commissioner Mode").classes("text-3xl font-semibold text-white")
             ui.label(
                 "Run the entire Women's Viperball League. "
                 "Simulate seasons, track careers, manage the Hall of Fame."
@@ -148,7 +148,7 @@ def _render_dashboard(dynasty: WVLCommissionerDynasty):
 
     # Header
     with ui.element("div").classes("w-full").style(
-        "background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); "
+        "background: var(--vb-surface-2); "
         "padding: 20px 24px; border-radius: 8px; margin-bottom: 16px;"
     ):
         with ui.row().classes("w-full items-center justify-between"):
@@ -613,10 +613,10 @@ def _show_career_card(record, dynasty):
 
 def _render_hof_tab(dynasty: WVLCommissionerDynasty):
     with ui.element("div").classes("w-full").style(
-        "background: linear-gradient(135deg, #92400e 0%, #d97706 100%); "
+        "background: var(--vb-surface-2); "
         "padding: 20px 24px; border-radius: 8px; margin-bottom: 16px;"
     ):
-        ui.label("Hall of Fame").classes("text-2xl font-bold text-white")
+        ui.label("Hall of Fame").classes("text-2xl font-semibold text-white")
         ui.label("Permanent player cards — these survive refreshes and resets.").classes("text-sm text-amber-100")
 
     entries = dynasty.hall_of_fame.get_inductees(sort_by="year")

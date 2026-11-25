@@ -11,28 +11,25 @@
 <style>
 .bracket { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0 16px; -webkit-overflow-scrolling: touch; }
 .bracket-round { min-width: 220px; flex-shrink: 0; }
-.bracket-round-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
+.bracket-round-label { font-size:12px; text-transform:none; letter-spacing:0; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
 .matchup { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg-alt); }
 .matchup.championship { border-color: var(--yellow); }
-.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size: 11px; }
+.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size:12px; }
 .matchup-team + .matchup-team { border-top: 1px solid var(--border); }
 .matchup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .matchup-score { font-variant-numeric: tabular-nums; flex-shrink: 0; width: 32px; text-align: right; }
 .matchup-winner { color: var(--fg-bright); font-weight: bold; }
 .matchup-loser { color: var(--fg-dim); }
-.matchup-bye { color: var(--fg-dim); font-style: italic; padding: 4px 8px; font-size: 11px; }
+.matchup-bye { color: var(--fg-dim); font-style:normal; padding: 4px 8px; font-size:12px; }
 .matchup-owner { border-left: 3px solid var(--yellow); }
 .champion-banner { padding: 12px 16px; border: 2px solid var(--yellow); background: var(--bg-alt); margin-bottom: 16px; text-align: center; }
-.champion-banner .label { font-size: 10px; color: var(--yellow); text-transform: uppercase; letter-spacing: 1px; }
+.champion-banner .label { font-size:12px; color: var(--yellow); text-transform:none; letter-spacing:0; }
 .champion-banner .name { font-size: 18px; font-weight: bold; color: var(--fg-bright); margin-top: 2px; }
 .achievement-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.achievement-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px; border-radius: 4px; }
-.achievement-champion { background: #78350f; color: #fbbf24; border: 1px solid #fbbf24; font-weight: bold; }
-.achievement-finalist { background: #1e293b; color: #94a3b8; border: 1px solid #64748b; font-weight: bold; }
-.achievement-semifinalist { background: #451a03; color: #d97706; border: 1px solid #92400e; }
-.achievement-quarterfinalist { background: #1e293b; color: #64748b; border: 1px solid #475569; }
-.achievement-qualifier { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
-.achievement-owner { box-shadow: 0 0 0 2px var(--yellow); }
+.achievement-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size:12px; border-radius: 4px; }
+.achievement-champion { background:var(--bg-alt); color:var(--yellow); border:1px solid var(--yellow); font-weight:600; }
+.achievement-finalist, .achievement-semifinalist, .achievement-quarterfinalist, .achievement-qualifier { background:var(--bg-alt); color:var(--fg); border:1px solid var(--border); }
+.achievement-owner { border-left:3px solid var(--accent); }
 @media (max-width: 768px) {
   .bracket { gap: 12px; }
   .bracket-round { min-width: 180px; }
@@ -40,7 +37,7 @@
 </style>
 
 <div class="page-header">
-  <h1>PLAYOFFS</h1>
+  <h1>Playoffs</h1>
   <div class="subtitle">{{ dynasty_name }} &mdash; Year {{ year }}</div>
 </div>
 
@@ -104,7 +101,7 @@
     </div>
     {% endfor %}
     {% if rnd.bye_teams %}
-    <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">
+    <div style="font-size:12px;color:var(--fg-dim);margin-top:4px;">
       Bye: {% for bt in rnd.bye_teams %}{{ bt.team_name }}{% if not loop.last %}, {% endif %}{% endfor %}
     </div>
     {% endif %}

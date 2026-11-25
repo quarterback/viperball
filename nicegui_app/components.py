@@ -48,15 +48,13 @@ def metric_card(label: str, value, delta: str = "", icon: str = ""):
     """Render a KPI metric card with optional icon and delta."""
     with ui.card().classes("p-3 min-w-[100px] flex-1").style(
         "background: var(--vb-surface, #1a1a2e); border: 1px solid var(--vb-border, #2a2a4a); "
-        "border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"
+        "border-radius: 8px; box-shadow: none;"
     ):
         with ui.row().classes("items-center gap-2"):
-            if icon:
-                ui.icon(icon).classes("text-sm").style("color: #94a3b8;")
-            ui.label(label).classes("text-[11px] font-semibold uppercase tracking-wider").style("color: #94a3b8;")
-        ui.label(str(value)).classes("text-xl sm:text-2xl font-extrabold mt-0.5").style("color: var(--vb-text, #e2e8f0); line-height: 1.2;")
+            ui.label(label).classes("text-xs font-medium").style("color: var(--vb-text-muted);")
+        ui.label(str(value)).classes("text-xl sm:text-2xl font-semibold mt-0.5").style("color: var(--vb-text, #e2e8f0); line-height: 1.2;")
         if delta:
-            ui.label(delta).classes("text-xs mt-0.5").style("color: #64748b;")
+            ui.label(delta).classes("text-xs mt-0.5").style("color: var(--vb-text-muted);")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -67,7 +65,7 @@ def score_display(team_name: str, score):
     """Render a big score display for game results."""
     with ui.column().classes("items-center"):
         ui.label(team_name).classes("text-base font-semibold").style("color: var(--vb-text-muted, #94a3b8);")
-        ui.label(str(score)).classes("text-5xl font-extrabold").style("color: var(--vb-text, #e2e8f0); line-height: 1;")
+        ui.label(str(score)).classes("text-5xl font-semibold").style("color: var(--vb-text, #e2e8f0); line-height: 1;")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -126,9 +124,9 @@ def stat_table(rows: list[dict], columns: Optional[list[str]] = None,
             _TABLE_STYLE_CSS = """
             <style>
                 .vb-stat-table .q-table th {
-                    background: var(--vb-surface-alt, #f8fafc);
+                    background: var(--vb-surface-2);
                     font-weight: 700; font-size: 11px;
-                    text-transform: uppercase; letter-spacing: 0.05em;
+                    text-transform: none; letter-spacing: 0;
                     color: var(--vb-text-muted, #64748b);
                 }
                 .vb-stat-table .q-table td { font-size: 13px; }
@@ -240,10 +238,10 @@ def section_header(title: str, subtitle: str = "", icon: str = ""):
     """Render a consistent section header with optional icon and subtitle."""
     with ui.row().classes("items-center gap-2 mb-1"):
         if icon:
-            ui.icon(icon).classes("text-2xl").style("color: #6366f1;")
-        ui.label(title).classes("text-2xl font-extrabold").style("color: var(--vb-text, #e2e8f0);")
+            ui.icon(icon).classes("text-2xl").style("color: var(--vb-text-muted);")
+        ui.label(title).classes("text-2xl font-semibold").style("color: var(--vb-text, #e2e8f0);")
     if subtitle:
-        ui.label(subtitle).classes("text-sm mb-4").style("color: #64748b;")
+        ui.label(subtitle).classes("text-sm mb-4").style("color: var(--vb-text-muted);")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -254,7 +252,7 @@ def empty_state(message: str, icon: str = "inbox", action_label: str = "", on_ac
     """Render a centered empty-state placeholder."""
     with ui.column().classes("w-full items-center py-12"):
         ui.icon(icon).classes("text-6xl").style("color: #cbd5e1;")
-        ui.label(message).classes("text-base mt-3").style("color: #94a3b8;")
+        ui.label(message).classes("text-base mt-3").style("color: var(--vb-text-muted);")
         if action_label and on_action:
             ui.button(action_label, on_click=on_action).props("no-caps color=indigo outline").classes("mt-4")
 
@@ -413,14 +411,14 @@ def render_rating_badges(ratings: dict, attrs: list | None = None):
                 "flex flex-col items-center px-1.5 py-0.5 rounded"
             ).style(f"background:{bg}; color:{fg}; border:1px solid {bd}; min-width:42px;"):
                 ui.label(abbr).classes("text-[9px] font-bold leading-tight")
-                ui.label(str(val)).classes("text-xs font-extrabold leading-tight")
+                ui.label(str(val)).classes("text-xs font-semibold leading-tight")
 
 
 def render_ovr_display(ovr: int):
     """Render the large OVR number with color coding."""
     ovr_color = "#16a34a" if ovr >= 85 else ("#d97706" if ovr >= 75 else "#64748b")
     ui.label("OVR").classes("text-[10px] font-bold text-slate-400 mb-0")
-    ui.label(str(ovr)).classes("text-4xl font-extrabold mb-2").style(
+    ui.label(str(ovr)).classes("text-4xl font-semibold mb-2").style(
         f"color:{ovr_color}; line-height:1;"
     )
 
