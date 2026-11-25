@@ -1,0 +1,71 @@
+{# Shared discipline panel. The summary is authoritative; historical games may lack it. #}
+{% set discipline_available = 'player_discipline' in fr and 'ejections' in fr %}
+{% set discipline_stats = fr.get('stats', {}) %}
+{% set da = discipline_stats.get('away', {}) %}
+{% set dh = discipline_stats.get('home', {}) %}
+{% if discipline_available or 'penalties' in da or 'penalties' in dh %}
+<section aria-labelledby="discipline-heading">
+<h2 id="discipline-heading">Penalties &amp; Discipline</h2>
+<div style="overflow-x:auto">
+<table>
+  <thead><tr><th scope="col">Away — {{ game.away_team }}</th><th scope="col">Statistic</th><th scope="col">Home — {{ game.home_team }}</th></tr></thead>
+  <tbody>
+    {% for key, label in [('penalties','Accepted penalties'), ('penalty_yards','Penalty yards'), ('penalties_declined','Declined penalties')] %}
+    <tr><td class="num">{{ da.get(key, '—') }}</td><th scope="row">{{ label }}</th><td class="num">{{ dh.get(key, '—') }}</td></tr>
+    {% endfor %}
+    {% if discipline_available %}
+    <tr><td class="num">{{ da.get('unsportsmanlike_fouls', '—') }}</td><th scope="row">Qualifying unsportsmanlike fouls</th><td class="num">{{ dh.get('unsportsmanlike_fouls', '—') }}</td></tr>
+    <tr><td class="num{% if da.get('ejections', 0) %} stat-bad{% endif %}">{{ da.get('ejections', '—') }}</td><th scope="row">Ejections</th><td class="num{% if dh.get('ejections', 0) %} stat-bad{% endif %}">{{ dh.get('ejections', '—') }}</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+</div>
+{% if discipline_available %}
+{% set events = fr.get('ejections') or [] %}
+{% if events %}
+<h3>Ejections ({{ events|length }})</h3>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Period / time</th><th>Team</th><th>Player</th><th>Foul / reason</th><th>Yardage ruling</th><th>Replacement</th></tr></thead>
+<tbody>
+{% for e in events %}
+<tr>
+<td>{% if e.quarter > 4 %}OT{{ e.quarter - 4 }}{% else %}Q{{ e.quarter }}{% endif %} {{ '%d:%02d'|format(e.time_remaining // 60, e.time_remaining % 60) }}</td>
+<td>{{ game.away_team if e.side == 'away' else game.home_team }}</td>
+<td><span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span> {{ e.tag }} {% if oneoff %}{{ e.player }}{% else %}<a href="/stats/college/{{ session_id }}/player/{{ game.away_team if e.side == 'away' else game.home_team }}/{{ e.player }}">{{ e.player }}</a>{% endif %}</td>
+<td>{{ e.foul }}{% if e.reason != e.foul %} — {{ e.reason }}{% endif %}</td>
+<td>{{ 'Declined' if e.declined else 'Accepted' }}</td>
+<td>{{ e.substitute or 'Not recorded' }}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+</div>
+{% else %}<p style="color:var(--fg-dim)">No ejections.</p>{% endif %}
+{% set at = da.get('penalties_by_type') or {} %}
+{% set ht = dh.get('penalties_by_type') or {} %}
+{% set kinds = (at.keys()|list + ht.keys()|list)|unique|sort %}
+{% if kinds %}
+<details><summary>Accepted penalties by type</summary>
+<table><thead><tr><th>Away</th><th>Foul</th><th>Home</th></tr></thead><tbody>
+{% for kind in kinds %}<tr><td class="num">{{ at.get(kind, 0) }}</td><th scope="row">{{ kind }}</th><td class="num">{{ ht.get(kind, 0) }}</td></tr>{% endfor %}
+</tbody></table></details>
+{% endif %}
+{% set pd = fr.get('player_discipline') or {} %}
+{% if pd.get('away') or pd.get('home') %}
+<details><summary>Player disciplinary record</summary>
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Team</th><th>Player</th><th class="num">Flags</th><th class="num">Accepted</th><th class="num">Unsportsmanlike</th><th>Status</th></tr></thead>
+<tbody>
+{% for side, team_name in [('away', game.away_team), ('home', game.home_team)] %}
+{% for d in pd.get(side, [])|sort(attribute='flags', reverse=true) %}
+<tr><td>{{ team_name }}</td><td>{{ d.tag }} {{ d.player }}</td><td class="num">{{ d.flags }}</td><td class="num">{{ d.accepted }}</td><td class="num">{{ d.unsportsmanlike }}</td><td>{% if d.ejected %}<strong class="stat-bad">Ejected</strong>{% elif d.unsportsmanlike == 1 %}One conduct foul{% else %}—{% endif %}</td></tr>
+{% endfor %}
+{% endfor %}
+</tbody></table></div></details>
+{% endif %}
+<p style="font-size:12px;color:var(--fg-dim)">Counts are charged to the offending team. Ejections stand even when penalty yardage is declined. Player records exclude team-only or unattributed flags.</p>
+{% else %}
+<p style="font-size:12px;color:var(--fg-dim)">Player discipline and ejection records are unavailable for this game.</p>
+{% endif %}
+</section>
+{% endif %}

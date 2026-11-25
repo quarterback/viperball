@@ -628,7 +628,7 @@
   {% endif %}
 
   {# ── Turnovers & Discipline ── #}
-  {{ section_header('TURNOVERS & DISCIPLINE') }}
+  {{ section_header('TURNOVERS') }}
   {{ stat_row('Fumbles Lost', 'fumbles_lost') }}
   {{ stat_row('Turnovers on Downs', 'turnovers_on_downs') }}
   {% if as_.get('kick_pass_interceptions') or hs.get('kick_pass_interceptions') %}
@@ -644,14 +644,6 @@
     <td class="num {% if hm.get('to_margin', 0) > 0 %}stat-good{% elif hm.get('to_margin', 0) < 0 %}stat-bad{% endif %}">{{ '%+d'|format(hm.get('to_margin', 0)) }}</td>
   </tr>
   {% endif %}
-  {% if as_.get('penalties') is not none or hs.get('penalties') is not none %}
-  <tr>
-    <td class="num {% if as_.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ as_.get('penalties', 0) }} ({{ as_.get('penalty_yards', 0)|round(0)|int }} yds)</td>
-    <td>Penalties (Yards)</td>
-    <td class="num {% if hs.get('penalties', 0) >= 8 %}stat-bad{% endif %}">{{ hs.get('penalties', 0) }} ({{ hs.get('penalty_yards', 0)|round(0)|int }} yds)</td>
-  </tr>
-  {% endif %}
-
   {# ── Timeouts ── #}
   {% if as_.get('timeouts_used') is not none or hs.get('timeouts_used') is not none %}
   {{ section_header('TIMEOUTS') }}
@@ -862,6 +854,8 @@
 </table>
 {% endif %}
 
+{% include "_game_discipline.html" %}
+
 {# ══════════════════════════════════════════════════════════
    PLAYER STATS — Offense, Defense, Special Teams
    ══════════════════════════════════════════════════════════ #}
@@ -894,7 +888,7 @@
   {% for p in off_players|sort(attribute='yards', reverse=true) %}
   <tr>
     <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
-    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a>{% if p.get('ejected') %} <span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span>{% endif %}</td>
     <td class="num">{{ p.get('touches', 0) }}</td>
     <td class="num {% if p.get('yards', 0) >= 100 %}stat-elite{% elif p.get('yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('yards', 0) }}</td>
     <td class="num {% if p.get('all_purpose_yards', 0) >= 120 %}stat-elite{% elif p.get('all_purpose_yards', 0) >= 75 %}stat-good{% endif %}">{{ p.get('all_purpose_yards', 0) }}</td>
@@ -926,7 +920,7 @@
   <tbody>
   {% for p in kp_throwers|sort(attribute='kick_passes_thrown', reverse=true) %}
   <tr>
-    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a>{% if p.get('ejected') %} <span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span>{% endif %}</td>
     <td class="num">{{ p.get('kick_passes_thrown', 0) }}</td>
     <td class="num">{{ p.get('kick_passes_completed', 0) }}</td>
     <td class="num {% if p.get('kick_passes_thrown', 0) > 0 and (p.get('kick_passes_completed', 0) / p.get('kick_passes_thrown', 1) * 100) >= 70 %}stat-good{% endif %}">{% if p.get('kick_passes_thrown', 0) > 0 %}{{ '%.0f'|format(p.get('kick_passes_completed', 0) / p.get('kick_passes_thrown', 1) * 100) }}%{% else %}&mdash;{% endif %}</td>
@@ -953,7 +947,7 @@
   <tbody>
   {% for p in kp_receivers|sort(attribute='kick_pass_yards', reverse=true) %}
   <tr>
-    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a>{% if p.get('ejected') %} <span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span>{% endif %}</td>
     <td class="num">{{ p.get('kick_pass_receptions', 0) }}</td>
     <td class="num {% if p.get('kick_pass_yards', 0) >= 50 %}stat-good{% endif %}">{{ p.get('kick_pass_yards', 0) }}</td>
     <td class="num">{% if p.get('kick_pass_receptions', 0) > 0 %}{{ '%.1f'|format(p.get('kick_pass_yards', 0) / p.get('kick_pass_receptions', 1)) }}{% else %}&mdash;{% endif %}</td>
@@ -986,7 +980,7 @@
   {% for p in def_players|sort(attribute='tackles', reverse=true) %}
   <tr>
     <td><span class="tag tag-pos">{{ p.get('tag', '??') }}</span></td>
-    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a>{% if p.get('ejected') %} <span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span>{% endif %}</td>
     <td class="num {% if p.get('tackles', 0) >= 8 %}stat-elite{% elif p.get('tackles', 0) >= 5 %}stat-good{% endif %}">{{ p.get('tackles', 0) }}</td>
     <td class="num {% if p.get('tfl', 0) > 0 %}stat-good{% endif %}">{{ p.get('tfl', 0) }}</td>
     <td class="num {% if p.get('sacks', 0) > 0 %}stat-elite{% endif %}">{{ p.get('sacks', 0) }}</td>
@@ -1027,7 +1021,7 @@
   <tbody>
   {% for p in st_players|sort(attribute='kick_att', reverse=true) %}
   <tr>
-    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a></td>
+    <td>{% if p.get('face_src') %}<img class="face" src="{{ p.face_src }}" alt="">{% endif %}<a href="/stats/college/{{ session_id }}/player/{{ team_name_display }}/{{ p.get('name', '') }}">{{ p.get('name', '?') }}</a>{% if p.get('ejected') %} <span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span>{% endif %}</td>
     <td class="num">{% if p.get('dk_att', 0) > 0 %}{{ p.get('dk_made', 0) }}/{{ p.get('dk_att', 0) }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{% if p.get('pk_att', 0) > 0 %}{{ p.get('pk_made', 0) }}/{{ p.get('pk_att', 0) }}{% else %}&mdash;{% endif %}</td>
     <td class="num">{{ p.get('kick_returns', 0) }}</td>
@@ -1136,7 +1130,7 @@
     <td class="num {% if p.yards is defined and p.yards >= 20 %}stat-good{% elif p.yards is defined and p.yards < 0 %}stat-bad{% endif %}">{{ p.yards|round(0)|int if p.yards is defined else '—' }}</td>
     <td class="num {% if p.epa is defined and p.epa > 2 %}stat-good{% elif p.epa is defined and p.epa < -2 %}stat-bad{% endif %}">{{ '%.1f'|format(p.epa) if p.epa is defined and p.epa is not none else '—' }}</td>
     <td style="white-space:normal;max-width:400px;{% if is_score %}color:var(--yellow);font-weight:bold{% elif is_turnover %}color:var(--red){% elif is_penalty %}color:var(--fg-dim){% endif %}">
-      {{ p.description if p.description else '—' }}
+      {% if p.get('penalty', {}) and p.penalty.get('ejection') %}<span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span> {% endif %}{{ p.description if p.description else '—' }}
     </td>
   </tr>
   {% endfor %}

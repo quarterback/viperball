@@ -1557,6 +1557,21 @@ function copyBoxScore(btn) {
     }
   });
 
+  /* Discipline lives in a semantic section, including collapsed detail tables. */
+  var discipline = document.querySelector('section[aria-labelledby="discipline-heading"]');
+  if (discipline) {
+    discipline.querySelectorAll('h2, h3, summary, table, p').forEach(function(el) {
+      if (el.tagName === 'TABLE') {
+        var tableText = tableToText(el);
+        if (tableText) lines.push(tableText, '');
+      } else if (el.tagName === 'P') {
+        lines.push(el.textContent.trim(), '');
+      } else {
+        lines.push('--- ' + el.textContent.trim() + ' ---');
+      }
+    });
+  }
+
   var text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   navigator.clipboard.writeText(text).then(function() {
     btn.textContent = 'Copied!';
