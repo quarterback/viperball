@@ -14,7 +14,7 @@ VIEWS = {
     "overview":"Overview", "players":"Players", "teams":"Teams", "scoring":"Scoring",
     "expected":"Expected points", "decisions":"Decision value", "delta":"Delta & bonus",
     "dtw":"Deserve to Win", "plays":"Play finder", "drives":"Drive finder",
-    "compare":"Compare", "glossary":"Glossary",
+    "compare":"Team compare", "player_compare":"Player compare", "glossary":"Glossary",
 }
 ZONES = ("Own 1–19","Own 20–39","40–59","Opp 40–21","Opp 20–1")
 ACTIONS = ("continue","drop_kick","place_kick","punt")
@@ -31,7 +31,7 @@ COLS = {
     "decisions":[("team","Team"),("action","Action"),("n","Decisions"),("supported","Compared"),
                  ("coverage","Support %"),("value","Obs. value"),("above","Above continue"),("above_n","Ref n"),("regret","Regret")],
     "delta":[("team","Team"),("bucket","Context"),("drives","Drives"),("points","Drive pts"),
-             ("ppd","PPD"),("score_pct","TD/kick %"),("value_n","Model n"),("eligible","Eligible"),
+             ("ppd","PPD"),("score_pct","TD/kick %"),("delta_n","Delta n"),("delta_eligible","Delta eligible"),("bonus_n","Bonus n"),("bonus_eligible","Bonus eligible"),
              ("delta_value","Delta value"),("bonus_value","Bonus context")],
     "dtw":[("team","Team"),("games","G"),("wins","Wins"),("xwins","DTW xW"),("luck","W−xW"),
            ("upsets","Upsets won"),("raw","Raw edge"),("delta_edge","Delta edge"),("bonus_edge","Bonus edge"),
@@ -173,6 +173,8 @@ def heldout_model(g,training):
 
 
 def play_matches(row,filters):
+    if filters.get("q") and row.get("description") is not None:
+        if filters["q"].casefold() not in " ".join(str(row.get(k,"")) for k in ("team","opponent","description","result")).casefold():return False
     for key in ("down","quarter","zone","action","result","margin","bucket"):
         if filters.get(key) not in (None,"") and str(row.get(key))!=str(filters[key]):return False
     return True
@@ -232,7 +234,9 @@ def drive_rows(g,contract,training,filters,conferences):
              "quarter":d.get("quarter"),"field":d.get("start_yard_line"),"zone":zone(d.get("start_yard_line")),
              "bucket":bucket,"origin":d.get("possession_origin"),"plays":d.get("plays"),"yards":d.get("yards"),
              "result":d.get("result"),"points":d.get("offensive_points"),"expected":None,"delta_value":None,"bonus_value":None,
-             "td_or_kick":scored if ev else None,"context_eligible":bool(new_possession and (s.get("origin")=="score_restart" or s.get("bonus_active") or s.get("bonus_recipient") in ("home","away")))}
+             "td_or_kick":scored if ev else None,
+             "delta_eligible":bool(new_possession and s.get("origin")=="score_restart"),
+             "bonus_eligible":bool(new_possession and (s.get("bonus_active") or s.get("bonus_recipient") in ("home","away")))}
         if s:
             diff=(s["home_score"]-s["away_score"])*(1 if side=="home" else -1)
             row["margin"]="leading" if diff>0 else "trailing" if diff<0 else "tied"
@@ -240,11 +244,11 @@ def drive_rows(g,contract,training,filters,conferences):
         if model and s:
             val=estimate(model,s)
             row["expected"]=round(val["value"],3) if val else None
-            if row["context_eligible"]:
-                de=context_decomposition(model,s,contract.get("restart_baseline"),s.get("origin")=="score_restart")
+            if row["delta_eligible"] or row["bonus_eligible"]:
+                de=context_decomposition(model,s,contract.get("restart_baseline"),row["delta_eligible"])
                 if de:
-                    row["delta_value"]=round(de["delta"],3)
-                    row["bonus_value"]=round(de["bonus_context"],3)
+                    if row["delta_eligible"]:row["delta_value"]=round(de["delta"],3)
+                    if row["bonus_eligible"]:row["bonus_value"]=round(de["bonus_context"],3)
         yield row
 
 
@@ -278,9 +282,11 @@ def build_report(games,view,filters,conferences,training=None):
                     b["audited"]+=1;b["points"]+=d["points"]
                     if d["td_or_kick"] is not None:
                         b["incidence_n"]+=1;b["scores"]+=int(d["td_or_kick"])
-                b["eligible"]+=int(d["context_eligible"])
+                b["delta_eligible"]+=int(d["delta_eligible"]);b["bonus_eligible"]+=int(d["bonus_eligible"])
                 if d["delta_value"] is not None:
-                    b["value_n"]+=1;b["delta_value"]+=d["delta_value"];b["bonus_value"]+=d["bonus_value"]
+                    b["delta_n"]+=1;b["delta_value"]+=d["delta_value"]
+                if d["bonus_value"] is not None:
+                    b["bonus_n"]+=1;b["bonus_value"]+=d["bonus_value"]
             continue
         if view in ("expected","decisions"):
             if not contract:continue
@@ -366,8 +372,9 @@ def build_report(games,view,filters,conferences,training=None):
         elif view=="delta":
             rows.append({"team":team,"bucket":key[1],"drives":b["drives"],"points":b["points"] if b["audited"] else None,
                          "ppd":ratio(b["points"],b["audited"]),"score_pct":ratio(b["scores"],b["incidence_n"],100),
-                         "eligible":b["eligible"],"value_n":b["value_n"],"delta_value":ratio(b["delta_value"],b["value_n"]),
-                         "bonus_value":ratio(b["bonus_value"],b["value_n"])})
+                         "delta_eligible":b["delta_eligible"],"delta_n":b["delta_n"],
+                         "bonus_eligible":b["bonus_eligible"],"bonus_n":b["bonus_n"],
+                         "delta_value":ratio(b["delta_value"],b["delta_n"]),"bonus_value":ratio(b["bonus_value"],b["bonus_n"])})
         elif view=="dtw":
             rows.append({"team":team,"games":b["games"],"wins":b["wins"],"xwins":round(b["xwins"],2),"luck":round(b["wins"]-b["xwins"],2),
                          "upsets":b["upsets"],"raw":ratio(b["raw"],b["games"]),"delta_edge":ratio(b["delta_edge"],b["games"]),"bonus_edge":ratio(b["bonus_edge"],b["games"]),
@@ -399,16 +406,49 @@ def comparison(rows,selected):
     """Peer percentiles with explicit direction and minimum peer count."""
     result=[]
     for key,label,lower in (("ppg","Points/game",False),("papg","Points allowed/game",True),("ppd","Offensive PPD",False),
-                           ("opp_ppd","Opponent PPD",True),("turnover_margin","Turnover margin",False),("kick_pct","Kick accuracy",False)):
-        peers=[r[key] for r in rows if r.get(key) is not None]
+                           ("opp_ppd","Opponent PPD",True),("turnover_margin","Turnover margin/game",False),("kick_pct","Kick accuracy",False)):
+        def value(r):
+            return ratio(r.get(key,0),r.get("games",0)) if key=="turnover_margin" and r.get(key) is not None else r.get(key)
+        peers=[value(r) for r in rows if value(r) is not None]
         values=[]
         for name in selected:
             row=next((r for r in rows if r["team"]==name),{})
-            v=row.get(key)
+            v=value(row)
             percentile=None
             if v is not None and len(peers)>=3:
                 better=sum(x>v if lower else x<v for x in peers);equal=sum(x==v for x in peers)
                 percentile=round(100*(better+.5*equal)/len(peers))
             values.append({"team":name,"value":v,"percentile":percentile})
         result.append({"metric":label,"peers":len(peers),"values":values})
+    return result
+
+
+def player_compare(rows, selected):
+    """Position-matched percentile comparisons, with metric-specific eligibility."""
+    from json import dumps
+    identities={dumps([p["team"],p["name"]],ensure_ascii=False,separators=(",",":")):p for p in rows}
+    chosen=[identities[x] for x in selected if x in identities][:4]
+    metrics=[
+        ("war","WAR",lambda p:p.get("touches",0)>=5),
+        ("yards_per_touch","Yards/touch",lambda p:p.get("touches",0)>=10),
+        ("wpa_per_play","Legacy WPA/play",lambda p:p.get("plays_involved",0)>=10),
+        ("zbr","Zeroback rating",lambda p:p.get("zbr",0)>0),
+        ("vpr","Viper rating",lambda p:p.get("vpr",0)>0),
+        ("tackles","Tackles",lambda p:p.get("games_played",0)>0),
+        ("sacks","Sacks",lambda p:p.get("games_played",0)>0),
+        ("kick_accuracy","Kick accuracy",lambda p:p.get("kick_att",0)>=5),
+    ]
+    def value(p,key,qualifies):
+        if not qualifies(p):return None
+        if key=="kick_accuracy":return ratio(p.get("kick_made",0),p["kick_att"],100)
+        return safe_number(p.get(key))
+    result=[]
+    for key,label,qualifies in metrics:
+        vals=[]
+        for p in chosen:
+            peers=[v for r in rows if r.get("position")==p.get("position") and (v:=value(r,key,qualifies)) is not None]
+            v=value(p,key,qualifies)
+            pct=round(100*(sum(x<v for x in peers)+.5*sum(x==v for x in peers))/len(peers)) if v is not None and len(peers)>=3 else None
+            vals.append({"team":p["name"]+" · "+p["team"],"value":v,"percentile":pct,"peers":len(peers)})
+        result.append({"metric":label,"values":vals,"peers":None})
     return result
