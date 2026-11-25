@@ -1,6 +1,33 @@
 # Viperball
 
-**A collegiate dynasty simulator for a sport that never existed — and plays like nothing you've seen.**
+Viperball is a fictional gridiron sport and a playable sports simulation universe. Manage a women's college program across generations, follow professional and international competitions, or study the game through its play-by-play and analytics.
+
+## Start playing
+
+```sh
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python main.py
+```
+
+Open [http://localhost:5000/stats/](http://localhost:5000/stats/). Use College or Dynasty to start a season or career. The stats site is the main interface for league play and management; the Python application also retains NiceGUI pages. No Node/React build or desktop GUI launcher is required.
+
+- [Quick start](QUICKSTART.md) — installation, first season, saves and analytics.
+- [Game modes and features](FEATURES.md) — the college, high-school, professional, WVL and international systems.
+- [Full rulebook](RULES.md) and [CVL competition rules](COLLEGE_RULES.md) — the sport and league regulations.
+- [Analytics](ANALYTICS.md) — the portal, formulas, scoring and model limitations.
+- [Coaching](COACHING_SPEC.md) and [tactical schools](docs/OFFENSE_SCHEMAS.md) — game plans, staff and careers.
+- [Engine](ENGINE_README.md), [application architecture](ARCHITECTURE_STATS_SITE_AND_RECRUITING.md) and [stats-site guide](docs/stats-site.md) — for developers.
+- [Documentation index](docs/README.md) and [current development plan](docs/DEVELOPMENT_PLAN.md) — current references and unresolved validation.
+
+## The simulation today
+
+The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
+
+The college Analytics tab opens thirteen views including player and team leaderboards, all scoring channels, expected points, decision value, Delta and bonus context, DTW, play and drive finders, comparisons and a glossary. Group plays by school, down or field zone; inspect individual records and export CSV. State-value and decision estimates are experimental and use supported held-out observations. The existing published EPA and DTW remain separate.
+
+**Documentation status:** November 25, 2026, after PR #386. Features described here are in the repository; this is not proof that the hosted deployment is current or that every new model passed national validation. See the development plan for remaining work.
 
 ---
 
@@ -37,8 +64,9 @@ The sport evolved from early American football's pre-forward-pass era, retaining
 17. [Overtime](#overtime)
 18. [Weather](#weather)
 19. [Game Day](#game-day)
-20. [Roster and Substitution Rules](#roster-and-substitution-rules)
-21. [Glossary](#glossary)
+20. [Coaching Staffs and Team Installation](#coaching-staffs-and-team-installation)
+21. [Roster and Substitution Rules](#roster-and-substitution-rules)
+22. [Glossary](#glossary)
 
 ---
 
@@ -587,10 +615,12 @@ A program also has its own installation: what its players have actually learned.
 - **Coaching trees.** A new coordinator who worked under the current head coach, or under the same head coach as the coordinator she replaces, starts 0.25 higher. One who reads the book the same way as her predecessor starts 0.20 higher, up to 0.85 in all. A coach promoted from the same staff keeps at least 0.70.
 - **Old habits.** When a coordinator leaves, a trace of her tendencies stays with the program and fades over the next season or two.
 - **Base book.** Switching offensive or defensive books resets the team's familiarity with the book to 0.35, which trims how much of the coordinator's signature shows until it is learned.
-- **Packages.** Each coordinator installs up to two packages from the playbook catalog (`data/playbooks`) that fit her preferences, the team's book and its roster, up to four per side. A package nudges play calls toward its formations and plays only in its own situations, such as Heavy Push in short yardage, and only as much as the team knows it. Packages tied to drive starts or a tired defense wait until the engine reports those.
-- **Defense.** Defensive installation is recorded the same way, and its game effect comes with the defensive coordinator identity work.
+- **Packages.** Each coordinator installs up to two packages from the playbook catalog (`data/playbooks`) that fit her preferences, the team's book and its roster, up to four per side. A package nudges play calls toward its formations and plays only in its own situations, such as Heavy Push in short yardage, and only as much as the team knows it. Packages act in eligible situations; defensive commitments and offensive package calls now execute in the engine. Rare-package effectiveness and adoption remain research questions.
+- **Defense.** Defensive installation controls eligible pre-snap commitments and roster-specific execution. Called rushers and actual rushers are tracked separately.
 
-Each offseason, CPU programs review their staffs, fire and hire through the coaching portal, and every coach ages and develops. The human program's staff changes only by the human's choice. Installations are saved with the dynasty, and the team page shows each team's familiarity, any fading habits and its installed packages.
+Each offseason, CPU programs review their staffs, fire and hire through the coaching portal, and every coach ages and develops. The human program controls senior staff decisions, with automatic retirement replacements and newly funded position assignments. Installations are saved with the dynasty, and the team page shows each team's familiarity, any fading habits and its installed packages.
+
+**Career and teaching continuity.** Programs cover six position groups through dedicated coaches or coordinators: Zerobacks, Backs & Vipers, Offensive Line, Defensive Line, Keepers & Coverage, and Kicking & Returns. Prestige funds two, four or six dedicated assignments in addition to the four core staff jobs. Coaches can pursue lifelong specialization, move between disciplines when qualified, or advance through the market. Seasonal adaptation and mentorship are bounded; recruiting accounts for school fit and technical instruction. Retirement and delayed alumni entry allow staff turnover without requiring every coach to become a head coach. See [COACHING_SPEC.md](COACHING_SPEC.md) for current mechanisms and calibration limits.
 
 **Defensive schools.** Each of the ten defenses has a strength that shows up in specific outcomes and a weakness something else can beat.
 
