@@ -541,6 +541,7 @@ class Dynasty:
         player_cards: Optional[Dict[str, list]] = None,
         rng: Optional[random.Random] = None,
         dq_team_boosts: Optional[Dict[str, Dict[str, float]]] = None,
+        defer_roster_maintenance: bool = False,
     ):
         """
         Add a completed season to dynasty history.
@@ -1007,9 +1008,9 @@ class Dynasty:
             for team_name, cards in player_cards.items():
                 team = season.teams.get(team_name)
                 if team:
-                    card_map = {c.full_name: c for c in cards}
+                    card_map = {c.player_id: c for c in cards if c.player_id}
                     for player in team.players:
-                        card = card_map.get(player.name)
+                        card = card_map.get(player.player_id)
                         if card:
                             # The app rebuilds its offseason cards from these players.
                             # Copy developed ratings back before that round trip.
@@ -1044,9 +1045,12 @@ class Dynasty:
         self._record_graduates_in_tracker(season, year)
 
         # Roster maintenance: graduate seniors, add signed recruits + fill gaps
-        signed_recruits = getattr(self, '_pending_signed_recruits', None)
-        self._roster_maintenance(season, rng=rng or random.Random(year + 99), signed_recruits=signed_recruits)
-        self._pending_signed_recruits = None  # consumed
+        if not defer_roster_maintenance:
+            signed_recruits = getattr(self, '_pending_signed_recruits', None)
+            self._roster_maintenance(season, rng=rng or random.Random(year + 99), signed_recruits=signed_recruits)
+            self._pending_signed_recruits = None  # consumed
+        # Interactive API finalizes roster maintenance AFTER signing and
+        # transfer decisions; graduates remain available for the departure ledger.
 
         self._update_rivalry_ledger(season)
 

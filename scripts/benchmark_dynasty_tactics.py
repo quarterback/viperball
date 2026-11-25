@@ -466,18 +466,32 @@ def run(seasons, nteams, seed, out, *, national=False):
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
             off=sess["offseason"]
+            # Development and graduation may change attributes/class, never
+            # introduce a new college identity before signing/finalization.
+            prior_ids = {pid for roster in start.values() for pid in roster}
+            off_ids = {c.player_id for cards in off["player_cards"].values() for c in cards}
+            if off_ids != prior_ids:
+                raise RuntimeError("Unexpected college identities before recruiting")
+            graduating_ids = {c.player_id for cards in off["player_cards"].values()
+                              for c in cards if c.year == "Graduate"}
+            pool_ratings = [r.true_overall for r in off["recruit_pool"]]
             nil=off["nil_program"]
             budget=nil.annual_budget
             post(base+"/offseason/nil/allocate",{"recruiting_pool":budget*.5,"portal_pool":budget*.3,"retention_pool":budget*.2})
             portal=post(base+"/offseason/portal/resolve")
             # The designated human program uses the same existing AI recruiting
             # helper for its board; no forced signings or manual hires.
+            from engine.roster_continuity import projected_rosters, COLLEGE_ROSTER_TARGET
+            human_roster = projected_rosters(off["player_cards"], off["portal"])[human]
             board,offers=auto_recruit_team(human,off["recruit_pool"],dyn.team_prestige.get(human,50),
-                dyn._estimate_team_regions().get(human,"midwest"),scholarships=8,
+                dyn._estimate_team_regions().get(human,"midwest"),
+                scholarships=max(0,COLLEGE_ROSTER_TARGET-len(human_roster)),
                 nil_budget=nil.recruiting_pool,rng=random.Random(seed+year),
-                current_roster=[{"position":p.position} for p in off["player_cards"].get(human,[])])
+                current_roster=[{"position":p.position} for p in human_roster])
             off["recruit_board"],off["nil_offers"]=board,offers
             recruiting=post(base+"/offseason/recruiting/resolve")
+            signed_ids = {r.recruit_id for recruits in (dyn._pending_signed_recruits or {}).values()
+                          for r in recruits}
             post(base+"/offseason/complete")
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
@@ -490,13 +504,27 @@ def run(seasons, nteams, seed, out, *, national=False):
             saved_rosters=deepcopy(dyn._next_season_rosters)
             if set(saved_rosters) != active:
                 raise RuntimeError(f"Offseason saved roster program mismatch: extra={sorted(set(saved_rosters)-active)}, missing={sorted(active-set(saved_rosters))}")
+            walkon_details = dyn.recruiting_history[year+1].get("walkon_details", {})
+            walkon_ids = {row["player_id"] for rows in walkon_details.values() for row in rows}
+            final_ids = {row["player_id"] for rows in saved_rosters.values() for row in rows}
+            if final_ids != (prior_ids-graduating_ids)|signed_ids|walkon_ids:
+                raise RuntimeError("College roster additions/departures do not reconcile")
+            from engine.roster_continuity import COLLEGE_ROSTER_TARGET
+            if any(len(rows) < COLLEGE_ROSTER_TARGET for rows in saved_rosters.values()):
+                raise RuntimeError("Roster below existing college target after finalization")
             expected_rosters={t:sorted((r.get("player_id", ""), r["first_name"]+" "+r["last_name"], r["position"]) for r in rows)
                               for t,rows in saved_rosters.items()}
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
                 raise RuntimeError("Application DB roundtrip lost installation, staff or roster")
-            if {t:{role:c.to_dict() for role,c in staff.items()} for t,staff in loaded._coaching_staffs.items()} != expected_coach_cards:
-                raise RuntimeError("Application DB roundtrip lost coaching career or tactical profile")
+            actual_coach_cards = {t:{role:c.to_dict() for role,c in staff.items()} for t,staff in loaded._coaching_staffs.items()}
+            if actual_coach_cards != expected_coach_cards:
+                differences = {t:{role:[k for k,v in card.items() if actual_coach_cards.get(t,{}).get(role,{}).get(k) != v]
+                                  for role,card in staff.items() if actual_coach_cards.get(t,{}).get(role) != card}
+                               for t,staff in expected_coach_cards.items() if actual_coach_cards.get(t) != staff}
+                report["coach_save_differences"] = differences
+                checkpoint()
+                raise RuntimeError("Application DB roundtrip lost coaching career or tactical profile: " + json.dumps(differences,sort_keys=True))
             loaded_pipeline=loaded._hs_pipeline.save_state() if loaded._hs_pipeline else None
             if loaded._pending_retired_dispersal != expected_dispersal or set(loaded.retired_programs) != retired:
                 raise RuntimeError("Application DB roundtrip lost program retirement state")
@@ -511,6 +539,9 @@ def run(seasons, nteams, seed, out, *, national=False):
                     "development_events":len(coach_events)},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
+                "college_cohort":{"graduated":len(graduating_ids),"signed_unique":len(signed_ids),
+                    "walkons":len(walkon_ids),"emergency_walkons":sum(row["source"]=="emergency" for rows in walkon_details.values() for row in rows),
+                    "pool_mean_overall":average(pool_ratings)},
                 "retained_installations":len(expected),"roster_sizes":{t:len(r) for t,r in saved_rosters.items()},
                 "mean_defense_familiarity_before":average([u["defense"]["familiarity"] for u in pre.values()]),
                 "mean_defense_familiarity_after":average([u["defense"]["familiarity"] for u in expected.values()])}

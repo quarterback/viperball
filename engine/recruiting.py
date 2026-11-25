@@ -506,6 +506,8 @@ class Recruit:
             potential=self.true_potential,
             development=self.true_development,
             current_team=team_name,
+            field_intelligence=self.field_intelligence, coachability=self.coachability,
+            gpa=self.gpa, sat_score=self.sat_score, academic_risk=self.academic_risk,
             original_stars=self.stars,
             loyalty=self.prefers_geography * 0.5 + (1.0 - self.prefers_prestige) * 0.3 + 0.1,
         )
@@ -1006,8 +1008,9 @@ def generate_single_recruit(
     stars: Optional[int] = None,
     region: Optional[str] = None,
     rng: Optional[random.Random] = None,
+    hs_year_gap: int = 0,
 ) -> Recruit:
-    """Generate a single recruit with randomised attributes."""
+    """Generate a recruit at college entry strength minus remaining HS growth."""
     if rng is None:
         rng = random.Random()
 
@@ -1032,7 +1035,7 @@ def generate_single_recruit(
     hometown = _generate_hometown(region, rng)
     hs = _generate_high_school(hometown, rng)
 
-    _s = roll_stats(level, position, rng, year_mod=COLLEGE_YEAR_MOD["Freshman"])
+    _s = roll_stats(level, position, rng, year_mod=COLLEGE_YEAR_MOD["Freshman"] - hs_year_gap)
     speed, stamina, agility = _s["speed"], _s["stamina"], _s["agility"]
     power, awareness, hands = _s["power"], _s["awareness"], _s["hands"]
     kicking, kick_power, kick_accuracy = _s["kicking"], _s["kick_power"], _s["kick_accuracy"]
@@ -2435,7 +2438,9 @@ def generate_hs_class(
     for i in range(size):
         rid = (f"HS-{graduation_year}-{i:04d}" if graduation_year is not None
                else f"HS-{grade}-{i:04d}")
-        recruit = generate_single_recruit(recruit_id=rid, rng=rng)
+        from engine.talent import HS_YEAR_GAP
+        gap = HS_YEAR_GAP[{"9th":"Freshman","10th":"Sophomore","11th":"Junior","12th":"Senior"}[grade]]
+        recruit = generate_single_recruit(recruit_id=rid, rng=rng, hs_year_gap=gap)
         scouted = _apply_scouting_noise(recruit.stars, grade, rng)
         prospect = HSProspect(recruit=recruit, grade=grade, scouted_stars=scouted)
         prospects.append(prospect)
@@ -2476,6 +2481,7 @@ def seed_recruiting_interest(
             # Spread from 20-90 across all teams
             team_prestige[t] = max(15, min(90, int(20 + (i / max(1, len(team_names) - 1)) * 70)))
 
+    team_prestige = {t: team_prestige.get(t, 50) for t in team_names}
     elite_teams = [t for t, p in team_prestige.items() if p >= 75]
     strong_teams = [t for t, p in team_prestige.items() if 55 <= p < 75]
     mid_teams = [t for t, p in team_prestige.items() if 35 <= p < 55]
@@ -2494,16 +2500,16 @@ def seed_recruiting_interest(
         # ── Determine how many schools are interested ──
         # Tiered by star rating — mirrors real recruiting
         if stars >= 5:
-            n_interested = rng.randint(15, min(30, len(team_names)))
+            n_interested = rng.randint(min(15, len(team_names)), min(30, len(team_names)))
             n_offers = int(rng.randint(8, 20) * offer_mult)
         elif stars >= 4:
-            n_interested = rng.randint(10, min(20, len(team_names)))
+            n_interested = rng.randint(min(10, len(team_names)), min(20, len(team_names)))
             n_offers = int(rng.randint(5, 12) * offer_mult)
         elif stars >= 3:
-            n_interested = rng.randint(5, min(12, len(team_names)))
+            n_interested = rng.randint(min(5, len(team_names)), min(12, len(team_names)))
             n_offers = int(rng.randint(2, 7) * offer_mult)
         elif stars >= 2:
-            n_interested = rng.randint(2, min(6, len(team_names)))
+            n_interested = rng.randint(min(2, len(team_names)), min(6, len(team_names)))
             n_offers = int(rng.randint(0, 3) * offer_mult)
         else:
             n_interested = rng.randint(0, min(3, len(team_names)))
