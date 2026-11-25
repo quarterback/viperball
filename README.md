@@ -513,16 +513,23 @@ Overtime is played in **8-minute periods**. Possession alternates to start each 
 
 ## Weather
 
-CVL games are played outdoors in all weather conditions. The six recognized weather categories are:
+Games are played in the weather at the home venue, or at the neutral site, for that place and time of year. Each quarter has its own conditions: the temperature, rain, snow or sleet and how hard it is falling, the wind's speed and direction, and the humidity. Conditions carry over from one quarter to the next, so rain can start, ease off or stop, the wind can pick up, and the temperature can fall as the game goes on.
 
-- **Clear** — No impact on play
-- **Rain** — Wet ball increases fumble and muff rates; reduced kick accuracy
-- **Snow** — Cold conditions significantly reduce kick accuracy; moderate fumble increase; slower play
-- **Sleet** — Worst conditions; extreme fumble risk, severely reduced kicking accuracy
-- **Extreme Heat** — Rapid fatigue accumulation; slight fumble increase from slippery hands
-- **Heavy Wind** — Significant impact on kick accuracy and punt distance; gusts create unpredictable ball flight
+**The field.** Rain soaks the field, and it stays wet after the rain stops. Grass turns to mud and holds water longer than turf, which drains. Snow builds up on the field and melts off when it warms above freezing. A wet field below 28°F freezes.
 
-Weather affects Viperball more dramatically than most gridiron sports because kicking is so central to the offense. A rain game neutralizes a team's kicking advantage and turns the contest into a ground-and-lateral battle. Snow and sleet games produce chaotic, fumble-heavy affairs where the bell becomes a significant scoring channel. Wind games penalize snap kick-dependent offenses and reward teams that can grind on the ground.
+**Ends and the wind.** The home team attacks the north end in the first and third quarters and in odd overtime periods; the teams switch ends every quarter. A wind at the kicker's back adds range to snap kicks and field goals and length to punts. A headwind takes them away. A crosswind costs accuracy.
+
+**What the conditions do.**
+
+- **Rain, snow and sleet** make the ball harder to hold (fumbles, muffs, dropped laterals), cost kick accuracy and kick pass completions, and slow runners on a wet or snowy field. The harder it falls, the bigger the effect. Sleet is the worst of the three.
+- **Cold** shortens kicks and makes the ball harder to hold below 35°F.
+- **Heat and humidity** drain players faster and draw more fouls.
+- **Altitude** carries kicks farther.
+- **Domes** have no weather. A retractable roof closes for rain, snow, cold or extreme heat.
+
+**Coaches.** Coaches see the conditions. They kick from longer with the wind and shorter into it, call fewer bombs into the wind or in the rain, and move to tighter formations as the ball and field get wetter. A weatherproof head coach's team loses less to the conditions, and a coach with a feel for the wind loses less kicking into it.
+
+Weather affects Viperball more than most gridiron sports because kicking is so central to the offense. A rain game blunts a team's kicking advantage and turns the contest into a ground and lateral battle. Snow and sleet games are full of fumbles, and the bell becomes a bigger scoring channel. A strong wind makes the quarters going into it a grind.
 
 ---
 

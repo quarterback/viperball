@@ -151,8 +151,11 @@ def simulate_promotion_playoff(
 
     if home_team and away_team:
         from engine.game_engine import ViperballEngine
+        from engine.weather import weather_for_team
         result = ViperballEngine(home_team, away_team,
                                  seed=rng.randint(0, 999999) if rng else random.randint(0, 999999),
+                                 weather=weather_for_team(home_team, league="wvl",
+                                                          month="November", rng=rng),
                                  is_playoff=True, officiating_level="pro").simulate_game()
         final = result.get("final_score", {})
         home_score = final.get("home", {}).get("score", result.get("home_score", 0))

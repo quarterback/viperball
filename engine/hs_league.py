@@ -396,8 +396,13 @@ def _hs_engine_game(home: HSTeam, away: HSTeam, rng: random.Random,
                     week: int = 0, playoff_round: str = "") -> HSGameResult:
     """A title game on the full engine, with the same bookkeeping as the quick model."""
     from engine.game_engine import ViperballEngine
-    result = ViperballEngine(_hs_engine_team(home), _hs_engine_team(away),
-                             seed=rng.randint(1, 1_000_000), is_playoff=True,
+    from engine.weather import weather_for_team
+    home_eng = _hs_engine_team(home)
+    # Title games fall at the end of the season, at the higher seed's field.
+    wx = weather_for_team(home_eng, week=max(week, 14), total_weeks=18,
+                          league="high_school", rng=rng)
+    result = ViperballEngine(home_eng, _hs_engine_team(away),
+                             seed=rng.randint(1, 1_000_000), is_playoff=True, weather=wx,
                              officiating_level="high_school").simulate_game()
     home_score = result["final_score"]["home"]["score"]
     away_score = result["final_score"]["away"]["score"]

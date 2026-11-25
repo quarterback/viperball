@@ -117,6 +117,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     current ratings to old scale numbers; all now read the old scale equivalent. Nearly every
     player had been getting the default archetype. → `aar_2026-11-25_scale01_old_scale_cutoffs.md`
 
+28. **Weather model** (November 25). Weather by quarter with a field that soaks and freezes,
+    wind by end, venues with roofs, turf and altitude, and real places and calendars for every
+    league. Fixed the FIV, heavy wind and fumble rule bugs and two more old scale leftovers.
+    → `aar_2026-11-25_wea02_weather_model.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

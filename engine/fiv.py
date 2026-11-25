@@ -361,6 +361,7 @@ def _slim_result(result: dict) -> dict:
     """Keep scores, stats, player_stats, drives, and play-by-play."""
     slim: dict = {}
     for key in ("final_score", "stats", "player_stats", "weather",
+                "weather_label", "weather_description",
                 "home_team_name", "away_team_name",
                 "home_team_abbrev", "away_team_abbrev",
                 "drive_summary", "play_by_play",
@@ -1035,18 +1036,20 @@ def _play_match(
     stage: str,
     rankings: Optional[FIVRankings] = None,
     rng: Optional[random.Random] = None,
+    venue_code: Optional[str] = None,
 ) -> MatchResult:
     """Play a single international match using the full ViperballEngine."""
     home_engine = home_team.to_engine_team()
     away_engine = away_team.to_engine_team()
 
-    # Generate weather
-    weather_key = "clear"
-    try:
-        weather_data = generate_game_weather(season_month="June")
-        weather_key = weather_data.get("condition", "clear")
-    except Exception:
-        pass
+    # WEA-02: international windows are in June. A World Cup plays in the
+    # host nation; other matches play in the first-named nation. (The old call
+    # passed an argument the weather function didn't take, the error was
+    # swallowed, and every match was clear.)
+    from engine.weather import weather_for_team
+    site = venue_code or home_team.code
+    weather_key = weather_for_team(home_engine, league="fiv", neutral_state=site,
+                                   month="June", rng=rng)
 
     seed = rng.randint(1, 999999) if rng else random.randint(1, 999999)
 
@@ -1594,6 +1597,7 @@ def run_world_cup_group_stage(
             result = _play_match(
                 national_teams[home_code],
                 national_teams[away_code],
+                venue_code=getattr(wc, 'host', None),
                 competition="wc_group",
                 stage=f"group_{group.group_name}",
                 rankings=rankings,
@@ -1651,6 +1655,7 @@ def run_world_cup_knockout(
         result = _play_match(
             national_teams[home_code],
             national_teams[away_code],
+            venue_code=getattr(wc, 'host', None),
             competition="wc_knockout",
             stage="round_of_16",
             rankings=rankings,
@@ -1685,6 +1690,7 @@ def run_world_cup_knockout(
             result = _play_match(
                 national_teams[home_code],
                 national_teams[away_code],
+                venue_code=getattr(wc, 'host', None),
                 competition=comp_type,
                 stage=round_name.lower().replace(" ", "_"),
                 rankings=rankings,
@@ -1713,6 +1719,7 @@ def run_world_cup_knockout(
         result = _play_match(
             national_teams[sf_losers[0]],
             national_teams[sf_losers[1]],
+            venue_code=getattr(wc, 'host', None),
             competition="wc_knockout",
             stage="third_place",
             rankings=rankings,
@@ -1737,6 +1744,7 @@ def run_world_cup_knockout(
         result = _play_match(
             national_teams[current_teams[0]],
             national_teams[current_teams[1]],
+            venue_code=getattr(wc, 'host', None),
             competition="wc_final",
             stage="final",
             rankings=rankings,

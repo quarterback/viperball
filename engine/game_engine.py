@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from copy import deepcopy
 from engine.rating_scale import current_to_legacy as _old
+from engine.weather import GameWeather
 # _old(rating): a current scale rating as its 60 to 100 equivalent, for
 # fixed cutoffs written on the old scale (SCALE-01).
 
@@ -3876,6 +3877,10 @@ def _defense_scheme_means() -> dict:
 
 class ViperballEngine:
 
+    # Calm defaults for engines built without __init__ (unit test stubs).
+    weather = "clear"
+    weather_info: Dict = {}
+
     RIVALRY_UNDERDOG_BOOST = {
         10: 2,
         20: 5,
@@ -3980,9 +3985,18 @@ class ViperballEngine:
         self._home_escalation = 1.0  # Current drive escalation multiplier
         self._away_escalation = 1.0
 
-        self.weather = weather if weather in WEATHER_CONDITIONS else "clear"
-        self.weather_info = WEATHER_CONDITIONS[self.weather]
+        # WEA-02: weather is a set of readings per period. A plain label
+        # (tools, matched studies) becomes fixed conditions for the game.
+        if isinstance(weather, GameWeather):
+            self.game_weather = weather
+            if game_temp is None:
+                game_temp = weather.reading(1).temp_f
+        else:
+            label = weather if weather in WEATHER_CONDITIONS else "clear"
+            self.game_weather = GameWeather.from_label(label, game_temp)
         self.game_temp = game_temp
+        self._weather_quarter = 0
+        self._apply_weather_period(1)
 
         # --- Injury / substitution state ---
         self.injury_tracker = injury_tracker
@@ -5870,6 +5884,7 @@ class ViperballEngine:
 
         for quarter in range(1, 5):
             self.state.quarter = quarter
+            self._apply_weather_period(quarter)
             self.state.time_remaining = 600  # 10-minute quarters
             if quarter in (1, 3):
                 self._roll_half_form(0 if quarter == 1 else 1)
@@ -6038,6 +6053,7 @@ class ViperballEngine:
                and ot_number < max_ot_periods):
             ot_number += 1
             self.state.quarter = 4 + ot_number  # Q5, Q6, Q7...
+            self._apply_weather_period(self.state.quarter)
             self.state.time_remaining = 480  # 8-minute quarters
 
             # Fresh timeouts each OT period
@@ -6909,7 +6925,7 @@ class ViperballEngine:
             kc_final = self._kicker_candidates(team_final)
             k_final = max(kc_final, key=lambda p: p.kicking) if kc_final else None
             k_skill = self._kick_skill(k_final.kicking) if k_final else 60
-            dk_range = 30 + (k_skill - 60) * 0.75 + 5
+            dk_range = 30 + (k_skill - 60) * 0.75 + 5 + self._kick_range_shift()
 
             # V3.1: Deficit awareness for final play — don't kick if the
             # points can't close the gap.  Prefer drop kick (5 pts) over
@@ -7054,6 +7070,100 @@ class ViperballEngine:
 
         return rate
 
+    # ── WEA-02: weather helpers ──
+    def _apply_weather_period(self, quarter: int) -> None:
+        """Load the conditions for a period (overtime keeps the fourth's)."""
+        q = min(4, max(1, quarter))
+        if q == self._weather_quarter:
+            return
+        self._weather_quarter = q
+        self.weather_info = self.game_weather.effects(q)
+        self.weather = self.weather_info["key"]
+
+    def _weather_story(self) -> str:
+        """The venue, then how conditions moved through the game: each period
+        whose conditions read differently from the one before."""
+        gw = self.game_weather
+        v = gw.venue
+        if gw.indoor:
+            venue = "Dome" if v.roof == "dome" else "Roof closed"
+        else:
+            venue = ("Grass" if v.surface == "grass" else "Turf") + (
+                ", roof open" if v.retractable else "")
+        if v.altitude_ft >= 3000:
+            venue += f", {v.altitude_ft:,} ft"
+        parts = [venue]
+        if not gw.indoor:
+            def sig(q):
+                bits = gw.describe(q).split(", ")
+                return tuple(b for b in bits if not b.endswith("°F"))
+            last, last_temp = sig(1), gw.reading(1).temp_f
+            for q in (2, 3, 4):
+                cur, temp = sig(q), gw.reading(q).temp_f
+                # A drift of a few degrees isn't news; a front coming in is.
+                if cur != last or abs(temp - last_temp) >= 6:
+                    parts.append(f"Q{q}: {gw.describe(q)}")
+                    last, last_temp = cur, temp
+        return " · ".join(parts)
+
+    def _attack_sign(self, side: Optional[str] = None) -> int:
+        """+1 if this side heads for the north end this period. The home team
+        heads north in the first and third quarters (and odd overtimes); the
+        teams switch ends every quarter."""
+        side = side or self.state.possession
+        q = self.state.quarter
+        home_north = (q % 2 == 1)
+        north = home_north if side == "home" else not home_north
+        return 1 if north else -1
+
+    def _tailwind(self, side: Optional[str] = None) -> float:
+        """Wind behind this side's kicks, in mph (negative: into the wind)."""
+        return self.weather_info.get("wind_along", 0.0) * self._attack_sign(side)
+
+    def _trait_effect(self, side: str, key: str, default: float = 1.0) -> float:
+        mods = getattr(self, "home_coaching_mods" if side == "home" else "away_coaching_mods", None)
+        return (mods or {}).get("hidden_trait_effects", {}).get(key, default)
+
+    def _weather_scale(self, side: Optional[str] = None) -> float:
+        """A weatherproof head coach's team loses less to the conditions."""
+        return self._trait_effect(side or self.state.possession, "weather_penalty_multiplier")
+
+    def _ball_handling(self, key: str = "fumble_mult", side: Optional[str] = None) -> float:
+        """Multiplier on fumbles, lateral drops or muffs from wet and cold."""
+        extra = self.weather_info.get(key, 1.0) - 1.0
+        return 1.0 + extra * self._weather_scale(side)
+
+    def _kick_range_shift(self, side: Optional[str] = None) -> float:
+        """Yards added to a kicker's range by the wind at her back (or taken by
+        a headwind), the cold, a wet ball and thin air. Coaches know the
+        conditions, so kick decisions read this too."""
+        side = side or self.state.possession
+        wind = 0.30 * self._tailwind(side)
+        if wind < 0:
+            wind *= self._trait_effect(side, "weather_kick_penalty_multiplier")
+        base = self.weather_info.get("kick_range_base", 0.0)
+        if base < 0:
+            base *= self._weather_scale(side)
+        return wind + base
+
+    def _kick_weather_accuracy(self, side: Optional[str] = None) -> float:
+        side = side or self.state.possession
+        mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        return (mod * self._weather_scale(side)
+                * self._trait_effect(side, "weather_kick_penalty_multiplier"))
+
+    def _kick_pass_weather(self, subfamily) -> float:
+        """Change in kick pass completion from rain and wind; deeper kicks
+        feel it more."""
+        depth = {"quick_kick": 0.5, "territory": 1.0, "bomb": 1.6,
+                 "kick_lateral": 0.8}.get(getattr(subfamily, "value", ""), 1.0)
+        tail = self._tailwind()
+        hurt = (self.weather_info.get("kick_pass_wet", 0.0)
+                + 0.004 * max(0.0, self.weather_info.get("wind_cross", 0.0) - 5)
+                + 0.003 * max(0.0, -tail - 5))
+        help_ = 0.002 * max(0.0, tail - 5)
+        return (help_ - hurt * self._weather_scale()) * depth
+
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
         """Field goal accuracy.
 
@@ -7063,11 +7173,12 @@ class ViperballEngine:
         comfortable range accuracy falls about 4 points per yard, down to a
         10% long shot, out to place_kick_max_distance.
         """
-        max_dist = V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)
+        shift = self._kick_range_shift()
+        max_dist = V2_ENGINE_CONFIG.get("place_kick_max_distance", 54) + shift
         if distance > max_dist:
             return 0.0
         comfortable_range = (30 + (kicker_skill - 60) * 0.75
-                             + V2_ENGINE_CONFIG.get("place_kick_range_bonus", 8))
+                             + V2_ENGINE_CONFIG.get("place_kick_range_bonus", 8) + shift)
         if distance <= 20:
             return 0.97  # Chip shot
         if distance <= comfortable_range:
@@ -7089,7 +7200,7 @@ class ViperballEngine:
         85-skill → comfortable to ~49 yards
         95-skill → comfortable to ~56 yards
         """
-        comfortable_range = 30 + (kicker_skill - 60) * 0.75
+        comfortable_range = 30 + (kicker_skill - 60) * 0.75 + self._kick_range_shift()
 
         if distance <= 15:
             return 0.98  # Point-blank
@@ -7191,7 +7302,7 @@ class ViperballEngine:
 
         # ── Determine kick comfort zone (used by all remaining down logic) ──
         snap_kick_agg = self._current_style().get("snap_kick_aggression", 1.0)
-        dk_comfort = 30.0 + (kicker_skill - 60) * 0.75
+        dk_comfort = 30.0 + (kicker_skill - 60) * 0.75 + self._kick_range_shift()
         dk_comfort *= snap_kick_agg
 
         # ── Situational awareness ──
@@ -7720,10 +7831,11 @@ class ViperballEngine:
         # foul up together.  The old weather rule added 0.003 to every one of
         # the 19 to 34 fouls in a phase, which nearly doubled flags in rain.
         rate_scale = V2_ENGINE_CONFIG.get("penalty_rate_scale", 1.0)
-        if self.weather in ("rain", "snow", "sleet"):
-            rate_scale *= V2_ENGINE_CONFIG.get("penalty_bad_weather_scale", 1.2)
-        elif self.weather == "heat":
-            rate_scale *= V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1)
+        # WEA-02: scaled by how wet it is and how hot, not by the label.
+        bad = self.weather_info.get("bad_weather_frac", 0.0)
+        heat = min(1.0, self.weather_info.get("heat_factor", 0.0))
+        rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_bad_weather_scale", 1.2) - 1.0) * bad
+        rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1) - 1.0) * heat
 
         for pen_def in penalties:
             prob = pen_def["prob"] * rate_scale
@@ -8891,20 +9003,21 @@ class ViperballEngine:
             base["spread"] -= 0.15
 
         # ── Weather adjustments ──
-        weather = self.weather
-        if weather in ("rain", "snow"):
-            base["heavy"] += 0.10
-            base["tight"] += 0.05
-            base["spread"] -= 0.10
-            base["split"] -= 0.05
-        elif weather == "sleet":
-            base["heavy"] += 0.15
-            base["tight"] += 0.10
-            base["spread"] -= 0.20
-            base["split"] -= 0.05
-        elif weather == "heavy_wind":
-            base["spread"] -= 0.05
-            base["split"] += 0.05
+        # WEA-02: coaches tighten up as the ball and field get wetter, more so
+        # in sleet or on a frozen field; strong wind pulls them off the spread.
+        wet = self.weather_info.get("wet_play", 0.0)
+        if self.weather == "sleet" or self.weather_info.get("frozen"):
+            wet *= 1.4
+        if wet > 0:
+            base["heavy"] += 0.10 * wet
+            base["tight"] += 0.06 * wet
+            base["spread"] -= 0.12 * wet
+            base["split"] -= 0.04 * wet
+        wind = self.weather_info.get("wind_mph", 0.0)
+        if wind >= 15:
+            w = min(1.5, (wind - 10) / 15.0)
+            base["spread"] -= 0.05 * w
+            base["split"] += 0.05 * w
 
         # ── V2.7: Lead management formation shift ──
         lm_form = self._lead_management_modifiers()
@@ -8990,8 +9103,9 @@ class ViperballEngine:
         kicker = max(kicker_candidates, key=lambda p: p.kicking) if kicker_candidates else None
         kicker_skill = self._kick_skill(kicker.kicking) if kicker else 60
 
-        dk_comfort = 30 + (kicker_skill - 60) * 0.75
-        pk_comfort = 45 + (kicker_skill - 60) * 0.9
+        _wx_shift = self._kick_range_shift()
+        dk_comfort = 30 + (kicker_skill - 60) * 0.75 + _wx_shift
+        pk_comfort = 45 + (kicker_skill - 60) * 0.9 + _wx_shift
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
         pk_success = self._place_kick_success(fg_distance, kicker_skill)
 
@@ -9004,7 +9118,7 @@ class ViperballEngine:
         # Same for field goals: beyond 54 yards the success model is 0.3% or
         # less, and beyond 65 the kick is impossible (a 72 yard attempt showed
         # up in the last seconds of a half).
-        if fg_distance > V2_ENGINE_CONFIG.get("place_kick_max_distance", 54):
+        if fg_distance > V2_ENGINE_CONFIG.get("place_kick_max_distance", 54) + _wx_shift:
             weights["field_goal"] = 0.0
         elif fg_distance <= dk_comfort:
             weights["snap_kick"] = weights.get("snap_kick", 0.12) * 1.8
@@ -9611,6 +9725,15 @@ class ViperballEngine:
         if kick_power < 70:
             power_gate = (kick_power / 70.0) ** 2
             base["bomb"] *= power_gate
+        # WEA-02: into the wind or in the rain, coaches call fewer bombs and
+        # more quick kicks; a strong wind at their backs invites the bomb.
+        _tail = self._tailwind()
+        _wet = self.weather_info.get("wet_play", 0.0)
+        _cross = self.weather_info.get("wind_cross", 0.0)
+        base["bomb"] *= max(0.35, 1.0 - 0.25 * _wet - 0.02 * max(0.0, -_tail - 5)
+                            - 0.012 * max(0.0, _cross - 8) + 0.015 * max(0.0, _tail - 8))
+        if "quick_kick" in base:
+            base["quick_kick"] *= 1.0 + 0.15 * _wet + 0.01 * max(0.0, -_tail - 5)
 
         # ── Style-specific sub-family overrides ──
         style_name = self._current_style_name()
@@ -9842,7 +9965,7 @@ class ViperballEngine:
         muff_prob *= 1.0 + 0.30 * self._st_return_factor(receiving_team)
         if returner:
             muff_prob *= 1.0 + max(0, 80 - returner.game_energy) / 160
-        muff_prob += self.weather_info.get("muff_modifier", 0.0)
+        muff_prob *= self._ball_handling("muff_mult", "away" if self.state.possession == "home" else "home")
 
         receiving_side = "away" if self.state.possession == "home" else "home"
         recv_mods = self.home_coaching_mods if receiving_side == "home" else self.away_coaching_mods
@@ -10193,10 +10316,7 @@ class ViperballEngine:
             elif ball_security < 60:
                 base_fumble *= 1.15
 
-        if self.weather in ['rain', 'snow', 'sleet']:
-            base_fumble *= 1.20
-        else:
-            base_fumble += self.weather_info.get("fumble_modifier", 0.0)
+        base_fumble *= self._ball_handling("fumble_mult")
 
         if carrier and carrier.archetype != "none":
             arch_info = get_archetype_info(carrier.archetype)
@@ -10993,7 +11113,7 @@ class ViperballEngine:
         variance *= streak_var
 
         # ── Weather ──
-        center += self.weather_info.get("speed_modifier", 0.0) * 2
+        center += self.weather_info.get("speed_modifier", 0.0) * 2 * self._weather_scale()
 
         # ── Formation shell modifier ──
         if play_family is not None:
@@ -11249,6 +11369,9 @@ class ViperballEngine:
                 base_prob *= 0.85
             elif composure > 120:
                 base_prob = min(0.92, base_prob * 1.05)
+
+        # ── WEA-02: rain and wind on the kick ──
+        base_prob = max(0.05, base_prob * (1.0 + self._kick_pass_weather(subfamily)))
 
         # ── DC gameplan suppression ──
         dc_gp = self._def_dc_gameplan()
@@ -11803,7 +11926,7 @@ class ViperballEngine:
 
         # Fumble check — trick plays involve extra ball handling
         fumble_rate = variant["fumble_rate"]
-        fumble_rate += self.weather_info.get("fumble_modifier", 0.0)
+        fumble_rate *= self._ball_handling("fumble_mult")
         if defense_read:
             fumble_rate *= 1.5  # more likely to fumble when defense reads it
 
@@ -12124,7 +12247,7 @@ class ViperballEngine:
         # ── Lateral fumble check ──
         base_lateral_fumble = 0.12
         fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.05
-        fumble_prob += self.weather_info.get("lateral_fumble_modifier", 0.0)
+        fumble_prob *= self._ball_handling("lateral_fumble_mult")
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
         fumble_prob *= (1 - lateral_success_bonus)
@@ -12844,8 +12967,8 @@ class ViperballEngine:
                     yac = int(yac * (1.0 + ec_yac_bonus))
 
             fumble_on_catch = 0.008
-            fumble_on_catch -= (receiver.hands / 100) * 0.004
-            fumble_on_catch = max(0.002, fumble_on_catch)
+            fumble_on_catch -= (_old(receiver.hands) / 100) * 0.004  # old scale (SCALE-01)
+            fumble_on_catch = max(0.002, fumble_on_catch) * self._ball_handling("fumble_mult")
 
             total_yards = kick_distance + yac
 
@@ -13388,7 +13511,8 @@ class ViperballEngine:
                         fatigue=round(stamina, 1),
                     )
 
-        punt_weather_mod = 1.0 + self.weather_info.get("punt_distance_modifier", 0.0)
+        punt_weather_mod = max(0.6, 1.0 + self.weather_info.get("punt_base", 0.0)
+                               + 0.010 * self._tailwind())
         fp = self.state.field_position
         ideal_punt = max(25, min(80, (100 - fp) - random.randint(0, 5)))
         yards_to_endzone = 100 - fp
@@ -13400,7 +13524,7 @@ class ViperballEngine:
             base_distance = random.gauss(ideal_punt, 6) * punt_weather_mod
         else:
             base_distance = random.gauss(ideal_punt, 8) * punt_weather_mod
-        kicking_factor = punter.kicking / 80
+        kicking_factor = _old(punter.kicking) / 80  # old scale (SCALE-01)
 
         defense = self._current_defense()
         kick_suppression = defense.get("kick_suppression", 1.0)
@@ -13832,7 +13956,7 @@ class ViperballEngine:
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
-        weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        weather_kick_mod = self._kick_weather_accuracy()
         success_prob *= (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
         success_prob = max(0.05, min(0.98, success_prob))
         kicker.game_kick_attempts += 1
@@ -14178,7 +14302,7 @@ class ViperballEngine:
         # ── Max field goal distance: 65 yards ──
         # Beyond 65 yards is physically impossible for a place kick.
         # If they're too far, punt instead (handled by kick decision logic).
-        if distance > max(65, V2_ENGINE_CONFIG.get("place_kick_max_distance", 54)):
+        if distance > max(65, V2_ENGINE_CONFIG.get("place_kick_max_distance", 54) + self._kick_range_shift()):
             # Too far for a place kick — treat as missed/punt-like
             self.change_possession()
             self.state.field_position = 100 - self.state.field_position
@@ -14210,7 +14334,7 @@ class ViperballEngine:
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
-        weather_kick_mod = self.weather_info.get("kick_accuracy_modifier", 0.0)
+        weather_kick_mod = self._kick_weather_accuracy()
         success_prob *= (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
         success_prob = max(0.10, min(0.98, success_prob))
         kicker.game_kick_attempts += 1
@@ -15267,7 +15391,7 @@ class ViperballEngine:
                         clock_mgmt = mods.get("clock_management", 0.5)
                         call_prob = 0.10 + 0.05 * (1.0 - clock_mgmt)
                         # Weather boost: hot/humid games drain more
-                        if self.weather in ("heat",):
+                        if self.weather_info.get("heat_factor", 0.0) >= 0.5:
                             call_prob *= 1.6
                         if "timeout_hoarder" in traits:
                             call_prob *= 0.30
@@ -16082,9 +16206,10 @@ class ViperballEngine:
             "defensive_reads": self._defense_read_counts,
             "defensive_rush": {side: self._rush_summary(side) for side in ("home", "away")},
             "special_teams_tactics": {side: {"profile": self._st_tactics[side], "calls": self._st_calls[side]} for side in ("home", "away")},
-            "weather": self.weather,
-            "weather_label": f"{self.game_temp}°F" if self.game_temp is not None else self.weather_info["label"],
-            "weather_description": self.weather_info["label"] if self.weather != "clear" else "",
+            "weather": self.game_weather.label(1),
+            "weather_label": self.game_weather.describe(1),
+            "weather_description": self._weather_story(),
+            "weather_detail": self.game_weather.summary(),
             "seed": self.seed,
             "stats": {
                 "home": home_stats,
