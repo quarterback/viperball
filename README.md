@@ -147,6 +147,8 @@ A field goal is the answer when a drive stalls outside snap kick range. Off a te
 
 Near the goal line, teams keep driving for the touchdown. Late in a game, a team does not take a kick that cannot tie or win.
 
+How soon a team kicks depends on its offense. Kick first offenses such as Boot Raid and Six Shooter take the shot earlier and from longer. Touchdown first offenses, Ground & Pound above all, keep driving on 4th down, need a longer 5th down before they kick, and go for it on 6th down with short yardage, more often inside the 25. Each offense also has its own appetite for going for it on 6th down instead of punting, and field position offenses such as Ironclad punt from farther up the field.
+
 ---
 
 ## Movement of the Ball
@@ -638,7 +640,7 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Ghost Formation** — An offensive scheme using the Viper's pre-snap motion to create confusion. Misdirection-heavy.
 
-**Ground & Pound** — An offensive scheme built around power running, using all six downs to grind 20 yards.
+**Ground & Pound** — The touchdown first offense. It runs the ball, uses short kick passes to keep the defense honest, goes for it on short 5th and 6th downs, and kicks only when a drive has truly stalled or the clock says take the points.
 
 **Keeper** — The last line of defense; analogous to a safety. Also fields kicks and serves as a returner.
 

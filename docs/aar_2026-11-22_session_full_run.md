@@ -136,6 +136,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     high school season plays on the quick model, and the high school build runs after the
     response. History years still cost 2 minutes each. → `aar_2026-11-25_dynasty_creation_speed.md`
 
+33. **Offense philosophies** (November 25). Kicking and go-for-it rules by offense, ten dead
+    style settings wired, Ground & Pound made touchdown first (56% of points from TDs, up from
+    41%), five unused offenses assigned. → `aar_2026-11-25_off_phil01_offense_philosophies.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |

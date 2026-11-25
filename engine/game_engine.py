@@ -2251,7 +2251,9 @@ class Play:
 OFFENSE_STYLES = {
     "ground_pound": {
         "label": "Ground & Pound",
-        "description": "Grind 20 yards, punch it in. Old-school power football using all 6 downs.",
+        "description": ("Touchdown first, gridiron style. Run the ball, use short kick passes to "
+                        "keep the defense honest, go for it on short late downs, and kick only "
+                        "when a drive is truly stalled or the clock says take the points."),
         "weights": {
             "dive_option": 0.14,
             "power": 0.13,
@@ -2263,14 +2265,14 @@ OFFENSE_STYLES = {
             "lateral_spread": 0.08,
             "kick_pass": 0.22,
             "trick_play": 0.04,
-            "snap_kick": 0.08,
-            "field_goal": 0.06,
+            "snap_kick": 0.0,
+            "field_goal": 0.0,
             "punt": 0.04,
         },
         "tempo": 0.4,
         "lateral_risk": 0.6,
-        "kick_rate": 0.18,
-        "option_rate": 0.55,
+        "kick_rate": 0.12,
+        "option_rate": 0.45,
         "run_bonus": 0.06,
         "fatigue_resistance": 0.08,
         "kick_accuracy_bonus": 0.0,
@@ -2279,11 +2281,13 @@ OFFENSE_STYLES = {
         "broken_play_bonus": 0.0,
         "pindown_bonus": 0.0,
         "run_vs_lateral": 0.70,
-        "early_down_aggression": 0.70,
+        "early_down_aggression": 0.6,
+        "early_down_run_rate": 0.65,
         "red_zone_run_pct": 0.85,
-        "kick_mode_aggression": 0.25,
+        "kick_mode_aggression": 0.10,
+        "go_for_it": 0.70,
         "kick_pass_weights": {
-            "quick_kick": 0.80, "territory": 0.15, "bomb": 0.0, "kick_lateral": 0.05,
+            "quick_kick": 0.65, "territory": 0.25, "bomb": 0.05, "kick_lateral": 0.05,
         },
         "formation_weights": {"tight": 0.30, "split": 0.25, "spread": 0.05, "heavy": 0.40},
     },
@@ -2982,6 +2986,19 @@ OFFENSE_STYLES = {
         "formation_weights": {"tight": 0.35, "split": 0.15, "spread": 0.05, "heavy": 0.45},
     },
 }
+
+# OFF-PHIL-01: how willing each offense is to go for it on late downs
+# (0.5 is the shared default). Ground & Pound sets its own above.
+_STYLE_GO_FOR_IT = {
+    "chain_gang": 0.75, "stampede": 0.65, "shock_and_awe": 0.65, "quick_strike": 0.6,
+    "lateral_spread": 0.6, "slick_n_slide": 0.6, "mismatch": 0.55, "ghost": 0.55,
+    "east_coast": 0.5, "balanced": 0.5, "mousetrap": 0.5,
+    "ball_control": 0.35, "six_shooter": 0.35, "boot_raid": 0.3, "ironclad": 0.2,
+}
+for _name, _g in _STYLE_GO_FOR_IT.items():
+    if _name in OFFENSE_STYLES:
+        OFFENSE_STYLES[_name].setdefault("go_for_it", _g)
+
 
 STYLE_MIGRATION = {
     "power_option": "ground_pound",
@@ -7406,10 +7423,19 @@ class ViperballEngine:
         dk_success = self._drop_kick_success(fg_distance, kicker_skill)
 
         # ── Red zone (fp >= 90): always chase the TD ──
+        # OFF-PHIL-01: how eager this offense is to take points rather than
+        # chase the touchdown (kick_mode_aggression, 0.5 is the shared
+        # default) and how willing it is to go for it on late downs
+        # (go_for_it, 0.5 default). td_lean is positive for touchdown
+        # first offenses and negative for kick first ones.
+        td_lean = 0.5 - self._style_knob("kick_mode_aggression", 0.5)
+        go_lean = self._style_knob("go_for_it", 0.5) - 0.5
         if fp >= 90:
             # On 6th down take the near-certain 5 points unless the goal
-            # line is within 3 yards. A failed 6th down try scores nothing.
-            if down == 6 and (100 - fp) > 3:
+            # line is within 3 yards (farther for a touchdown first
+            # offense). A failed 6th down try scores nothing.
+            goal_line_go = 3 + max(0.0, td_lean) * 8 + max(0.0, go_lean) * 4
+            if down == 6 and (100 - fp) > goal_line_go:
                 if dk_success >= 0.40:
                     return PlayType.DROP_KICK
                 if pk_success >= 0.50:
@@ -7522,6 +7548,9 @@ class ViperballEngine:
             # leaves 5th and 6th. Only when the first down is far away;
             # green-light kickers/coaches pull the trigger a little sooner.
             stall_ytg = V2_ENGINE_CONFIG.get("kick_4th_down_min_ytg", 10)
+            # Kick first offenses kick sooner; a touchdown first one keeps
+            # driving on 4th down, with 5th and 6th still to come.
+            stall_ytg = stall_ytg + td_lean * (25 if td_lean > 0 else 12)
             if has_green_light:
                 stall_ytg = max(1, stall_ytg - 3)
             if (not dk_futile and ytg >= stall_ytg
@@ -7530,7 +7559,7 @@ class ViperballEngine:
 
             # Badly stalled and out of snap kick range: take the field goal.
             if (not pk_futile and dk_success < 0.55
-                    and ytg >= V2_ENGINE_CONFIG.get("kick_4th_down_fg_min_ytg", 14)
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_4th_down_fg_min_ytg", 14) + td_lean * (25 if td_lean > 0 else 12)
                     and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)):
                 return PlayType.PLACE_KICK
 
@@ -7592,14 +7621,18 @@ class ViperballEngine:
             # 5th down is the natural snap kick down: a miss keeps the ball
             # and leaves 6th down for a second try, while a miss on 6th is a
             # turnover. Go for it instead on short yardage.
-            if (not dk_futile and dk_success >= 0.55
-                    and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4) + 4 * territory_bias)):
+            # A touchdown first offense needs a longer 5th down and a surer
+            # kick before it gives up on the drive; a kick first one takes
+            # the shot sooner.
+            if (not dk_futile and dk_success >= 0.55 + td_lean * 0.3
+                    and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)
+                                   + 4 * territory_bias + td_lean * 12)):
                 return PlayType.DROP_KICK
 
             # Stalled outside snap kick range but inside field goal range:
             # put 3 on the board. A miss on 5th down keeps the ball.
             if (not pk_futile and pk_success >= V2_ENGINE_CONFIG.get("kick_fg_min_success", 0.70)
-                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_fg_min_ytg", 8)):
+                    and ytg >= V2_ENGINE_CONFIG.get("kick_5th_down_fg_min_ytg", 8) + td_lean * 12):
                 return PlayType.PLACE_KICK
 
             # Otherwise advance and decide on 6th.
@@ -7614,16 +7647,24 @@ class ViperballEngine:
                     return best_kick
                 return None  # Go for it — punting surrenders the game
 
-            # Go for it on very short ytg (elite kickers lower this)
-            go_ytg = max(1, 3 - (kicker_skill - 75) // 10)
+            # Go for it on very short ytg (elite kickers lower this). A
+            # go-for-it offense goes on longer yardage, and a touchdown
+            # first one goes for it more inside the 25.
+            go_ytg = max(1, 3 - (kicker_skill - 75) // 10) + go_lean * 6
+            if fp >= 75:
+                go_ytg += max(0.0, td_lean) * 6
             if ytg <= go_ytg:
                 return None
             # Any kick available? Take it — always prefer points.
             if best_kick:
                 return best_kick
-            # No kick available — punt to avoid TOD (field position)
+            # No kick available — punt to avoid TOD (field position). Field
+            # position offenses punt from farther up the field.
             territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
-            if fp < 65 + 10 * territory_bias:
+            punt_line = (65 + 10 * territory_bias
+                         + 20 * (self._style_knob("punt_aggression", 1.0) - 1.0)
+                         + 10 * (self._style_knob("field_position_priority", 0.5) - 0.5))
+            if fp < punt_line:
                 return PlayType.PUNT
             # Deep in opponent territory but no kick — go for it
             if ytg <= 5:
@@ -9276,6 +9317,28 @@ class ViperballEngine:
             weights["snap_kick"] = weights.get("snap_kick", 0.08) * 2.0
             weights["punt"] = 0.0
 
+        # ── OFF-PHIL-01: style identity settings ──
+        # option_rate: option runs against downhill runs (0.4 is neutral).
+        opt = self._style_knob("option_rate", 0.4)
+        opt_mult = max(0.5, min(1.6, opt / 0.4))
+        for rk in ("dive_option", "sweep_option", "speed_option"):
+            weights[rk] = weights.get(rk, 0.0) * opt_mult
+        # run_vs_lateral: how much of the ground game goes sideways in lateral
+        # chains (0.5 is neutral).
+        rvl = self._style_knob("run_vs_lateral", 0.5)
+        weights["lateral_spread"] = weights.get("lateral_spread", 0.0) * max(0.3, min(1.6, (1.0 - rvl) / 0.5))
+        # early_down_aggression: shots (trick plays, jet sweeps) on early downs.
+        if down <= 2:
+            eda = self._style_knob("early_down_aggression", 0.7)
+            for rk in ("trick_play", "viper_jet"):
+                weights[rk] = weights.get(rk, 0.0) * (0.3 + eda)
+        # turnover_aversion: fewer risky throws and chains all game.
+        ta = self._style_knob("turnover_aversion", 0.0)
+        if ta > 0:
+            weights["kick_pass"] = weights.get("kick_pass", 0.0) * (1.0 - 0.3 * ta)
+            weights["lateral_spread"] = weights.get("lateral_spread", 0.0) * (1.0 - 0.5 * ta)
+            weights["trick_play"] = weights.get("trick_play", 0.0) * (1.0 - 0.6 * ta)
+
         # ── Lateral hard cap (4-6% of plays) ──
         weights["lateral_spread"] = min(weights.get("lateral_spread", 0.2), 0.08)
 
@@ -9383,6 +9446,29 @@ class ViperballEngine:
             weights["trick_play"] = weights.get("trick_play", 0.05) * 1.8
             weights["dive_option"] = weights.get("dive_option", 0.1) * 0.5
             weights["power"] = weights.get("power", 0.1) * 0.5
+
+        # ── OFF-PHIL-01: target run shares ──
+        # red_zone_run_pct inside the 20 and early_down_run_rate on downs 1
+        # and 2 set the share of non-kick plays that are runs. The clock
+        # drills below still override them late in a half.
+        target = None
+        if fp >= 80:
+            target = self._current_style().get("red_zone_run_pct")
+        elif down <= 2:
+            target = self._current_style().get("early_down_run_rate")
+        if target:
+            run_keys = ("dive_option", "power", "sweep_option", "speed_option",
+                        "counter", "draw", "viper_jet")
+            other_keys = ("kick_pass", "lateral_spread", "trick_play")
+            run_w = sum(weights.get(k, 0.0) for k in run_keys)
+            oth_w = sum(weights.get(k, 0.0) for k in other_keys)
+            if run_w > 0 and oth_w > 0:
+                total = run_w + oth_w
+                rs, os_ = target * total / run_w, (1.0 - target) * total / oth_w
+                for k in run_keys:
+                    weights[k] = weights.get(k, 0.0) * rs
+                for k in other_keys:
+                    weights[k] = weights.get(k, 0.0) * os_
 
         # ── 3-minute warning drill play selection ──
         if (quarter in (2, 4) and time_left < 180):
@@ -9612,6 +9698,12 @@ class ViperballEngine:
         if self.state.possession == "home":
             return self.home_style
         return self.away_style
+
+    def _style_knob(self, key: str, default: float) -> float:
+        """A setting from the offense's style (OFF-PHIL-01). Styles that don't
+        set it get the default, which reproduces the shared behavior."""
+        v = self._current_style().get(key, default)
+        return default if v is None else v
 
     def _current_style_name(self) -> str:
         if self.state.possession == "home":
@@ -11229,6 +11321,9 @@ class ViperballEngine:
 
         # ── Weather ──
         center += self.weather_info.get("speed_modifier", 0.0) * 2 * self._weather_scale()
+
+        # ── OFF-PHIL-01: a run first offense's backs and line are built for it ──
+        center *= 1.0 + self._style_knob("run_bonus", 0.0)
 
         # ── Formation shell modifier ──
         if play_family is not None:

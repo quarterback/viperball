@@ -22,13 +22,23 @@ from typing import Dict, Optional, Tuple
 from engine.stable_hash import stable_hash
 
 
+# OFF-PHIL-01: Ironclad, Six Shooter, Quick Strike, Mousetrap and Mismatch
+# were on no list, so no AI team ever ran them.
 PHILOSOPHY_TO_OFFENSE = {
-    "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe"],
-    "lateral_heavy": ["lateral_spread", "chain_gang", "ghost"],
-    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide"],
-    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast"],
-    "air_raid": ["shock_and_awe", "boot_raid", "east_coast"],
-    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide"],
+    "kick_heavy": ["boot_raid", "ball_control", "stampede", "east_coast", "shock_and_awe",
+                   "six_shooter"],
+    "lateral_heavy": ["lateral_spread", "chain_gang", "ghost", "quick_strike", "mismatch"],
+    "ground_and_pound": ["ground_pound", "ball_control", "slick_n_slide", "ironclad"],
+    "hybrid": ["balanced", "ghost", "slick_n_slide", "ground_pound", "east_coast",
+               "mousetrap", "mismatch", "six_shooter"],
+    "air_raid": ["shock_and_awe", "boot_raid", "east_coast", "quick_strike"],
+    "possession": ["east_coast", "ball_control", "ground_pound", "slick_n_slide",
+                   "ironclad", "mousetrap"],
+}
+
+_STYLE_PREVALENCE = {
+    "ground_pound": 1.8,
+    "ironclad": 0.7, "six_shooter": 0.7, "quick_strike": 0.7, "mousetrap": 0.7, "mismatch": 0.6,
 }
 
 IDENTITY_STYLE_TO_DEFENSE = {
@@ -143,6 +153,9 @@ def assign_ai_scheme(team_stats: Dict, identity: Dict, seed: Optional[int] = Non
             w += (kick_pow - 75) * 0.10 + (speed - 83) * 0.08
         elif c == "balanced":
             w += 0.3
+        # OFF-PHIL-01: the touchdown first Ground & Pound is a common
+        # philosophy; the five newly listed styles are niche choices.
+        w *= _STYLE_PREVALENCE.get(c, 1.0)
         weights.append(max(0.1, w))
 
     # Coaching: Scheme Master bias — boost the top-weighted scheme
