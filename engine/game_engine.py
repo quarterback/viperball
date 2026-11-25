@@ -6717,6 +6717,7 @@ class ViperballEngine:
             analytics_before = self._analytics_state()
             play = self.simulate_play()
             play.analytics_before = analytics_before
+            play.analytics_resolution = self._analytics_state()
             play.home_score_after = self.state.home_score
             play.away_score_after = self.state.away_score
             self.play_log.append(play)
@@ -7296,6 +7297,7 @@ class ViperballEngine:
 
             final_play.snap_possession = final_snap_side
             final_play.analytics_before = analytics_before
+            final_play.analytics_resolution = self._analytics_state()
             final_play.analytics_terminal_kick = True
             self._finish_st_event(final_play)
             final_play.home_score_after = self.state.home_score
@@ -17044,6 +17046,7 @@ class ViperballEngine:
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
             "analytics_before": getattr(play,"analytics_before",None),
+            "analytics_resolution": getattr(play,"analytics_resolution",None),
             "analytics_terminal_kick": getattr(play,"analytics_terminal_kick",False),
             "snap_lineup": getattr(play, "snap_lineup", None),
             "spot_error": getattr(play, "spot_error", None),
