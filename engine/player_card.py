@@ -718,6 +718,13 @@ class PlayerCard:
             career_seasons=career,
             career_awards=d.get("career_awards", []),
             current_team=d.get("current_team", ""),
+            field_intelligence=d.get("field_intelligence", 50),
+            coachability=d.get("coachability", 50),
+            gpa=d.get("gpa", 3.0), sat_score=d.get("sat_score", 1050),
+            academic_risk=d.get("academic_risk", "clear"),
+            transfer_count=d.get("transfer_count", 0),
+            loyalty=d.get("loyalty", 0.5),
+            original_stars=d.get("original_stars", 0),
         )
 
     def summary_line(self) -> str:
@@ -780,6 +787,12 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
         gpa=getattr(player, "gpa", 3.0),
         sat_score=getattr(player, "sat_score", 1050),
         academic_risk=getattr(player, "academic_risk", "clear"),
+        transfer_count=getattr(player, "transfer_count", 0),
+        loyalty=getattr(player, "loyalty", 0.5),
+        original_stars=getattr(player, "original_stars", 0),
+        career_seasons=[SeasonStats.from_dict(x) if isinstance(x, dict) else x
+                        for x in getattr(player, "career_seasons", [])],
+        career_awards=list(getattr(player, "career_awards", [])),
         work_rate=getattr(player, "work_rate", 0) or 0,
     )
 
@@ -787,7 +800,7 @@ def player_to_card(player, team_name: str = "") -> PlayerCard:
 def card_to_player(card: PlayerCard) -> "Player":
     """Convert a PlayerCard back to a game_engine.Player for season simulation."""
     from engine.game_engine import Player
-    return Player(
+    player = Player(
         number=card.number,
         name=card.full_name,
         position=card.position,
@@ -818,6 +831,12 @@ def card_to_player(card: PlayerCard) -> "Player":
         archetype=card.archetype,
         work_rate=getattr(card, "work_rate", 0) or 0,
     )
+    for key in ("field_intelligence", "coachability", "gpa", "sat_score", "academic_risk",
+                "transfer_count", "loyalty", "original_stars"):
+        setattr(player, key, getattr(card, key))
+    player.career_seasons = [s.to_dict() for s in card.career_seasons]
+    player.career_awards = list(card.career_awards)
+    return player
 
 
 def game_result_to_log(player, opponent: str, week: int) -> GameLog:
