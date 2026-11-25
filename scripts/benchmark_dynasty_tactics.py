@@ -35,12 +35,15 @@ def staff_ids(dyn):
     return {t: {role:c.coach_id for role,c in s.items()} for t,s in dyn._coaching_staffs.items()}
 
 def verify_staffs(dyn, active):
-    from engine.coaching import ROLES
+    from engine.coach_roles import CORE_ROLES, ALL_ROLES, POSITION_ROLES
+    from engine.position_staff import coverage
     owners = defaultdict(list)
     for team in sorted(active):
         staff = dyn._coaching_staffs.get(team, {})
-        if set(staff) != set(ROLES):
-            raise RuntimeError(f"Incomplete staff at {team}: {sorted(staff)}")
+        if not set(CORE_ROLES)<=set(staff)<=set(ALL_ROLES):
+            raise RuntimeError(f"Incomplete or invalid staff at {team}: {sorted(staff)}")
+        if not all(a["coach_id"] for a in coverage(staff).values()):
+            raise RuntimeError(f"Uncovered teaching assignment at {team}")
         for role, card in staff.items():
             if card.team_name != team or card.role != role:
                 raise RuntimeError(f"Coach employment metadata mismatch: {team}/{role}/{card.coach_id}")
@@ -551,7 +554,8 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 dyn._estimate_team_regions().get(human,"midwest"),
                 scholarships=max(0,COLLEGE_ROSTER_TARGET-len(human_roster)),
                 nil_budget=nil.recruiting_pool,rng=random.Random(seed+year),
-                current_roster=[{"position":p.position} for p in human_roster])
+                current_roster=[{"position":p.position} for p in human_roster],
+                position_staff=dyn._coaching_staffs.get(human))
             off["recruit_board"],off["nil_offers"]=board,offers
             recruiting=post(base+"/offseason/recruiting/resolve")
             signed_ids = {r.recruit_id for recruits in (dyn._pending_signed_recruits or {}).values()
@@ -617,7 +621,10 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 "coach_career_continuity":{"retained":len(retained_coaches),
                     "departed":len(set(before_coaches)-set(after_coaches)),
                     "new":len(set(after_coaches)-set(before_coaches)),
-                    "development_events":len(coach_events), "career_evidence":career_events},
+                    "development_events":len(coach_events), "career_evidence":career_events,
+                    "position_staff_count":sum(r.startswith("pos_") for team in active for r in dyn._coaching_staffs[team]),
+                    "position_payroll":sum(c.contract_salary for team in active for r,c in dyn._coaching_staffs[team].items() if r.startswith("pos_")),
+                    "alumni_entries":len(dyn.coaching_history[year+1].get("alumni_candidates",[]))},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),
