@@ -66,18 +66,6 @@ def test_polished_pages_render(tmp_path, monkeypatch):
         response=client.get(url)
         assert response.status_code==200, (url,response.status_code,response.text[:400])
         assert expected in response.text, (url,expected)
-    # Every analytics view must render from actual completed games.
-    for view in ("overview","players","teams","scoring","expected","decisions","delta",
-                 "dtw","plays","drives","compare","player_compare","glossary"):
-        response=client.get(prefix+"/analytics",params={"view":view})
-        assert response.status_code==200,(view,response.text[:500])
-        assert "Analytics navigation" in response.text
-    plays=client.get(prefix+"/analytics",params={"view":"plays","week":week,"match":0,"export":"csv"})
-    assert plays.status_code==200 and "text/csv" in plays.headers["content-type"]
-    assert "Play description" in plays.text and len(plays.text.splitlines())>1
-    comparison=client.get(prefix+"/analytics",params=[("view","compare"),("compare",names[0]),("compare",names[1])])
-    assert comparison.status_code==200 and "Team percentile comparison" in comparison.text
-    assert names[0] in comparison.text and names[1] in comparison.text
     # Analytics portal consumes the very same completed season and box scores.
     for view in ("overview","players","teams","scoring","expected","decisions","delta","dtw",
                  "plays","drives","compare","player_compare","glossary"):
