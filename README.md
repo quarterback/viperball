@@ -147,7 +147,7 @@ A field goal is the answer when a drive stalls outside snap kick range. Off a te
 
 Near the goal line, teams keep driving for the touchdown. Late in a game, a team does not take a kick that cannot tie or win.
 
-How soon a team kicks depends on its offense. Kick first offenses such as Boot Raid and Six Shooter take the shot earlier and from longer. Touchdown first offenses, Ground & Pound above all, keep driving on 4th down, need a longer 5th down before they kick, and go for it on 6th down with short yardage, more often inside the 25. Each offense also has its own appetite for going for it on 6th down instead of punting, and field position offenses such as Ironclad punt from farther up the field.
+How soon a team kicks depends on its offense. Kick first offenses such as Boot Raid and Six Shooter take the shot earlier and from longer. Touchdown first offenses, Ground Control above all, keep driving on 4th down, need a longer 5th down before they kick, and go for it on 6th down with short yardage, more often inside the 25. Each offense also has its own appetite for going for it on 6th down instead of punting, and field position offenses such as Ironclad punt from farther up the field.
 
 ---
 
@@ -592,6 +592,36 @@ A program also has its own installation: what its players have actually learned.
 
 Each offseason, CPU programs review their staffs, fire and hire through the coaching portal, and every coach ages and develops. The human program's staff changes only by the human's choice. Installations are saved with the dynasty, and the team page shows each team's familiarity, any fading habits and its installed packages.
 
+**Defensive schools.** Each of the ten defenses has a strength that shows up in specific outcomes and a weakness something else can beat.
+
+| Defense | Strength | Weakness |
+|---|---|---|
+| Fortress | Stops inside runs and forces 5th and 6th downs | Kick passes and laterals get outside it |
+| Lockdown | Shuts down kick passes | Power runs work against its light box |
+| Swarm | Contains lateral chains and intercepts them | Kick passes find the seams |
+| Predator | Hunts turnovers: more interceptions and forced fumbles | Gives up big plays when the gamble fails |
+| Drift | Bends, then tightens in scoring range and forces kicks | Gives up steady yards |
+| Blitz Pack | Pressure, forced fumbles and kick rush | Counters and draws |
+| Chaos | Disguise, some interceptions and kick rush | Gets carved up once the offense adjusts |
+| Shadow | Spies the Viper | Power runs |
+| Keeper Hunt | Rushes every kick, with more blocks and rushed 6th down kicks | Ordinary everywhere else, and gives up short yardage conversions |
+| Rotation | Stays fresh against tempo and long drives | A little softer every snap |
+
+A missed snap kick on downs 1 to 5 keeps the ball, so pressuring a kick mostly hands the offense another down. Keeper Hunt does its real damage on 6th down and with blocks.
+
+**Weekly game plans.** Before every game, the defensive staff leans part of the way toward the scheme that best counters the opponent's offense: Fortress against the run offenses, Lockdown against the kick pass offenses, Predator against the lateral offenses, Shadow against Ghost and Mismatch, and Drift against East Coast. The defense keeps its own name and signature; only its numbers move. An adaptable head coach moves up to 60% of the way, a stubborn one barely moves, and a coach of average adaptability and stubbornness moves 35%.
+
+**Coach fingerprints.** Two coaches with the same offense still call different games. Each head coach has six fingerprint traits:
+
+- touchdown finish: chase the 9 rather than take the 5
+- late down aggression
+- run lean
+- kick pass lean
+- lateral lean
+- turnover caution
+
+They move the offense's kicking, go-for-it and turnover settings and its play mix. The coach page shows the fingerprint measured from the season's games: run, kick pass and lateral share, the share of points from touchdowns, how often the team goes for it on 5th and 6th down past midfield, how often it kicks when in range on 4th to 6th down, plays per game, and the defense its game plans lean toward.
+
 **Program count.** A dynasty season needs an even number of programs. If the count is odd when a season starts, Coast Guard is retired, or Merchant Marine if Coast Guard is the human's program. Retiring a different program beforehand keeps the count even and skips this.
 
 ## Roster and Substitution Rules
@@ -640,7 +670,7 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Ghost Formation** — An offensive scheme using the Viper's pre-snap motion to create confusion. Misdirection-heavy.
 
-**Ground & Pound** — The touchdown first offense. It runs the ball, uses short kick passes to keep the defense honest, goes for it on short 5th and 6th downs, and kicks only when a drive has truly stalled or the clock says take the points.
+**Ground Control** — The touchdown first offense. It runs the ball, uses short kick passes to keep the defense honest, goes for it on short 5th and 6th downs, and kicks only when a drive has truly stalled or the clock says take the points.
 
 **Keeper** — The last line of defense; analogous to a safety. Also fields kicks and serves as a returner.
 

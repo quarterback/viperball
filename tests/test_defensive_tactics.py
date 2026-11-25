@@ -22,7 +22,7 @@ from engine.game_engine import (
 )
 
 
-def make_engine(offense="ground_pound", defense="lockdown"):
+def make_engine(offense="ground_control", defense="lockdown"):
     engine = object.__new__(ViperballEngine)
     engine.state = SimpleNamespace(
         possession="home", quarter=1, down=1, yards_to_go=20,
@@ -66,9 +66,9 @@ def test_correct_formation_read_moves_halfway_toward_neutral(
 
 
 @pytest.mark.parametrize("offense,scheme,family", [
-    ("ground_pound", "lockdown", PlayFamily.POWER),
+    ("ground_control", "lockdown", PlayFamily.POWER),
     ("boot_raid", "lockdown", PlayFamily.KICK_PASS),
-    ("ground_pound", "fortress", PlayFamily.POWER),
+    ("ground_control", "fortress", PlayFamily.POWER),
     ("chain_gang", "swarm", PlayFamily.LATERAL_SPREAD),
 ])
 def test_scheme_effect_has_expected_direction(offense, scheme, family):
@@ -80,15 +80,16 @@ def test_scheme_effect_has_expected_direction(offense, scheme, family):
     matrix = OFFENSE_VS_DEFENSE_MATCHUP[(offense, scheme)] - (means["matchup"] - 1)
     specific = (DEFENSE_STYLES[scheme]["play_family_modifiers"][family.value]
                 - (means["family"][family.value] - 1))
-    expected = max(0.75, min(1.20, 1 + 0.5 * (matrix - 1) + 0.35 * (specific - 1)))
+    # DEF-12: the family term weighs 0.6 and the bounds widened to 0.72 to 1.25.
+    expected = max(0.72, min(1.25, 1 + 0.5 * (matrix - 1) + 0.6 * (specific - 1)))
     assert multiplier == pytest.approx(expected)
-    assert 0.75 <= multiplier <= 1.20
+    assert 0.72 <= multiplier <= 1.25
 
 
 def test_scheme_offense_and_defense_tradeoffs():
     # A coverage scheme makes kick passing less productive while conceding
     # better power runs. This is a tactical distinction, not a win-rate test.
-    engine = make_engine("ground_pound", "lockdown")
+    engine = make_engine("ground_control", "lockdown")
     power_vs_lockdown = engine._defense_style_multiplier(PlayFamily.POWER)
     engine.home_team.offense_style = "boot_raid"
     kick_vs_lockdown = engine._defense_style_multiplier(PlayFamily.KICK_PASS)
@@ -125,7 +126,7 @@ def test_scheme_effect_can_be_ablation_disabled(monkeypatch):
 
 
 def test_explosive_defense_affects_breakaway_probability(monkeypatch):
-    engine = make_engine("ground_pound", "lockdown")
+    engine = make_engine("ground_control", "lockdown")
     engine._defensive_fatigue_factor = lambda: 1.0
     # Keep base chance deterministic: speed is rescaled in the real engine,
     # and the same player/matchup is evaluated against two schemes.
@@ -142,7 +143,7 @@ def test_explosive_defense_affects_breakaway_probability(monkeypatch):
 
 def test_all_offenses_and_defenses_have_explicit_matchups():
     assert len(OFFENSE_STYLES) == 16
-    assert len(DEFENSE_STYLES) == 8
+    assert len(DEFENSE_STYLES) == 10  # DEF-12 added Keeper Hunt and Rotation
     assert all(
         (offense, defense) in OFFENSE_VS_DEFENSE_MATCHUP
         for offense in OFFENSE_STYLES

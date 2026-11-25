@@ -644,6 +644,8 @@ DEFENSE_ALIGNMENT_MAP = {
     "Drift Defense": "spread",
     "Chaos Defense": "aggressive",
     "Lockdown": "spread",
+    "Keeper Hunt": "aggressive",
+    "Rotation Defense": "balanced",
     # Legacy mappings (backward compatibility)
     "Base Defense": "balanced",
     "Pressure Defense": "aggressive",
@@ -1068,7 +1070,7 @@ def designate_stars(players: List, max_stars: int = 3) -> List[str]:
 
 
 STARTER_FIRST_LOOK = {
-    "ground_pound":   {"run_starter_pct": 0.82, "recv_starter_pct": 0.64, "starter_ceiling": 38, "rotation_ceiling": 7},
+    "ground_control":   {"run_starter_pct": 0.82, "recv_starter_pct": 0.64, "starter_ceiling": 38, "rotation_ceiling": 7},
     "ball_control":   {"run_starter_pct": 0.76, "recv_starter_pct": 0.62, "starter_ceiling": 35, "rotation_ceiling": 7},
     "balanced":       {"run_starter_pct": 0.70, "recv_starter_pct": 0.60, "starter_ceiling": 30, "rotation_ceiling": 8},
     "slick_n_slide":  {"run_starter_pct": 0.70, "recv_starter_pct": 0.64, "starter_ceiling": 30, "rotation_ceiling": 8},
@@ -2249,8 +2251,8 @@ class Play:
 
 
 OFFENSE_STYLES = {
-    "ground_pound": {
-        "label": "Ground & Pound",
+    "ground_control": {
+        "label": "Ground Control",
         "description": ("Touchdown first, gridiron style. Run the ball, use short kick passes to "
                         "keep the defense honest, go for it on short late downs, and kick only "
                         "when a drive is truly stalled or the clock says take the points."),
@@ -2988,7 +2990,7 @@ OFFENSE_STYLES = {
 }
 
 # OFF-PHIL-01: how willing each offense is to go for it on late downs
-# (0.5 is the shared default). Ground & Pound sets its own above.
+# (0.5 is the shared default). Ground Control sets its own above.
 _STYLE_GO_FOR_IT = {
     "chain_gang": 0.75, "stampede": 0.65, "shock_and_awe": 0.65, "quick_strike": 0.6,
     "lateral_spread": 0.6, "slick_n_slide": 0.6, "mismatch": 0.55, "ghost": 0.55,
@@ -3001,7 +3003,8 @@ for _name, _g in _STYLE_GO_FOR_IT.items():
 
 
 STYLE_MIGRATION = {
-    "power_option": "ground_pound",
+    "power_option": "ground_control",
+    "ground_pound": "ground_control",
     "territorial": "boot_raid",
     "option_spread": "ghost",
     "rouge_hunt": "stampede",
@@ -3034,7 +3037,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     #   new_value = 1.0 + (old_value - 1.0) * 0.5
     #
     # Swarm crushes lateral-heavy offenses but kick pass carves its zones
-    ("ground_pound", "swarm"): 0.975,
+    ("ground_control", "swarm"): 0.975,
     ("lateral_spread", "swarm"): 0.91,
     ("boot_raid", "swarm"): 1.06,
     ("ball_control", "swarm"): 0.99,
@@ -3044,7 +3047,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "swarm"): 0.975,
     ("balanced", "swarm"): 0.975,
     # Blitz Pack pressures everything but counters/draws exploit vacated gaps
-    ("ground_pound", "blitz_pack"): 0.94,
+    ("ground_control", "blitz_pack"): 0.94,
     ("lateral_spread", "blitz_pack"): 1.04,
     ("boot_raid", "blitz_pack"): 0.95,
     ("ball_control", "blitz_pack"): 0.925,
@@ -3054,7 +3057,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "blitz_pack"): 1.05,
     ("balanced", "blitz_pack"): 1.00,
     # Shadow shuts down viper-based schemes but power run eats it alive
-    ("ground_pound", "shadow"): 1.06,
+    ("ground_control", "shadow"): 1.06,
     ("lateral_spread", "shadow"): 0.95,
     ("boot_raid", "shadow"): 0.975,
     ("ball_control", "shadow"): 1.04,
@@ -3064,7 +3067,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "shadow"): 0.96,
     ("balanced", "shadow"): 0.99,
     # Fortress walls off the run game but lateral/kick pass go around
-    ("ground_pound", "fortress"): 0.89,
+    ("ground_control", "fortress"): 0.89,
     ("lateral_spread", "fortress"): 1.075,
     ("boot_raid", "fortress"): 1.09,
     ("ball_control", "fortress"): 0.91,
@@ -3074,7 +3077,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "fortress"): 1.00,
     ("balanced", "fortress"): 1.01,
     # Predator gambles — great vs predictable offenses, burned by chaos
-    ("ground_pound", "predator"): 0.95,
+    ("ground_control", "predator"): 0.95,
     ("lateral_spread", "predator"): 0.975,
     ("boot_raid", "predator"): 0.94,
     ("ball_control", "predator"): 0.925,
@@ -3084,7 +3087,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "predator"): 1.025,
     ("balanced", "predator"): 0.975,
     # Drift bends but doesn't break — dies to patient ball control
-    ("ground_pound", "drift"): 1.025,
+    ("ground_control", "drift"): 1.025,
     ("lateral_spread", "drift"): 0.96,
     ("boot_raid", "drift"): 0.94,
     ("ball_control", "drift"): 1.075,
@@ -3094,7 +3097,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "drift"): 0.975,
     ("balanced", "drift"): 0.99,
     # Chaos wrecks predictable teams, but experienced/balanced offenses adapt
-    ("ground_pound", "chaos"): 0.94,
+    ("ground_control", "chaos"): 0.94,
     ("lateral_spread", "chaos"): 0.975,
     ("boot_raid", "chaos"): 0.95,
     ("ball_control", "chaos"): 0.96,
@@ -3104,7 +3107,7 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
     ("slick_n_slide", "chaos"): 1.01,
     ("balanced", "chaos"): 1.04,
     # Lockdown denies kick pass but ground game bulldozes the light box
-    ("ground_pound", "lockdown"): 1.075,
+    ("ground_control", "lockdown"): 1.075,
     ("lateral_spread", "lockdown"): 0.96,
     ("boot_raid", "lockdown"): 0.90,
     ("ball_control", "lockdown"): 1.05,
@@ -3181,6 +3184,14 @@ OFFENSE_VS_DEFENSE_MATCHUP = {
 # ── Formation × Defense Matchup Matrix ──
 # Multiplicative layer that stacks with OFFENSE_VS_DEFENSE_MATCHUP.
 # > 1.0 = formation has advantage, < 1.0 = defense has advantage.
+# DEF-12: the two new schemes. Keeper Hunt is a little better than its
+# numbers against the kick first offenses; Rotation is neutral.
+for _off in OFFENSE_STYLES:
+    OFFENSE_VS_DEFENSE_MATCHUP.setdefault(
+        (_off, "keeper_hunt"),
+        0.95 if _off in ("boot_raid", "six_shooter", "ball_control", "ironclad") else 1.0)
+    OFFENSE_VS_DEFENSE_MATCHUP.setdefault((_off, "rotation"), 1.0)
+
 FORMATION_VS_DEFENSE = {
     # --- Tight: power interior, weak to pressure/blitz ---
     ("tight", "swarm"):       1.00,
@@ -3219,6 +3230,10 @@ FORMATION_VS_DEFENSE = {
     ("heavy", "chaos"):       1.00,  # Even matchup
     ("heavy", "lockdown"):    1.12,  # Coverage is useless — no one to cover
 }
+
+for _form in sorted({f for f, _ in FORMATION_VS_DEFENSE}):
+    FORMATION_VS_DEFENSE.setdefault((_form, "keeper_hunt"), 1.00)
+    FORMATION_VS_DEFENSE.setdefault((_form, "rotation"), 1.00)
 
 # ========================================
 # DEFENSIVE ARCHETYPES
@@ -3652,6 +3667,100 @@ DEFENSE_STYLES = {
             "leading_conserve": 0.10,
         },
     },
+
+    # ================================================================
+    # KEEPER HUNT — kick pressure (DEF-12)
+    # Built against kick first teams. Sends rushers at every snap kick
+    # and place kick: more blocks, rushed and deflected kicks, bells off
+    # loose balls. Commits rushers, so it gives up conversions and draws
+    # roughing fouls; "take the five" stops being automatic.
+    # ================================================================
+    "keeper_hunt": {
+        "label": "Keeper Hunt",
+        "description": "Pressure every kick: more blocks, rushed kicks and loose ball bells. The rushers it commits give up conversions and draw fouls.",
+        "play_family_modifiers": {
+            "dive_option": 0.91,
+            "speed_option": 0.86,
+            "sweep_option": 0.87,
+            "power": 0.92,
+            "counter": 0.95,
+            "draw": 1.02,
+            "viper_jet": 0.79,
+            "lateral_spread": 0.91,
+            "kick_pass": 0.90,
+            "trick_play": 0.91,
+        },
+        "read_success_rate": 0.38,
+        "pressure_factor": 0.90,
+        "turnover_bonus": 0.20,
+        "explosive_suppression": 1.02,
+        "kick_suppression": 0.80,
+        "kick_pass_coverage": 0.06,
+        "pindown_defense": 0.95,
+        "fatigue_resistance": 0.04,
+        "gameplan_bias": {
+            "dive_option": 0.02, "speed_option": 0.02, "sweep_option": 0.02,
+            "power": 0.02, "counter": 0.02, "draw": 0.02, "viper_jet": 0.02,
+            "lateral_spread": 0.02, "kick_pass": 0.04, "trick_play": 0.02,
+        },
+        "personnel_weights": {
+            "speed": 0.35, "agility": 0.25, "tackling": 0.20, "awareness": 0.20,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.06,
+            "short_yardage_modifier": 1.12,
+            "long_yardage_modifier": 0.95,
+            "trailing_aggression": 0.08,
+            "leading_conserve": 0.04,
+        },
+    },
+
+    # ================================================================
+    # ROTATION — tempo counter (DEF-12)
+    # Substitutes aggressively. Defenders stay fresh, so tempo offenses
+    # and long drives wear it down less and it holds up late. The price is
+    # continuity: no one star plays every snap, so it is a little softer
+    # play to play.
+    # ================================================================
+    "rotation": {
+        "label": "Rotation Defense",
+        "description": "Substitute aggressively to stay fresh. Blunts tempo and late game collapse, but rotating bodies costs a little on every snap.",
+        "play_family_modifiers": {
+            "dive_option": 0.89,
+            "speed_option": 0.84,
+            "sweep_option": 0.85,
+            "power": 0.90,
+            "counter": 0.93,
+            "draw": 1.00,
+            "viper_jet": 0.77,
+            "lateral_spread": 0.89,
+            "kick_pass": 0.88,
+            "trick_play": 0.89,
+        },
+        "read_success_rate": 0.36,
+        "pressure_factor": 0.40,
+        "turnover_bonus": 0.12,
+        "explosive_suppression": 0.95,
+        "kick_suppression": 1.00,
+        "kick_pass_coverage": 0.06,
+        "pindown_defense": 0.95,
+        "fatigue_resistance": 0.60,
+        "gameplan_bias": {
+            "dive_option": 0.02, "speed_option": 0.02, "sweep_option": 0.02,
+            "power": 0.02, "counter": 0.02, "draw": 0.02, "viper_jet": 0.02,
+            "lateral_spread": 0.02, "kick_pass": 0.02, "trick_play": 0.02,
+        },
+        "personnel_weights": {
+            "stamina": 0.35, "tackling": 0.25, "speed": 0.20, "awareness": 0.20,
+        },
+        "situational": {
+            "red_zone_read_boost": 0.06,
+            "short_yardage_modifier": 1.00,
+            "long_yardage_modifier": 1.00,
+            "trailing_aggression": 0.04,
+            "leading_conserve": 0.06,
+        },
+    },
 }
 
 # ── Defensive Style → Personnel Category Mapping ──────────────────
@@ -3666,6 +3775,8 @@ DEFENSE_SCHEME_TO_CATEGORY = {
     "drift":      "coverage",
     "chaos":      "pressure",
     "lockdown":   "contain",
+    "keeper_hunt": "pressure",
+    "rotation":   "base",
 }
 
 # ── Per-Surface Defensive Personnel Weights ───────────────────────
@@ -3735,6 +3846,8 @@ STYLE_BLITZ_CHANCE = {
     "drift":      0.05,
     "chaos":      0.30,
     "lockdown":   0.10,
+    "keeper_hunt": 0.20,
+    "rotation":   0.08,
 }
 
 # ========================================
@@ -3755,7 +3868,7 @@ OFFENSE_BLOCK_MODIFIERS = {
     "stampede": 1.0,
     "balanced": 1.0,
     "slick_n_slide": 1.05,
-    "ground_pound": 1.1,
+    "ground_control": 1.1,
     "ghost": 1.15,
     "lateral_spread": 1.2,
     "chain_gang": 1.2,
@@ -3773,6 +3886,8 @@ DEFENSE_BLOCK_MODIFIERS = {
     "shadow": 1.0,             # Average
     "drift": 0.9,              # Soft zone = less rush
     "lockdown": 0.8,           # Drops back, doesn't rush kicks
+    "keeper_hunt": 1.0,        # Kick rush comes from its signature (kick_rush)
+    "rotation": 0.95,
     # Legacy (backward compatibility)
     "pressure_defense": 1.5,
     "coverage_defense": 1.0,
@@ -3783,6 +3898,8 @@ DEFENSE_BLOCK_MODIFIERS = {
 
 DEFENSE_MUFF_MODIFIERS = {
     "lockdown": 1.35,          # Best coverage = best gunners on punt team
+    "keeper_hunt": 1.10,
+    "rotation": 1.00,
     "predator": 1.25,          # Aggressive coverage, forces mistakes
     "swarm": 1.15,             # Flows to ball — good special teams
     "chaos": 1.10,             # Unpredictable coverage
@@ -3873,6 +3990,65 @@ ST_SCHEME_MIGRATION = {
 
 
 _DEFENSE_SCHEME_MEANS = None
+
+
+# COACH-FP-01: how far a head coach's fingerprint slider can move a style
+# setting, at slider 0 or 100. A touchdown first coach lowers the style's
+# kick eagerness; a late down gambler raises its go-for-it appetite.
+_FINGERPRINT_SHIFTS = {
+    "kick_mode_aggression": ("touchdown_finish", -0.20),
+    "go_for_it": ("late_down_aggression", 0.20),
+    "turnover_aversion": ("turnover_caution", 0.30),
+}
+
+# DEF-12: each defense's signature, the specific outcomes it changes. Every
+# defense also loses to something (its play_family_modifiers above). 1.0 is
+# no change.
+#   kp_int       kick pass interception chance
+#   lateral_int  lateral interception chance
+#   strip        run fumble chance (forced fumbles)
+#   kick_rush    blocked kick chance and, past 1.0, rushed snap kicks
+DEFENSE_SIGNATURES = {
+    "swarm":       {"lateral_int": 1.45, "strip": 1.05},
+    "blitz_pack":  {"strip": 1.25, "kick_rush": 1.20},
+    "shadow":      {},
+    "fortress":    {"strip": 1.10},
+    "predator":    {"kp_int": 1.40, "lateral_int": 1.25, "strip": 1.20},
+    "drift":       {"kp_int": 0.85},
+    "chaos":       {"kp_int": 1.10, "lateral_int": 1.15, "kick_rush": 1.15},
+    "lockdown":    {"kp_int": 1.15},
+    "keeper_hunt": {"kick_rush": 3.0},
+    "rotation":    {},
+}
+
+
+# DEF-13: the defense a coach leans toward against each offense in the
+# weekly game plan. Chosen from the defense by offense matrix (points
+# allowed), not from the scheme descriptions.
+COUNTER_DEFENSE = {
+    "ground_control": "fortress", "ironclad": "fortress", "stampede": "fortress",
+    "ball_control": "fortress", "six_shooter": "fortress", "slick_n_slide": "fortress",
+    "shock_and_awe": "lockdown", "boot_raid": "lockdown", "quick_strike": "lockdown",
+    "east_coast": "drift",
+    "chain_gang": "predator", "lateral_spread": "predator",
+    "ghost": "shadow", "mismatch": "shadow",
+}
+
+
+def blend_defense(base: Dict, counter: Dict, w: float) -> Dict:
+    """A base defense moved part of the way toward a counter scheme. The
+    base keeps its name, label, alignment and signature; only its numbers
+    move, so a stubborn coach's defense still looks like his own."""
+    out = dict(base)
+    for k, v in base.items():
+        cv = counter.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and isinstance(cv, (int, float)):
+            out[k] = v * (1.0 - w) + cv * w
+    fam = dict(base.get("play_family_modifiers", {}))
+    for k, cv in counter.get("play_family_modifiers", {}).items():
+        fam[k] = fam.get(k, 1.0) * (1.0 - w) + cv * w
+    out["play_family_modifiers"] = fam
+    return out
 
 
 def _defense_scheme_means() -> dict:
@@ -4285,6 +4461,32 @@ class ViperballEngine:
                     offense_style=away_off_style)
                 self.away_dc_gameplan = roll_dc_gameplan(
                     away_coaching, rng=self._away_coaching_rng)
+
+        # ── DEF-13: weekly game plan ──
+        # Each defensive staff leans part of the way toward a counter for the
+        # opponent's offense. How far depends on the head coach: adaptable
+        # coaches move more, stubborn ones barely move. No coaching staff
+        # means an average coach.
+        self.game_plans = {}
+        for side, mods in (("home", self.home_coaching_mods), ("away", self.away_coaching_mods)):
+            opp_off = (self.away_team if side == "home" else self.home_team).offense_style
+            base_name = (self.home_team if side == "home" else self.away_team).defense_style
+            counter = COUNTER_DEFENSE.get(opp_off)
+            pf = (mods or {}).get("personality_factors", {})
+            w = 0.35 * pf.get("adaptability", 1.0) * (2.0 - pf.get("stubbornness", 1.0))
+            w = max(0.0, min(0.6, w)) * V2_ENGINE_CONFIG.get("weekly_game_plan_scale", 1.0)
+            if counter and counter != base_name and w > 0:
+                base = self.home_defense if side == "home" else self.away_defense
+                blended = blend_defense(base, DEFENSE_STYLES[counter], w)
+                if side == "home":
+                    self.home_defense = blended
+                else:
+                    self.away_defense = blended
+                self.game_plans[side] = {"base": base_name, "lean": counter,
+                                         "weight": round(w, 2), "against": opp_off}
+            else:
+                self.game_plans[side] = {"base": base_name, "lean": None, "weight": 0.0,
+                                         "against": opp_off}
 
         # V2.7: Lead management profiles — countermeasure tendencies + sensitivity
         from engine.coaching import _default_lead_profile
@@ -5868,10 +6070,10 @@ class ViperballEngine:
                 weights[i] *= max(0.4, soft_decay)
 
         if not for_receiving:
-            lead_forced = {"ground_pound": 0.62, "stampede": 0.58, "ball_control": 0.56,
+            lead_forced = {"ground_control": 0.62, "stampede": 0.58, "ball_control": 0.56,
                            "slick_n_slide": 0.54, "balanced": 0.54, "ghost": 0.44,
                            "boot_raid": 0.40, "lateral_spread": 0.38, "chain_gang": 0.36}
-            comp_forced = {"ground_pound": 0.22, "stampede": 0.22, "ball_control": 0.20,
+            comp_forced = {"ground_control": 0.22, "stampede": 0.22, "ball_control": 0.20,
                            "slick_n_slide": 0.20, "balanced": 0.20, "ghost": 0.18,
                            "boot_raid": 0.16, "lateral_spread": 0.16, "chain_gang": 0.14}
             cop_forced_speed = 0.40
@@ -6614,7 +6816,7 @@ class ViperballEngine:
             # a real time-of-possession differential between grind and tempo teams.
             #
             # Style-based play clock (seconds per play):
-            #   Ground & Pound / Ball Control / Rouge Hunt: 32-38s (huddle, heavy sets)
+            #   Ground Control / Ball Control / Rouge Hunt: 32-38s (huddle, heavy sets)
             #   Triple Threat / Balanced:                   25-30s (pro-style)
             #   Boot Raid / Ghost:                          22-26s (moderate tempo)
             #   Lateral Spread / Chain Gang:                18-22s (no-huddle, high tempo)
@@ -7320,7 +7522,20 @@ class ViperballEngine:
         over = distance - comfortable_range
         return max(0.10, 0.82 - over * 0.04)
 
-    def _drop_kick_success(self, distance: int, kicker_skill: int) -> float:
+    def _drop_kick_success(self, distance, kicker_skill=75):
+        """Snap kick success against the defense on the field. A kick rush
+        defense (Keeper Hunt above all) hurries the kicker; coaches read
+        this too, so taking the five is less automatic against it (DEF-12)."""
+        p = self._drop_kick_success_base(distance, kicker_skill)
+        rush = self._def_sig("kick_rush") if hasattr(self, "state") else 1.0
+        if rush > 1.0:
+            # A missed snap kick on downs 1 to 5 keeps the ball, so the rush
+            # bites hardest on 6th down, when a miss is a turnover.
+            per = 0.12 if getattr(self.state, "down", 6) >= 6 else 0.04
+            p *= 1.0 - per * (rush - 1.0)
+        return p
+
+    def _drop_kick_success_base(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
 
         Drop kicks are worth 5 points (vs 3 for FGs) and have recovery
@@ -9339,6 +9554,13 @@ class ViperballEngine:
             weights["lateral_spread"] = weights.get("lateral_spread", 0.0) * (1.0 - 0.5 * ta)
             weights["trick_play"] = weights.get("trick_play", 0.0) * (1.0 - 0.6 * ta)
 
+        # ── COACH-FP-01: the head coach's own play calling leans ──
+        run_f = self._fingerprint_factor("run_lean")
+        for rk in ("dive_option", "power", "sweep_option", "speed_option", "counter", "draw"):
+            weights[rk] = weights.get(rk, 0.0) * run_f
+        weights["kick_pass"] = weights.get("kick_pass", 0.0) * self._fingerprint_factor("kick_pass_lean")
+        weights["lateral_spread"] = weights.get("lateral_spread", 0.0) * self._fingerprint_factor("lateral_lean")
+
         # ── Lateral hard cap (4-6% of plays) ──
         weights["lateral_spread"] = min(weights.get("lateral_spread", 0.2), 0.08)
 
@@ -9700,15 +9922,32 @@ class ViperballEngine:
         return self.away_style
 
     def _style_knob(self, key: str, default: float) -> float:
-        """A setting from the offense's style (OFF-PHIL-01). Styles that don't
-        set it get the default, which reproduces the shared behavior."""
+        """A setting from the offense's style (OFF-PHIL-01), moved by the head
+        coach's decision fingerprint (COACH-FP-01). Styles that don't set it
+        get the default, which reproduces the shared behavior."""
         v = self._current_style().get(key, default)
-        return default if v is None else v
+        v = default if v is None else v
+        shift = _FINGERPRINT_SHIFTS.get(key)
+        if shift:
+            slider, size = shift
+            f = (self._coaching_mods() or {}).get("personality_factors", {}).get(slider)
+            if f is not None:
+                # f runs 0.75 to 1.25 around 1.0 (slider 0 to 100).
+                v = v + (f - 1.0) * 2.0 * size
+        return v
+
+    def _fingerprint_factor(self, slider: str) -> float:
+        """The head coach's slider as a 0.75 to 1.25 factor (1.0 is average)."""
+        return (self._coaching_mods() or {}).get("personality_factors", {}).get(slider, 1.0)
 
     def _current_style_name(self) -> str:
         if self.state.possession == "home":
             return self.home_team.offense_style
         return self.away_team.offense_style
+
+    def _def_sig(self, key: str) -> float:
+        """DEF-12: the defense on the field's signature effect for key."""
+        return DEFENSE_SIGNATURES.get(self._current_defense_name(), {}).get(key, 1.0)
 
     def _current_defense(self) -> Dict:
         if self.state.possession == "home":
@@ -9739,8 +9978,11 @@ class ViperballEngine:
             means = _defense_scheme_means()
             matchup -= means["matchup"] - 1.0
             family -= means["family"].get(play_family.value, 1.0) - 1.0
-        effect = 1.0 + 0.50 * (matchup - 1.0) + 0.35 * (family - 1.0)
-        return max(0.75, min(1.20, effect))
+        # DEF-12: the family term carries the scheme's strengths and
+        # weaknesses; it was weighted 0.35, which flattened every defense
+        # toward the same one.
+        effect = 1.0 + 0.50 * (matchup - 1.0) + V2_ENGINE_CONFIG.get("defense_family_weight", 0.6) * (family - 1.0)
+        return max(0.72, min(1.25, effect))
 
     def _scheme_explosive_suppression(self) -> float:
         value = self._current_defense().get("explosive_suppression", 1.0)
@@ -9942,7 +10184,7 @@ class ViperballEngine:
 
         # ── Style-specific sub-family overrides ──
         style_name = self._current_style_name()
-        if style_name == "ground_pound":
+        if style_name == "ground_control":
             # Play-action quick kick off heavy run looks
             base["quick_kick"] *= 1.80
             base["bomb"] *= 0.20
@@ -9990,7 +10232,7 @@ class ViperballEngine:
         return chosen
 
     def _apply_style_situational(self, weights: Dict, style_name: str, down: int, ytg: int, fp: int, score_diff: int, quarter: int, time_left: int):
-        if style_name == "ground_pound":
+        if style_name == "ground_control":
             if down <= 3:
                 weights["dive_option"] = weights.get("dive_option", 0.1) * 1.3
                 weights["power"] = weights.get("power", 0.1) * 1.3
@@ -10137,6 +10379,7 @@ class ViperballEngine:
         st_modifier = rushing_st.get("block_rush_modifier", 1.0)
 
         block_prob = base_prob * offense_modifier * defense_modifier * st_modifier
+        block_prob *= self._def_sig("kick_rush") ** 1.4
 
         return max(0.0, block_prob)
 
@@ -10433,7 +10676,8 @@ class ViperballEngine:
         off_pf = off_mods.get("personality_factors", {})
         tempo_pref = off_pf.get("tempo_preference", 1.0)
         if tempo_pref > 1.0:
-            adjusted_fatigue *= 1.0 + (tempo_pref - 1.0) * 0.5  # subtle extra tire
+            # A rotating defense keeps sending fresh bodies at the tempo.
+            adjusted_fatigue *= 1.0 + (tempo_pref - 1.0) * 0.5 * (1.0 - max(0.0, fatigue_resistance))
 
         return max(1.0, adjusted_fatigue)
 
@@ -10522,6 +10766,7 @@ class ViperballEngine:
                 base_fumble *= 1.15
 
         base_fumble *= self._ball_handling("fumble_mult")
+        base_fumble *= self._def_sig("strip")
 
         if carrier and carrier.archetype != "none":
             arch_info = get_archetype_info(carrier.archetype)
@@ -12373,6 +12618,7 @@ class ViperballEngine:
             thrower_skill = getattr(thrower, 'lateral_skill', 70)
             int_chance = 0.05 * (1 + (scale_rating(avg_def_awareness, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
             int_chance *= _gm_int_red
+            int_chance *= self._def_sig("lateral_int")
             # V4: Pursuit quality scales INT/fumble chance
             int_chance *= _lat_pursuit_mod
             trap = self._active_dc_call()
@@ -13034,6 +13280,7 @@ class ViperballEngine:
                     int_rate = 0.05 * (1 + (scale_rating(avg_def_aware, "rescale_turnovers") - 70) / 100) * (1 - (scale_rating(thrower_skill, "rescale_turnovers") - 70) / 200)
                     # V4: Pursuit quality scales INT chance
                     int_rate *= _kl_pursuit_mod
+                    int_rate *= self._def_sig("lateral_int")
                     int_rate = max(0.025, min(0.10, int_rate))
                     if random.random() < int_rate:
                         chain_intercepted = True
@@ -13404,6 +13651,7 @@ class ViperballEngine:
            (self.state.possession == "away" and self.home_turnover_machine):
             int_chance += 0.02
 
+        int_chance *= self._def_sig("kp_int")
         int_chance = max(0.04, min(0.30, int_chance))
 
         if random.random() < int_chance:
@@ -14071,7 +14319,7 @@ class ViperballEngine:
         for p in def_team.players:
             if p.archetype == "diving_wing" and p.name not in self._unavailable_in_game(def_team):
                 tck_score = max(0, scale_rating(p.tackling, "rescale_yac") - 70) / 30.0
-                spd_score = max(0, p.speed - 78) / 22.0
+                spd_score = max(0, _old(p.speed) - 78) / 22.0  # old scale (SCALE-01)
                 kick_score = max(0, p.kicking - 40) / 50.0
                 attr_index = (tck_score * 0.45 + spd_score * 0.35 + kick_score * 0.20)
                 attr_index = min(1.0, attr_index)
@@ -14091,7 +14339,8 @@ class ViperballEngine:
         if weather_mod < -0.05:
             dk_block_prob += 0.005
 
-        dk_block_prob = max(0.0, min(0.06, dk_block_prob))
+        dk_block_prob *= self._def_sig("kick_rush") ** 1.4
+        dk_block_prob = max(0.0, min(0.12, dk_block_prob))
 
         if random.random() < dk_block_prob:
             kicker.game_kick_attempts += 1
@@ -16437,6 +16686,7 @@ class ViperballEngine:
             "weather_label": self.game_weather.describe(1),
             "weather_description": self._weather_story(),
             "weather_detail": self.game_weather.summary(),
+            "game_plans": self.game_plans,
             "seed": self.seed,
             "stats": {
                 "home": home_stats,

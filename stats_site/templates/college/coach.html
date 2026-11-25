@@ -127,6 +127,9 @@
     'composure_tendency': 'Composure', 'adaptability': 'Adaptability',
     'stubbornness': 'Stubbornness', 'player_trust': 'Player Trust',
     'variance_tolerance': 'Variance Tolerance',
+    'touchdown_finish': 'Touchdown Finish', 'late_down_aggression': 'Late Down Aggression',
+    'run_lean': 'Run Lean', 'kick_pass_lean': 'Kick Pass Lean', 'lateral_lean': 'Lateral Lean',
+    'turnover_caution': 'Turnover Caution',
   } %}
   {% for key, label in slider_labels.items() %}
   {% if key in sliders %}
@@ -145,6 +148,27 @@
   </tbody>
 </table>
 {% endif %}
+
+{# COACH-FP-01: measured fingerprint #}
+<h2>Fingerprint</h2>
+<table>
+  <tbody>
+  <tr><td>Offense</td><td>{{ offense_school }}</td></tr>
+  <tr><td>Defense</td><td>{{ defense_school }}{% if fingerprint and fingerprint.defense_lean %}, leaning toward {{ fingerprint.defense_lean|replace('_',' ')|title }} in game plans{% endif %}</td></tr>
+  {% if fingerprint %}
+  <tr><td>Run share</td><td class="num">{{ fingerprint.run_share }}%</td></tr>
+  <tr><td>Kick pass share</td><td class="num">{{ fingerprint.kick_pass_share }}%</td></tr>
+  <tr><td>Lateral share</td><td class="num">{{ fingerprint.lateral_share }}%</td></tr>
+  <tr><td>Share of points from touchdowns</td><td class="num">{{ fingerprint.td_share if fingerprint.td_share is not none else '' }}{% if fingerprint.td_share is not none %}%{% endif %}</td></tr>
+  <tr><td>Goes for it on 5th and 6th down past midfield</td><td class="num">{{ fingerprint.late_down_go if fingerprint.late_down_go is not none else '' }}{% if fingerprint.late_down_go is not none %}%{% endif %}</td></tr>
+  <tr><td>Kicks when in range on 4th to 6th down</td><td class="num">{{ fingerprint.kick_acceptance if fingerprint.kick_acceptance is not none else '' }}{% if fingerprint.kick_acceptance is not none %}%{% endif %}</td></tr>
+  <tr><td>Plays per game</td><td class="num">{{ fingerprint.plays_per_game }}</td></tr>
+  <tr><td>Games measured</td><td class="num">{{ fingerprint.games }}</td></tr>
+  {% else %}
+  <tr><td colspan="2">Measured once the team has played.</td></tr>
+  {% endif %}
+  </tbody>
+</table>
 
 {# Awards #}
 {% if coach_awards %}

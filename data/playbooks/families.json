@@ -1,60 +1,110 @@
 {
   "version": 1,
   "offense": {
-    "ground_pound": {
+    "ground_control": {
       "identity": "Power runs on all six downs between the tackles, finished at the goal line.",
-      "strong_in": ["short_yardage", "goal_line"],
-      "personnel": ["physical_roster"],
+      "strong_in": [
+        "short_yardage",
+        "goal_line"
+      ],
+      "personnel": [
+        "physical_roster"
+      ],
       "constraints": "Little explosive ceiling; a stacked box takes away its main plays.",
-      "signature_fields": ["red_zone_run_pct"],
+      "signature_fields": [
+        "red_zone_run_pct"
+      ],
       "travels": "Its dives and powers travel to other books; its red zone run lean is a system choice that stays home."
     },
     "lateral_spread": {
       "identity": "Two to four lateral chains that stretch a defense sideways.",
-      "strong_in": ["chasing", "long_yardage"],
-      "personnel": ["lateral_hands"],
+      "strong_in": [
+        "chasing",
+        "long_yardage"
+      ],
+      "personnel": [
+        "lateral_hands"
+      ],
       "constraints": "Fumbles and bells both ways; weak in rain.",
-      "signature_fields": ["lateral_success_bonus", "tired_def_yardage_bonus"],
+      "signature_fields": [
+        "lateral_success_bonus",
+        "tired_def_yardage_bonus"
+      ],
       "travels": "Its chain plays travel; the lateral success bonus comes from drilling chains every day and stays home."
     },
     "boot_raid": {
       "identity": "Reach the Launch Pad, then fire snap kicks.",
-      "strong_in": ["launch_pad", "kick_range"],
-      "personnel": ["strong_kicker"],
+      "strong_in": [
+        "launch_pad",
+        "kick_range"
+      ],
+      "personnel": [
+        "strong_kicker"
+      ],
       "constraints": "Needs a reliable kicker; stalls when kick passes are denied.",
-      "signature_fields": ["launch_pad_threshold", "weights_attack", "kick_pass_weights_attack", "snap_kick_aggression"],
+      "signature_fields": [
+        "launch_pad_threshold",
+        "weights_attack",
+        "kick_pass_weights_attack",
+        "snap_kick_aggression"
+      ],
       "travels": "Its kick pass sets travel. The Launch Pad payoff is its kicking system, which stays home: in the PR #329 prototype, borrowed Boot Raid calls on the Launch Pad gained less than home calls (3.84 against 4.27 yards a play)."
     },
     "ball_control": {
       "identity": "Mistake free possession that takes the points when they are there.",
-      "strong_in": ["protect_lead"],
+      "strong_in": [
+        "protect_lead"
+      ],
       "personnel": [],
       "constraints": "Low ceiling when chasing.",
-      "signature_fields": ["clock_burn_multiplier"],
+      "signature_fields": [
+        "clock_burn_multiplier"
+      ],
       "travels": "Its safe calls travel; the clock burn is a tempo system that stays home."
     },
     "ghost": {
       "identity": "Viper motion and pre snap confusion; the defense never knows where the playmaker is.",
       "strong_in": [],
-      "personnel": ["team_speed"],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "Shadow mirrors the Viper and takes it away.",
-      "signature_fields": ["viper_touch_rate", "pre_snap_motion", "misdirection_bonus"],
+      "signature_fields": [
+        "viper_touch_rate",
+        "pre_snap_motion",
+        "misdirection_bonus"
+      ],
       "travels": "Its jets and counters travel as matchup calls; the motion system stays home."
     },
     "stampede": {
       "identity": "High tempo speed runs outside that exploit tired defenders.",
-      "strong_in": ["tired_defense"],
-      "personnel": ["team_speed", "deep_conditioning"],
+      "strong_in": [
+        "tired_defense"
+      ],
+      "personnel": [
+        "team_speed",
+        "deep_conditioning"
+      ],
       "constraints": "Needs its own tempo to tire a defense.",
-      "signature_fields": ["fatigue_exploit_bonus"],
+      "signature_fields": [
+        "fatigue_exploit_bonus"
+      ],
       "travels": "Its sweeps and speed options travel, best against a defense already tired. In the PR #329 prototype, borrowed Stampede calls on early downs lost about a yard a play against home calls."
     },
     "chain_gang": {
       "identity": "Maximum lateral chains, maximum chaos.",
-      "strong_in": ["chasing"],
-      "personnel": ["lateral_hands"],
+      "strong_in": [
+        "chasing"
+      ],
+      "personnel": [
+        "lateral_hands"
+      ],
       "constraints": "Feast or famine; gives up bells.",
-      "signature_fields": ["chain_length_preference", "lateral_success_bonus", "risk_tolerance"],
+      "signature_fields": [
+        "chain_length_preference",
+        "lateral_success_bonus",
+        "risk_tolerance"
+      ],
       "travels": "Its long chains travel as a chase package; its risk appetite is the head coach's, not the play's."
     },
     "slick_n_slide": {
@@ -62,7 +112,10 @@
       "strong_in": [],
       "personnel": [],
       "constraints": "Reads need reps; borrowed reads lose their edge.",
-      "signature_fields": ["rkpo_rate", "lead_back_bonus"],
+      "signature_fields": [
+        "rkpo_rate",
+        "lead_back_bonus"
+      ],
       "travels": "Its two back looks travel as matchup calls; the read option rate stays home."
     },
     "balanced": {
@@ -75,34 +128,76 @@
     },
     "east_coast": {
       "identity": "Short kick passes that move the chains; rhythm builds with each completion.",
-      "strong_in": ["long_yardage", "two_minute"],
-      "personnel": ["strong_kicker"],
+      "strong_in": [
+        "long_yardage",
+        "two_minute"
+      ],
+      "personnel": [
+        "strong_kicker"
+      ],
       "constraints": "A turnover or punt resets the rhythm.",
-      "signature_fields": ["rhythm_escalation", "possession_drive_bonus", "weights_attack", "weights_siege", "weights_chase"],
+      "signature_fields": [
+        "rhythm_escalation",
+        "possession_drive_bonus",
+        "weights_attack",
+        "weights_siege",
+        "weights_chase"
+      ],
       "travels": "Its quick kick chains travel; the rhythm meter is a system and stays home."
     },
     "shock_and_awe": {
       "identity": "Vertical kick pass bombs at maximum tempo.",
-      "strong_in": ["chasing", "long_yardage"],
-      "personnel": ["elite_kicker", "team_speed"],
+      "strong_in": [
+        "chasing",
+        "long_yardage"
+      ],
+      "personnel": [
+        "elite_kicker",
+        "team_speed"
+      ],
       "constraints": "Sacks and interceptions; feast or famine.",
-      "signature_fields": ["volume_shooting", "deep_shot_bonus", "tempo_fatigue_export", "sack_vulnerability"],
+      "signature_fields": [
+        "volume_shooting",
+        "deep_shot_bonus",
+        "tempo_fatigue_export",
+        "sack_vulnerability"
+      ],
       "travels": "Its deep shots travel; volume shooting and tempo fatigue are system level."
     },
     "six_shooter": {
       "identity": "Run heavy setup on downs 1 to 4, then pull the trigger in Kick Mode.",
-      "strong_in": ["launch_pad", "late_downs"],
-      "personnel": ["strong_kicker"],
+      "strong_in": [
+        "launch_pad",
+        "late_downs"
+      ],
+      "personnel": [
+        "strong_kicker"
+      ],
       "constraints": "Needs field position before the trigger.",
-      "signature_fields": ["phase_shift", "weights_kick_mode", "kick_pass_weights_kick_mode", "early_down_run_rate"],
+      "signature_fields": [
+        "phase_shift",
+        "weights_kick_mode",
+        "kick_pass_weights_kick_mode",
+        "early_down_run_rate"
+      ],
       "travels": "Its late down sets travel; the phase shift is a system."
     },
     "quick_strike": {
       "identity": "Transition offense: score in 2 to 4 plays off turnovers and bonus possessions.",
-      "strong_in": ["after_takeaway", "chasing", "two_minute"],
-      "personnel": ["team_speed"],
+      "strong_in": [
+        "after_takeaway",
+        "chasing",
+        "two_minute"
+      ],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "Short possessions leave its defense on the field.",
-      "signature_fields": ["transition_yards_bonus", "bonus_possession_aggression", "short_drive_efficiency"],
+      "signature_fields": [
+        "transition_yards_bonus",
+        "bonus_possession_aggression",
+        "short_drive_efficiency"
+      ],
       "travels": "Its fast break calls travel; the transition bonus belongs to the system."
     },
     "mousetrap": {
@@ -110,36 +205,64 @@
       "strong_in": [],
       "personnel": [],
       "constraints": "Needs a defense that adjusts.",
-      "signature_fields": ["bait_phase", "bait_phase_plays", "weights_bait", "adaptation_exploit_bonus", "counter_tendency_bonus"],
+      "signature_fields": [
+        "bait_phase",
+        "bait_phase_plays",
+        "weights_bait",
+        "adaptation_exploit_bonus",
+        "counter_tendency_bonus"
+      ],
       "travels": "Its counters travel as matchup calls; the bait phase is a whole game plan and stays home."
     },
     "mismatch": {
       "identity": "Find the weak link and attack it with the Viper.",
       "strong_in": [],
-      "personnel": ["team_speed"],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "Needs a mismatch to exist.",
-      "signature_fields": ["matchup_exploit_bonus", "pre_snap_read_bonus", "viper_touch_rate", "personnel_grouping_shifts"],
+      "signature_fields": [
+        "matchup_exploit_bonus",
+        "pre_snap_read_bonus",
+        "viper_touch_rate",
+        "personnel_grouping_shifts"
+      ],
       "travels": "Its Viper isolation calls travel as matchup calls."
     },
     "ironclad": {
       "identity": "Suffocating grind with maximum clock burn.",
-      "strong_in": ["short_yardage", "protect_lead"],
-      "personnel": ["physical_roster", "strong_defense"],
+      "strong_in": [
+        "short_yardage",
+        "protect_lead"
+      ],
+      "personnel": [
+        "physical_roster",
+        "strong_defense"
+      ],
       "constraints": "Cannot chase a game.",
-      "signature_fields": ["clock_burn_multiplier", "field_position_priority", "turnover_aversion", "punt_aggression"],
+      "signature_fields": [
+        "clock_burn_multiplier",
+        "field_position_priority",
+        "turnover_aversion",
+        "punt_aggression"
+      ],
       "travels": "Its grind calls travel late with a lead; field position and turnover aversion stay home."
     }
   },
   "defense": {
     "swarm": {
       "identity": "Zone rally defense: everyone flows to the ball.",
-      "personnel": ["team_speed"],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "Kick pass seams.",
       "travels": "Called on matchups against lateral books."
     },
     "blitz_pack": {
       "identity": "Extra rushers every play.",
-      "personnel": ["team_speed"],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "Counters and draws carve empty gaps; DEF-06 measured about one more 30 yard play a game against it.",
       "travels": "A short yardage and chase package; rated weak in long yardage (long_yardage_modifier 1.20)."
     },
@@ -151,13 +274,18 @@
     },
     "fortress": {
       "identity": "Stack the box and own the line of scrimmage.",
-      "personnel": ["strong_defense", "physical_roster"],
+      "personnel": [
+        "strong_defense",
+        "physical_roster"
+      ],
       "constraints": "Kick passes and laterals stretch the edges.",
       "travels": "A short yardage and goal line package."
     },
     "predator": {
       "identity": "Gamble for turnovers.",
-      "personnel": ["team_speed"],
+      "personnel": [
+        "team_speed"
+      ],
       "constraints": "A wrong guess is a touchdown.",
       "travels": "A long yardage and chase package."
     },
@@ -175,9 +303,27 @@
     },
     "lockdown": {
       "identity": "Shutdown kick pass coverage.",
-      "personnel": ["strong_defense"],
+      "personnel": [
+        "strong_defense"
+      ],
       "constraints": "Forces a ground game through a lighter box.",
       "travels": "A long yardage, kick range and lead protection package."
+    },
+    "keeper_hunt": {
+      "identity": "Pressure every kick.",
+      "personnel": [
+        "strong_defense"
+      ],
+      "constraints": "Commits rushers, so it gives up conversions.",
+      "travels": "A kick range package against kick first offenses."
+    },
+    "rotation": {
+      "identity": "Substitute to stay fresh.",
+      "personnel": [
+        "strong_defense"
+      ],
+      "constraints": "No one star plays every snap.",
+      "travels": "A late game and tempo package."
     }
   }
 }

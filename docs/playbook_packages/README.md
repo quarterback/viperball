@@ -21,7 +21,7 @@ engine, and what travels when another team borrows from it.
 
 A package starts in one family (`origin_family`) and lists every family that can install it
 (`compatible_families`). That is how a coach running one book uses plays from another: an
-East Coast team can install Ground & Pound's Heavy Push for short yardage, and a Fortress
+East Coast team can install Ground Control's Heavy Push for short yardage, and a Fortress
 defense can install Lockdown's Kick Range Shell. Each package carries the fields from the
 PRD's package example (formation, play family, kick pass, personnel and situation tags, what
 counters it, its tradeoffs) plus plain text for its inspiration, scenario, benefits, cost

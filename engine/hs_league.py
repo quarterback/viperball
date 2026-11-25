@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 
 from engine.hs_league_data import (
     REGIONS, STATE_TO_REGION, STATES, HS_MASCOTS,
-    HS_OFFENSE_STYLES, HS_DEFENSE_STYLES,
+    HS_OFFENSE_STYLES, HS_OFFENSE_WEIGHTS, HS_DEFENSE_STYLES,
     HS_ROSTER_TEMPLATE, HS_STAT_RANGES, HS_YEAR_ORDER,
 )
 
@@ -210,7 +210,7 @@ def generate_hs_team(
 ) -> HSTeam:
     """Generate a full HS team with 24 players across 4 class years."""
     mascot = rng.choice(HS_MASCOTS)
-    offense = rng.choice(HS_OFFENSE_STYLES)
+    offense = rng.choices(HS_OFFENSE_STYLES, weights=HS_OFFENSE_WEIGHTS)[0]
     defense = rng.choice(HS_DEFENSE_STYLES)
     prestige = rng.randint(25, 80)
 
@@ -409,7 +409,7 @@ def _hs_fast_sim(
 # take about 17 minutes a dynasty offseason on the full engine.
 HS_ENGINE_ROUNDS = {"state_final", "regional", "national_round", "national_semi", "national_final"}
 
-_HS_OFFENSE_TO_ENGINE = {"triple_option": "ground_pound", "smashmouth": "ground_pound",
+_HS_OFFENSE_TO_ENGINE = {"triple_option": "ground_control", "smashmouth": "ground_control",
                          "tempo": "lateral_spread"}
 _HS_DEFENSE_TO_ENGINE = {"zone": "drift", "man_press": "lockdown", "blitz_heavy": "blitz_pack"}
 

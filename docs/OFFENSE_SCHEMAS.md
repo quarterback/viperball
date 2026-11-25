@@ -10,7 +10,7 @@
 
 | Key | Label | Identity | Play DNA |
 |---|---|---|---|
-| `ground_pound` | Ground & Pound | Power football, grind 20 yards, punch it in | 70% run:lateral, 85% red zone run, lowest tempo (0.4) |
+| `ground_control` | Ground Control | Power football, grind 20 yards, punch it in | 70% run:lateral, 85% red zone run, lowest tempo (0.4) |
 | `lateral_spread` | Lateral Spread | Stretch defense horizontally with 2–4 lateral chains | 30% laterals, explosive lateral bonus +20%, high risk (1.4) |
 | `boot_raid` | Boot Raid | Air Raid with the foot — get to Launch Pad, fire snap kicks | 55% kick rate, snap kick aggression 1.5x, launch pad at opp 45 |
 | `ball_control` | Ball Control | Conservative, mistake-free, take the points | Clock burn 1.3x, 75% run:lateral, lowest aggression |
@@ -178,8 +178,8 @@ Each run family has detailed yardage/fumble/personnel configuration:
 ```python
 "kick_heavy":        ["boot_raid", "ball_control", "stampede"]
 "lateral_heavy":     ["lateral_spread", "chain_gang", "ghost"]
-"ground_and_pound":  ["ground_pound", "ball_control", "slick_n_slide"]
-"hybrid":            ["balanced", "ghost", "slick_n_slide", "ground_pound"]
+"ground_and_pound":  ["ground_control", "ball_control", "slick_n_slide"]
+"hybrid":            ["balanced", "ghost", "slick_n_slide", "ground_control"]
 ```
 
 ### Roster Stat Thresholds (add to candidates if met)

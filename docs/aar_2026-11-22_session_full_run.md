@@ -137,8 +137,13 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     response. History years still cost 2 minutes each. → `aar_2026-11-25_dynasty_creation_speed.md`
 
 33. **Offense philosophies** (November 25). Kicking and go-for-it rules by offense, ten dead
-    style settings wired, Ground & Pound made touchdown first (56% of points from TDs, up from
+    style settings wired, Ground Control made touchdown first (56% of points from TDs, up from
     41%), five unused offenses assigned. → `aar_2026-11-25_off_phil01_offense_philosophies.md`
+
+34. **Coaching identity, steps 4, 5, 6 and 8** (November 25). Ground Control rename, lateral
+    offenses common in high school, defenses with real signatures plus Keeper Hunt and Rotation
+    (all 48 to 55% against the field), weekly game plans, coach fingerprints and the fingerprint
+    panel. → `aar_2026-11-25_coaching_identity_def12_def13_fp01.md`
 
 ## Numbers, start to end (benchmark, per team per game)
 

@@ -16,14 +16,14 @@ from engine.defensive_commitments import eligibility
 # Each case is a native or compatible package, versus an offense that
 # exercises its benefit or concession. Cases share roster pairs and seeds.
 CASES = [
-    ("fortress", "fortress_goal_line_stand", "ground_pound"),
-    ("fortress", "fortress_short_yardage_wall", "ground_pound"),
+    ("fortress", "fortress_goal_line_stand", "ground_control"),
+    ("fortress", "fortress_short_yardage_wall", "ground_control"),
     ("fortress", "fortress_short_yardage_wall", "lateral_spread"),
     ("lockdown", "lockdown_kick_range_shell", "boot_raid"),
     ("lockdown", "lockdown_long_yardage_bracket", "boot_raid"),
-    ("lockdown", "lockdown_long_yardage_bracket", "ground_pound"),
+    ("lockdown", "lockdown_long_yardage_bracket", "ground_control"),
     ("drift", "drift_prevent", "shock_and_awe"),
-    ("blitz_pack", "blitz_short_yardage_pressure", "ground_pound"),
+    ("blitz_pack", "blitz_short_yardage_pressure", "ground_control"),
     ("blitz_pack", "rugby_rush_line", "lateral_spread"),
     ("predator", "afl_kick_in_press", "boot_raid"),
     ("chaos", "lax_ride", "boot_raid"),

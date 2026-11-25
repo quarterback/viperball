@@ -2184,6 +2184,12 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
     ))
 
 
+def _style_label(key: str, kind: str) -> str:
+    from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES
+    table = OFFENSE_STYLES if kind == "offense" else DEFENSE_STYLES
+    return table.get(key, {}).get("label", key.replace("_", " ").title() if key else "")
+
+
 @router.get("/college/{session_id}/coach/{team_name}/{coach_role}", response_class=HTMLResponse)
 def college_coach(request: Request, session_id: str, team_name: str, coach_role: str):
     api = _get_api()
@@ -2256,6 +2262,13 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     # Personality sliders for display
     sliders = card.personality_sliders or {}
 
+    # COACH-FP-01: what this staff actually did this season
+    from engine.fingerprint import team_fingerprint
+    fingerprint = team_fingerprint([g for g in season.schedule if g.completed], team_name)
+    _cfg = (getattr(season, "style_configs", None) or {}).get(team_name, {})
+    offense_school = _style_label(_cfg.get("offense_style", ""), "offense")
+    defense_school = _style_label(_cfg.get("defense_style", ""), "defense")
+
     # Postseason combined stats (playoff + bowl)
     bowl_count = sum(1 for a in (card.career_awards or []) if a.get("level") == "postseason")
     postseason_apps = card.playoff_appearances + bowl_count
@@ -2271,7 +2284,8 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
         management_profile=active_management(card), calling_roles=calling_roles,
         seeking_hc=seeks_hc(card), requires_calls=requires_calls(card,coach_role),
         season_record=season_record, coach_awards=coach_awards,
-        sliders=sliders,
+        sliders=sliders, fingerprint=fingerprint,
+        offense_school=offense_school, defense_school=defense_school,
         postseason_apps=postseason_apps, postseason_wins=postseason_wins,
         face_src=_coach_face_url_for(card.coach_id, card.gender),
     ))

@@ -18,7 +18,7 @@ from engine.season import Season, TeamRecord, Game
 # ========================================
 
 OFFENSE_STYLE_NAMES = {
-    "ground_pound": "Ground & Pound",
+    "ground_control": "Ground Control",
     "lateral_spread": "Lateral Spread",
     "boot_raid": "Boot Raid",
     "ball_control": "Ball Control",
@@ -39,6 +39,8 @@ DEFENSE_STYLE_NAMES = {
     "drift": "Drift",
     "chaos": "Chaos",
     "lockdown": "Lockdown",
+    "keeper_hunt": "Keeper Hunt",
+    "rotation": "Rotation",
 }
 
 

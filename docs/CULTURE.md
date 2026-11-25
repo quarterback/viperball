@@ -156,7 +156,7 @@ Look for: rapid point swings, a sequence of turnovers in a short time window, a 
 
 ### Question 3: The Dominant Strategy — How did the winner win?
 - Through the air (Snap Kicks and Kick Passes)? → Write about range and aerial execution.
-- Through the trenches (Ground & Pound)? → Write about carries, yards per carry, drive length.
+- Through the trenches (Ground Control)? → Write about carries, yards per carry, drive length.
 - Through field position (Pindowns and punt game)? → Write about the kicking duel, territorial control.
 - Through turnovers (Bells and INTs)? → Write about the chaos, the scramble, the loose ball that changed everything.
 

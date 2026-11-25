@@ -21,7 +21,7 @@ The monolithic `simulate_kick_pass()` has been split into **4 distinct sub-famil
 
 ## How Styles Play Differently Now
 
-- **Ground & Pound**: 80% Quick Kicks (play-action safe throws off heavy runs)
+- **Ground Control**: 80% Quick Kicks (play-action safe throws off heavy runs)
 - **Chain Gang**: 60% Kick-Laterals (scheme identity = lateral chaos)
 - **Boot Raid**: 50% Territory in Launch Pad range, Quick Kicks elsewhere
 - **Ghost**: Bombs on early downs (misdirection deep shots), Quick Kicks on late downs

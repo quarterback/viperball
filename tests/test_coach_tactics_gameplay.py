@@ -162,10 +162,10 @@ def test_full_game_uses_final_scheme_for_role_assignment(monkeypatch):
     staff = {"oc": coach_variant("vertical_attack", "oc-role-order")}
     engine = ViperballEngine(
         home, away, seed=91, home_coaching=staff,
-        style_overrides={home.name: "boot_raid", away.name: "ground_pound"},
+        style_overrides={home.name: "boot_raid", away.name: "ground_control"},
     )
     assert (home.name, "boot_raid", "boot_raid") in calls
-    assert (away.name, "ground_pound", "ground_pound") in calls
+    assert (away.name, "ground_control", "ground_control") in calls
     assert engine.home_oc_tactics["coach_id"] == "oc-role-order"
     assert engine.away_oc_tactics == {}
 

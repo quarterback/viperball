@@ -8,7 +8,7 @@ formation shells are actually tested, rather than merely sampled when chosen.
 
 Run from repository root (or any directory):
   PYTHONHASHSEED=0 python scripts/defense_matchup_matrix.py --reps 1 --out reports/def06
-  python scripts/defense_matchup_matrix.py --offenses boot_raid,ground_pound \\
+  python scripts/defense_matchup_matrix.py --offenses boot_raid,ground_control \\
       --weathers clear,rain --formations split,spread --reps 2 --out reports/def06_weather
 
 This is an observational sensitivity experiment, not a final tuning target.

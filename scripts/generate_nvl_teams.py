@@ -40,7 +40,7 @@ NVL_TEAMS = {
     "bal": {
         "city": "Baltimore", "name": "Bells", "abbr": "BAL",
         "state": "MD", "country": "USA", "division": "NVL East",
-        "franchise_rating": 75, "style": "ground_pound", "defense": "swarm",
+        "franchise_rating": 75, "style": "ground_control", "defense": "swarm",
         "philosophy": "hybrid", "tempo": "moderate",
     },
     "roc": {
@@ -70,7 +70,7 @@ NVL_TEAMS = {
     "cal": {
         "city": "Calgary", "name": "Coldfront", "abbr": "CGY",
         "state": "AB", "country": "Canada", "division": "NVL North",
-        "franchise_rating": 74, "style": "ground_pound", "defense": "man_press",
+        "franchise_rating": 74, "style": "ground_control", "defense": "man_press",
         "philosophy": "ground_heavy", "tempo": "slow",
     },
     "dul": {
@@ -94,7 +94,7 @@ NVL_TEAMS = {
     "mem": {
         "city": "Memphis", "name": "Mudcats", "abbr": "MEM",
         "state": "TN", "country": "USA", "division": "NVL Central",
-        "franchise_rating": 77, "style": "ground_pound", "defense": "swarm",
+        "franchise_rating": 77, "style": "ground_control", "defense": "swarm",
         "philosophy": "hybrid", "tempo": "moderate",
     },
     "chi": {

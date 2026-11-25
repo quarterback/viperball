@@ -307,6 +307,14 @@ PERSONALITY_SLIDER_NAMES = (
     "stubbornness",
     "player_trust",
     "variance_tolerance",
+    # COACH-FP-01: decision fingerprint. Two coaches running the same
+    # offense still differ on these.
+    "touchdown_finish",       # chase the 9 rather than take the 5
+    "late_down_aggression",   # go for it on 5th and 6th down
+    "run_lean",               # call runs
+    "kick_pass_lean",         # call kick passes
+    "lateral_lean",           # call lateral chains
+    "turnover_caution",       # avoid risky throws and chains
 )
 
 # ──────────────────────────────────────────────
@@ -425,7 +433,7 @@ STYLE_COUNTERMEASURE_BIAS = {
     "lateral_spread":  {"avalanche": 0.15, "counterpunch": 0.10},
     "ghost":           {"avalanche": 0.10, "counterpunch": 0.05},
     "shock_and_awe":   {"avalanche": 0.20},
-    "ground_pound":    {"vault": 0.20, "slow_drip": 0.05},
+    "ground_control":    {"vault": 0.20, "slow_drip": 0.05},
     "ball_control":    {"vault": 0.10, "thermostat": 0.15},
     "boot_raid":       {"slow_drip": 0.25},
     "stampede":        {"avalanche": 0.10, "vault": 0.05},
