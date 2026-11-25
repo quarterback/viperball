@@ -1,6 +1,8 @@
 # VIPERBALL HOUSE STYLE GUIDE
 ## Writing, Voice, and Coverage Standards — Version 2.0
 
+> **Current statistics and rules (November 25, 2026):** Follow [RULES.md](../RULES.md), [ANALYTICS.md](../ANALYTICS.md) and [OFFENSE_SCHEMAS.md](OFFENSE_SCHEMAS.md) for mechanics and terminology. Dated examples are writing exercises, not current empirical benchmarks. Confirm score attribution, actual possession changes and bonus markers before writing; positive Delta cost means a disadvantage. Do not present experimental EP/decision/DTW estimates as causal facts.
+
 ---
 
 ## The premise
@@ -17,7 +19,7 @@ It is football. Downs, drives, field position, touchdowns, field goals, run game
 
 The scoring has more channels than football. Snap kicks are worth five — write each attempt with distance and result, the way you'd write a field goal attempt, with the frequency of a three-pointer. Bells are half a point; final scores have halves. Write both as transactions, not events.
 
-Interceptions carry a bonus possession. Write the sequence — the pick, then the possession that followed — because the sequence is what makes them worth more than a standard turnover.
+Interceptions can generate a delayed bonus possession, subject to cancellation and half boundaries. Write the actual sequence — the pick, subsequent drive, and bonus marker if awarded — rather than assuming a bonus was realized.
 
 Kill rate and power play efficiency are how the sport tracks lead management. Use them the way you'd use any team stat.
 
@@ -290,7 +292,7 @@ The box score from Rutgers vs. Mississippi State (Week 5) is a useful testing do
 
 **The performance**: Aria Rigsby (ZB50) had an ugly completion line — 13/30, 43% — but hit three touchdown kicks and managed the game from her own end zone for long stretches. Véronique Lapointe went 9/18 for Mississippi State, more efficient per attempt, but Mississippi State had six fewer possessions.
 
-**The key plays**: The second-quarter lateral interception (Rutgers' own lateral picked off, giving Mississippi State a possession at the 71) stopped a Rutgers scoring drive and created a Mississippi State touchdown. Rutgers answered from a bonus possession that resulted from that same interception being their turnover — the Delta system at work. The Q3 snap kick from 44 yards to open the second half was a momentum marker for Mississippi State.
+**The key plays**: The second-quarter lateral interception (Rutgers' own lateral picked off, giving Mississippi State a possession at the 71) stopped a Rutgers scoring drive and created a Mississippi State touchdown. The historical account describes a later Rutgers bonus drive; verify the original event sequence before attributing it. An interception awards a potential bonus to the intercepting side, not the side that threw it. The Q3 snap kick from 44 yards to open the second half was a momentum marker for Mississippi State.
 
 **What to lead with**: Not the final score. Lead with the 95 yards of penalties on a one-point game, and what it says about Rutgers that they won it despite themselves.
 

@@ -9,11 +9,11 @@ and calls.
 - Data: `data/playbooks/vocabulary.json`, `families.json`, `packages.json`
 - Loader and validator: `engine/playbook_catalog.py`
 - Tests: `tests/test_playbook_catalog.py`
-- Current inventory: [INVENTORY.md](INVENTORY.md), generated with `python -m engine.playbook_catalog`
+- Current inventory: [INVENTORY.md](INVENTORY.md); regenerate the detailed runtime inventory with `python -m engine.playbook_catalog`
 
 ## Families and packages
 
-A family is one of the engine's 16 offensive styles or 8 defensive schemes, under its
+A family is one of the engine's 16 offensive styles or 10 defensive schemes, under its
 existing slug. A family record joins the engine's own numbers (top play types, formation
 mix, kick pass mix, best and worst matchups, a defense's ratings) with catalog notes: its
 identity, the situations it is built for, the roster it needs, its signature fields in the
