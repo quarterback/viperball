@@ -3,7 +3,8 @@ import hashlib
 import math
 import random
 
-ROLES=("head_coach","oc","dc","stc")
+from .coach_roles import (ALL_ROLES as ROLES, POSITION_ROLES, POSITION_DISCIPLINE,
+                          career_path, experience, role_readiness)
 ATTRS=("instincts","leadership","composure","rotations","development","recruiting")
 FOCUS={"head_coach":(1,1.25,1.15,.95,.95,1.25),"oc":(1.2,.75,1,1.05,1.25,.85),
        "dc":(1.2,.85,1,1.2,1.15,.75),"stc":(1.05,.75,1.15,1.25,1.15,.75)}
@@ -16,6 +17,12 @@ def slider(card,key):
 def ensure(card):
     state=getattr(card,"career_development",None)
     if state:
+        for role in ROLES:
+            state.setdefault("role_years", {}).setdefault(role, 0)
+        if "legacy_role_years" not in state:
+            origin = (getattr(card, "tactical_profile", {}) or {}).get("origin_role", card.role)
+            state["legacy_role_years"] = {origin: max(0, card.seasons_coached - sum(state["role_years"].values()))}
+        career_path(card, state)
         return state
     rng=random.Random(int.from_bytes(hashlib.sha256(("coach-career-v1:"+card.coach_id).encode()).digest()[:16],"big"))
     roll=rng.random()
@@ -33,6 +40,8 @@ def ensure(card):
            "ever_head_coach":getattr(card,"role","")=="head_coach" or years["head_coach"]>0,
            "fractional_growth":{},"history":[]}
     card.career_development=state
+    state["legacy_role_years"] = {card.role: max(0, n-sum(years.values()))}
+    career_path(card, state)
     return state
 
 def management(card):
@@ -42,6 +51,11 @@ def management(card):
         tactics=ensure_coach_tactical_profile(card)
         origin=tactics.get("origin_role")
         specialty=origin if origin in ("oc","dc","stc") else {"offensive_mind":"oc","defensive_mind":"dc","special_teams_guru":"stc"}.get(getattr(card,"hc_affinity","balanced"))
+        if origin in POSITION_ROLES or (origin in ("oc","dc","stc") and card.role in ("oc","dc","stc") and card.role != origin):
+            # A promoted former position coach or crossover specialist retains
+            # their proven calling discipline, not their earliest assignment.
+            candidates = [r for r in ("oc","dc","stc") if experience(card,r,state)>0]
+            specialty = card.role if card.role in candidates else max(candidates,key=lambda r:experience(card,r,state),default=POSITION_DISCIPLINE.get(origin))
         delegation=float(tactics.get("head_coach",{}).get("delegation",.6))
         state["management"]={"specialty":specialty,"retained_call":specialty if specialty and delegation<.62 else None,
             "delegation":delegation,"development":round(clip((card.development-25)/70),3),
@@ -83,16 +97,26 @@ def call_authority(staff,role):
     staff=staff or {}
     c=caller(staff,role)
     hc=staff.get("head_coach")
-    if c is None or hc is None or c is hc or requires_calls(c,role):
+    if c is None:
         return 1.
-    return clip(.4+.6*active_management(hc).get("delegation",.5),.4,.95)
+    readiness = role_readiness(c, role, ensure(c))
+    if hc is None or c is hc or requires_calls(c,role):
+        return readiness
+    return readiness * clip(.4+.6*active_management(hc).get("delegation",.5),.4,.95)
 
 def aptitude(card):
     return .35*card.leadership+.30*card.instincts+.20*card.composure+.15*card.recruiting
 
 def seeks_hc(card):
     state=ensure(card)
-    return bool(getattr(card,"wants_hc",False) or state["ambition"]>=.65) and (getattr(card,"hc_meter",0)>=45 or state["ever_head_coach"])
+    if state["ever_head_coach"]:
+        return True
+    if card.role in POSITION_ROLES:
+        return False
+    path = career_path(card,state)
+    if path["primary"] == "stc":
+        return path["intent"] == "head_coach" and card.hc_meter >= 45
+    return bool(getattr(card,"wants_hc",False) or state["ambition"]>=.65) and getattr(card,"hc_meter",0)>=45
 
 def reputation(card):
     return ensure(card)["reputation"]
@@ -150,7 +174,7 @@ def grow(card,evidence=None):
     context=1+min(.15,max(0.,(evidence or {}).get("above_expectation") or 0.)*.3)
     age_factor=1. if card.age<55 else .75 if card.age<60 else .5 if card.age<65 else .25
     result={}
-    for attr,focus in zip(ATTRS,FOCUS.get(card.role,FOCUS["oc"])):
+    for attr,focus in zip(ATTRS,FOCUS.get(card.role,(.85,.85,1,1.05,1.35,1.20) if card.role in POSITION_ROLES else FOCUS["oc"])):
         old=getattr(card,attr)
         gap=max(0,95-old)
         annual_cap=clip(.65+gap*.06,.65,4.5)*(1 if st["tier"]==1 else 1.2 if st["tier"]==2 else 1.45)
