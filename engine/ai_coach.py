@@ -9,9 +9,9 @@ Auto-assigns offense and defense styles to teams based on:
 Used by Season Simulator and Dynasty Mode to avoid manual configuration
 of every non-human team.
 
-Also provides in-game defensive play-calling via choose_defensive_call(),
-which returns a DefensivePackage with situational modifiers that affect
-game-engine outcome probabilities.
+Retains choose_defensive_call() solely as a deprecated external compatibility
+helper. The full engine owns the canonical pre-snap DC call and defensive
+commitment resolver; do not stack these historical modifiers.
 """
 
 import random
@@ -398,7 +398,7 @@ def choose_defensive_call(
     lead_management: Optional[Dict] = None,
 ) -> DefensivePackage:
     """
-    Choose a situational defensive package.
+    Deprecated legacy five-style helper; not part of full-engine play calling.
 
     Args:
         defense_style:  one of the 5 defense styles (e.g. "pressure_defense")
@@ -412,6 +412,9 @@ def choose_defensive_call(
     Returns:
         DefensivePackage with situational modifiers
     """
+    import warnings
+    warnings.warn("choose_defensive_call is a legacy compatibility helper; use the full engine DC resolver",
+                  DeprecationWarning, stacklevel=2)
     if rng is None:
         rng = random.Random()
 

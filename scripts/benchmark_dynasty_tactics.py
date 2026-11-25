@@ -76,6 +76,28 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
         stats = fr["stats"][side]
         if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
             raise RuntimeError(f"Score ledger mismatch for {name}")
+        # Physical snap ledger: exact participation, no player twice, and
+        # the rush/coverage partition must be the credited defensive XI.
+        for play in fr["play_by_play"]:
+            lineup = play.get("snap_lineup")
+            if not lineup or lineup["offense_side"] != side:
+                continue
+            for unit in ("offense","defense"):
+                people = lineup[unit]
+                if len(people) != len(set(people)) or len(people)>11:
+                    raise RuntimeError("Invalid snap lineup")
+                groups["participation:"+unit]["snaps"] += 1
+                groups["participation:"+unit]["players"] += len(people)
+                groups["participation:"+unit]["short"] += int(len(people)<11)
+            rush = play.get("rush_event") or {}
+            if rush and set(rush["defenders_on_field"]) != set(lineup["defense"]):
+                raise RuntimeError("Rush personnel differ from credited defenders")
+        energy = fr.get("game_day",{}).get("energy",{}).get(side,[])
+        for player in energy:
+            if player["snaps"] != player["offensive_snaps"] + player["defensive_snaps"]:
+                raise RuntimeError("Player workload ledger mismatch")
+            groups["participation:workload"]["players"] += 1
+            groups["participation:workload"]["shifts"] += player["shifts"]
         # Offensive package ledger distinguishes opportunities, calls and
         # actual matching choices. All are attributed to the snapping side.
         oc = fr.get("coach_tactics", {}).get(side, {})

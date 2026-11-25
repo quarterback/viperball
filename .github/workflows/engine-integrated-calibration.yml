@@ -18,6 +18,9 @@ on:
       - engine/hs_league.py
       - engine/weather.py
       - tests/test_weather_model.py
+      - engine/coach_learning.py
+      - tests/test_coach_learning.py
+      - tests/test_snap_participation.py
       - tests/test_college_cohort_continuity.py
       - engine/recruiting.py
       - engine/roster_continuity.py
@@ -62,7 +65,7 @@ jobs:
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
       - run: python -m pip install -r requirements.txt pytest
       - name: College feeder and rating-scale regressions
-        run: python -m pytest -q tests/test_college_feeder_identity.py tests/test_scale_cutoffs.py tests/test_college_cohort_continuity.py tests/test_weather_model.py
+        run: python -m pytest -q tests/test_college_feeder_identity.py tests/test_scale_cutoffs.py tests/test_college_cohort_continuity.py tests/test_weather_model.py tests/test_coach_learning.py tests/test_snap_participation.py
       - name: Combined engine smoke and calibration
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}

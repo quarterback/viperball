@@ -380,3 +380,10 @@ For new discoveries, assign the next stable ID in the relevant group, state whet
 - [Delta/Mess Rate terminology spec](https://github.com/quarterback/viperball/blob/main/docs/mess_rate_implementation.md)
 
 _This assessment was compiled from direct repository inspection and the existing agent's AARs. It is a task specification, not evidence that the proposed fixes have already been built or tested._
+
+
+### November 25 continuation: CCH-08 / FAT-01 / DEF-04 / DEF-05
+
+- CCH-08 implementation: [AAR](aar_2026-11-25_cch08_coach_adaptation.md). Bounded persistent coordinator adaptation; combined acceptance outstanding.
+- FAT-01 implementation: [AAR](aar_2026-11-25_fat01_coach_rotations.md). Stable snap participants, coach-dependent shifts, qualified replacement checks; outcome validation outstanding.
+- DEF-04/05 implementation: [AAR](aar_2026-11-25_def04_def05_participation.md). On-field defensive selection, physical snap ledger and legacy interface deprecation; runtime acceptance outstanding.
