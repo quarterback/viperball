@@ -6,7 +6,7 @@ The original box score was a single table labeled "Offensive Stats" — 13 rows 
 
 But it told you nothing about *how* a team played.
 
-A Ground Control team that ran 30 times for 180 yards and threw 8 kick passes looked identical in structure to a Boot Raid team that ran 12 times for 60 yards and threw 25 kick passes. You had to mentally parse all 13 rows, do your own arithmetic, and reconstruct the offensive identity from raw numbers. The box score was a spreadsheet, not a story.
+A Ground & Pound team that ran 30 times for 180 yards and threw 8 kick passes looked identical in structure to a Boot Raid team that ran 12 times for 60 yards and threw 25 kick passes. You had to mentally parse all 13 rows, do your own arithmetic, and reconstruct the offensive identity from raw numbers. The box score was a spreadsheet, not a story.
 
 ## The Style Fingerprint Concept
 
@@ -14,7 +14,7 @@ The insight was that a box score should be readable the way a real football box 
 
 Viperball has more offensive dimensions than traditional football (rushing, kick passing, laterals, kicking, trick plays), which makes the problem harder but the payoff bigger. A properly structured box score should let you identify:
 
-- **Ground Control**: High carries, high rush yards, low KP attempts, few laterals
+- **Ground & Pound**: High carries, high rush yards, low KP attempts, few laterals
 - **Boot Raid**: High KP attempts, high completion rate, moderate rushing, snap kick volume
 - **Chain Gang**: Lateral chains everywhere, high lateral efficiency, distributed touches
 - **Ghost Formation**: Balanced but unpredictable, moderate across all categories
@@ -62,7 +62,7 @@ Before any numbers appear, two colored cards identify each team's offensive sche
 ```
 ┌─────────────────────────┐  ┌─────────────────────────┐
 │ Agnes Scott College     │  │ Air Force Academy       │
-│ Ground Control | Slow   │  │ Boot Raid | Mid         │
+│ Ground & Pound | Slow   │  │ Boot Raid | Mid         │
 └─────────────────────────┘  └─────────────────────────┘
 ```
 
@@ -72,11 +72,11 @@ This is pulled directly from the engine's `OFFENSE_STYLES` dict — the same dat
 
 The flat list becomes six distinct sections, each telling part of the offensive story:
 
-**Rushing** — Carries, Yards, YPC, Rush TDs. The ground game gets its own block. A Ground Control team should dominate here; a Boot Raid team should show modest numbers. YPC (yards per carry) is now computed from the play family breakdown rather than estimated — it counts run-family plays (dive_option, power, sweep_option, speed_option, counter, draw, viper_jet) against rushing yards.
+**Rushing** — Carries, Yards, YPC, Rush TDs. The ground game gets its own block. A Ground & Pound team should dominate here; a Boot Raid team should show modest numbers. YPC (yards per carry) is now computed from the play family breakdown rather than estimated — it counts run-family plays (dive_option, power, sweep_option, speed_option, counter, draw, viper_jet) against rushing yards.
 
-**Kick Passing** — Att, Comp, Comp%, Yards, TDs, INTs. The aerial game. Completion percentage is now displayed directly rather than requiring mental math. A Boot Raid team should show 20+ attempts and 55-65% completion. A Ground Control team might show 8-12 attempts.
+**Kick Passing** — Att, Comp, Comp%, Yards, TDs, INTs. The aerial game. Completion percentage is now displayed directly rather than requiring mental math. A Boot Raid team should show 20+ attempts and 55-65% completion. A Ground & Pound team might show 8-12 attempts.
 
-**Lateral Game** — Chains, Successful, Efficiency, Yards, Lat INTs. Viperball's unique dimension. Chain Gang and Lateral Spread teams should show high chain counts and efficiency. Ground Control teams might have 5-8 chains as a secondary option.
+**Lateral Game** — Chains, Successful, Efficiency, Yards, Lat INTs. Viperball's unique dimension. Chain Gang and Lateral Spread teams should show high chain counts and efficiency. Ground & Pound teams might have 5-8 chains as a secondary option.
 
 **Kicking** — Snap Kicks (DK) made/att, Field Goals (PK) made/att, Punts. Previously kicking only appeared in the scoring section as point contributions. Now the kicking game is visible as offensive production — a team with 8 DK attempts is playing a fundamentally different game than one with 2.
 
@@ -88,7 +88,7 @@ The flat list becomes six distinct sections, each telling part of the offensive 
 
 With the restructured box score, you can now do a three-second style identification:
 
-- See "Ground Control | Slow" in the header → check Rushing section → confirm 25+ carries, 140+ yards
+- See "Ground & Pound | Slow" in the header → check Rushing section → confirm 25+ carries, 140+ yards
 - See "Boot Raid | Mid" → check Kick Passing → confirm 20+ attempts, 55%+ completion
 - See "Chain Gang | Fast" → check Lateral Game → confirm 15+ chains, 65%+ efficiency
 - The kicking section reveals whether a team is leaning on DK as a scoring weapon or grinding field goals
@@ -106,7 +106,7 @@ The new Offensive Performance section in batch results provides:
 2. **Category breakdown table** — Rushing, kick pass, laterals, snap kicks, field goals, trick plays with avg/game, totals, and contextual extras (completion %, efficiency %, INT counts)
 3. **Play family distribution** — Expandable panel showing every play family's total calls, avg/game, and share percentage
 
-The play family distribution is particularly useful for style verification. If a Ground Control team's play distribution shows 35% kick pass and 15% dive/power, something is wrong with the style weights. If a Chain Gang team shows 25% lateral_spread, the style is working. This is the tool you use to debug the playbook, not just the outcome.
+The play family distribution is particularly useful for style verification. If a Ground & Pound team's play distribution shows 35% kick pass and 15% dive/power, something is wrong with the style weights. If a Chain Gang team shows 25% lateral_spread, the style is working. This is the tool you use to debug the playbook, not just the outcome.
 
 ### Why This Matters for Tuning
 
@@ -123,7 +123,7 @@ Now:
 
 1. Run batch sim
 2. See offensive performance table — rushing avg 87.6 yds (below 100-120 target)
-3. Check play family distribution — run families at 22% share (should be 30%+ for ground_control)
+3. Check play family distribution — run families at 22% share (should be 30%+ for ground_pound)
 4. Adjust weights with specific targets
 5. Repeat
 
@@ -133,7 +133,7 @@ The feedback loop is faster because the data you need is surfaced rather than bu
 
 The broader lesson is the same one that emerged from the Diving Wing case study: **presentation should reflect the system's internal logic**. The engine has distinct offensive styles with different play selection weights. The box score should make those differences visible without requiring the reader to understand the weight tables.
 
-A flat list of numbers is style-agnostic — it treats every team identically. A structured box score with style headers and categorized stats is style-aware — it tells you *which numbers to look at* based on who's playing. Ground Control? Check Rushing first. Boot Raid? Check Kick Passing. Chain Gang? Check Laterals.
+A flat list of numbers is style-agnostic — it treats every team identically. A structured box score with style headers and categorized stats is style-aware — it tells you *which numbers to look at* based on who's playing. Ground & Pound? Check Rushing first. Boot Raid? Check Kick Passing. Chain Gang? Check Laterals.
 
 This is the difference between a database query and a scouting report.
 

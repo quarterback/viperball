@@ -81,7 +81,7 @@ Avalanche (Motivator, Chain Gang):
   avalanche: 0.361, counterpunch: 0.308, thermostat: 0.149
   Sensitivity: offset=3.1, range=7.7
 
-Vault (Disciplinarian, Ground Control):
+Vault (Disciplinarian, Ground & Pound):
   vault: 0.421, slow_drip: 0.256, thermostat: 0.189
   Sensitivity: offset=10.3, range=13.6
 
