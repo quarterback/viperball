@@ -78,6 +78,22 @@ def test_polished_pages_render(tmp_path, monkeypatch):
     comparison=client.get(prefix+"/analytics",params=[("view","compare"),("compare",names[0]),("compare",names[1])])
     assert comparison.status_code==200 and "Team percentile comparison" in comparison.text
     assert names[0] in comparison.text and names[1] in comparison.text
+    # Analytics portal consumes the very same completed season and box scores.
+    for view in ("overview","players","teams","scoring","expected","decisions","delta","dtw",
+                 "plays","drives","compare","player_compare","glossary"):
+        response=client.get(prefix+"/analytics",params={"view":view})
+        assert response.status_code==200,(view,response.status_code,response.text[:400])
+        assert 'Analytics navigation' in response.text,view
+    grouped=client.get(prefix+"/analytics",params={"view":"plays","group":"down","week":week})
+    assert grouped.status_code==200 and "Grouped results" in grouped.text
+    raw=client.get(prefix+"/analytics",params={"view":"plays","group":"raw","week":week,"match":0,"down":1})
+    assert raw.status_code==200 and "Play description" in raw.text
+    export=client.get(prefix+"/analytics",params={"view":"plays","group":"down","week":week,"export":"csv"})
+    assert export.status_code==200 and export.headers["content-type"].startswith("text/csv")
+    assert "Split,Observations" in export.text and len(export.text.splitlines())>1
+    compare=client.get(prefix+"/analytics",params=[("view","compare"),("compare",names[0]),("compare",names[1])])
+    assert compare.status_code==200 and names[0] in compare.text and names[1] in compare.text
+    assert "Explore game plays" in client.get(prefix+"/game/"+str(week)+"/0").text
     overview=client.get(prefix+"/").text
     assert "games played" not in overview.split('<div class="page-header">',1)[1].split('<div class="tabs">',1)[0]
     assert "Simulate week "+str(week+1) in overview
