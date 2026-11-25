@@ -84,6 +84,7 @@
  ('plays','Play finder','Search completed plays by down, zone, action and game situation.'),
  ('drives','Drive finder','Find drives by starting position, origin and outcome.'),
  ('compare','Team comparison','Peer percentiles for up to four programs.'),
+ ('player_compare','Player comparison','Position-matched percentiles with metric-specific qualification.'),
  ('glossary','Metric glossary','Definitions, denominators, coverage and model limitations.')] %}
  <a class="vba-tool" href="{{ base }}?view={{ k }}"><strong>{{ title }}</strong><span>{{ desc }}</span></a>
  {% endfor %}
@@ -112,13 +113,18 @@
 <form class="vba-filter" method="get" action="{{ base }}">
  <input type="hidden" name="view" value="{{ view }}"><input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="order" value="{{ order }}"><input type="hidden" name="columns" value="{{ selected_columns|join(',') }}">
  {% if filters.match %}<input type="hidden" name="match" value="{{ filters.match }}"><span>Game {{ filters.match|int + 1 }} of week {{ filters.week }} · <a href="{{ url(match='') }}">All games that week</a></span>{% endif %}
- {% if view=="compare" %}
+ {% if view=="player_compare" %}
+ <label>Find a player<input type="search" id="vba-player-search" placeholder="Name or team" oninput="const q=this.value.toLowerCase();document.querySelectorAll('#vba-player-picker option').forEach(o=>o.hidden=!o.selected&&!o.textContent.toLowerCase().includes(q))"></label>
+ <label>Players (choose up to 4)<select name="player_id" id="vba-player-picker" multiple size="7">{% for p in player_options %}<option value="{{ p.id }}" {% if p.id in player_ids %}selected{% endif %}>{{ p.label }}</option>{% endfor %}</select></label>
+ {% elif view=="compare" %}
  <label>Teams (choose up to 4)<select name="compare" multiple size="5">{% for t in team_names %}<option value="{{ t }}" {% if t in compare.split('|') %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
  {% else %}
  <label>Team<select name="team"><option value="">All teams</option>{% for t in team_names %}<option value="{{ t }}" {% if filters.team==t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
  {% endif %}
  <label>Conference<select name="conference"><option value="">All conferences</option>{% for c in conferences %}<option value="{{ c }}" {% if filters.conference==c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
- {% if view=="players" %}
+ {% if view=="player_compare" %}
+ <span class="vba-muted">Whole-season player records. Peers are matched by position.</span>
+ {% elif view=="players" %}
  <label>Position<select name="position"><option value="">All positions</option>{% for p in positions %}<option value="{{ p }}" {% if position==p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></label>
  <label>Player search<input name="q" value="{{ q }}" placeholder="Name"></label><label>Min. touches<input type="number" name="min_n" min="0" value="{{ min_n }}"></label>
  {% else %}
@@ -148,12 +154,12 @@
 {% if view=="scoring" %}<p class="vba-muted">Score totals use completed records; scoring channels are limited to audited games. Unavailable attribution is not a zero.</p>{% endif %}
 {% if view=="players" %}<p class="vba-muted">Whole-season player totals, with at least five touches or ten plays involved. Game-situation filters are available in Play finder.</p>{% endif %}
 {% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability. Research xW is a distinct retrospective alignment model, fitted on separate earlier games and evaluated on later games only. {% if training.get("dtw_train_games",0)>=30 %}Candidate training sample: {{ training.dtw_train_games }} games.{% else %}Insufficient disjoint training support for candidate estimates.{% endif %}</p>{% endif %}
-{% if view=="compare" %}
-<h2 class="vba-section">Team percentile comparison</h2>
-{% if compare_rows and compare_rows[0]['values'] and compare %}<p class="vba-muted">Peer set uses the selected conference, weeks and game scope. Higher percentile is better. Minimum three peers.</p>
-<div class="vba-table"><table><thead><tr><th>Metric</th><th>Peers</th>{% for v in compare_rows[0]['values'] %}<th>{{ v.team }}</th>{% endfor %}</tr></thead><tbody>
-{% for metric in compare_rows %}<tr><th>{{ metric.metric }}</th><td>{{ metric.peers }}</td>{% for v in metric['values'] %}<td>{% if v.value is not none %}{{ v.value }}{% else %}—{% endif %}{% if v.percentile is not none %}<div class="vba-scale" role="img" aria-label="{{ v.percentile }}th percentile"><span style="width:{{ v.percentile }}%"></span></div><small>{{ v.percentile }} pctile</small>{% endif %}</td>{% endfor %}</tr>{% endfor %}
-</tbody></table></div>{% else %}<p class="vba-muted">Choose teams above to compare their measured performance.</p>{% endif %}
+{% if view in ("compare","player_compare") %}
+<h2 class="vba-section">{{ "Player" if view=="player_compare" else "Team" }} percentile comparison</h2>
+{% if compare_rows and compare_rows[0]['values'] %}<p class="vba-muted">{% if view=="player_compare" %}Each player is compared with qualified players at the same position in the selected conference or league. Peer counts are metric-specific.{% else %}Peer set uses the selected conference, weeks and game scope.{% endif %} Higher percentile is better. Minimum three peers.</p>
+<div class="vba-table"><table><thead><tr><th>Metric</th>{% if view=="compare" %}<th>Peers</th>{% endif %}{% for v in compare_rows[0]['values'] %}<th>{{ v.team }}</th>{% endfor %}</tr></thead><tbody>
+{% for metric in compare_rows %}<tr><th>{{ metric.metric }}</th>{% if view=="compare" %}<td>{{ metric.peers }}</td>{% endif %}{% for v in metric['values'] %}<td>{% if v.value is not none %}{{ v.value }}{% else %}—{% endif %}{% if v.percentile is not none %}<div class="vba-scale" role="img" aria-label="{{ v.percentile }}th percentile"><span style="width:{{ v.percentile }}%"></span></div><small>{{ v.percentile }} pctile</small>{% endif %}{% if view=="player_compare" %}<small> · n={{ v.peers }}</small>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>{% else %}<p class="vba-muted">Choose up to four {{ "players" if view=="player_compare" else "teams" }} above to compare their measured performance.</p>{% endif %}
 {% endif %}
 {% if heatmap and view in ("expected","plays") %}
 <h2 class="vba-section">{{ "Expected net points" if view=="expected" else "Immediate net points" }} by down and field zone</h2>
