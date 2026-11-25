@@ -2115,7 +2115,7 @@ def auto_recruit_team(
 
         # Overall desirability
         base = recruit.stars * 20 + recruit.true_overall * 0.3
-        score = base * star_match * geo * need_mult * recruiting_multiplier(position_staff,recruit.position) + rng.uniform(-5, 5)
+        score = base * star_match * geo * need_mult * recruiting_multiplier(position_staff,recruit) + rng.uniform(-5, 5)
         scored.append((score, recruit))
 
     scored.sort(key=lambda x: x[0], reverse=True)
