@@ -316,6 +316,7 @@ def run(seasons, nteams, seed, out, *, national=False):
             profiles = league_roster_profiles(season.teams)
             adoption = {}
             funnel = defaultdict(Counter)
+            focus_funnel = defaultdict(lambda: defaultdict(Counter))
             for name, unit in units.items():
                 card = dyn._coaching_staffs.get(name, {}).get("dc")
                 snap = defensive_adoption_snapshot(unit, card, profiles.get(name, {}))
@@ -327,6 +328,12 @@ def run(seasons, nteams, seed, out, *, national=False):
                                 "installed_by_current_dc"):
                         bucket[key] += int(row[key])
                     bucket["installable"] += int(row["personnel_ok"] and row["callable"])
+                    focus_bucket = focus_funnel[snap.get("coverage_focus") or "unknown"][pid]
+                    focus_bucket["programs"] += 1
+                    focus_bucket["installable"] += int(row["personnel_ok"] and row["callable"])
+                    focus_bucket["installed"] += int(row["installed"])
+                    if row.get("preference_rank") is not None:
+                        focus_bucket["top_two"] += int(row["preference_rank"] <= 2)
                     if row["personnel_ok"] and row["callable"] and not row["installed"]:
                         bucket["qualified_not_installed"] += 1
             for pid, bucket in funnel.items():
@@ -341,6 +348,8 @@ def run(seasons, nteams, seed, out, *, national=False):
                   "dc_changes":sorted(changes),"staff":staff,"first_units":first_units,"end_units":units,
                   "installed":dict(installed),"defensive_adoption":adoption,
                   "defensive_adoption_funnel":{k:dict(v) for k,v in funnel.items()},
+                  "defensive_adoption_by_focus":{focus:{pid:dict(counts) for pid,counts in rows.items()}
+                      for focus,rows in focus_funnel.items()},
                   "roster_fit_mismatches":fit,"roster_moves":roster_moves,
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
             item["active_programs"] = len(active)
@@ -373,6 +382,8 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "rush",dict(groups["rush_total"]),"mean_carry",weekly[-1]["mean_carry"],flush=True)
             for pid, values in sorted(funnel.items()):
                 print("ADOPTION",year,pid,dict(values),flush=True)
+            for focus, rows in sorted(focus_funnel.items()):
+                print("ADOPTION_FOCUS",year,focus,json.dumps({pid:dict(v) for pid,v in rows.items()},sort_keys=True),flush=True)
             for key,g in sorted(packages.items()):
                 print("PACKAGE",year,key,dict(g),flush=True)
             for key,g in sorted(groups.items()):
