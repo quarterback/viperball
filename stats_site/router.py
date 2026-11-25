@@ -3496,6 +3496,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
     if view not in VIEWS:
         raise HTTPException(400, "Unknown analytics view")
     if scope not in ("all","regular","postseason"):scope="all"
+    compare="|".join(t for val in request.query_params.getlist("compare") for t in val.split("|") if t)
     filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,
                    down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket)
     team_names=sorted(season.teams)
@@ -3503,7 +3504,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
     conferences=sorted(season.conferences)
     conf_map=getattr(season,"team_conferences",{}) or {}
     training={"model":None,"cutoff":None,"train_games":0,"reason":None}
-    if view in ("expected","decisions","delta","plays","drives"):
+    if view in ("expected","decisions","delta","plays","drives","dtw"):
         training=_cache_get(season,"analytics_portal_training")
         if training is None:
             training=fit_session_model(games)
@@ -3580,7 +3581,7 @@ def college_analytics(request: Request, session_id: str, view: str = "", sort: s
             for p in fr.get("drive_summary" if view in ("drives","delta") else "play_by_play",[]):
                 if p.get("play_type"):play_types.add(p["play_type"])
                 if p.get("result"):play_results.add(p["result"])
-        if view=="decisions":play_types={"continue","drop_kick","place_kick","punt"}
+        if view in ("decisions","expected"):play_types={"continue","drop_kick","place_kick","punt"}
     return templates.TemplateResponse("college/analytics_portal.html", _ctx(
         request,section="college",session_id=session_id,season_name=getattr(season,"name","Season"),
         views=VIEWS,view=view,rows=visible,cols=cols,all_cols=all_cols,selected_columns=columns.split(",") if columns else [],
