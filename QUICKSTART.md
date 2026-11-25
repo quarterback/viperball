@@ -1,154 +1,45 @@
-# Viperball - Quick Start Guide
+# Quick start
 
-## 🚀 Launch the GUI
+## Run locally
 
-```bash
-# Method 1: Use the launcher (checks dependencies)
-./launch_gui.sh
+Use Python 3.11 or later. From a checkout of the repository:
 
-# Method 2: Direct launch
-python viperball_gui.py
+```sh
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python main.py
 ```
 
-## 📋 First Time Setup
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. Open [http://localhost:5000/stats/](http://localhost:5000/stats/). Alternatively run `uvicorn main:fastapi_app --host 127.0.0.1 --port 5000 --workers 1`. The engine and both browser surfaces run in the same process. Use the pinned requirements; no npm build, Tkinter, Streamlit or old desktop launcher is needed.
 
-### 1. Generate Team Rosters
+## Choose a mode
 
-Before creating a dynasty, generate rosters for all teams:
+| Goal | Where to begin |
+|---|---|
+| Play one game | /stats/game-sim |
+| Run a college season | /stats/college/new |
+| Manage a college program across years | /stats/dynasty/new |
+| Find current sessions and saves | /stats/ and /stats/saves |
+| Follow the high-school feeder | /stats/high-school/ |
+| Browse professional leagues | /stats/pro/ |
+| Follow the women's league | /stats/wvl/ |
+| Follow international competition | /stats/international/ |
 
-```bash
-# Generate all 102 teams (takes ~2 minutes)
-python scripts/generate_rosters.py --all
-```
+In a college season, choose the programs and settings, select your offense and defense when applicable, complete or skip the portal stage, then simulate a week or the remaining games. The season page has controls for the postseason. A dynasty adds annual recruiting, player development, retention, staff changes and a new season.
 
-Or generate just a few teams to start:
+The supplied school files provide the source data. The game creates rosters; you do not need to generate every roster before playing. The actual league size and schedule depend on your selected settings and the available school files.
 
-```bash
-# Generate specific teams
-python scripts/generate_rosters.py --schools gonzaga,villanova,vcu,marquette,davidson
-```
+## Study a game
 
-### 2. Create Your Dynasty
+Open Schedule, select a completed game, then inspect the scoring ledger, team and player statistics, drives, defensive calls, line changes and play-by-play. A box score links directly to Analytics play and drive searches.
 
-1. Open the GUI: `./launch_gui.sh`
-2. Click **File → New Dynasty**
-3. Search for and select your team
-4. Click "Select Team"
-5. You're ready to go!
+From the season menu, choose **Analytics**. Use the thirteen views described in [ANALYTICS.md](ANALYTICS.md). Try Play finder with down 6, group by offensive school, then drill into an individual result. State-value estimates need enough completed games in earlier weeks; blank cells mean unavailable, not zero.
 
-## 🎮 Basic Operations
+## Saves and deployment
 
-### View Your Roster
-1. Go to "👥 Team Roster" tab
-2. Click "Load Roster"
-3. Browse your 36-player roster
+The application uses live sessions with SQLite persistence. Use the game's saves, import/export and archive controls; do not copy or edit the database while a session is writing to it. Back up your data before changing revisions. The current development target is newly created seasons; old-save compatibility is not promised.
 
-### Simulate Games
-- **Advance Week**: Toolbar button (simulates 1 week)
-- **Simulate Season**: Toolbar button (simulates full season)
+Set VIPERBALL_DB_PATH to select a database location. In production, fly.toml mounts /data and uses /data/viperball.db. For local troubleshooting, check /api/health (including build_sha when supplied), the server terminal and the actual page URL. The Fly configuration disables automatic wake-up; a stopped machine must be started deliberately.
 
-### Check Standings
-- Go to "🏆 Standings" tab
-- Select a conference from dropdown
-- View rankings and records
-
-### Save Your Progress
-- **File → Save Dynasty**
-- Choose location
-- File saved as `.json`
-
-### Load Saved Dynasty
-- **File → Load Dynasty**
-- Select your saved `.json` file
-
-## 📁 Important Files
-
-```
-viperball/
-├── viperball_gui.py       ← Main GUI application
-├── launch_gui.sh          ← GUI launcher script
-├── data/
-│   ├── teams/             ← Generated team rosters (36 players each)
-│   ├── schools/           ← School database (102 schools)
-│   └── conferences.json   ← 8 conferences
-├── scripts/
-│   ├── generate_rosters.py  ← Generate team rosters
-│   └── generate_names.py    ← Name generator
-└── saves/                 ← Your saved dynasties (create this folder)
-```
-
-## 🎯 Common Tasks
-
-### Generate More Rosters
-
-```bash
-# Single team
-python scripts/generate_rosters.py --schools <school_id>
-
-# Multiple teams
-python scripts/generate_rosters.py --schools team1,team2,team3
-
-# All teams
-python scripts/generate_rosters.py --all
-```
-
-### Find School IDs
-
-School IDs are in `data/schools/d1_non_football.json`.
-
-Common examples:
-- `gonzaga` - Gonzaga University
-- `villanova` - Villanova University
-- `vcu` - Virginia Commonwealth University
-- `marquette` - Marquette University
-- `davidson` - Davidson College
-- `gonzaga` - Gonzaga University
-- `boston_university` - Boston University
-
-### Create Saves Folder
-
-```bash
-mkdir saves
-```
-
-## 🔧 Troubleshooting
-
-### "Tkinter not found"
-```bash
-# Ubuntu/Debian
-sudo apt-get install python3-tk
-
-# macOS - Should be included
-# Windows - Should be included
-```
-
-### "No roster found"
-Generate the roster first:
-```bash
-python scripts/generate_rosters.py --schools <team_id>
-```
-
-### "Module not found"
-Make sure you're in the viperball directory:
-```bash
-cd /path/to/viperball
-python viperball_gui.py
-```
-
-## 🏆 Tips
-
-1. **Generate all rosters first** - Makes the experience smoother
-2. **Save often** - Especially after big wins!
-3. **Explore conferences** - 8 different conferences to choose from
-4. **Check recruiting** - Build your dynasty with great recruits
-5. **Track history** - Watch your dynasty grow over the years
-
-## 📚 More Info
-
-- Full documentation: `GUI_README.md`
-- Name generation system: `scripts/generate_names.py`
-- School database: `data/schools/d1_non_football.json`
-
----
-
-**Ready to build your dynasty? Let's go! 🏈**
+See [architecture](ARCHITECTURE_STATS_SITE_AND_RECRUITING.md) for deployment details and [development plan](docs/DEVELOPMENT_PLAN.md) for validation status.
