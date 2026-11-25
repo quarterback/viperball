@@ -1,5 +1,7 @@
 # WVL Commissioner Mode — Implementation Plan
 
+> **Historical feature specification.** This records the design at the time of writing; use [current feature guide](FEATURES.md) and [development plan](docs/DEVELOPMENT_PLAN.md) for implemented behavior and current priorities.
+
 ## What It Is
 
 Commissioner Mode is a unified simulation hub where you run the entire women's
