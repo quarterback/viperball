@@ -477,6 +477,9 @@ def run(seasons, nteams, seed, out, *, national=False):
             off=sess["offseason"]
             if {r.recruit_id:asdict(r) for r in off["recruit_pool"]} != expected_graduates:
                 raise RuntimeError("College recruiting pool is not the tracked HS senior cohort")
+            reserve_ids = {r.recruit_id for r in off["hs_walkon_reserve"]}
+            if reserve_ids != hs_seniors-set(expected_graduates):
+                raise RuntimeError("High school walk-on reserve does not reconcile with actual seniors")
             tracked_after = verify_pipeline(dyn._hs_league,dyn._hs_pipeline)
             hs_after = competition_index(dyn._hs_league)
             if set(hs_before)-set(hs_after) != hs_seniors or not (tracked_before-set(expected_graduates)) <= tracked_after:
@@ -525,6 +528,19 @@ def run(seasons, nteams, seed, out, *, national=False):
             walkon_details = dyn.recruiting_history[year+1].get("walkon_details", {})
             walkon_ids = {row["player_id"] for rows in walkon_details.values() for row in rows}
             final_ids = {row["player_id"] for rows in saved_rosters.values() for row in rows}
+            from engine.talent import STAT_KEYS
+            emergency_ids = {row["player_id"] for rows in walkon_details.values() for row in rows
+                             if row["source"] == "emergency"}
+            for rows in saved_rosters.values():
+                for row in rows:
+                    pid = row["player_id"]
+                    if pid not in (signed_ids|walkon_ids)-emergency_ids:
+                        continue
+                    if pid not in hs_seniors:
+                        raise RuntimeError("New college recruit has no graduating HS identity")
+                    team, player = hs_before[pid]
+                    if row["high_school"] != team.school_name or any(row["ratings"][attr] != getattr(player,attr) for attr in STAT_KEYS):
+                        raise RuntimeError("College signing altered authoritative HS ratings or school")
             if final_ids != (prior_ids-graduating_ids)|signed_ids|walkon_ids:
                 raise RuntimeError("College roster additions/departures do not reconcile")
             from engine.roster_continuity import COLLEGE_ROSTER_TARGET
@@ -561,7 +577,7 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),
-                    "tracked_graduates":len(expected_graduates),"tracked_returning":len(tracked_before-set(expected_graduates)),
+                    "tracked_graduates":len(expected_graduates),"walkon_reserve":len(reserve_ids),"tracked_returning":len(tracked_before-set(expected_graduates)),
                     "next_competition_players":len(hs_after),"next_tracked":len(tracked_after),
                     "competition_games":len(dyn._hs_league.schedule),"save_parity":True},
                 "college_cohort":{"graduated":len(graduating_ids),"signed_unique":len(signed_ids),
