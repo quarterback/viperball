@@ -25,7 +25,7 @@ COLS = {
     "scoring":[("team","Team"),("games","G"),("audited","Audited G"),("points","PF"),
                ("rush_td","Rush TD pts"),("lateral_td","Lat TD pts"),("kp_td","KP TD pts"),("return_td","Ret TD pts"),
                ("dk","Snap pts"),("pk","FG pts"),("safety","Safety pts"),("pindown","Pindown pts"),("bell","Bell pts"),
-               ("other","Unknown pts"),("drive_points","Drive pts"),("non_drive_points","Non-drive pts"),("gap","Unreconciled pts")],
+               ("other","Unknown pts"),("drive_points","Drive pts"),("non_drive_points","Non-drive pts"),("gap","Unaudited pts")],
     "expected":[("team","Team"),("value_n","EP n"),("event_n","Events"),("coverage","EP %"),
                 ("expected","Mean EP"),("realized","Actual net"),("epa","Mean EPA"),("epa_n","EPA n"),("legacy_epa","Legacy EPA/play")],
     "decisions":[("team","Team"),("action","Action"),("n","Decisions"),("supported","Compared"),
@@ -34,7 +34,8 @@ COLS = {
              ("ppd","PPD"),("score_pct","TD/kick %"),("value_n","Model n"),("eligible","Eligible"),
              ("delta_value","Delta value"),("bonus_value","Bonus context")],
     "dtw":[("team","Team"),("games","G"),("wins","Wins"),("xwins","DTW xW"),("luck","W−xW"),
-           ("upsets","Upsets won"),("raw","Raw edge"),("delta_edge","Delta edge"),("bonus_edge","Bonus edge")],
+           ("upsets","Upsets won"),("raw","Raw edge"),("delta_edge","Delta edge"),("bonus_edge","Bonus edge"),
+           ("candidate","Research xW"),("candidate_n","Research G"),("matched_legacy","Matched DTW xW")],
     "plays":[("week","Week"),("team","Possession"),("opponent","Opponent"),("quarter","Q"),("clock","Clock"),
              ("down","Down"),("distance","To go"),("field","Yard line"),("action","Play"),("result","Result"),
              ("yards","Yds"),("points","Net pts"),("expected","Exp net"),("epa","EPA"),("description","Play description")],
@@ -118,10 +119,12 @@ def fit_session_model(games):
     early=[g for g in games if g["kind"]=="regular" and g["week"]<=cutoff and g["result"]
            and g["result"].get("analytics_contract_version")==1]
     early.sort(key=lambda g:sha256(g["id"].encode()).hexdigest())
+    ep_games=[g for g in early if int(sha256(g["id"].encode()).hexdigest()[:8],16)%4!=0][:120]
+    dtw_games=[g for g in early if int(sha256(g["id"].encode()).hexdigest()[:8],16)%4==0][:120]
     n=0
     def rows():
         nonlocal n
-        for g in early[:120]:
+        for g in ep_games:
             c=contract_for(g)
             if not c:continue
             labels=label_states(c)
@@ -131,7 +134,37 @@ def fit_session_model(games):
     model=fit(rows())
     if n<8 or not model["states"]:
         return {"model":None,"cutoff":cutoff,"train_games":n,"reason":"Not enough new-contract games with supported state cells."}
-    return {"model":model,"cutoff":cutoff,"train_games":n,"reason":None}
+    # DTW research fit uses separate earlier games, never EP training games
+    # or later games. Sparse coverage may make it unavailable.
+    from engine.dtw_research import fit as fit_dtw
+    candidate_rows=[]
+    for g in dtw_games:
+        fr=g["result"];st=fr.get("stats",{})
+        old=calculate_game_dtw(fr,st.get("home",{}).get("viperball_metrics"),st.get("away",{}).get("viperball_metrics"))
+        features=dtw_features(g,model,old)
+        if features:
+            outcome=.5 if g["home_score"]==g["away_score"] else float(g["home_score"]>g["away_score"])
+            candidate_rows.append({"features":features,"outcome":outcome})
+    dtw_model=fit_dtw(candidate_rows,("exchange_epa","turnover_margin","stop_rate","kick_pass_pct","kicking_eff"))
+    return {"model":model,"cutoff":cutoff,"train_games":n,"dtw_model":dtw_model,
+            "dtw_train_games":len(candidate_rows),"reason":None}
+
+
+def dtw_features(g,model,old):
+    from engine.dtw_research import feature_vector
+    from engine.viperball_metrics import calculate_to_margin
+    c=contract_for(g)
+    if not c or c["missing_states"] or c["state_score_mismatches"]:return None
+    count=0;total=0.;events=0
+    for row in c["events"]:
+        s=row.get("before_state")
+        if not s:continue
+        events+=1
+        e=event_epa(model,row)
+        if e:
+            count+=1;total+=e["epa"]*(1 if s["possession"]=="home" else -1)
+    return feature_vector({"dtw_edges":old["edges"],"turnover_margin":calculate_to_margin(g["result"]["play_by_play"],"home")},
+                          {"epa_coverage":count/max(1,events),"epa_home_per_event":total/count if count else None})
 
 
 def heldout_model(g,training):
@@ -147,7 +180,7 @@ def play_matches(row,filters):
 def play_rows(g,contract,training,filters,conferences):
     if not contract:return
     raw=g["result"].get("play_by_play",[])
-    model=heldout_model(g,training)
+    model=heldout_model(g,training) if not contract["missing_states"] and not contract["state_score_mismatches"] else None
     for r,p in zip(contract["events"],raw):
         s=r.get("before_state") or {}
         side=r.get("snap_possession")
@@ -178,11 +211,12 @@ def play_rows(g,contract,training,filters,conferences):
 def drive_rows(g,contract,training,filters,conferences):
     fr=g["result"]
     if not fr:return
-    model=heldout_model(g,training)
+    model=heldout_model(g,training) if contract and not contract["missing_states"] and not contract["state_score_mismatches"] else None
     by_id=defaultdict(list)
     if contract:
         for r in contract["events"]:
             by_id[r["drive_id"]].append(r)
+    seen_possessions=set()
     for i,d in enumerate(fr.get("drive_summary",[])):
         side=d.get("team")
         if side not in ("home","away") or not team_ok(g,side,filters,conferences):continue
@@ -190,10 +224,14 @@ def drive_rows(g,contract,training,filters,conferences):
         bucket="bonus" if d.get("bonus_drive") else "penalty_kill" if cost>0 else "power_play" if cost<0 else "neutral"
         ev=by_id.get(f'{g["id"]}:d{i}',[])
         s=next((r["before_state"] for r in ev if r["before_state"]),None)
+        new_possession=bool(s and (s["possession"],s["possession_id"]) not in seen_possessions)
+        if s:seen_possessions.add((s["possession"],s["possession_id"]))
+        scored=any(e["drive_credit"] and e["method"] in ("rush_td","lateral_td","kp_td","dk","pk") for r in ev for e in r["score_events"])
         row={"week":g["week"],"idx":g["idx"],"team":g[side],"opponent":g["away" if side=="home" else "home"],
              "quarter":d.get("quarter"),"field":d.get("start_yard_line"),"zone":zone(d.get("start_yard_line")),
              "bucket":bucket,"origin":d.get("possession_origin"),"plays":d.get("plays"),"yards":d.get("yards"),
-             "result":d.get("result"),"points":d.get("offensive_points"),"expected":None,"delta_value":None,"bonus_value":None}
+             "result":d.get("result"),"points":d.get("offensive_points"),"expected":None,"delta_value":None,"bonus_value":None,
+             "td_or_kick":scored if ev else None,"context_eligible":bool(new_possession and (s.get("origin")=="score_restart" or s.get("bonus_active") or s.get("bonus_recipient") in ("home","away")))}
         if s:
             diff=(s["home_score"]-s["away_score"])*(1 if side=="home" else -1)
             row["margin"]="leading" if diff>0 else "trailing" if diff<0 else "tied"
@@ -201,7 +239,7 @@ def drive_rows(g,contract,training,filters,conferences):
         if model and s:
             val=estimate(model,s)
             row["expected"]=round(val["value"],3) if val else None
-            if s.get("origin")=="score_restart" or s.get("bonus_active") or s.get("bonus_recipient") in ("home","away"):
+            if row["context_eligible"]:
                 de=context_decomposition(model,s,contract.get("restart_baseline"),s.get("origin")=="score_restart")
                 if de:
                     row["delta_value"]=round(de["delta"],3)
@@ -237,18 +275,19 @@ def build_report(games,view,filters,conferences,training=None):
                 b["drives"]+=1
                 if d["points"] is not None:
                     b["audited"]+=1;b["points"]+=d["points"]
-                    b["scores"]+=int(d["result"] in ("touchdown","successful_kick"))
-                eligible=d["origin"] in ("score_restart","bonus_possession","turnover") or d["bucket"]=="bonus"
-                b["eligible"]+=int(eligible)
+                    if d["td_or_kick"] is not None:
+                        b["incidence_n"]+=1;b["scores"]+=int(d["td_or_kick"])
+                b["eligible"]+=int(d["context_eligible"])
                 if d["delta_value"] is not None:
                     b["value_n"]+=1;b["delta_value"]+=d["delta_value"];b["bonus_value"]+=d["bonus_value"]
             continue
         if view in ("expected","decisions"):
             if not contract:continue
+            if contract["missing_states"] or contract["state_score_mismatches"]:model=None
             labels={}
             if model and view=="expected":
                 labels={x["event_id"]:x["target"] for x in label_states(contract) if x["horizon"]==2}
-            for r in contract["events"]:
+            for r,p in zip(contract["events"],fr.get("play_by_play",[])):
                 s=r["before_state"]
                 if not s or not team_ok(g,s["possession"],filters,conferences):continue
                 side=s["possession"];team=g[side]
@@ -265,6 +304,8 @@ def build_report(games,view,filters,conferences,training=None):
                         h=heat[(s["down"],zone(s["field_position"]))];h["n"]+=1;h["pts"]+=v["value"]
                     if e:
                         b["epa_n"]+=1;b["epa"]+=e["epa"]
+                        legacy=safe_number(p.get("epa"))
+                        if legacy is not None:b["legacy_n"]+=1;b["legacy_epa"]+=legacy
                 elif r["action"]:
                     if not model:continue
                     b=groups[(team,r["action"])];b["n"]+=1
@@ -276,6 +317,10 @@ def build_report(games,view,filters,conferences,training=None):
             continue
         st=fr.get("stats",{})
         dtw=calculate_game_dtw(fr,st.get("home",{}).get("viperball_metrics"),st.get("away",{}).get("viperball_metrics")) if view=="dtw" else None
+        candidate=None
+        if dtw and model and training.get("dtw_model"):
+            from engine.dtw_research import predict
+            candidate=predict(training["dtw_model"],dtw_features(g,model,dtw))
         for side in ("home","away"):
             if not team_ok(g,side,filters,conferences):continue
             opp="away" if side=="home" else "home";team=g[side]
@@ -287,6 +332,8 @@ def build_report(games,view,filters,conferences,training=None):
                 x=dtw[side+"_dtw"];sign=1 if side=="home" else -1
                 win=1 if score>against else .5 if score==against else 0
                 b["wins"]+=win;b["xwins"]+=x;b["upsets"]+=int(win==1 and dtw["upset"])
+                if candidate is not None:
+                    b["candidate_n"]+=1;b["candidate"]+=candidate if side=="home" else 1-candidate;b["matched_legacy"]+=x
                 c=dtw["component_edges"]
                 b["raw"]+=sign*c["raw_performance"];b["delta_edge"]+=sign*c["delta_context"];b["bonus_edge"]+=sign*c["turnover_bonus_conversion"]
                 continue
@@ -311,18 +358,20 @@ def build_report(games,view,filters,conferences,training=None):
         if view=="expected":
             rows.append({"team":team,"value_n":b["value_n"],"event_n":b["event_n"],"coverage":ratio(b["value_n"],b["event_n"],100),
                          "expected":ratio(b["expected"],b["value_n"]),"realized":ratio(b["realized"],b["value_n"]),
-                         "epa":ratio(b["epa"],b["epa_n"]),"epa_n":b["epa_n"],"legacy_epa":None})
+                         "epa":ratio(b["epa"],b["epa_n"]),"epa_n":b["epa_n"],"legacy_epa":ratio(b["legacy_epa"],b["legacy_n"])})
         elif view=="decisions":
             rows.append({"team":team,"action":key[1],"n":b["n"],"supported":b["supported"],"coverage":ratio(b["supported"],b["n"],100),
                          "value":ratio(b["value"],b["supported"]),"above":ratio(b["above"],b["above_n"]),"above_n":b["above_n"],"regret":ratio(b["regret"],b["supported"])})
         elif view=="delta":
             rows.append({"team":team,"bucket":key[1],"drives":b["drives"],"points":b["points"] if b["audited"] else None,
-                         "ppd":ratio(b["points"],b["audited"]),"score_pct":ratio(b["scores"],b["audited"],100),
+                         "ppd":ratio(b["points"],b["audited"]),"score_pct":ratio(b["scores"],b["incidence_n"],100),
                          "eligible":b["eligible"],"value_n":b["value_n"],"delta_value":ratio(b["delta_value"],b["value_n"]),
                          "bonus_value":ratio(b["bonus_value"],b["value_n"])})
         elif view=="dtw":
             rows.append({"team":team,"games":b["games"],"wins":b["wins"],"xwins":round(b["xwins"],2),"luck":round(b["wins"]-b["xwins"],2),
-                         "upsets":b["upsets"],"raw":ratio(b["raw"],b["games"]),"delta_edge":ratio(b["delta_edge"],b["games"]),"bonus_edge":ratio(b["bonus_edge"],b["games"])})
+                         "upsets":b["upsets"],"raw":ratio(b["raw"],b["games"]),"delta_edge":ratio(b["delta_edge"],b["games"]),"bonus_edge":ratio(b["bonus_edge"],b["games"]),
+                         "candidate_n":b["candidate_n"],"candidate":round(b["candidate"],3) if b["candidate_n"] else None,
+                         "matched_legacy":round(b["matched_legacy"],3) if b["candidate_n"] else None})
         elif view=="scoring":
             rows.append({"team":team,"games":b["games"],"points":b["points"],"audited":b["audited"],
                          **{m:b[m] if b["audited"] else None for m in METHODS},
