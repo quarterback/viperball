@@ -392,3 +392,8 @@ _This assessment was compiled from direct repository inspection and the existing
 ### November 25 — CCH-09 career and program leadership
 
 Implementation in PR #378, pending candidate validation. [Design report](PRD_CCH09_COACHING_CAREERS_AND_PROGRAM_LEADERSHIP.md) and [implementation AAR](aar_2026-11-25_cch09_coaching_careers.md). Follow-up: 20–30-season career distribution and program growth study; five/ten-season player/roster studies remain outstanding. No scripted career breakthroughs or staff conflict mechanics.
+
+
+### VAL-06 — Longitudinal coaching and roster studies
+
+[Study design and AAR](aar_2026-11-25_val06_longitudinal_coaching_rosters.md). Three independent full-engine reduced-league trajectories, with 5/10/20/30-year milestones. Observer only; no new gameplay tuning. Follow-up requires actual results before staffing/continuity changes.
