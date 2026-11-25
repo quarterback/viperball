@@ -650,6 +650,67 @@ def active_situations(context: Dict[str, Any]) -> set:
     return out
 
 
+# These scripts have compound situations in their catalog descriptions.
+# Other multi-tag packages deliberately allow alternative triggers.
+_OFFENSE_ALL_SITUATIONS = {
+    "afl_kick_in_breakout", "afl_restart_go_to", "lax_fast_break",
+    "league_last_tackle_kick",
+}
+
+
+def offensive_package_eligible(pkg: dict, live: set) -> bool:
+    tags = set(pkg.get("situation_tags", ()))
+    if not tags:
+        return False
+    if pkg["package_id"] in _OFFENSE_ALL_SITUATIONS:
+        return tags <= live
+    return bool(tags & live)
+
+
+def choose_offensive_package(tactics: dict, context: dict, rng):
+    """One optional practiced plan per snap; base playbook is always available.
+
+    No global RNG draws, no post-snap information, no changes to legal
+    play weights. Formation, family and subtype share the same plan.
+    """
+    live = active_situations(context)
+    candidates = []
+    for pkg in sorted(tactics.get("packages") or [], key=lambda p: p["package_id"]):
+        familiarity = _clamp(pkg.get("familiarity", 0.0))
+        if familiarity > 0 and offensive_package_eligible(pkg, live):
+            candidates.append((pkg, familiarity))
+    eligible = [pkg["package_id"] for pkg, _ in candidates]
+    if not candidates:
+        return None, eligible, sorted(live)
+    authority = _clamp(tactics.get("authority", 1.0))
+    if rng.random() >= .90 * authority * max(f for _, f in candidates):
+        return None, eligible, sorted(live)
+    picked = rng.choices([p for p, _ in candidates],
+                         weights=[f for _, f in candidates], k=1)[0]
+    return picked, eligible, sorted(live)
+
+
+def offensive_plan_bias(tactics: dict, key: str, package: Optional[dict]) -> dict:
+    base = dict(tactics.get(key) or {})
+    if package:
+        pull = PACKAGE_PULL * _clamp(package.get("familiarity", 0.0))
+        for tag in package.get(_PACKAGE_TAGS[key], ()):
+            base[tag] = base.get(tag, 0.0) + pull
+    return base
+
+
+def offensive_plan_matches(package: dict, choices: dict) -> dict:
+    """Report observed choices, not a claim that a package caused them."""
+    result = {}
+    for choice, field in (("formation", "formation_tags"),
+                          ("family", "play_family_tags"),
+                          ("kick_pass", "kick_pass_tags")):
+        tags = package.get(field) or []
+        if choice in choices and tags:
+            result[choice] = choices[choice] in tags
+    return result
+
+
 def situational_bias(tactics: Dict[str, Any], key: str, context: Dict[str, Any],
                      usage: Optional[dict] = None) -> Dict[str, float]:
     """The OC's (installation scaled) bias for one category plus the pull
@@ -662,7 +723,7 @@ def situational_bias(tactics: Dict[str, Any], key: str, context: Dict[str, Any],
     live = active_situations(context)
     tag_field = _PACKAGE_TAGS[key]
     for p in pkgs:
-        if not set(p["situation_tags"]) & live:
+        if not offensive_package_eligible(p, live):
             continue
         pull = PACKAGE_PULL * _clamp(p.get("familiarity", 0.0))
         for t in p.get(tag_field, []):
