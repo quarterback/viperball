@@ -26,7 +26,7 @@
 
 <h2>National champion</h2>
 {% if national_champion %}
-<p style="font-size:18px;margin:4px 0 12px"><strong><a href="/stats/high-school/team/{{ (team_keys.get(national_champion, national_champion))|urlencode }}">{{ national_champion }}</a></strong></p>
+<p style="font-size:18px;margin:4px 0 12px"><strong><a href="/stats/high-school/team/{{ national_champion_key|urlencode }}">{{ national_champion }}</a></strong></p>
 {% endif %}
 {% if national_games %}
 <table>
@@ -35,9 +35,9 @@
   {% for g in national_games %}
   <tr>
     <td>{{ g.round }}</td>
-    <td>{% if g.winner == g.home %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.home, g.home))|urlencode }}">{{ g.home }}</a>{% if g.winner == g.home %}</strong>{% endif %}</td>
+    <td>{% if g.winner_key == g.home_key %}<strong>{% endif %}<a href="/stats/high-school/team/{{ g.home_key|urlencode }}">{{ g.home }}</a>{% if g.winner_key == g.home_key %}</strong>{% endif %}</td>
     <td class="num">{{ g.home_score }}</td>
-    <td>{% if g.winner == g.away %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.away, g.away))|urlencode }}">{{ g.away }}</a>{% if g.winner == g.away %}</strong>{% endif %}</td>
+    <td>{% if g.winner_key == g.away_key %}<strong>{% endif %}<a href="/stats/high-school/team/{{ g.away_key|urlencode }}">{{ g.away }}</a>{% if g.winner_key == g.away_key %}</strong>{% endif %}</td>
     <td class="num">{{ g.away_score }}</td>
   </tr>
   {% endfor %}
@@ -52,7 +52,7 @@
   {% for r in regions %}
   <tr>
     <td>{{ r.name }}</td>
-    <td>{% if r.champion %}<a href="/stats/high-school/team/{{ (team_keys.get(r.champion, r.champion))|urlencode }}">{{ r.champion }}</a>{% endif %}</td>
+    <td>{% if r.champion %}<a href="/stats/high-school/team/{{ r.champion_key|urlencode }}">{{ r.champion }}</a>{% endif %}</td>
     <td>{% for s in r.states %}<a href="/stats/high-school/state/{{ s }}">{{ s }}</a>{% if not loop.last %} {% endif %}{% endfor %}</td>
   </tr>
   {% endfor %}
@@ -86,7 +86,7 @@
   {% for p in top_seniors %}
   <tr>
     <td class="num rank">{{ loop.index }}</td>
-    <td>{{ p.name }}</td>
+    <td>{% if p.tracked %}<a href="/stats/recruiting/recruit/{{ p.player_id|urlencode }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</td>
     <td>{{ p.position }}</td>
     <td><a href="/stats/high-school/team/{{ (p.school ~ "_" ~ p.state)|urlencode }}">{{ p.school }}</a></td>
     <td><a href="/stats/high-school/state/{{ p.state }}">{{ p.state }}</a></td>
@@ -108,7 +108,7 @@
   <tr>
     <td><a href="/stats/high-school/state/{{ s.code }}">{{ s.name }}</a></td>
     <td class="num">{{ s.teams }}</td>
-    <td>{% if s.champion %}<a href="/stats/high-school/team/{{ (team_keys.get(s.champion, s.champion))|urlencode }}">{{ s.champion }}</a>{% endif %}</td>
+    <td>{% if s.champion %}<a href="/stats/high-school/team/{{ s.champion_key|urlencode }}">{{ s.champion }}</a>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
