@@ -589,7 +589,8 @@ class Dynasty:
                 break
 
         # Pre-compute conference champions and playoff teams once
-        playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
+        playoff_teams = {name for game in season.playoff_bracket
+                         for name in (game.home_team, game.away_team)}
         conf_champs = season.get_conference_champions() if self.conferences else {}
         conf_champ_set = set(conf_champs.values())
 
@@ -691,12 +692,7 @@ class Dynasty:
 
             # Playoff bracket: determine which teams won playoff games
             # and who reached the championship game
-            playoff_teams_set = set()
-            try:
-                playoff_records = season.get_playoff_teams(num_teams=8)
-                playoff_teams_set = {r.team_name for r in playoff_records}
-            except Exception:
-                pass
+            playoff_teams_set = playoff_teams
 
             # Count playoff wins per team from the bracket
             playoff_wins_by_team: Dict[str, int] = {}
@@ -817,7 +813,6 @@ class Dynasty:
                 self.coach.championships += 1
 
             # Check if playoff
-            playoff_teams = [r.team_name for r in season.get_playoff_teams(num_teams=8)]
             if self.coach.team_name in playoff_teams:
                 self.coach.playoff_appearances += 1
 
