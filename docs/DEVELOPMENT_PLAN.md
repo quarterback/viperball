@@ -18,7 +18,7 @@ Updated November 25, 2026. Baseline main a6f1660a96a87934651cfcb76bd91ecdc50b89f
 | AN-VAL | Integrated release gate | Implemented CI gates and two-seed national study; acceptance outstanding |
 | AN-UI | Viperball analytics portal | Implemented 13 college views, grouped/raw queries, model coverage, comparisons, CSV and game navigation in #385; UI/engine acceptance pending ([portal AAR](aar_2026-11-25_analytics_portal.md)) |
 | VAL-07 | Combined main / long dynasty | Open; 10/20/30-season runs after #383/#384, compare VAL-06 cohort growth, actual STC careers, crossovers, salaries, generated fills, alumni, fit and schedule |
-| UI-VAL | Browser regression | Open; #384 browser wait timed out; verify merged main; preserve mobile changes |
+| UI-VAL | Browser regression | Open; #384 browser wait timed out; #385 and #386 browser screenshot/keyboard jobs also failed ([#385](https://github.com/quarterback/viperball/actions/runs/45662632442), [#386](https://github.com/quarterback/viperball/actions/runs/45666438332)). Diagnose and verify merged main. |
 | UI-01 / DEL-03 | Remaining game/team/season reporting | Partial; scoring/drive/game-plan/fingerprint displays shipped; audit remaining halftime, weather splits and career/analytics presentation against live surfaces |
 | DEF-10 follow-up | Natural rare package adoption/effectiveness | Instrumented; further tuning only if repeated evidence supports it; no forced prevalence |
 | ENG-02 | TD/turnover drift | Investigated and tuned in #367 and later school work; monitor current distributions, no automatic scoring target |
@@ -34,3 +34,5 @@ Implementation details: [advanced analytics AAR](aar_2026-11-25_advanced_analyti
 ## November 25 documentation and accounting follow-up
 
 #385 merged the analytics pipeline and thirteen-view portal. #386 corrects defensive interception/return touchdown and WPA credit, lateral efficiency and timeout reporting; lateral yards remain within rushing. The previous byte-identical trace comparison was removed per the owner; the regression gate now includes box-score credit tests. No national validation or live deployment claim is inferred from either merge. Current user/developer references are indexed in [README.md](README.md). Historical AARs and old plans remain dated evidence.
+
+Latest CI observation: #385 CCH-03/04 integration, CCH-02, CCH-03 and defensive regression passed; national/integrated calibration remained in progress. #386 CCH-02, CCH-03 and defensive regression passed; integration running and integrated calibration queued. Both interface workflows failed at Browser screenshots and keyboard interaction. These are branch checks, not current live release proof.
