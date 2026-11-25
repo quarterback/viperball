@@ -3239,7 +3239,7 @@ def dynasty_advance(session_id: str):
     populate_portal(portal, {t:[c for c in cards if c.year != "Graduate"]
                              for t,cards in offseason_player_cards.items()},
                     team_records, rng=rng, team_prestige=dynasty.team_prestige,
-                    coaching_retention={t:position_retention_bonus(s) for t,s in dynasty._coaching_staffs.items()})
+                    coaching_retention={t:position_retention_bonus(s,year) for t,s in dynasty._coaching_staffs.items()})
 
     # The same actual HS seniors shown on the scouting board enter college.
     from engine.college_feeder import advance_college_feeder
