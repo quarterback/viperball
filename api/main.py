@@ -4339,6 +4339,8 @@ def _serialize_coach_card(card) -> dict:
     from engine.coaching import CoachCard, CLASSIFICATION_LABELS, HC_AFFINITY_LABELS
     if isinstance(card, dict):
         return card
+    from engine.coach_career import ensure, active_management, seeks_hc, requires_calls
+    career = ensure(card)
     return {
         "coach_id": card.coach_id,
         "name": card.full_name,
@@ -4370,6 +4372,13 @@ def _serialize_coach_card(card) -> dict:
         "personality": card.personality,
         "background": card.background,
         "wants_hc": card.wants_hc,
+        "seeks_hc": seeks_hc(card),
+        "hc_readiness": card.hc_meter,
+        "market_reputation": career["reputation"],
+        "role_years": dict(career["role_years"]),
+        "former_head_coach": career["ever_head_coach"] and card.role != "head_coach",
+        "requires_play_calling": requires_calls(card,card.role),
+        "management_profile": active_management(card),
         "alma_mater": card.alma_mater,
     }
 
@@ -4392,11 +4401,14 @@ def season_coaching_staff_get(session_id: str, team: Optional[str] = Query(None)
         serialized[role] = _serialize_coach_card(card)
 
     from engine.coaching import compute_dev_aura
+    from engine.coach_career import caller
     aura = compute_dev_aura(staff)
 
     return {
         "team": team_name,
         "staff": serialized,
+        "play_callers": {role: selected.coach_id for role in ("oc","dc","stc")
+                         if (selected := caller(staff,role)) is not None},
         "dev_aura": round(aura, 4),
         "dev_aura_max_boost_pct": round(aura * 100, 1),
     }
@@ -4473,9 +4485,13 @@ def season_coaching_hire(session_id: str, req: CoachHireRequest):
         raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
 
     # Set the coach on the team
-    target.team_name = human_team
-    target.role = req.role
+    from engine.coach_career import appoint, requires_calls, active_management
     staffs = session.get("coaching_staffs", season.coaching_staffs)
+    hc = staffs.get(human_team,{}).get("head_coach")
+    if requires_calls(target,req.role) and active_management(hc).get("retained_call") == req.role:
+        raise HTTPException(status_code=400,detail="This former head coach requires play-calling authority.")
+    target.team_name = human_team
+    appoint(target,req.role)
     if human_team not in staffs:
         staffs[human_team] = {}
     old_coach = staffs[human_team].get(req.role)

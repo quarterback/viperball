@@ -607,6 +607,7 @@ class CoachCard:
     # Existing saves omit this field; __post_init__ generates a stable
     # versioned profile without consuming the game/season random stream.
     tactical_profile: Dict = field(default_factory=dict)
+    career_development: Dict = field(default_factory=dict)
 
     # ── computed properties ───────────────────
 
@@ -625,6 +626,10 @@ class CoachCard:
         # All runtime effects remain disabled until CCH-02.
         from .coach_tactics import ensure_coach_tactical_profile
         ensure_coach_tactical_profile(self)
+        from .coach_career import ensure, appoint
+        ensure(self)
+        if self.role == "head_coach" and not self.career_development.get("management"):
+            appoint(self, self.role)
 
     @property
     def full_name(self) -> str:
@@ -783,6 +788,7 @@ class CoachCard:
             "standard": self.standard,
             "growth": self.growth,
             "tactical_profile": self.tactical_profile,
+            "career_development": self.career_development,
         }
 
     @classmethod
@@ -838,6 +844,7 @@ class CoachCard:
             standard=d.get("standard", 50),
             growth=d.get("growth", 50),
             tactical_profile=d.get("tactical_profile", {}),
+            career_development=d.get("career_development", {}),
         )
         # Explicit saved chemistry scores are authoritative, including 50.
         # Only missing legacy fields should receive constructor backfill.
@@ -1073,6 +1080,7 @@ def _pick_classification(
 def calculate_coach_salary(
     card: CoachCard,
     rng: Optional[random.Random] = None,
+    target_role: Optional[str] = None,
 ) -> int:
     """
     Determine a coach's market salary based on visible attributes and record.
@@ -1099,9 +1107,13 @@ def calculate_coach_salary(
     # Championship premium
     base += card.championships * 25_000
 
-    # HC premium
-    if card.role == "head_coach":
+    from .coach_career import reputation, veteran_premium
+    role = target_role or card.role
+    base = int(base * (1 + (reputation(card)-50)*.004))
+    if role == "head_coach":
         base = int(base * 1.25)
+    else:
+        base = int(base * (1 + .18*veteran_premium(card)))
 
     # Noise ±8%
     noise = rng.uniform(0.92, 1.08)
@@ -1531,7 +1543,8 @@ class CoachMarketplace:
             for i, card in enumerate(pool):
                 if card.coach_id == coach_id:
                     card.team_name = team_name
-                    card.role = role
+                    from .coach_career import appoint
+                    appoint(card, role)
                     card.contract_salary = salary
                     card.contract_years_remaining = years
                     card.contract_buyout = int(salary * years * 0.5)
@@ -1590,7 +1603,8 @@ class CoachMarketplace:
 
                 if rng.random() < accept_chance:
                     card.team_name = hiring_team
-                    card.role = new_role
+                    from .coach_career import appoint
+                    appoint(card, new_role)
                     card.contract_salary = offer_salary
                     card.contract_years_remaining = offer_years
                     card.contract_buyout = int(offer_salary * offer_years * 0.5)
@@ -1971,59 +1985,14 @@ def advance_hc_meter(
 
     gain = 0
 
-    # 1. Tenure: +2 per year as a coordinator
-    gain += 2
-
-    # 2. Coaching a star player: +5-10 if best player in area is 85+ ovr
-    if best_player_ovr_in_area >= 90:
-        gain += rng.randint(7, 10)
-    elif best_player_ovr_in_area >= 85:
-        gain += rng.randint(5, 7)
-    elif best_player_ovr_in_area >= 80:
-        gain += rng.randint(2, 4)
-
-    # 3. Team winning: +3-8 based on wins above .500
-    total = team_wins + team_losses
-    if total > 0:
-        wp = team_wins / total
-        if wp >= 0.75:
-            gain += rng.randint(6, 8)
-        elif wp >= 0.60:
-            gain += rng.randint(4, 6)
-        elif wp >= 0.50:
-            gain += rng.randint(2, 4)
-
-    # 4. Postseason: bonus for playoff / conference championship
-    if made_playoff:
-        gain += rng.randint(3, 5)
-    if won_conference:
-        gain += rng.randint(2, 4)
-
-    # 5. HC success: working for a great HC rubs off
-    if hc_card:
-        hc_wp = hc_card.win_percentage
-        if hc_wp >= 0.70:
-            gain += rng.randint(4, 6)
-        elif hc_wp >= 0.55:
-            gain += rng.randint(2, 4)
-        # Bonus if HC has championships
-        if hc_card.championships > 0:
-            gain += rng.randint(1, 3)
-
-    # 6. Own quality: already-good coaches learn faster
-    if card.overall >= 80:
-        gain += rng.randint(2, 3)
-    elif card.overall >= 75:
-        gain += rng.randint(1, 2)
-
-    # Apply
-    old_meter = card.hc_meter
-    card.hc_meter = min(100, card.hc_meter + gain)
-
-    # Flip wants_hc when meter crosses 75
-    if card.hc_meter >= 75 and not card.wants_hc:
-        card.wants_hc = True
-
+    # Readiness measures preparation, not desire or market demand.
+    from .coach_career import aptitude, ensure
+    experience = ensure(card)["role_years"]
+    gain = 3 + int(aptitude(card)/25) + int(bool(hc_card))
+    gain += min(2, sum(experience.values())//6)
+    before = card.hc_meter
+    card.hc_meter = min(100, card.hc_meter+gain)
+    gain = card.hc_meter-before
     return gain
 
 
@@ -2051,36 +2020,8 @@ def apply_coach_development(
     if rng is None:
         rng = random.Random()
 
-    changes: Dict[str, int] = {}
-    total = team_wins + team_losses
-    wp = team_wins / total if total > 0 else 0.5
-
-    # Winning coaches improve more
-    if wp >= 0.65:
-        gain_range = (0, 2)
-    elif wp >= 0.50:
-        gain_range = (0, 1)
-    else:
-        gain_range = (-1, 1)
-
-    # Age decline: coaches over 60 start losing a step
-    age_penalty = 0
-    if card.age >= 65:
-        age_penalty = -2
-    elif card.age >= 60:
-        age_penalty = -1
-
-    for attr_name in ("instincts", "leadership", "composure", "rotations",
-                       "development", "recruiting"):
-        base_change = rng.randint(*gain_range) + age_penalty
-        old_val = getattr(card, attr_name)
-        new_val = _clamp_attr(old_val + base_change)
-        delta = new_val - old_val
-        if delta != 0:
-            setattr(card, attr_name, new_val)
-            changes[attr_name] = delta
-
-    return changes
+    from .coach_career import grow
+    return grow(card)
 
 
 # ──────────────────────────────────────────────
@@ -2111,7 +2052,11 @@ def get_acceptable_roles(card: CoachCard) -> List[str]:
     if card.role == "head_coach":
         # Former HCs can take coordinator roles
         # Their hc_affinity hints at where they'd fit best
-        if card.hc_affinity == "defensive_mind":
+        from .coach_career import management
+        specialty = management(card).get("specialty")
+        if specialty in ("oc","dc","stc"):
+            roles.append(specialty)
+        elif card.hc_affinity == "defensive_mind":
             if "dc" not in roles:
                 roles.append("dc")
         elif card.hc_affinity == "offensive_mind":
@@ -2128,7 +2073,8 @@ def get_acceptable_roles(card: CoachCard) -> List[str]:
                     break
     else:
         # Coordinators
-        if card.wants_hc or card.hc_meter >= 75:
+        from .coach_career import seeks_hc
+        if seeks_hc(card):
             if "head_coach" not in roles:
                 roles.append("head_coach")
 
@@ -2230,7 +2176,9 @@ def compute_dev_boost(
         override_floor = override_range[0]
         base_boost = max(base_boost, override_floor)
 
-    return base_boost
+    from .coach_career import active_management
+    emphasis = active_management(hc).get("development",.5)
+    return min(8., base_boost * (.9+.2*emphasis))
 
 
 def compute_recruiting_bonus(
@@ -2252,7 +2200,8 @@ def compute_recruiting_bonus(
     if hc.classification == "program_changer":
         base = max(base, 0.85)
 
-    return base
+    from .coach_career import active_management
+    return min(1., base * (.9+.2*active_management(hc).get("recruiting",.5)))
 
 
 def compute_program_changer_prestige_boost(
@@ -2281,34 +2230,10 @@ def compute_program_changer_prestige_boost(
 
 
 def compute_hc_ambition(coach: CoachCard) -> int:
-    """
-    Compute the prestige level an HC believes they deserve.
-
-    An HC's ambition is built from their career win percentage plus
-    bonuses from postseason success.  This drives whether the HC seeks
-    a move to a higher-prestige program when their contract expires.
-
-    Formula:
-        base  = win_percentage * 80                            (0-80)
-        + conference_titles * 5                                (up to ~25)
-        + playoff_appearances * 3                              (up to ~15)
-        + playoff_wins * 4          (deeper runs = more wins)  (up to ~20)
-        + championship_appearances * 5                         (up to ~10)
-        + championships * 8                                    (up to ~24)
-
-    Returns:
-        int in [10, 99] — the prestige level this HC expects.
-    """
-    wp = coach.win_percentage
-    base = int(wp * 80)
-
-    base += coach.conference_titles * 5
-    base += coach.playoff_appearances * 3
-    base += coach.playoff_wins * 4
-    base += coach.championship_appearances * 5
-    base += coach.championships * 8
-
-    return max(10, min(99, base))
+    """Desired program prestige, distinct from the desire to be an HC."""
+    from .coach_career import ensure, reputation, clip
+    desire=ensure(coach)["ambition"]
+    return int(clip(reputation(coach)+25*(desire-.5),10,99))
 
 
 def try_hc_contract_extension(
@@ -2457,6 +2382,9 @@ def compute_gameday_modifiers(
         + leadership_raw * 0.25 # organizational discipline
     )
     clock_mgmt = norm(clock_mgmt_raw)
+    from .coach_career import active_management
+    if hc:
+        clock_mgmt = max(0.,min(1.,.85*clock_mgmt+.15*active_management(hc).get("game_management",clock_mgmt)))
     # Sub-archetype bonuses
     sub_arch = hc.sub_archetype if hc else ""
     if sub_arch == "clock_surgeon":
@@ -2687,6 +2615,9 @@ def roll_dc_gameplan(
 
     hc = coaching_staff.get("head_coach")
     dc = coaching_staff.get("dc")
+
+    from .coach_career import caller
+    dc = caller(coaching_staff,"dc")
 
     # DC instincts drive the base center.
     # instincts 25 → center 1.02 (bad DC, slight offense advantage)

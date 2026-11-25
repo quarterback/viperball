@@ -1,0 +1,7 @@
+# CCH-08 — College coaching tactical adaptation
+
+Source baseline: main 4968495, includes merged #377. Offensive calibration job 45521382130 passed; combined national acceptance is still pending. Implemented at user direction before that acceptance, without claiming validation.
+
+College offseason records coordinator-specific lessons before career movement. Only completed games attributed to the actual coordinator contribute. Compare kick passes versus runs for OC, four-or-more intended rushers versus lower commitment on opposing kick passes for DC, within each game and coarse down, distance and field-zone strata. Exclude nullified fouls. Bounded progress/turnover outcome is descriptive feedback; opposing roster, game state and selection confounding remain. At least six matched games and 30 observations per arm, shrink toward zero, scale by adaptability and stubbornness, maximum .015 annual and .06 cumulative shift. No base identity change, generic rating gain or scheme replacement. Learning remains on the coach card across moves; existing installation familiarity limits offensive expression. Legacy profiles without learning remain neutral. No retroactive synthetic history.
+
+Focused tests cover evidence floors, repeat-year guard, identity, persistence, and attribution. Integrated dynasty verifies base signatures remain unchanged and learning remains bounded. Later work: inspect observed changes by coach, evaluate matched long-run outcomes, roster changes and selection confounding before tuning. No pro/international changes.

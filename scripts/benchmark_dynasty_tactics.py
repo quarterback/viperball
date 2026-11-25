@@ -76,6 +76,28 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
         stats = fr["stats"][side]
         if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
             raise RuntimeError(f"Score ledger mismatch for {name}")
+        # Physical snap ledger: exact participation, no player twice, and
+        # the rush/coverage partition must be the credited defensive XI.
+        for play in fr["play_by_play"]:
+            lineup = play.get("snap_lineup")
+            if not lineup or lineup["offense_side"] != side:
+                continue
+            for unit in ("offense","defense"):
+                people = lineup[unit]
+                if len(people) != len(set(people)) or len(people)>11:
+                    raise RuntimeError("Invalid snap lineup")
+                groups["participation:"+unit]["snaps"] += 1
+                groups["participation:"+unit]["players"] += len(people)
+                groups["participation:"+unit]["short"] += int(len(people)<11)
+            rush = play.get("rush_event") or {}
+            if rush and set(rush["defenders_on_field"]) != set(lineup["defense"]):
+                raise RuntimeError("Rush personnel differ from credited defenders")
+        energy = fr.get("game_day",{}).get("energy",{}).get(side,[])
+        for player in energy:
+            if player["snaps"] != player["offensive_snaps"] + player["defensive_snaps"]:
+                raise RuntimeError("Player workload ledger mismatch")
+            groups["participation:workload"]["players"] += 1
+            groups["participation:workload"]["shifts"] += player["shifts"]
         # Offensive package ledger distinguishes opportunities, calls and
         # actual matching choices. All are attributed to the snapping side.
         oc = fr.get("coach_tactics", {}).get(side, {})
@@ -369,7 +391,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             funnel = defaultdict(Counter)
             focus_funnel = defaultdict(lambda: defaultdict(Counter))
             for name, unit in units.items():
-                card = dyn._coaching_staffs.get(name, {}).get("dc")
+                from engine.coach_career import caller
+                card = caller(dyn._coaching_staffs.get(name, {}),"dc")
                 snap = defensive_adoption_snapshot(unit, card, profiles.get(name, {}))
                 adoption[name] = snap
                 for pid, row in snap["packages"].items():
@@ -469,8 +492,19 @@ def run(seasons, nteams, seed, out, *, national=False):
                 w,l = played_records[old_team]
                 if (c.age, c.seasons_coached, c.career_wins, c.career_losses) != (age+1,seasons_coached+1,wins+w,losses+l):
                     raise RuntimeError(f"Coach season credit mismatch: {cid}")
-                if ensure_coach_tactical_profile(c) != profile:
-                    raise RuntimeError(f"Coach signature changed during employment transition: {cid}")
+                updated = deepcopy(ensure_coach_tactical_profile(c))
+                learning = updated.pop("learning", {})
+                prior = profile.get("learning", {})
+                original = {k:v for k,v in profile.items() if k != "learning"}
+                if updated != original:
+                    raise RuntimeError(f"Coach base signature changed during employment transition: {cid}")
+                from engine.coach_learning import LIMIT, STEP
+                for key in ("kick_mix", "pressure"):
+                    if abs(learning.get(key,0)) > LIMIT + 1e-6 or abs(learning.get(key,0)-prior.get(key,0)) > STEP + 1e-6:
+                        raise RuntimeError(f"Unbounded tactical adaptation: {cid}/{key}")
+            career_events = dyn.coaching_history[year+1].get("career_development", [])
+            if len(career_events) != len(before_coaches) or len({e["team"]+"|"+e["role"] for e in career_events}) != len(before_coaches):
+                raise RuntimeError("Career evidence ledger must cover each prior staff slot once")
             coach_events = dyn.coaching_history[year+1].get("development", [])
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
@@ -573,7 +607,7 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "coach_career_continuity":{"retained":len(retained_coaches),
                     "departed":len(set(before_coaches)-set(after_coaches)),
                     "new":len(set(after_coaches)-set(before_coaches)),
-                    "development_events":len(coach_events)},
+                    "development_events":len(coach_events), "career_evidence":career_events},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),

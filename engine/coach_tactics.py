@@ -233,24 +233,20 @@ def resolve_offensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
     personality and countermeasures still operate). A missing HC grants
     the coordinator full authority; a present HC explicitly constrains it.
     """
-    if not staff or not staff.get("oc"):
+    from .coach_career import caller, call_authority
+    oc = caller(staff,"oc")
+    if oc is None:
         return {}
-    oc = staff["oc"]
     profile = ensure_coach_tactical_profile(oc)
-    hc = staff.get("head_coach")
-    if hc is None:
-        authority = 1.0
-    else:
-        hc_profile = ensure_coach_tactical_profile(hc)
-        delegation = hc_profile.get("head_coach", {}).get("delegation", 0.5)
-        authority = max(0.40, min(0.95, 0.40 + 0.60 * float(delegation)))
+    authority = call_authority(staff,"oc")
+    from .coach_learning import offense_bias
     return {
         "coach_id": oc.coach_id,
         "signature": profile.get("identity", {}).get("offense_interpretation", ""),
         "featured_position": profile.get("offense", {}).get("featured_position", ""),
         "authority": round(authority, 3),
         "formation_bias": dict(profile.get("offense", {}).get("formation_bias", {})),
-        "family_bias": dict(profile.get("offense", {}).get("family_bias", {})),
+        "family_bias": offense_bias(profile),
         "kick_pass_bias": dict(profile.get("offense", {}).get("kick_pass_bias", {})),
     }
 
@@ -308,25 +304,21 @@ def resolve_defensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
     A game lacking a DC keeps the previous scheme-only behavior. A missing
     HC delegates fully. This does not overwrite or re-roll the saved card.
     """
-    if not staff or staff.get("dc") is None:
+    from .coach_career import caller, call_authority
+    dc = caller(staff,"dc")
+    if dc is None:
         return {}
-    dc = staff["dc"]
     profile = ensure_coach_tactical_profile(dc)
     defense = profile.get("defense", {})
-    hc = staff.get("head_coach")
-    if hc is None:
-        authority = 1.0
-    else:
-        leader = ensure_coach_tactical_profile(hc)
-        delegation = float(leader.get("head_coach", {}).get("delegation", 0.5))
-        authority = max(0.4, min(0.95, 0.4 + 0.6 * delegation))
+    authority = call_authority(staff,"dc")
     focus = tuple(x for x in defense.get("read_focus", ())
                   if x in DEFENSIVE_READ_CATEGORIES)
+    from .coach_learning import pressure_bias
     return {
         "coach_id": dc.coach_id,
         "signature": profile.get("identity", {}).get("defense_interpretation", ""),
         "authority": round(authority, 3),
-        "pressure_bias": max(-0.15, min(0.15, float(defense.get("pressure_bias", 0.0)))),
+        "pressure_bias": pressure_bias(profile),
         "run_support_bias": max(-0.15, min(0.15, float(defense.get("run_support_bias", 0.0)))),
         "coverage_focus": str(defense.get("coverage_focus", "")),
         "aggression": max(0.0, min(1.0, float((dc.personality_sliders or {}).get("aggression", 50))/100)),
@@ -395,15 +387,13 @@ def defensive_read_allocation(tactics: Dict[str, Any], family_category: str) -> 
 
 def resolve_special_teams_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
     """Read the saved STC profile without changing the coach or scheme."""
-    if not staff or staff.get("stc") is None:
+    from .coach_career import caller, call_authority
+    coach = caller(staff,"stc")
+    if coach is None:
         return {}
-    coach = staff["stc"]
     profile = ensure_coach_tactical_profile(coach)
     prefs = profile.get("special_teams", {})
-    hc = staff.get("head_coach")
-    delegation = (ensure_coach_tactical_profile(hc).get("head_coach", {})
-                  .get("delegation", 0.5) if hc else 1.0)
-    authority = max(0.4, min(1.0, 0.4 + 0.6 * float(delegation)))
+    authority = call_authority(staff,"stc")
     return {
         "coach_id": coach.coach_id,
         "authority": authority,

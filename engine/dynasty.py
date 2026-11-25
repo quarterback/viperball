@@ -980,18 +980,22 @@ class Dynasty:
                     redshirt_events.append({"team": team_name, "player": name})
 
                 team_dev_boost = 0.0
+                unit_staff = {}
                 if dq_team_boosts and team_name in dq_team_boosts:
                     team_dev_boost = dq_team_boosts[team_name].get("development", 0.0)
                 # Coaching: HC development attribute adds to dev_boost
                 if hasattr(self, '_coaching_staffs') and team_name in self._coaching_staffs:
                     from engine.coaching import compute_dev_boost, get_sub_archetype_effects
-                    team_dev_boost += compute_dev_boost(self._coaching_staffs[team_name])
+                    unit_staff = self._coaching_staffs[team_name]
+                    team_dev_boost += compute_dev_boost(unit_staff)
                     # V2.2: Mentor sub-archetype boosts development
                     hc = self._coaching_staffs[team_name].get("head_coach")
                     if hc:
                         sub_fx = get_sub_archetype_effects(hc)
                         team_dev_boost *= sub_fx.get("development_bonus_multiplier", 1.0)
-                report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost)
+                from engine.coach_career import position_boost
+                report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost,
+                    position_boosts={p.position:position_boost(unit_staff,p.position) for p in cards})
                 for ev in report.notable_events:
                     dev_events.append({
                         "team": team_name,
@@ -1260,6 +1264,10 @@ class Dynasty:
         _DEFENSE_POS = {"Defensive Line", "Keeper"}
 
         development_events = []
+        tactical_learning = []
+        career_events = []
+        from engine.coach_learning import adapt
+        from engine.coach_career import record_season, season_evidence, grow, caller
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
             if sr is None:
@@ -1270,6 +1278,7 @@ class Dynasty:
             won_conf = sr.get("conference_champion", False)
 
             hc_card = staff.get("head_coach")
+            evidence = season_evidence(self.seasons.get(prev_year),team_name)
 
             # Compute best player overall in each area from player_cards
             best_in_area: Dict[str, int] = {"oc": 0, "dc": 0, "stc": 0}
@@ -1287,6 +1296,11 @@ class Dynasty:
                     best_in_area["stc"] = max(best_in_area["stc"], ovr)
 
             for role, card in staff.items():
+                event = record_season(card,role,prev_year,team_name,tw,tl,evidence,
+                    made_playoff,won_conf,getattr(self.seasons.get(prev_year),"champion",None)==team_name,
+                    self.team_prestige.get(team_name,50))
+                if event is not None:
+                    career_events.append(event)
                 # Advance HC meter for assistants
                 meter_before = card.hc_meter
                 if role != "head_coach":
@@ -1300,8 +1314,15 @@ class Dynasty:
                         rng=rng,
                     )
 
+                # Learn from the completed season before any employment moves.
+                calling_role = role if role in ("oc","dc") and caller(staff,role) is card else None
+                if role == "head_coach":
+                    calling_role = next((key for key in ("oc","dc") if caller(staff,key) is card),None)
+                lesson = adapt(card, calling_role, team_name, prev_year, self.seasons.get(prev_year))
+                if lesson is not None:
+                    tactical_learning.append(lesson)
                 # All coaches develop their attributes each offseason
-                deltas = apply_coach_development(card, tw, tl, rng=rng)
+                deltas = grow(card,evidence) if event is not None else {}
                 development_events.append({"coach_id": card.coach_id, "team": team_name,
                     "role": role, "attribute_changes": deltas,
                     "hc_meter_gain": card.hc_meter - meter_before})
@@ -1343,6 +1364,8 @@ class Dynasty:
             "portal_summary": coaching_portal.get_summary(),
             "portal_hires": coaching_portal.hires,
             "development": development_events,
+            "tactical_learning": tactical_learning,
+            "career_development": career_events,
         }
         result["coaching"] = self.coaching_history[year]
         return result["coaching"]

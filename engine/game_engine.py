@@ -4078,7 +4078,10 @@ class ViperballEngine:
                 is_defense = "_defense" in team_key.lower() or "_def" in team_key.lower()
                 base_key = team_key.lower().replace("_defense", "").replace("_def", "")
 
-                if is_defense and style in DEFENSE_STYLES:
+                if is_defense:
+                    style = DEFENSE_STYLE_MIGRATION.get(style, style)
+                    if style not in DEFENSE_STYLES:
+                        continue
                     # Apply defensive style
                     if base_key in [self.home_team.name.lower(), self.home_team.abbreviation.lower()]:
                         self.home_team.defense_style = style
@@ -4128,6 +4131,8 @@ class ViperballEngine:
         # Migrate old defense style names to new scheme names
         home_def = DEFENSE_STYLE_MIGRATION.get(self.home_team.defense_style, self.home_team.defense_style)
         away_def = DEFENSE_STYLE_MIGRATION.get(self.away_team.defense_style, self.away_team.defense_style)
+        home_def = home_def if home_def in DEFENSE_STYLES else "swarm"
+        away_def = away_def if away_def in DEFENSE_STYLES else "swarm"
         self.home_team.defense_style = home_def
         self.away_team.defense_style = away_def
         self.home_defense = DEFENSE_STYLES.get(home_def, DEFENSE_STYLES["swarm"])
@@ -4480,6 +4485,8 @@ class ViperballEngine:
             return {}
         return {
             "oc_id": tactics["coach_id"],
+            "play_caller_id": tactics["coach_id"],
+            "employed_oc_id": getattr(((self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}).get("oc"),"coach_id",None),
             "signature": tactics["signature"],
             "authority": tactics["authority"],
             "featured_position": tactics["featured_position"],
@@ -4740,6 +4747,8 @@ class ViperballEngine:
         used = self._dc_tactics_usage[side]
         return {
             "dc_id": tactics["coach_id"], "signature": tactics["signature"],
+            "play_caller_id": tactics["coach_id"],
+            "employed_dc_id": getattr(((self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}).get("dc"),"coach_id",None),
             "authority": tactics["authority"],
             "installation_execution_factor": tactics.get("installation_execution_factor", 1.0),
             "coverage_focus": tactics["coverage_focus"],
@@ -5192,6 +5201,9 @@ class ViperballEngine:
         else:
             off_on = [p for p in off_team.players if p.name not in off_unavail]
             def_on = [p for p in def_team.players if p.name not in def_unavail]
+        self._snap_lineup = {"offense_side":self.state.possession,
+            "offense":[player_label(p) for p in off_on],
+            "defense":[player_label(p) for p in def_on]}
         for p in off_on:
             p.game_offensive_snaps += 1
         for p in def_on:
@@ -5254,7 +5266,25 @@ class ViperballEngine:
                     taken.add(p.name)
         if lines_on:
             for p in self._midfield_on(team, unavail, side):
-                on.append((p, "Midfield"))
+                if p.name not in taken and p.name not in unavail:
+                    on.append((p, "Midfield"))
+                    taken.add(p.name)
+        # Fill depleted positional slots only after normal assignments. An
+        # emergency player occupies a real role and cannot occupy two slots.
+        slots = {g: prof.get("slots",1) for g,prof in profiles.items()
+                 if prof.get("side") == side and not (lines_on and g in MIDFIELD_GROUPS)}
+        if lines_on:
+            slots["Midfield"] = 5 if side == "offense" else 4
+        for group, count in slots.items():
+            missing = count - sum(role == group for _,role in on)
+            if missing <= 0:
+                continue
+            pool = [p for p in team.players if p.name not in unavail and p.name not in taken]
+            score_group = "two_way" if group == "Midfield" else group
+            pool.sort(key=lambda p:self._depth_score(p,score_group),reverse=True)
+            for p in pool[:missing]:
+                on.append((p,group))
+                taken.add(p.name)
         cache[key] = on
         return on
 
@@ -5342,6 +5372,19 @@ class ViperballEngine:
         return sum(scale_rating(p.overall) * self.player_fatigue_modifier(p)
                    for p in line) / max(1, len(line))
 
+    def _rotation_preference(self, team, unit):
+        """Bounded rest preference from HC and relevant coordinator, neutral without staff."""
+        staff = getattr(self, "_home_coaching_staff" if team is self.home_team else "_away_coaching_staff", None) or {}
+        hc = staff.get("head_coach")
+        coordinator = staff.get("oc" if unit == "offense" else "dc")
+        if unit == "midfield":
+            cards = [c for c in (staff.get("oc"), staff.get("dc")) if c is not None]
+            coord = sum(getattr(c, "rotations", 60) for c in cards) / len(cards) if cards else 60
+        else:
+            coord = getattr(coordinator, "rotations", 60)
+        rotation = .6 * getattr(hc, "rotations", 60) + .4 * coord
+        return max(-1., min(1., (rotation - 60.) / 35.))
+
     def _rotate_midfield(self, team, hard_out, ride):
         """Coach's line changes for one team. Lines change together and can
         change at any time, including during a live turnover."""
@@ -5361,7 +5404,8 @@ class ViperballEngine:
         back = cfg.get("back", 90)
         energy = lambda l: sum(p.game_energy for p in l) / max(1, len(l))
         wr = sum(scale_rating(p.work_rate_rating) for p in line) / max(1, len(line))
-        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w
+        preference = self._rotation_preference(team, "midfield")
+        out_mark = outs[min(cur, len(outs) - 1)] - ride - (wr - 75.0) * wr_w + 6 * preference
         in_transition = getattr(self, "_transition_side", None) == sk
         if in_transition:
             out_mark -= V2_ENGINE_CONFIG.get("live_change_tired_margin", 3)
@@ -5372,7 +5416,7 @@ class ViperballEngine:
         elif energy(line) < out_mark:
             # Roll to the next line in order that is rested and good enough
             # to play about as well as the tired line does right now.
-            accept = self._line_strength(line) * (1.0 - cfg.get("rest", 0.10))
+            accept = self._line_strength(line) * (1.0 - max(0., cfg.get("rest", 0.10) + .04 * preference))
             order = [(cur + k) % len(lines) for k in range(1, len(lines))]
             for i in order:
                 cand = lines[i]
@@ -5448,14 +5492,19 @@ class ViperballEngine:
                 lineup = self._lineup(team, unavail, side)
                 on_names = {p.name for p, _ in lineup}
                 swaps = {}
+                preference = self._rotation_preference(team, side)
                 for p, group in sorted(lineup, key=lambda x: x[0].game_energy):
-                    if group not in profiles:
+                    # Re-evaluate after each accepted change: one backup cannot fill two slots.
+                    unavail = hard_out | resting
+                    current = self._lineup(team, unavail, side)
+                    on_names = {a.name for a, _ in current}
+                    if p.name not in on_names or group not in profiles:
                         continue
                     prof = profiles[group]
                     if swaps.get(group, 0) >= prof.get("max_swaps", 1):
                         continue
                     wr = scale_rating(p.work_rate_rating)
-                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w
+                    out_mark = prof["out"] - ride - (wr - 75.0) * wr_w + 6 * preference
                     if p.game_energy >= out_mark:
                         continue
                     if p.position == "Zeroback" and self._is_last_kicker(team, p, unavail | {p.name}):
@@ -5464,7 +5513,7 @@ class ViperballEngine:
                     # starter does right now? "rest" is how much worse the
                     # coach accepts to save the starter for later.
                     tired_now = scale_rating(p.overall) * self.player_fatigue_modifier(p)
-                    accept = tired_now * (1.0 - prof.get("rest", 0.05))
+                    accept = tired_now * (1.0 - max(0., prof.get("rest", 0.05) + .04 * preference))
                     need = max(60.0, min(prof["back"] - 10, p.game_energy + 25), p.game_energy + 12)
                     cands = [(b, 1.0) for b in self._group_members(team, group)]
                     if group in COVER_FOR:
@@ -5476,6 +5525,16 @@ class ViperballEngine:
                     if not backups:
                         continue
                     resting.add(p.name)
+                    self._lineup_cache = {}
+                    proposed = self._lineup(team, hard_out | resting, side)
+                    proposed_names = {a.name for a, _ in proposed}
+                    qualified = {b.name for b in backups}
+                    if (len(proposed_names) < len(on_names) or p.name in proposed_names
+                            or not (proposed_names - on_names) <= qualified
+                            or not (proposed_names - on_names)):
+                        resting.discard(p.name)
+                        self._lineup_cache = {}
+                        continue
                     p.game_shifts += 1
                     swaps[group] = swaps.get(group, 0) + 1
                     self._lineup_cache = {}
@@ -5505,14 +5564,14 @@ class ViperballEngine:
                 if p.name not in on_names:
                     stam_rec = max(0.6, scale_rating(getattr(p, "stamina", 35)) / 75.0)
                     p.game_energy = min(100.0, p.game_energy + rest * stam_rec)
-        self._rotate_shifts()
+        # The charged lineup must remain in place through this snap. Changes
+        # occur before the next play, after all previous exposure is resolved.
 
     def _defense_players(self, team):
         """Return defensive players (Keepers and DL)."""
         unavailable = self._unavailable_in_game(team)
         if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
-            on = [p for p in self._on_field(team, unavailable, "defense")
-                  if p.position in ("Keeper", "Defensive Line")]
+            on = self._on_field(team, unavailable, "defense")
             if on:
                 return on
         defs = [p for p in team.players if p.position in ("Keeper", "Defensive Line")
@@ -7606,14 +7665,7 @@ class ViperballEngine:
         # Compute defensive quality from the unit on the field.
         # Blend of tackling, awareness, and speed across non-injured/benched defenders.
         def_team = self.get_defensive_team()
-        injured = self._unavailable_in_game(def_team)
-        defenders = [p for p in def_team.players
-                     if p.position in ("Keeper", "Defensive Line")
-                     and p.name not in injured]
-        if not defenders:
-            defenders = [p for p in def_team.players if p.name not in injured][:6]
-        if not defenders:
-            defenders = def_team.players[:5]
+        defenders = self._get_defenders_by_group(def_team)["all"]
 
         # Average defensive intensity rating (0-100 scale)
         def_ratings = []
@@ -7627,10 +7679,7 @@ class ViperballEngine:
 
         # Average offensive talent on the field
         off_team = self.get_offensive_team()
-        off_injured = self._unavailable_in_game(off_team)
-        attackers = [p for p in off_team.players if p.name not in off_injured][:11]
-        if not attackers:
-            attackers = off_team.players[:5]
+        attackers = self._offense_all(off_team)
         off_ratings = []
         for a in attackers:
             r = (a.speed * 0.30 + getattr(a, 'agility', 75) * 0.25
@@ -8759,7 +8808,9 @@ class ViperballEngine:
         self._pending_transition = None
         self._fast_break = None
         self._lineup_cache = {}
+        self._rotate_shifts()
         # Do not leak a prior call onto a kick or penalty snap.
+        self._snap_lineup = None
         self._active_offensive_plan = None
         self._offensive_plan_event = None
         self._active_defensive_call = None
@@ -8796,6 +8847,7 @@ class ViperballEngine:
 
         play = self._simulate_play_core()
         play.snap_possession = self._snap_possession
+        play.snap_lineup = self._snap_lineup
         self._check_exposure_injuries(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
         play.possession_origin = self._drive_origin
@@ -10576,16 +10628,17 @@ class ViperballEngine:
         'all' (combined eligible pool).
         """
         injured = self._unavailable_in_game(def_team)
-        dl = [p for p in def_team.players
-              if p.position == "Defensive Line" and p.name not in injured]
-        kp = [p for p in def_team.players
-              if p.position == "Keeper" and p.name not in injured]
-        all_eligible = dl + kp
-        if not all_eligible:
-            all_eligible = [p for p in def_team.players if p.name not in injured][:6]
-        if not all_eligible:
-            all_eligible = def_team.players[:5]
-        return {"dl": dl, "keeper": kp, "all": all_eligible}
+        if V2_ENGINE_CONFIG.get("shift_rotation_enabled", False):
+            lineup = self._lineup(def_team, injured, "defense")
+            if lineup:
+                dl = [p for p,role in lineup if role == "Defensive Line"]
+                kp = [p for p,role in lineup if role == "Keeper"]
+                db = [p for p,role in lineup if role not in ("Defensive Line","Keeper")]
+                return {"dl":dl,"keeper":kp,"db":db,"all":[p for p,_ in lineup]}
+        dl = [p for p in def_team.players if p.position == "Defensive Line" and p.name not in injured]
+        kp = [p for p in def_team.players if p.position == "Keeper" and p.name not in injured]
+        all_eligible = dl + kp or [p for p in def_team.players if p.name not in injured][:6] or def_team.players[:5]
+        return {"dl":dl,"keeper":kp,"db":[],"all":all_eligible}
 
     def select_run_tackler(self, def_team, play_family=None):
         """Style-aware run tackler selection.
@@ -10599,26 +10652,26 @@ class ViperballEngine:
         for play-by-play descriptions.
         """
         groups = self._get_defenders_by_group(def_team)
-        dl, kp = groups["dl"], groups["keeper"]
+        dl, kp, db = groups["dl"], groups["keeper"], groups["db"]
         surface_weights = self._get_personnel_surface_weights("run_tackler")
 
         # Play-family pool composition
         pf_val = play_family.value if play_family is not None else ""
         if pf_val in ("dive_option", "power"):
             # Inside runs: DL-heavy pool
-            pool = dl * 4 + kp if dl else groups["all"]
+            pool = dl * 4 + kp + db if dl else groups["all"]
             pool_label = "box"
         elif pf_val in ("sweep_option", "speed_option", "viper_jet"):
             # Outside/perimeter runs: Keeper-heavy pool
-            pool = dl + kp * 3 if kp else groups["all"]
+            pool = dl + kp * 3 + db * 3 if kp or db else groups["all"]
             pool_label = "edge"
         elif pf_val == "counter":
             # Counter — balanced, awareness helps read the misdirection
-            pool = dl * 2 + kp * 2 if (dl and kp) else groups["all"]
+            pool = dl * 2 + kp * 2 + db * 2 if dl else groups["all"]
             pool_label = "read"
         elif pf_val == "draw":
             # Draw — pass rush posture then tackle; DL in good position
-            pool = dl * 3 + kp * 2 if dl else groups["all"]
+            pool = dl * 3 + kp * 2 + db if dl else groups["all"]
             pool_label = "rush"
         else:
             pool = groups["all"]
@@ -10828,7 +10881,7 @@ class ViperballEngine:
         """
         surface_weights = self._get_personnel_surface_weights("lateral_pursuit")
         groups = self._get_defenders_by_group(def_team)
-        eligible = groups["all"][:8]  # Top 8 defenders for pursuit
+        eligible = groups["all"]  # every actual on-field defender can pursue
 
         if not eligible:
             return 1.0
@@ -10856,8 +10909,10 @@ class ViperballEngine:
             if is_nearby:
                 base += random.uniform(5, 15)
             return base
-        off_scores = [_recovery_score(p, p == fumbling_player) for p in off_team.players[:6]]
-        def_scores = [_recovery_score(p) for p in def_team.players[:6]]
+        off_pool = self._offense_all(off_team)
+        def_pool = self._get_defenders_by_group(def_team)["all"]
+        off_scores = [_recovery_score(p, p == fumbling_player) for p in off_pool]
+        def_scores = [_recovery_score(p) for p in def_pool]
         best_off = max(off_scores, default=30)
         best_def = max(def_scores, default=30)
         total = best_off + best_def
@@ -10872,8 +10927,7 @@ class ViperballEngine:
         off_chance = max(0.0, off_chance)
         if random.random() >= off_chance:
             # Credit bell to a specific defender (keepers get priority)
-            unavail = self._unavailable_in_game(def_team)
-            keepers = [p for p in def_team.players if p.position == "Keeper" and p.name not in unavail]
+            keepers = self._get_defenders_by_group(def_team)["keeper"]
             if keepers:
                 bell_player = random.choice(keepers)
                 bell_player.game_keeper_bells += 1
@@ -12205,7 +12259,8 @@ class ViperballEngine:
         # ~3% base per lateral in the chain, modified by defender awareness
         # vs thrower lateral skill. Laterals are risky — chaos breeds turnovers.
         def_team = self.get_defensive_team()
-        avg_def_awareness = sum(getattr(p, 'awareness', 70) for p in def_team.players[:6]) / 6
+        lateral_defenders = self._get_defenders_by_group(def_team)["all"]
+        avg_def_awareness = sum(getattr(p, "awareness", 70) for p in lateral_defenders) / max(1,len(lateral_defenders))
 
         # V4: Style-aware lateral pursuit quality modifier
         _lat_pursuit_mod = self.compute_lateral_pursuit_quality(def_team)
@@ -12234,10 +12289,7 @@ class ViperballEngine:
                 raw_fp = max(1, 100 - int_spot)
 
                 # Pick the interceptor (exclude injured/benched defenders)
-                _inj_set = self._unavailable_in_game(def_team)
-                int_candidates = [p for p in def_team.players[:8] if p.name not in _inj_set]
-                if not int_candidates:
-                    int_candidates = def_team.players[:6]
+                int_candidates = lateral_defenders
                 int_weights = [getattr(p, 'awareness', 70) + p.speed for p in int_candidates]
                 int_weights = self._spread_the_love_defense(int_candidates, int_weights)
                 interceptor = random.choices(int_candidates, weights=int_weights, k=1)[0]
@@ -12829,7 +12881,8 @@ class ViperballEngine:
                 chain_fumbled = False
                 chain_intercepted = False
                 lat_def_team = self.get_defensive_team()
-                avg_def_aware = sum(getattr(p, 'awareness', 70) for p in lat_def_team.players[:6]) / 6
+                lat_defenders = self._get_defenders_by_group(lat_def_team)["all"]
+                avg_def_aware = sum(getattr(p, "awareness", 70) for p in lat_defenders) / max(1,len(lat_defenders))
                 # V4: Pursuit quality for kick-lateral chains
                 _kl_pursuit_mod = self.compute_lateral_pursuit_quality(lat_def_team)
 
@@ -14546,9 +14599,7 @@ class ViperballEngine:
     def _attribute_points_to_keeper(self, points: float):
         """Attribute points scored against the defense to all keepers on the field."""
         def_team = self.get_defensive_team()
-        unavail = self._unavailable_in_game(def_team)
-        active_keepers = [p for p in def_team.players
-                          if p.position == "Keeper" and p.name not in unavail]
+        active_keepers = self._get_defenders_by_group(def_team)["keeper"]
         if not active_keepers:
             return
         share = points / len(active_keepers)
@@ -16125,7 +16176,8 @@ class ViperballEngine:
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
                                p.game_kick_pass_receptions > 0 or
                                p.game_blocks > 0 or p.game_pancakes > 0 or
-                               p.game_plays_involved > 0)
+                               p.game_plays_involved > 0 or p.game_offensive_snaps > 0 or
+                               p.game_defensive_snaps > 0)
                 if has_activity:
                     role_label = getattr(p, 'game_role', 'DEPTH')
                     recv_role = getattr(p, 'game_role_recv', 'DEPTH')
@@ -16218,7 +16270,9 @@ class ViperballEngine:
             return [{"name": p.name, "position": p.position,
                      "energy_start": round(p.game_energy_start, 1),
                      "energy_end": round(p.game_energy, 1),
-                     "snaps": p.game_field_snaps}
+                     "snaps": p.game_field_snaps, "shifts": p.game_shifts,
+                     "offensive_snaps": p.game_offensive_snaps,
+                     "defensive_snaps": p.game_defensive_snaps}
                     for p in team.players
                     if p.game_field_snaps > 0]
 
@@ -16229,6 +16283,9 @@ class ViperballEngine:
                                 "halves": [round(x, 3) for x in getattr(self, "half_form", {}).get(side, [1.0, 1.0])]}
                          for side in ("home", "away")},
                 "energy": {"home": _energy(self.home_team), "away": _energy(self.away_team)},
+                "rotation_preference": {side: {unit: round(self._rotation_preference(team, unit),3)
+                    for unit in ("offense","defense","midfield")}
+                    for side,team in (("home",self.home_team),("away",self.away_team))},
                 "line_changes": dict(getattr(self, "_mid_line_state", {}).get("changes", {"home": 0, "away": 0})),
                 "caught_changing": dict(getattr(self, "_mid_line_state", {}).get("caught", {"home": 0, "away": 0})),
             },
@@ -16603,6 +16660,7 @@ class ViperballEngine:
             "possession_origin": getattr(play, "possession_origin", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
+            "snap_lineup": getattr(play, "snap_lineup", None),
             "spot_error": getattr(play, "spot_error", None),
             "spot_error_corrected": getattr(play, "spot_error_corrected", None),
             "formation": getattr(play, "formation", "") or "",
