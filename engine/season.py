@@ -1818,6 +1818,48 @@ class Season:
                         break
                 if repaired:
                     break
+            if not repaired and has_conferences:
+                # A conference-heavy greedy allocation can leave both deficits
+                # on one side. Permit a missing in-conference edge below the
+                # cap, or exchange an unprotected conference edge in a large
+                # conference for two cross-conference games. Preserve small
+                # conference round robins and every protected matchup.
+                for j, a in enumerate(short):
+                    for b in short[j+1:]:
+                        if (_same_conference(a,b) and tuple(sorted((a,b))) not in scheduled_pairs
+                                and conf_game_counts[a]<MAX_CONFERENCE_GAMES and conf_game_counts[b]<MAX_CONFERENCE_GAMES):
+                            _add_game(a,b,True)
+                            repaired=True
+                            break
+                    if repaired:
+                        break
+                if not repaired:
+                    for j,a in enumerate(short):
+                        partners=short[j+1:]
+                        if games_per_team-game_counts[a]>=2:
+                            partners=[a]+partners
+                        for b in partners:
+                            for old in games:
+                                u,v=old.home_team,old.away_team
+                                pair=tuple(sorted((u,v)))
+                                if (not old.is_conference_game or pair in protected or a in (u,v) or b in (u,v)
+                                        or len(self.conferences.get(self.team_conferences.get(u),[]))<=MAX_CONFERENCE_GAMES+1):
+                                    continue
+                                for x,y in ((u,v),(v,u)):
+                                    if not (_can_add(a,x) and _can_add(b,y)):
+                                        continue
+                                    games.remove(old)
+                                    scheduled_pairs.remove(pair)
+                                    for t in (u,v):
+                                        game_counts[t]-=1
+                                        conf_game_counts[t]-=1
+                                    _add_game(a,x,False)
+                                    _add_game(b,y,False)
+                                    repaired=True
+                                    break
+                                if repaired: break
+                            if repaired: break
+                        if repaired: break
             if not repaired:
                 break
 

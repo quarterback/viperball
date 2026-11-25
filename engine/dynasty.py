@@ -1335,8 +1335,18 @@ class Dynasty:
                 sr.get("wins", 5), sr.get("losses", 5)
             )
 
-        # Run the coaching portal (NRMP-style matching)
+        # Retire after the completed season is credited, before employment offers.
+        from engine.coach_career import retires
+        retirements = []
         coaching_portal = CPortal(year=year)
+        for team_name, staff in sorted(active_staffs.items()):
+            for role, card in sorted(staff.items()):
+                if retires(card,year):
+                    retirements.append({"coach_id":card.coach_id,"team":team_name,"role":role,
+                        "year":year,"age":card.age,"card":card.to_dict()})
+                    coaching_portal.add_vacancy(team_name,role)
+        retired_ids = {row["coach_id"] for row in retirements}
+        # Run the coaching portal (NRMP-style matching)
         populate_coaching_portal(
             coaching_portal,
             active_staffs,
@@ -1344,7 +1354,7 @@ class Dynasty:
             self.team_prestige,
             fired_roles=fired_roles,
             human_team=human_team,
-            rng=rng,
+            rng=rng, retired_ids=retired_ids,
         )
 
         conf_dict = self.get_conferences_dict() if self.conferences else None
@@ -1366,6 +1376,7 @@ class Dynasty:
             "development": development_events,
             "tactical_learning": tactical_learning,
             "career_development": career_events,
+            "retirements": retirements,
         }
         result["coaching"] = self.coaching_history[year]
         return result["coaching"]

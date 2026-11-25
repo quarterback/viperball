@@ -198,6 +198,7 @@ def populate_coaching_portal(
     fired_roles: Optional[Dict[str, List[str]]] = None,
     human_team: str = "",
     rng: Optional[random.Random] = None,
+    retired_ids: Optional[set] = None,
 ) -> None:
     """
     Populate the coaching portal with available coaches.
@@ -227,11 +228,15 @@ def populate_coaching_portal(
     if fired_roles is None:
         fired_roles = {}
 
+    retired_ids = retired_ids or set()
     all_team_names = list(coaching_staffs.keys())
 
     # ── 1. Expired contracts & fired coaches ──
     for team_name, staff in coaching_staffs.items():
         for role, card in staff.items():
+            # Retired coaches cannot re-enter the hiring pool.
+            if card.coach_id in retired_ids:
+                continue
             # Skip human team (they manage their own staff)
             if team_name == human_team:
                 continue
@@ -295,7 +300,7 @@ def populate_coaching_portal(
         if team_name == human_team:
             continue
         for role, card in staff.items():
-            if role == "head_coach":
+            if role == "head_coach" or card.coach_id in retired_ids:
                 continue
             from .coach_career import seeks_hc
             if not seeks_hc(card):
@@ -594,7 +599,7 @@ def _build_preference_lists(
 
     # Former HCs require actual call authority. If the HC job is also
     # vacant, accepted coordinator appointments constrain the incoming HC.
-    from .coach_career import active_management, requires_calls
+    from .coach_career import active_management, requires_calls, staffing_preference
     def eligible(entry, team, role):
         if not requires_calls(entry.coach,role):
             return True
@@ -618,6 +623,9 @@ def _build_preference_lists(
                     team_prestige.get(team_name, 50),
                     rng,
                 )
+                if "head_coach" not in portal.vacancies.get(team_name,()):
+                    hc=(coaching_staffs or {}).get(team_name,{}).get("head_coach")
+                    score += staffing_preference(hc,entry.coach,role,team_name)
                 scored.append((score, entry.coach_id))
             scored.sort(key=lambda x: x[0], reverse=True)
             team_prefs[(team_name, role)] = [cid for _, cid in scored[:max_rank]]
