@@ -1,5 +1,7 @@
 # Viperball engine: next-stage handoff and agent coordination
 
+**Current status and ownership:** See [the consolidated development plan](DEVELOPMENT_PLAN.md). This document retains its original assessment, requirements and historical task statuses; it is no longer an independent active queue.
+
 **Reviewed:** 2026-11-24 (Pacific). **Base:** main at `6d106f70b99a037b2cfc5e52cf8afc7041060809`. **Status:** planning only; no new gameplay mechanics or validation claimed.
 
 ## Correction to previous handoff
