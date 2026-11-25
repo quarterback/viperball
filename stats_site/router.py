@@ -1936,13 +1936,14 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         from engine.coaching import CoachCard
         staff_dict = {role: CoachCard.from_dict(c) if isinstance(c,dict) else c for role,c in staff_dict.items() if c}
         callers = {role:caller(staff_dict,role) for role in ("oc","dc","stc")}
-        for role in ["head_coach", "oc", "dc", "stc"]:
+        from engine.coach_roles import ALL_ROLES, POSITION_LABELS
+        for role in ALL_ROLES:
             card = staff_dict.get(role)
             if not card:
                 continue
             if isinstance(card, dict):
                 card = CoachCard.from_dict(card)
-            role_label = {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, role)
+            role_label = {"head_coach": "HC", "oc": "OC", "dc": "DC", "stc": "STC"}.get(role, POSITION_LABELS.get(role,role))
             coaching_staff.append({
                 "role": role, "role_label": role_label,
                 "name": card.full_name,
