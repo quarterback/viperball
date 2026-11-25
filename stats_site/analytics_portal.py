@@ -86,6 +86,7 @@ def matching_games(games,filters):
             if filters["scope"]=="postseason" and g["kind"]=="regular":continue
             if filters["scope"]=="regular" and g["kind"]!="regular":continue
         if filters.get("week") and str(g["week"])!=str(filters["week"]):continue
+        if filters.get("match") and str(g["idx"])!=str(filters["match"]):continue
         if filters.get("team") and filters["team"] not in (g["home"],g["away"]):continue
         if filters.get("opponent") and filters["opponent"] not in (g["home"],g["away"]):continue
         yield g
