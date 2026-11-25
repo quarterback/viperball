@@ -1299,9 +1299,11 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
 
         style_configs = {}
         for tname in teams:
-            style_configs[tname] = ai_configs.get(
+            style_configs[tname] = dict(ai_configs.get(
                 tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
-            )
+            ))
+            if tname != dynasty.coach.team_name:
+                style_configs[tname].update(next_schools.get(tname, {}))
 
     pinned = None
     if req.pinned_matchups:
@@ -2759,13 +2761,18 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
             }
         },
         seed=seed,
+        coaching_staffs=dynasty._coaching_staffs or {},
     )
 
+    from engine.coach_school_continuity import planned_schools
+    next_schools = planned_schools(dynasty, dynasty.current_year)
     style_configs = {}
     for tname in teams:
-        style_configs[tname] = ai_configs.get(
+        style_configs[tname] = dict(ai_configs.get(
             tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
-        )
+        ))
+        if tname != dynasty.coach.team_name:
+            style_configs[tname].update(next_schools.get(tname, {}))
 
     pinned = None
     if req.pinned_matchups:
@@ -4030,7 +4037,9 @@ def offseason_recruiting_resolve(session_id: str):
         team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
 
     previous_season = dynasty.seasons.get(year - 1)
-    team_style_configs = getattr(previous_season, "style_configs", {}) or {}
+    from engine.coach_school_continuity import planned_schools
+    team_style_configs = {**(getattr(previous_season, "style_configs", {}) or {}),
+                          **planned_schools(dynasty, year)}
     retired = set(getattr(dynasty, "retired_programs", []) or [])
     for team_name in player_cards:
         if team_name == human_team or team_name in retired:
