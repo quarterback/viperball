@@ -16145,6 +16145,7 @@ class ViperballEngine:
                     stat_entry = {
                         "tag": player_tag(p),
                         "name": p.name,
+                        "player_id": p.player_id,
                         "role": combined_role,
                         "archetype": get_archetype_info(p.archetype).get("label", p.archetype) if p.archetype != "none" else "—",
                         "rush_rank": p.game_rush_rank,

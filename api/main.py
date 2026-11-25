@@ -506,33 +506,9 @@ def _require_dynasty(session: dict) -> Dynasty:
 
 
 def _ensure_hs_pipeline(dynasty):
-    """Ensure a dynasty has its HS recruiting pipeline built so the incoming
-    recruit class can be scanned *before* the offseason. Builds it from the
-    dynasty's own team data (no live Season needed); no-op if already present.
-    """
-    if getattr(dynasty, "_hs_pipeline", None) is not None:
-        return dynasty._hs_pipeline
-    try:
-        import random as _rnd
-        from engine.hs_league import create_hs_league, simulate_hs_season
-        from engine.recruiting import HSRecruitingPipeline
-
-        year = getattr(dynasty, "current_year", 2026)
-        rng = _rnd.Random(year)
-        dynasty._hs_league = create_hs_league(year, rng=rng)
-        dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=rng)
-
-        prestige = getattr(dynasty, "team_prestige", {}) or {}
-        team_names = list(prestige.keys())
-        class_size = max(300, (len(team_names) or 200) * 12)
-        dynasty._hs_pipeline = HSRecruitingPipeline()
-        dynasty._hs_pipeline.generate_initial_pipeline(
-            base_seed=year, size_per_class=class_size,
-            team_names=team_names, team_prestige=prestige or None,
-        )
-    except Exception:
-        logger.debug("HS pipeline build failed", exc_info=True)
-    return getattr(dynasty, "_hs_pipeline", None)
+    """The scouting board is a view of the saved HS competition."""
+    from engine.college_feeder import ensure_college_feeder
+    return ensure_college_feeder(dynasty)
 
 
 def _serialize_team_record(rec: TeamRecord) -> dict:
@@ -2674,23 +2650,8 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     # Recruiting Hub on the stats site shows data before the first offseason.
     try:
         import random as _rnd
-        from engine.hs_league import create_hs_league, simulate_hs_season
-        from engine.recruiting import HSRecruitingPipeline
-
-        _year = req.starting_year
-        _rng = _rnd.Random(_year)
-        dynasty._hs_league = create_hs_league(_year, rng=_rng)
-        dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
-
-        num_teams = len(teams) or 200
-        _class_size = max(300, num_teams * 12)
-        _t_names = list(teams.keys())
-        _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
-        dynasty._hs_pipeline = HSRecruitingPipeline()
-        dynasty._hs_pipeline.generate_initial_pipeline(
-            base_seed=_year, size_per_class=_class_size,
-            team_names=_t_names, team_prestige=_t_prestige,
-        )
+        from engine.college_feeder import ensure_college_feeder
+        ensure_college_feeder(dynasty, req.starting_year, list(teams.keys()))
     except Exception:
         pass  # Non-critical — will be created on first offseason advance
 
@@ -2858,6 +2819,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
                 logger.info("odd program count: auto retired %s", _cand)
                 break
 
+    from engine.roster_continuity import assign_opening_roster_ids
+    assign_opening_roster_ids(teams, next_rosters or {}, dynasty.current_year)
     if next_rosters:
         from engine.roster_continuity import restore_finalized_rosters
         try:
@@ -3272,26 +3235,10 @@ def dynasty_advance(session_id: str):
                              for t,cards in offseason_player_cards.items()},
                     team_records, rng=rng, team_prestige=dynasty.team_prestige)
 
-    # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
-    from engine.recruiting import HSRecruitingPipeline
-    num_teams = len(season.teams) if hasattr(season, "teams") else 200
-    pool_size = max(300, num_teams * 12)
-    _t_names = list(season.teams.keys()) if hasattr(season, "teams") else []
-    _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
-    if dynasty._hs_pipeline is None:
-        dynasty._hs_pipeline = HSRecruitingPipeline()
-        dynasty._hs_pipeline.generate_initial_pipeline(
-            base_seed=year, size_per_class=pool_size,
-            team_names=_t_names, team_prestige=_t_prestige,
-        )
-        # First year: no graduates yet, fall back to fresh generation
-        recruit_pool = generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
-    else:
-        graduates = dynasty._hs_pipeline.advance_year(
-            new_9th_seed=year, size=pool_size, rng=rng,
-        )
-        # Use pipeline graduates (12th graders) as the recruit pool
-        recruit_pool = [g.recruit for g in graduates] if graduates else generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
+    # The same actual HS seniors shown on the scouting board enter college.
+    from engine.college_feeder import advance_college_feeder
+    recruit_pool, hs_walkon_reserve = advance_college_feeder(
+        dynasty, year, list(season.teams), include_reserve=True)
 
     from engine.roster_continuity import COLLEGE_ROSTER_TARGET
     continuing_count = sum(c.year != "Graduate" for c in offseason_player_cards.get(human_team, []))
@@ -3311,6 +3258,7 @@ def dynasty_advance(session_id: str):
     session["offseason"] = {
         "portal": portal,
         "recruit_pool": recruit_pool,
+        "hs_walkon_reserve": hs_walkon_reserve,
         "recruit_board": recruit_board,
         "nil_program": human_nil,
         "nil_offers": {},
@@ -4201,10 +4149,17 @@ def offseason_complete(session_id: str):
 
         walkons = fill_college_roster_gaps(
             player_cards, offseason.get("recruit_pool", []), dynasty.current_year,
-            random.Random(dynasty.current_year + 19))
+            random.Random(dynasty.current_year + 19),
+            reserve_pool=offseason.get("hs_walkon_reserve", []))
         history = dynasty.recruiting_history.setdefault(dynasty.current_year, {})
         history["walkons"] = {t:len(rows) for t,rows in walkons.items()}
         history["walkon_details"] = walkons
+        # Keep signed reserve players discoverable in the recruiting profile
+        # after graduation, without putting thousands of unsigned reserves
+        # into the public signing pool.
+        used_reserves = [r for r in offseason.get("hs_walkon_reserve", []) if r.signed]
+        if used_reserves:
+            dynasty._last_recruit_pool = list(dynasty._last_recruit_pool or []) + used_reserves
         dynasty._pending_signed_recruits = None
         dynasty._next_season_rosters = {t:[c.to_dict() for c in cards]
                                          for t,cards in player_cards.items()}

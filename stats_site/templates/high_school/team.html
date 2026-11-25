@@ -22,7 +22,7 @@
   <tbody>
   {% for g in games %}
   <tr>
-    <td><a href="/stats/high-school/team/{{ (team_keys.get(g.opponent, g.opponent))|urlencode }}">{{ g.opponent }}</a></td>
+    <td><a href="/stats/high-school/team/{{ g.opponent_key|urlencode }}">{{ g.opponent }}</a></td>
     <td style="color:var(--fg-dim)">{{ 'home' if g.home else 'away' }}</td>
     <td class="{{ 'stat-good' if g.won else 'stat-bad' }}">{{ 'W' if g.won else 'L' }}</td>
     <td class="num">{{ g.us }}-{{ g.them }}</td>
@@ -39,7 +39,7 @@
   {% for p in players %}
   <tr>
     <td class="num">{{ p.number }}</td>
-    <td>{{ p.name }}</td>
+    <td>{% if p.tracked %}<a href="/stats/recruiting/recruit/{{ p.player_id|urlencode }}">{{ p.name }}</a>{% else %}{{ p.name }}{% endif %}</td>
     <td>{{ p.position }}</td>
     <td>{{ p.year }}</td>
     <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% endif %}">{{ p.overall }}</td>

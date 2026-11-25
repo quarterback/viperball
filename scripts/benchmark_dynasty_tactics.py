@@ -446,6 +446,15 @@ def run(seasons, nteams, seed, out, *, national=False):
             if index+1==seasons:
                 break
             pre=deepcopy(dyn._team_installations)
+            from engine.college_feeder import competition_index, verify_pipeline
+            import hashlib
+            from dataclasses import asdict
+            old_league, old_pipeline = dyn._hs_league, dyn._hs_pipeline
+            tracked_before = verify_pipeline(old_league,old_pipeline)
+            hs_before = competition_index(old_league)
+            expected_graduates = {p.recruit.recruit_id: asdict(p.recruit)
+                                  for p in old_pipeline.classes["12th"]}
+            hs_seniors = {pid for pid,(_,p) in hs_before.items() if p.year=="Senior"}
             from engine.coach_tactics import ensure_coach_tactical_profile
             before_coaches = {cid: (c.team_name, c.age, c.seasons_coached, c.career_wins, c.career_losses,
                                    deepcopy(ensure_coach_tactical_profile(c)))
@@ -466,6 +475,17 @@ def run(seasons, nteams, seed, out, *, national=False):
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
             off=sess["offseason"]
+            if {r.recruit_id:asdict(r) for r in off["recruit_pool"]} != expected_graduates:
+                raise RuntimeError("College recruiting pool is not the tracked HS senior cohort")
+            reserve_ids = {r.recruit_id for r in off["hs_walkon_reserve"]}
+            if reserve_ids != hs_seniors-set(expected_graduates):
+                raise RuntimeError("High school walk-on reserve does not reconcile with actual seniors")
+            tracked_after = verify_pipeline(dyn._hs_league,dyn._hs_pipeline)
+            hs_after = competition_index(dyn._hs_league)
+            if set(hs_before)-set(hs_after) != hs_seniors or not (tracked_before-set(expected_graduates)) <= tracked_after:
+                raise RuntimeError("High school roster or scouting cohort failed year continuity")
+            if any(pid in hs_after for pid in expected_graduates):
+                raise RuntimeError("Graduating recruits remain in HS competition")
             # Development and graduation may change attributes/class, never
             # introduce a new college identity before signing/finalization.
             prior_ids = {pid for roster in start.values() for pid in roster}
@@ -498,6 +518,7 @@ def run(seasons, nteams, seed, out, *, national=False):
             expected_coach_cards = {t:{role:deepcopy(c.to_dict()) for role,c in staff.items()}
                                     for t,staff in dyn._coaching_staffs.items()}
             expected_pipeline=dyn._hs_pipeline.save_state() if dyn._hs_pipeline else None
+            hs_digest = hashlib.sha256(json.dumps(dyn._hs_league.save_state(),sort_keys=True).encode()).hexdigest()
             expected_dispersal=list(dyn._pending_retired_dispersal)
             if expected_dispersal:
                 raise RuntimeError(f"Unexpected pending retirements after season: {expected_dispersal}")
@@ -507,6 +528,19 @@ def run(seasons, nteams, seed, out, *, national=False):
             walkon_details = dyn.recruiting_history[year+1].get("walkon_details", {})
             walkon_ids = {row["player_id"] for rows in walkon_details.values() for row in rows}
             final_ids = {row["player_id"] for rows in saved_rosters.values() for row in rows}
+            from engine.talent import STAT_KEYS
+            emergency_ids = {row["player_id"] for rows in walkon_details.values() for row in rows
+                             if row["source"] == "emergency"}
+            for rows in saved_rosters.values():
+                for row in rows:
+                    pid = row["player_id"]
+                    if pid not in (signed_ids|walkon_ids)-emergency_ids:
+                        continue
+                    if pid not in hs_seniors:
+                        raise RuntimeError("New college recruit has no graduating HS identity")
+                    team, player = hs_before[pid]
+                    if row["high_school"] != team.school_name or any(row["ratings"][attr] != getattr(player,attr) for attr in STAT_KEYS):
+                        raise RuntimeError("College signing altered authoritative HS ratings or school")
             if final_ids != (prior_ids-graduating_ids)|signed_ids|walkon_ids:
                 raise RuntimeError("College roster additions/departures do not reconcile")
             from engine.roster_continuity import COLLEGE_ROSTER_TARGET
@@ -530,6 +564,9 @@ def run(seasons, nteams, seed, out, *, national=False):
                 raise RuntimeError("Application DB roundtrip lost program retirement state")
             if loaded_pipeline != expected_pipeline:
                 raise RuntimeError("Application DB roundtrip lost high school pipeline state")
+            if loaded._hs_league is None or hashlib.sha256(json.dumps(loaded._hs_league.save_state(),sort_keys=True).encode()).hexdigest() != hs_digest:
+                raise RuntimeError("Application DB roundtrip lost high school competition state")
+            verify_pipeline(loaded._hs_league,loaded._hs_pipeline)
             # Reload into the live session via the actual endpoint and continue.
             post(base+"/dynasty/load?save_key="+sid)
             trans={"from_year":year,"to_year":year+1,"database_roundtrip":True,
@@ -539,6 +576,10 @@ def run(seasons, nteams, seed, out, *, national=False):
                     "development_events":len(coach_events)},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
+                "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),
+                    "tracked_graduates":len(expected_graduates),"walkon_reserve":len(reserve_ids),"tracked_returning":len(tracked_before-set(expected_graduates)),
+                    "next_competition_players":len(hs_after),"next_tracked":len(tracked_after),
+                    "competition_games":len(dyn._hs_league.schedule),"save_parity":True},
                 "college_cohort":{"graduated":len(graduating_ids),"signed_unique":len(signed_ids),
                     "walkons":len(walkon_ids),"emergency_walkons":sum(row["source"]=="emergency" for rows in walkon_details.values() for row in rows),
                     "pool_mean_overall":average(pool_ratings)},

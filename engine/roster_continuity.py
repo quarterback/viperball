@@ -77,7 +77,7 @@ def projected_rosters(cards_by_team, portal):
     return result
 
 
-def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=()):
+def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=(), reserve_pool=()):
     """Use unsigned prospects for depth, then explicit emergency walk-ons.
     Never cut signed or returning players to meet the ordinary roster target.
     """
@@ -88,6 +88,8 @@ def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=(
     candidates = [r for r in recruit_pool if not r.signed and not r.committed_to
                   and r.recruit_id not in used]
     rng.shuffle(candidates)
+    reserves = [r for r in reserve_pool if not r.signed and not r.committed_to and r.recruit_id not in used]
+    rng.shuffle(reserves)
     by_team = {}
     fallback = 0
     # Rotate which school gets first pick; no alphabetical recruiting advantage.
@@ -102,7 +104,13 @@ def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=(
             pos = max(COLLEGE_DEPTH, key=lambda p: COLLEGE_DEPTH[p] - counts[p])
             idx = next((i for i, r in enumerate(candidates)
                         if r.position == pos and r.recruit_id not in used), None)
-            if idx is None:
+            reserve_idx = (next((i for i,r in enumerate(reserves)
+                                if r.position == pos and r.recruit_id not in used),None)
+                           if idx is None else None)
+            if reserve_idx is not None:
+                recruit = reserves.pop(reserve_idx)
+                source = "hs_reserve"
+            elif idx is None:
                 fallback += 1
                 rid = f"WALKON-{year}-{fallback:05d}"
                 while rid in used:
@@ -130,3 +138,23 @@ def fill_college_roster_gaps(rosters, recruit_pool, year, rng, unavailable_ids=(
                 card.number = next((n for n in range(1, 100) if n not in numbers), 0)
             numbers.add(card.number)
     return by_team
+
+
+def assign_opening_roster_ids(teams, saved_rosters, year):
+    """Namespace new college players by program, entry season and slot.
+
+    Fresh generator name/suffix IDs can collide across schools. Never
+    change a finalized saved roster's IDs or use names as identity.
+    """
+    import hashlib
+    used = {row.get("player_id") for rows in saved_rosters.values() for row in rows}
+    for name, team in sorted(teams.items()):
+        if name in saved_rosters:
+            continue
+        for i, player in enumerate(team.players):
+            digest = hashlib.sha256(f"{name}:{year}:{i}".encode()).hexdigest()[:24]
+            pid = f"CVL-OPEN-{year}-{digest}"
+            if pid in used:
+                raise ValueError(f"Opening college player identity already exists: {pid}")
+            player.player_id = pid
+            used.add(pid)

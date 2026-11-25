@@ -1708,18 +1708,10 @@ class Dynasty:
             _portal_gains[tn] = len(portal_result.get(tn, []))
 
         # ── 6a. HS League Season Sim → Real Recruit Pool ──
-        from engine.hs_league import (
-            create_hs_league, simulate_hs_season, advance_hs_league,
-            graduating_class_to_recruits, league_summary,
-        )
-
-        if self._hs_league is None:
-            self._hs_league = create_hs_league(year, rng=rng)
-        else:
-            self._hs_league = advance_hs_league(self._hs_league, year, rng=rng)
-
-        self._hs_league = simulate_hs_season(self._hs_league, rng=rng)
-        hs_recruits = graduating_class_to_recruits(self._hs_league)
+        from engine.hs_league import league_summary
+        from engine.college_feeder import advance_college_feeder
+        hs_recruits = advance_college_feeder(self, year,
+                                              list(season.teams), pool_size)
         result["hs_league"] = league_summary(self._hs_league)
 
         recruit_result = run_full_recruiting_cycle(
@@ -1760,17 +1752,6 @@ class Dynasty:
         }
         result["recruiting"] = self.recruiting_history[year]
 
-        # ── 7. HS Recruiting Pipeline (legacy — keep for scouting board) ──
-        from engine.recruiting import HSRecruitingPipeline
-        if self._hs_pipeline is None:
-            self._hs_pipeline = HSRecruitingPipeline()
-            self._hs_pipeline.generate_initial_pipeline(
-                base_seed=year, size_per_class=pool_size,
-            )
-        else:
-            self._hs_pipeline.advance_year(
-                new_9th_seed=year, size=pool_size, rng=rng,
-            )
         result["hs_pipeline"] = self._hs_pipeline.pipeline_summary()
 
         # Publish HS pipeline to bridge DB for WVL preview access
@@ -2284,6 +2265,11 @@ class Dynasty:
             "team_installations": dict(getattr(self, "_team_installations", {}) or {}),
         }
 
+        if self._hs_league is not None:
+            data["hs_league_state"] = self._hs_league.save_state()
+        if self._hs_pipeline is not None:
+            data["hs_pipeline_state"] = self._hs_pipeline.save_state()
+
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
 
@@ -2335,6 +2321,13 @@ class Dynasty:
             name: ensure_installation(rec, name)
             for name, rec in (data.get("team_installations") or {}).items() if rec
         }
+
+        if data.get("hs_league_state") is not None:
+            from engine.hs_league import HSLeague
+            dynasty._hs_league = HSLeague.from_save_state(data["hs_league_state"])
+        if data.get("hs_pipeline_state") is not None:
+            from engine.recruiting import HSRecruitingPipeline
+            dynasty._hs_pipeline = HSRecruitingPipeline.from_save_state(data["hs_pipeline_state"])
 
         return dynasty
 
