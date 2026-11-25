@@ -255,7 +255,8 @@ def _carryover(side: str, unit: dict, new_card: Any, staff: dict, previous_staff
         fam += LINEAGE_BONUS
     if unit.get("signature") and _signature(new_card, side) == unit.get("signature"):
         fam += SAME_SIGNATURE_BONUS
-    return min(CARRYOVER_CAP, fam)
+    from engine.coach_career import continuity_carryover
+    return min(CARRYOVER_CAP, continuity_carryover(staff,unit,fam))
 
 
 # Installation preferences, not execution modifiers. Existing pressure,

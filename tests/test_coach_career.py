@@ -77,3 +77,31 @@ def test_pregame_probability_is_complementary_neutral():
     b=SimpleNamespace(players=[SimpleNamespace(overall=40)]*22)
     assert pregame_probability(a,b,True)>.5
     assert abs(pregame_probability(a,b,True)+pregame_probability(b,a,True)-1)<1e-5
+
+
+def test_retirement_and_management_preferences():
+    from engine.coach_career import retirement_probability, retires, staffing_preference, continuity_carryover
+    hc=card("leader")
+    appoint(hc,"head_coach")
+    m=active_management(hc)
+    m["continuity"]=1.
+    a=card("local"); a.team_name="A"
+    b=card("outside"); b.team_name="B"
+    b.tactical_profile=deepcopy(a.tactical_profile)
+    b.tactical_profile["coach_id"]=b.coach_id
+    assert staffing_preference(hc,a,"oc","A")>staffing_preference(hc,b,"oc","A")
+    assert .3<continuity_carryover({"head_coach":hc},{"familiarity":.9},.3)<=.85
+    assert retirement_probability(59)==0 and retirement_probability(80)==1
+    hc.age=80
+    assert retires(hc,2040)
+
+def test_retired_coach_cannot_return_to_portal():
+    from engine.coaching_portal import CoachingPortal,populate_coaching_portal,run_coaching_match
+    c=card("retired","oc",True); c.age=80; c.hc_meter=100
+    staff={"A":{"oc":c}}
+    portal=CoachingPortal(year=2040)
+    portal.add_vacancy("A","oc")
+    populate_coaching_portal(portal,staff,{"A":(6,6)},{"A":50},retired_ids={c.coach_id},rng=random.Random(1))
+    assert c.coach_id not in [e.coach_id for e in portal.entries]
+    run_coaching_match(portal,staff,{"A":50},year=2040,rng=random.Random(1))
+    assert staff["A"]["oc"].coach_id!=c.coach_id

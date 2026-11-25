@@ -3465,7 +3465,9 @@ def dynasty_coaching_history(session_id: str):
                 team: roles for team, roles in changes.items()
             },
             "teams_with_changes": len(changes),
-            "marketplace_summary": summary,
+            "marketplace_summary": data.get("portal_summary",summary),
+            "portal_hires": data.get("portal_hires",[]),
+            "retirements": [{k:v for k,v in row.items() if k!="card"} | {"name":row.get("card",{}).get("first_name","")+" "+row.get("card",{}).get("last_name","")} for row in data.get("retirements",[])],
         }
 
     staffs = {}
@@ -3474,7 +3476,7 @@ def dynasty_coaching_history(session_id: str):
         hc = staff.get("head_coach") if isinstance(staff, dict) else None
         if hc:
             staffs[t_name] = {
-                "hc_name": hc.name,
+                "hc_name": hc.full_name,
                 "hc_classification": hc.classification or "unclassified",
                 "hc_overall": hc.overall,
                 "hc_seasons": hc.seasons_coached,

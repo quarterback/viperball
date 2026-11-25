@@ -176,3 +176,53 @@ def position_boost(staff,position):
     if card is None:
         return 0.
     return min(1.5,max(0.,(card.development-50)/45)*.75+.75*veteran_premium(card))
+
+def retirement_probability(age):
+    """Candidate age curve; retirement is distinct from dismissal."""
+    if age<60:
+        return 0.
+    if age>=80:
+        return 1.
+    return min(.65,.025*(age-59))
+
+def retires(card,year):
+    # Stable per coach and year; does not perturb hiring or game randomness.
+    payload=f"coach-retirement-v1:{card.coach_id}:{year}".encode()
+    u=int.from_bytes(hashlib.sha256(payload).digest()[:8],"big")/2**64
+    return u<retirement_probability(card.age)
+
+def staffing_preference(hc,candidate,role,team):
+    """Modest ranking adjustment, not a game-day performance bonus."""
+    m=active_management(hc)
+    if not m or role=="head_coach":
+        return 0.
+    from engine.coach_tactics import ensure_coach_tactical_profile
+    leadership=m.get("staff_management",.5)
+    continuity=m.get("continuity",.5)
+    # Reward existing knowledge of this program or shared tactical lineage.
+    familiar=(candidate.team_name==team or any(
+        getattr(stop,"team_name",None)==team for stop in candidate.career_history))
+    mentor=any(x.get("coach_id")==hc.coach_id for x in candidate.coaching_tree)
+    fit=0.
+    if role in ("oc","dc"):
+        k="offense_interpretation" if role=="oc" else "defense_interpretation"
+        fit=float(ensure_coach_tactical_profile(hc)["identity"].get(k)==
+                  ensure_coach_tactical_profile(candidate)["identity"].get(k))
+    # Strong developers/recruiters seek complementary staff when their own
+    # profile is weaker; the existing rank still dominates.
+    teaching=(candidate.development-60)/35
+    recruiting=(candidate.recruiting-60)/35
+    complementary=(1-m.get("development",.5))*teaching+(1-m.get("recruiting",.5))*recruiting
+    return clip(continuity*(2*int(familiar)+1.5*int(mentor)+fit)+
+                leadership*2*complementary,-3,5)
+
+def continuity_carryover(staff,unit,familiarity):
+    """Preserve a limited amount of practiced knowledge on succession."""
+    hc=(staff or {}).get("head_coach")
+    m=active_management(hc)
+    if not m:
+        return familiarity
+    # A continuity-oriented leader preserves more of an existing installation;
+    # does not manufacture familiarity for a newly invented system.
+    retained=max(0.,unit.get("familiarity",0.)-familiarity)
+    return clip(familiarity+retained*.20*m.get("continuity",.5),0,.85)

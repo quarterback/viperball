@@ -199,7 +199,7 @@ def roster_fit(season, records):
                     mismatches.append({"team":name,"side":side,"package":pkg["package_id"]})
     return mismatches
 
-def run(seasons, nteams, seed, out, *, national=False):
+def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
     from fastapi.testclient import TestClient
     with tempfile.TemporaryDirectory(prefix="viperball-dynasty-") as tmp:
         os.environ["VIPERBALL_DB_PATH"] = str(Path(tmp)/"study.sqlite3")
@@ -246,6 +246,10 @@ def run(seasons, nteams, seed, out, *, national=False):
         def checkpoint():
             (out/"dynasty_results.json").write_text(json.dumps(report,indent=2,sort_keys=True))
         checkpoint()
+        observer = None
+        if longitudinal:
+            from benchmark_longitudinal import Study
+            observer = Study(out,seed,seasons)
         prev_rosters=None
         prev_staff=None
         prev_units={}
@@ -342,6 +346,8 @@ def run(seasons, nteams, seed, out, *, national=False):
                     raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
                                        +json.dumps(differences,sort_keys=True))
             verify_staffs(dyn, active)
+            if observer:
+                observer.opening(year,dyn,season)
             staff=staff_ids(dyn)
             changes={t for t in names if prev_staff and staff[t].get("dc")!=prev_staff[t].get("dc")}
             groups,packages=defaultdict(Counter),defaultdict(Counter)
@@ -450,6 +456,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             print("ROSTER",year,json.dumps(item["roster_observations"],sort_keys=True),flush=True)
             report["years"].append(item)
             checkpoint()
+            if observer:
+                observer.season_end(year,dyn,season,item)
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],
                 "DC_changes",len(changes),"installed",sum(installed.values()),"package_ids",len(installed),
                 "fit_mismatches",len(fit),"calls",sum(v.get("selected",0) for v in packages.values()),
@@ -509,6 +517,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
             off=sess["offseason"]
+            if observer:
+                observer.developed(year,off["player_cards"])
             if {r.recruit_id:asdict(r) for r in off["recruit_pool"]} != expected_graduates:
                 raise RuntimeError("College recruiting pool is not the tracked HS senior cohort")
             reserve_ids = {r.recruit_id for r in off["hs_walkon_reserve"]}
@@ -622,9 +632,13 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "mean_defense_familiarity_after":average([u["defense"]["familiarity"] for u in expected.values()])}
             report["transitions"].append(trans)
             checkpoint()
+            if observer:
+                observer.transition(year,dyn,active,trans)
             print("TRANSITION",json.dumps(trans,sort_keys=True),flush=True)
         report["complete"]=True
         checkpoint()
+        if observer:
+            observer.finish()
         print("COMPLETED",len(report["years"]),"seasons",sum(y["regular_games"]+y["playoff_games"] for y in report["years"]),"full games",flush=True)
         return report
 
@@ -635,7 +649,8 @@ if __name__=="__main__":
     p.add_argument("--seed",type=int,default=20261124)
     p.add_argument("--out",default="reports/dynasty-calibration")
     p.add_argument("--national",action="store_true",help="Use all actual college program files and default conference alignment")
+    p.add_argument("--longitudinal",action="store_true",help="Record annual coach, program and roster trajectories")
     a=p.parse_args()
     if a.seasons<2 or (not a.national and (a.teams<16 or a.teams%4)):
         p.error("Use at least two seasons; reduced leagues need at least 16 teams divisible by four")
-    run(a.seasons,a.teams,a.seed,Path(a.out),national=a.national)
+    run(a.seasons,a.teams,a.seed,Path(a.out),national=a.national,longitudinal=a.longitudinal)

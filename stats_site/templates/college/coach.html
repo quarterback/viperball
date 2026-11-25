@@ -62,6 +62,29 @@
   </tbody>
 </table>
 
+<h2>Career &amp; Authority</h2>
+<table><tbody>
+<tr><td>Market reputation</td><td>{{ career_reputation }} / 100</td></tr>
+<tr><td>Actual play calling</td><td>{{ calling_roles|join(", ") if calling_roles else "Delegated / not calling plays" }}</td></tr>
+{% if role != "head_coach" %}
+<tr><td>HC readiness</td><td>{{ coach.hc_meter }} / 100</td></tr>
+<tr><td>Seeking head jobs</td><td>{{ "Yes" if seeking_hc else "No" }}</td></tr>
+{% if former_hc %}<tr><td>Previous head coach</td><td>Yes; {{ "requires play-calling authority" if requires_calls else "specialist" }}</td></tr>{% endif %}
+{% endif %}
+{% for key,label in [("head_coach","Head coach"),("oc","Offensive coordinator"),("dc","Defensive coordinator"),("stc","Special teams coordinator")] %}
+<tr><td>Recorded years — {{ label }}</td><td>{{ role_years.get(key,0) }}</td></tr>
+{% endfor %}
+</tbody></table>
+<p style="font-size:11px;color:var(--fg-dim)">Recorded role years count observed career seasons; older aggregate records may not specify a role. Reputation measures market standing, not coaching skill.</p>
+{% if management_profile %}
+<h2>Program Leadership</h2>
+<table><tbody>
+{% for key,label in [("delegation","Delegation"),("development","Player development"),("recruiting","Recruiting"),("continuity","Continuity"),("staff_management","Staff management"),("game_management","Game management")] %}
+{% if key in management_profile %}<tr><td>{{ label }}</td><td class="num">{{ (100*management_profile[key])|round|int }}</td></tr>{% endif %}
+{% endfor %}
+</tbody></table>
+{% endif %}
+
 <h2>Attributes</h2>
 <table>
   <thead><tr><th>Attribute</th><th class="num">Rating</th><th>Bar</th></tr></thead>
@@ -187,6 +210,16 @@
   {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+{% if career_evidence %}
+<h2>Season-by-season Career Evidence</h2>
+<table><thead><tr><th>Year</th><th>Program</th><th>Role</th><th>W-L</th><th>Expected W</th><th>Reputation</th></tr></thead><tbody>
+{% for e in career_evidence %}
+<tr><td>{{ e.year }}</td><td>{{ e.team }}</td><td>{{ {"head_coach":"HC","oc":"OC","dc":"DC","stc":"STC"}.get(e.role,e.role) }}</td><td>{{ e.wins }}-{{ e.losses }}</td><td>{% if e.evidence.games %}{{ "%.1f"|format(e.evidence.expected) }} / {{ e.evidence.games }}{% else %}&mdash;{% endif %}</td><td>{{ e.reputation_before|round|int }} → {{ e.reputation_after|round|int }}</td></tr>
+{% endfor %}
+</tbody></table>
+<p style="font-size:11px;color:var(--fg-dim)">Expected wins use a pregame roster-strength estimate; not a causal measure of individual coaching impact.</p>
 {% endif %}
 
 {# Coaching Tree #}
