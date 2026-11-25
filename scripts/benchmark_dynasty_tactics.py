@@ -391,7 +391,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             funnel = defaultdict(Counter)
             focus_funnel = defaultdict(lambda: defaultdict(Counter))
             for name, unit in units.items():
-                card = dyn._coaching_staffs.get(name, {}).get("dc")
+                from engine.coach_career import caller
+                card = caller(dyn._coaching_staffs.get(name, {}),"dc")
                 snap = defensive_adoption_snapshot(unit, card, profiles.get(name, {}))
                 adoption[name] = snap
                 for pid, row in snap["packages"].items():
@@ -501,6 +502,9 @@ def run(seasons, nteams, seed, out, *, national=False):
                 for key in ("kick_mix", "pressure"):
                     if abs(learning.get(key,0)) > LIMIT + 1e-6 or abs(learning.get(key,0)-prior.get(key,0)) > STEP + 1e-6:
                         raise RuntimeError(f"Unbounded tactical adaptation: {cid}/{key}")
+            career_events = dyn.coaching_history[year+1].get("career_development", [])
+            if len(career_events) != len(before_coaches) or len({e["team"]+"|"+e["role"] for e in career_events}) != len(before_coaches):
+                raise RuntimeError("Career evidence ledger must cover each prior staff slot once")
             coach_events = dyn.coaching_history[year+1].get("development", [])
             if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
                 raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
@@ -603,7 +607,7 @@ def run(seasons, nteams, seed, out, *, national=False):
                 "coach_career_continuity":{"retained":len(retained_coaches),
                     "departed":len(set(before_coaches)-set(after_coaches)),
                     "new":len(set(after_coaches)-set(before_coaches)),
-                    "development_events":len(coach_events)},
+                    "development_events":len(coach_events), "career_evidence":career_events},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "hs_feeder":{"competition_players":len(hs_before),"graduating_seniors":len(hs_seniors),

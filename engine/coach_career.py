@@ -139,7 +139,7 @@ def record_season(card,role,year,team,wins,losses,evidence,playoff=False,confere
     before=st["reputation"]
     st["reputation"]=round(clip(.78*before+.22*target,0,100),3)
     st["last_year"]=year
-    event={"year":year,"team":team,"role":role,"wins":wins,"losses":losses,
+    event={"year":year,"team":team,"role":role,"coach_id":card.coach_id,"wins":wins,"losses":losses,
            "evidence":evidence,"reputation_before":before,"reputation_after":st["reputation"]}
     st["history"].append(event)
     return event

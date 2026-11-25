@@ -2032,6 +2032,8 @@ class Season:
                     spot_error_rate=round(0.001 + inaccuracy * 0.015, 5),
                 )
 
+        from engine.coach_career import pregame_probability
+        coach_expectation_home = pregame_probability(home_team,away_team,is_neutral)
         engine = ViperballEngine(
             home_team,
             away_team,
@@ -2049,6 +2051,7 @@ class Season:
             **nfz_kwargs,
         )
         result = engine.simulate_game()
+        result["coach_expectation_home"] = coach_expectation_home
         for _rec in _installs:
             _ti.record_game(_rec)
         result["is_rivalry_game"] = game.is_rivalry_game

@@ -389,6 +389,7 @@ def apply_team_development(
     players: list,
     rng: Optional[random.Random] = None,
     dev_boost: float = 0.0,
+    position_boosts: Optional[dict] = None,
 ) -> DevelopmentReport:
     """
     Apply offseason development to a list of PlayerCard objects.
@@ -407,7 +408,8 @@ def apply_team_development(
     report = DevelopmentReport()
 
     for card in players:
-        event = apply_offseason_development(card, rng=rng, dev_boost=dev_boost)
+        event = apply_offseason_development(card, rng=rng,
+            dev_boost=dev_boost+(position_boosts or {}).get(card.position,0.0))
         if event:
             report.notable_events.append(event)
         report.year_updated[card.full_name] = card.year
