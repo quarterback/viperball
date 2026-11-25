@@ -731,12 +731,45 @@
   {% set hb = hdye.get(bucket, {}) %}
   {% if ab.get('count', 0) > 0 or hb.get('count', 0) > 0 %}
   <tr>
-    <td class="num" style="font-size:12px;">{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td class="num" style="font-size:12px;">{% if 'points' in ab %}{{ '%.1f'|format(ab.points) }} pts · {% endif %}{{ ab.get('count', 0) }} drives · {{ ('%.2f'|format(ab.points_per_drive)) if 'points_per_drive' in ab else '—' }} PPD · {{ '%.0f'|format(ab.get('score_rate', 0)) }}% score<br>{{ ab.get('touchdowns', 0) }} TD ({{ '%.1f'|format(ab.get('touchdown_rate', 0)) }}%) / {{ ab.get('kicks', 0) }} kicks ({{ '%.1f'|format(ab.get('kick_rate', 0)) }}%){% if 'drop_kicks' in ab %} ({{ ab.get('drop_kicks', 0) }} DK, {{ ab.get('place_kicks', 0) }} PK){% endif %}</td>
     <td style="font-size:12px;">{{ label }}<span style="display:block;color:var(--fg-dim);">Points, not just scoring frequency</span></td>
-    <td class="num" style="font-size:12px;">{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
+    <td class="num" style="font-size:12px;">{% if 'points' in hb %}{{ '%.1f'|format(hb.points) }} pts · {% endif %}{{ hb.get('count', 0) }} drives · {{ ('%.2f'|format(hb.points_per_drive)) if 'points_per_drive' in hb else '—' }} PPD · {{ '%.0f'|format(hb.get('score_rate', 0)) }}% score<br>{{ hb.get('touchdowns', 0) }} TD ({{ '%.1f'|format(hb.get('touchdown_rate', 0)) }}%) / {{ hb.get('kicks', 0) }} kicks ({{ '%.1f'|format(hb.get('kick_rate', 0)) }}%){% if 'drop_kicks' in hb %} ({{ hb.get('drop_kicks', 0) }} DK, {{ hb.get('place_kicks', 0) }} PK){% endif %}</td>
   </tr>
   {% endif %}
   {% endfor %}
+  {% set ar = as_.get('scoring_reconciliation', {}) %}
+  {% set hr = hs.get('scoring_reconciliation', {}) %}
+  {% if ar or hr %}
+  {{ section_header('SCORING RECONCILIATION') }}
+  {% for label, key in [('Drive scoring subtotal', 'drive_points'), ('Non-drive scoring', 'non_drive_points')] %}
+  <tr>
+    <td class="num"><strong>{{ ('%.1f'|format(ar[key])) if key in ar else '—' }}</strong></td>
+    <td><strong>{{ label }}</strong></td>
+    <td class="num"><strong>{{ ('%.1f'|format(hr[key])) if key in hr else '—' }}</strong></td>
+  </tr>
+  {% endfor %}
+  {% for label, key in [('Bells', 'bell'), ('Safeties', 'safety'), ('Return touchdowns', 'return_td'), ('Pindowns outside drives', 'pindown'), ('Rushing TD outside drives', 'rush_td'), ('Lateral TD outside drives', 'lateral_td'), ('Kick-pass TD outside drives', 'kp_td'), ('Snap kicks outside drives', 'dk'), ('Place kicks outside drives', 'pk'), ('Unclassified scoring method', 'other')] %}
+  {% set amethod = ar.get('non_drive_by_method', {}).get(key) %}
+  {% set hmethod = hr.get('non_drive_by_method', {}).get(key) %}
+  {% if key in ['bell', 'safety', 'return_td', 'pindown'] or amethod or hmethod %}
+  <tr>
+    <td class="num">{{ ('%.1f'|format(amethod)) if amethod is not none else '—' }}</td>
+    <td style="padding-left:1em;">{{ label }}</td>
+    <td class="num">{{ ('%.1f'|format(hmethod)) if hmethod is not none else '—' }}</td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+  {% for label, key in [('Final score', 'final_score'), ('Unreconciled points', 'unreconciled_points')] %}
+  <tr>
+    <td class="num{% if key == 'unreconciled_points' and ar and not ar.get('score_consistent') %} stat-bad{% endif %}">{{ ('%.1f'|format(ar[key])) if key in ar else '—' }}</td>
+    <td>{{ label }}</td>
+    <td class="num{% if key == 'unreconciled_points' and hr and not hr.get('score_consistent') %} stat-bad{% endif %}">{{ ('%.1f'|format(hr[key])) if key in hr else '—' }}</td>
+  </tr>
+  {% endfor %}
+  <tr><td colspan="3" style="font-size:11px;color:var(--fg-dim);">Drive points include offensive TDs, made scoring kicks and pindowns earned on the team's own drive. Bells, safeties and return TDs are non-drive points. Subtotal includes all indented rows.</td></tr>
+  {% else %}
+  <tr><td colspan="3" style="font-size:11px;color:var(--fg-dim);">Scoring reconciliation unavailable for this game. Older drive totals may include non-drive scores.</td></tr>
+  {% endif %}
   <tr>
     {% set a_pp = as_.get('dye', {}).get('power_play', {}) %}
     {% set h_pp = hs.get('dye', {}).get('power_play', {}) %}
