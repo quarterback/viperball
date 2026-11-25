@@ -11,24 +11,24 @@
 <style>
 .bracket { display: flex; gap: 24px; overflow-x: auto; padding: 8px 0 16px; -webkit-overflow-scrolling: touch; }
 .bracket-round { min-width: 220px; flex-shrink: 0; }
-.bracket-round-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
+.bracket-round-label { font-size:12px; text-transform:none; letter-spacing:0; color: var(--fg-dim); margin-bottom: 8px; font-weight: bold; }
 .matchup { border: 1px solid var(--border); margin-bottom: 8px; background: var(--bg-alt); }
 .matchup.championship { border-color: var(--yellow); }
-.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size: 11px; }
+.matchup-team { display: flex; align-items: center; padding: 4px 8px; gap: 6px; font-size:12px; }
 .matchup-team + .matchup-team { border-top: 1px solid var(--border); }
-.matchup-seed { color: var(--fg-dim); font-size: 10px; width: 18px; text-align: right; flex-shrink: 0; }
+.matchup-seed { color: var(--fg-dim); font-size:12px; width: 18px; text-align: right; flex-shrink: 0; }
 .matchup-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.matchup-tbd { color: var(--fg-dim); font-style: italic; }
+.matchup-tbd { color: var(--fg-dim); font-style:normal; }
 .bubble-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
 .bubble-section { border: 1px solid var(--border); background: var(--bg-alt); padding: 12px; }
-.bubble-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; }
+.bubble-section h3 { font-size:12px; text-transform:none; letter-spacing:0; margin: 0 0 8px; }
 .bubble-section.last-in h3 { color: var(--green, #4caf50); }
 .bubble-section.first-out h3 { color: var(--red, #ef5350); }
-.bubble-team { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 11px; border-bottom: 1px solid var(--border); }
+.bubble-team { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size:12px; border-bottom: 1px solid var(--border); }
 .bubble-team:last-child { border-bottom: none; }
-.bubble-team .meta { color: var(--fg-dim); font-size: 10px; }
-.bid-auto { color: var(--yellow); font-size: 9px; text-transform: uppercase; font-weight: bold; }
-.bid-atlarge { color: var(--accent); font-size: 9px; text-transform: uppercase; font-weight: bold; }
+.bubble-team .meta { color: var(--fg-dim); font-size:12px; }
+.bid-auto { color: var(--yellow); font-size:12px; text-transform:none; font-weight: bold; }
+.bid-atlarge { color: var(--accent); font-size:12px; text-transform:none; font-weight: bold; }
 @media (max-width: 768px) {
   .bracket { gap: 12px; }
   .bracket-round { min-width: 180px; }
@@ -37,7 +37,7 @@
 </style>
 
 <div class="page-header">
-  <h1>BRACKETOLOGY</h1>
+  <h1>Bracketology</h1>
   <div class="subtitle">{{ season_name }} — {{ num_teams }}-Team Projected Field</div>
 </div>
 

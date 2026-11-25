@@ -22,20 +22,20 @@
 
 {# ── Season Complete Banner ── #}
 {% if is_complete %}
-<div style="background:var(--bg-alt);border:2px solid {% if is_champion %}var(--yellow){% elif record.wins > record.losses %}var(--green){% elif record.wins < record.losses %}var(--red){% else %}var(--border){% endif %};padding:24px;margin-bottom:16px;text-align:center;">
+<div style="background:var(--bg-alt);border:1px solid var(--border);padding:24px;margin-bottom:16px;text-align:center;">
   {% if is_champion %}
-  <div style="font-size:14px;color:var(--yellow);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:bold;">National Champions</div>
+  <div style="font-size:14px;color:var(--yellow);text-transform:none;letter-spacing:0;margin-bottom:8px;font-weight:bold;">National Champions</div>
   {% endif %}
-  <div style="font-size:10px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:1px;">Final Record</div>
+  <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Final Record</div>
   <div style="font-size:56px;font-weight:bold;color:var(--fg-bright);line-height:1;">{{ record.wins }} - {{ record.losses }}</div>
   <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-    <a href="/stats/college/" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:8px 20px;text-decoration:none;font-size:12px;text-transform:uppercase;">View Full Stats</a>
+    <a href="/stats/college/" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:8px 20px;text-decoration:none;font-size:12px;text-transform:none;">View season statistics</a>
     <form method="POST" action="/stats/my-team/run-it-back" style="display:inline;">
       <input type="hidden" name="session_id" value="{{ session_id }}">
-      <button type="submit" style="background:var(--green);color:#000;border:none;padding:8px 24px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:bold;text-transform:uppercase;">Run It Back &rarr;</button>
+      <button class="btn-run" type="submit" style="padding:8px 24px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:bold;text-transform:none;">Start next season</button>
     </form>
   </div>
-  <div style="margin-top:6px;font-size:10px;color:var(--fg-dim);">Seniors graduate, players develop, new portal and NIL budget.</div>
+  <div style="margin-top:6px;font-size:12px;color:var(--fg-dim);">Advance to the next year: graduate seniors, develop players and reset the NIL budget.</div>
 </div>
 {% endif %}
 
@@ -44,29 +44,29 @@
 <div style="background:var(--bg-alt);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
   <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <div>
-      <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Week</div>
+      <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Week</div>
       <div style="font-size:28px;font-weight:bold;color:var(--fg-bright);">{{ current_week }} / {{ total_weeks }}</div>
     </div>
     <div>
-      <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Record</div>
+      <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Record</div>
       <div style="font-size:28px;font-weight:bold;color:{% if record.wins > record.losses %}var(--green){% elif record.wins < record.losses %}var(--red){% else %}var(--fg-bright){% endif %};">{{ record.wins }}-{{ record.losses }}</div>
     </div>
     <div style="flex:1;min-width:200px;">
-      <div style="background:var(--border);height:8px;"><div style="background:var(--green);height:100%;width:{{ (current_week / total_weeks * 100) if total_weeks > 0 else 0 }}%"></div></div>
-      <div style="font-size:10px;color:var(--fg-dim);margin-top:2px;">Season progress</div>
+      <div style="background:var(--border);height:8px;"><div style="background:var(--accent);height:100%;width:{{ (current_week / total_weeks * 100) if total_weeks > 0 else 0 }}%"></div></div>
+      <div style="font-size:12px;color:var(--fg-dim);margin-top:2px;">Season progress</div>
     </div>
     <div style="display:flex;gap:8px;">
       <form method="POST" action="/stats/my-team/sim" style="display:inline;">
         <input type="hidden" name="session_id" value="{{ session_id }}">
-        <button type="submit" style="background:var(--green);color:#000;border:none;padding:10px 20px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:bold;text-transform:uppercase;">
+        <button class="btn-run" type="submit" style="padding:10px 20px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:bold;text-transform:none;">
           {% if not is_season_started %}Start Season{% else %}Sim Week {{ current_week + 1 }}{% endif %}
         </button>
       </form>
       <form method="POST" action="/stats/my-team/sim" style="display:inline;">
         <input type="hidden" name="session_id" value="{{ session_id }}">
         <input type="hidden" name="sim_all" value="1">
-        <button type="submit" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:10px 16px;cursor:pointer;font-size:12px;font-family:inherit;text-transform:uppercase;">
-          Sim Rest
+        <button type="submit" style="background:var(--bg);color:var(--fg-bright);border:1px solid var(--border);padding:10px 16px;cursor:pointer;font-size:12px;font-family:inherit;text-transform:none;">
+          Simulate remaining games
         </button>
       </form>
     </div>
@@ -83,7 +83,7 @@
   {% for g in recent_games %}
   <tr>
     <td class="num">{{ g.week }}</td>
-    <td style="font-size:10px;color:var(--fg-dim);">{% if g.home %}vs{% else %}@{% endif %}</td>
+    <td style="font-size:12px;color:var(--fg-dim);">{% if g.home %}vs{% else %}@{% endif %}</td>
     <td>{{ g.opponent }}</td>
     <td class="num">{{ g.my_score }} - {{ g.opp_score }}</td>
     <td style="font-weight:bold;color:{% if g.won %}var(--green){% else %}var(--red){% endif %};">{% if g.won %}W{% else %}L{% endif %}</td>
@@ -109,10 +109,10 @@
   {% for p in roster %}
   <tr>
     <td>{{ p.name }}</td>
-    <td><span class="tag tag-pos" style="font-size:10px;padding:1px 5px;">{{ p.position }}</span></td>
+    <td><span class="tag tag-pos" style="font-size:12px;padding:1px 5px;">{{ p.position }}</span></td>
     <td class="num {% if p.overall >= 65 %}stat-elite{% elif p.overall >= 45 %}stat-good{% elif p.overall < 20 %}stat-bad{% endif %}">{{ p.overall }}</td>
     <td class="num">{% for i in range(p.potential) %}&#9733;{% endfor %}{% for i in range(5 - p.potential) %}&#9734;{% endfor %}</td>
-    <td style="font-size:11px;">{{ p.year }}{% if p.year in ("Senior", "Graduate") %} <span style="color:var(--fg-dim);font-size:9px;">(grad)</span>{% endif %}</td>
+    <td style="font-size:12px;">{{ p.year }}{% if p.year in ("Senior", "Graduate") %} <span style="color:var(--fg-dim);font-size:12px;">(grad)</span>{% endif %}</td>
     <td class="num {% if p.speed >= 85 %}stat-elite{% elif p.speed >= 70 %}stat-good{% elif p.speed < 50 %}stat-bad{% endif %}">{{ p.speed }}</td>
     <td class="num {% if p.power >= 85 %}stat-elite{% elif p.power >= 70 %}stat-good{% elif p.power < 50 %}stat-bad{% endif %}">{{ p.power }}</td>
     <td class="num {% if p.agility >= 85 %}stat-elite{% elif p.agility >= 70 %}stat-good{% elif p.agility < 50 %}stat-bad{% endif %}">{{ p.agility }}</td>
