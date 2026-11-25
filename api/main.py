@@ -3237,7 +3237,8 @@ def dynasty_advance(session_id: str):
 
     # The same actual HS seniors shown on the scouting board enter college.
     from engine.college_feeder import advance_college_feeder
-    recruit_pool = advance_college_feeder(dynasty, year, list(season.teams))
+    recruit_pool, hs_walkon_reserve = advance_college_feeder(
+        dynasty, year, list(season.teams), include_reserve=True)
 
     from engine.roster_continuity import COLLEGE_ROSTER_TARGET
     continuing_count = sum(c.year != "Graduate" for c in offseason_player_cards.get(human_team, []))
@@ -3257,6 +3258,7 @@ def dynasty_advance(session_id: str):
     session["offseason"] = {
         "portal": portal,
         "recruit_pool": recruit_pool,
+        "hs_walkon_reserve": hs_walkon_reserve,
         "recruit_board": recruit_board,
         "nil_program": human_nil,
         "nil_offers": {},
@@ -4147,7 +4149,8 @@ def offseason_complete(session_id: str):
 
         walkons = fill_college_roster_gaps(
             player_cards, offseason.get("recruit_pool", []), dynasty.current_year,
-            random.Random(dynasty.current_year + 19))
+            random.Random(dynasty.current_year + 19),
+            reserve_pool=offseason.get("hs_walkon_reserve", []))
         history = dynasty.recruiting_history.setdefault(dynasty.current_year, {})
         history["walkons"] = {t:len(rows) for t,rows in walkons.items()}
         history["walkon_details"] = walkons
