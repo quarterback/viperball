@@ -7528,23 +7528,28 @@ def high_school_index(request: Request):
         if not st_teams:
             continue
         states.append({"code": code, "name": data["name"], "teams": len(st_teams),
-                       "champion": league.state_champions.get(code, "")})
+                       "champion": league.state_champions.get(code, ""),
+                       "champion_key": league.state_champion_keys.get(code, "")})
+    tracked = {p.recruit.recruit_id for rows in dynasty._hs_pipeline.classes.values() for p in rows}
     seniors = sorted((p for t in teams for p in t.seniors), key=lambda p: -p.overall)[:25]
     senior_rows = []
     for p in seniors:
         row = _hs_player_row(p)
+        row["tracked"] = p.player_id in tracked
         row["school"] = p.high_school
         row["state"] = p.state
         senior_rows.append(row)
     return templates.TemplateResponse("high_school/index.html", _ctx(
         request, section="high-school", league=league,
         national_champion=league.national_champion,
+        national_champion_key=league.national_champion_key,
         team_keys=_hs_team_keys(league),
         national_games=[{"round": _HS_ROUND_LABELS.get(g.playoff_round, g.playoff_round),
                          "home": g.home, "away": g.away, "home_score": g.home_score,
                          "away_score": g.away_score, "winner": g.winner,
                          "home_key": g.home_key, "away_key": g.away_key, "winner_key": g.winner_key} for g in nat_games],
         regions=[{"name": r, "champion": league.region_champions.get(r, ""),
+                  "champion_key": league.region_champion_keys.get(r, ""),
                   "states": REGIONS.get(r, [])} for r in REGIONS],
         states=states, top_teams=[_hs_team_row(t) for t in ranked[:25]],
         top_seniors=senior_rows, team_count=len(teams),
@@ -7573,7 +7578,7 @@ def high_school_state(request: Request, code: str):
                and (g.home_key in keys or g.away_key in keys)]
     return templates.TemplateResponse("high_school/state.html", _ctx(
         request, section="high-school", league=league, code=code, state_name=STATES[code]["name"],
-        champion=league.state_champions.get(code, ""), conferences=conf_rows,
+        champion=league.state_champions.get(code, ""), champion_key=league.state_champion_keys.get(code, ""), conferences=conf_rows,
         team_keys=_hs_team_keys(league, prefer_state=code),
         playoff_games=[{"round": _HS_ROUND_LABELS.get(g.playoff_round, g.playoff_round),
                         "home": g.home, "away": g.away, "home_score": g.home_score,
@@ -7591,6 +7596,7 @@ def high_school_team(request: Request, key: str):
         raise HTTPException(404, "Team not found")
     year_order = {"Senior": 0, "Junior": 1, "Sophomore": 2, "Freshman": 3}
     players = sorted(team.players, key=lambda p: (year_order.get(p.year, 9), -p.overall))
+    tracked = {p.recruit.recruit_id for rows in dynasty._hs_pipeline.classes.values() for p in rows}
     games = [g for g in league.schedule if key in (g.home_key, g.away_key)]
     game_rows = []
     for g in games:
@@ -7603,6 +7609,6 @@ def high_school_team(request: Request, key: str):
     return templates.TemplateResponse("high_school/team.html", _ctx(
         request, section="high-school", league=league, team=_hs_team_row(team),
         state_name=STATES.get(team.state, {}).get("name", team.state),
-        players=[_hs_player_row(p) for p in players], games=game_rows,
+        players=[{**_hs_player_row(p), "tracked": p.player_id in tracked} for p in players], games=game_rows,
         team_keys=_hs_team_keys(league, prefer_state=team.state),
     ))
