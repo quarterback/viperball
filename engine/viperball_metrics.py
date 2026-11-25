@@ -186,15 +186,18 @@ def calculate_lateral_pct(plays: List[Dict], team: str) -> float:
 
     Elite: 80%+  |  Good: 65-80%  |  Average: 50-65%  |  Poor: <50%
     """
-    team_plays = [p for p in plays if p.get("possession") == team]
+    team_plays = [p for p in plays
+                  if (p.get("snap_possession") or p.get("possession")) == team]
     lateral_plays = [p for p in team_plays if (p.get("laterals") or 0) > 0]
 
     if not lateral_plays:
         return 0.0
 
+    # Same definition as the box score's Lateral Efficiency.
     successful = sum(
         1 for p in lateral_plays
-        if p.get("result") not in ["fumble", "turnover_on_downs"]
+        if not p.get("fumble")
+        and p.get("result") not in ("lateral_intercepted", "int_return_td")
     )
 
     return round((successful / len(lateral_plays)) * 100, 1)

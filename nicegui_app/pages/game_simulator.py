@@ -380,7 +380,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
     ui.label("Lateral Game").classes("font-bold text-slate-700 mt-4")
     lat_rows = [
         {"Stat": "Chains", home_name: str(hs.get("lateral_chains", 0)), away_name: str(as_.get("lateral_chains", 0))},
-        {"Stat": "Successful", home_name: str(hs.get("successful_laterals", 0)), away_name: str(as_.get("successful_laterals", 0))},
+        {"Stat": "Successful chains", home_name: str(hs.get("successful_laterals", 0)), away_name: str(as_.get("successful_laterals", 0))},
         {"Stat": "Efficiency", home_name: f"{hs.get('lateral_efficiency', 0)}%", away_name: f"{as_.get('lateral_efficiency', 0)}%"},
         {"Stat": "Yards", home_name: str(hs.get("lateral_yards", 0)), away_name: str(as_.get("lateral_yards", 0))},
         {"Stat": "Lat INTs", home_name: str(hs.get("lateral_interceptions", 0)), away_name: str(as_.get("lateral_interceptions", 0))},
@@ -500,7 +500,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                 defenders = [p for p in pstats
                              if p.get("tackles", 0) > 0 or p.get("tfl", 0) > 0
                              or p.get("sacks", 0) > 0 or p.get("hurries", 0) > 0
-                             or p.get("kick_pass_ints", 0) > 0
+                             or p.get("def_ints", p.get("kick_pass_ints", 0)) > 0
                              or p.get("st_tackles", 0) > 0]
                 if defenders:
                     defenders = sorted(defenders, key=lambda p: (
@@ -515,7 +515,7 @@ def _render_box_score(result, plays, home_name, away_name, home_score, away_scor
                             "TFL": p.get("tfl", 0),
                             "SACK": p.get("sacks", 0),
                             "HUR": p.get("hurries", 0),
-                            "INT": p.get("kick_pass_ints", 0),
+                            "INT": p.get("def_ints", p.get("kick_pass_ints", 0)),
                         }
                         for p in defenders
                     ]

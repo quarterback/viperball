@@ -294,7 +294,7 @@ def analyze_game_data(game_data: dict) -> str:
             h1 = stats.get('timeouts_1h', 0)
             h2 = stats.get('timeouts_2h', 0)
             lines.append(f"  {label}:")
-            lines.append(f"    Used: {used}  |  Remaining: {remaining}  |  1H: {h1}  2H: {h2}")
+            lines.append(f"    Used: {used}  |  Remaining in {stats.get('timeouts_remaining_period', '2H')}: {remaining}  |  1H: {h1}  2H: {h2}")
             if by_cat:
                 cat_parts = [f"{v}× {k.replace('_', ' ')}" for k, v in by_cat.items()]
                 lines.append(f"    Breakdown: {', '.join(cat_parts)}")

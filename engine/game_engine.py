@@ -1651,6 +1651,7 @@ class Player:
     game_kick_laterals_thrown: int = 0
     game_kick_laterals_completed: int = 0
     game_lateral_interceptions: int = 0
+    game_int_return_tds: int = 0
     game_kick_returns: int = 0
     game_kick_return_yards: int = 0
     game_kick_return_tds: int = 0
@@ -8480,12 +8481,26 @@ class ViperballEngine:
             })
         else:
             # Failed challenge — burn a timeout as penalty
+            burned = False
             if challenger == "home":
                 if self.state.home_timeouts > 0:
                     self.state.home_timeouts -= 1
+                    burned = True
             else:
                 if self.state.away_timeouts > 0:
                     self.state.away_timeouts -= 1
+                    burned = True
+            if burned:
+                self.timeout_log.append({
+                    "quarter": self.state.quarter,
+                    "time_remaining": self.state.time_remaining,
+                    "team": challenger,
+                    "team_name": (self.home_team if challenger == "home" else self.away_team).name,
+                    "category": "failed_challenge",
+                    "remaining": (self.state.home_timeouts if challenger == "home"
+                                  else self.state.away_timeouts),
+                    "play_number": self.state.play_number,
+                })
             self.referee_crew.blown_call_log.append({
                 "type": "challenge_failed",
                 "quarter": self.state.quarter,
@@ -8771,6 +8786,13 @@ class ViperballEngine:
                 setattr(returner, k, before)
             elif "return_yards" in k and v - before == full:
                 setattr(returner, k, before + kept)
+
+    def _credit_defender(self, player) -> None:
+        """Record a defender who made the tackle, sack or interception."""
+        defenders = self.__dict__.setdefault("_play_defenders", [])
+        label = player_label(player)
+        if label not in defenders:
+            defenders.append(label)
 
     def _snapshot_play_stats(self) -> list:
         """Numeric per-game counters for every player, taken at the snap."""
@@ -9101,6 +9123,7 @@ class ViperballEngine:
         # against the sides as they lined up, and a foul that wipes out
         # the play restores both.
         self._snap_possession = self.state.possession
+        self._play_defenders = []
         self._pre_play_scores = (self.state.home_score, self.state.away_score)
         self._pre_play_kick_mode = self.state.kick_mode
         self._pre_play_bonus_team = self.state.bonus_possession_team
@@ -9114,6 +9137,7 @@ class ViperballEngine:
 
         play = self._simulate_play_core()
         play.snap_possession = self._snap_possession
+        play.defenders_involved = list(self._play_defenders)
         play.snap_lineup = self._snap_lineup
         self._check_exposure_injuries(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
@@ -12073,6 +12097,7 @@ class ViperballEngine:
         def_team_for_tackle = self.get_defensive_team()
         tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
         tackler.game_tackles += 1
+        self._credit_defender(tackler)
         if tackler.position == "Keeper":
             tackler.game_keeper_tackles += 1
 
@@ -12081,6 +12106,7 @@ class ViperballEngine:
             assist_tackler = self._pick_def_tackler(def_team_for_tackle, 3)
             if assist_tackler != tackler:
                 assist_tackler.game_tackles += 1
+                self._credit_defender(assist_tackler)
                 assist_tackler.game_plays_involved += 1
                 self.drain_player_energy(assist_tackler, "tackler")
 
@@ -12483,6 +12509,7 @@ class ViperballEngine:
         def_team = self.get_defensive_team()
         tackler = self._pick_def_tackler(def_team, yards_gained)
         tackler.game_tackles += 1
+        self._credit_defender(tackler)
 
         # Drain energy: trick play carrier and tackler
         self.drain_player_energy(carrier, "carrier")
@@ -12646,6 +12673,7 @@ class ViperballEngine:
                 int_weights = self._spread_the_love_defense(int_candidates, int_weights)
                 interceptor = random.choices(int_candidates, weights=int_weights, k=1)[0]
                 interceptor.game_lateral_interceptions += 1
+                self._credit_defender(interceptor)
                 self.drain_player_energy(interceptor, "carrier")
                 int_tag = player_tag(interceptor)
 
@@ -12666,7 +12694,7 @@ class ViperballEngine:
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.add_score(9)
-                    interceptor.game_tds += 1
+                    interceptor.game_int_return_tds += 1
                     return Play(
                         play_number=self.state.play_number,
                         quarter=self.state.quarter,
@@ -12835,6 +12863,7 @@ class ViperballEngine:
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
         lat_tackler.game_tackles += 1
+        self._credit_defender(lat_tackler)
         self.drain_player_energy(lat_tackler, "tackler")
 
         # Tackling reduces lateral chain yards
@@ -13126,6 +13155,7 @@ class ViperballEngine:
             sacker = rusher if rusher else sack_def_team.players[0]
             sacker.game_sacks += 1
             sacker.game_tackles += 1
+            self._credit_defender(sacker)
             sacker.game_plays_involved += 1
             self.drain_player_energy(kicker, "kick_pass")
             self.drain_player_energy(sacker, "tackler")
@@ -13292,6 +13322,11 @@ class ViperballEngine:
                     int_rate = max(0.025, min(0.10, int_rate))
                     if random.random() < int_rate:
                         chain_intercepted = True
+                        kl_interceptor = (max(lat_defenders, key=lambda d: getattr(d, "awareness", 70) + d.speed)
+                                          if lat_defenders else None)
+                        if kl_interceptor is not None:
+                            kl_interceptor.game_lateral_interceptions += 1
+                            self._credit_defender(kl_interceptor)
                         int_spot = min(99, catch_spot + chain_yards)
                         throwing_team_int = self.state.possession
                         self.change_possession()
@@ -13307,6 +13342,8 @@ class ViperballEngine:
                             self.state.down = 1
                             self.state.yards_to_go = 20
                             self.add_score(9)
+                            if kl_interceptor is not None:
+                                kl_interceptor.game_int_return_tds += 1
                             self.apply_stamina_drain(4)
                             stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
                             return Play(
@@ -13533,12 +13570,14 @@ class ViperballEngine:
             kp_def_team = self.get_defensive_team()
             kp_tackler = self._pick_def_tackler(kp_def_team, total_yards)
             kp_tackler.game_tackles += 1
+            self._credit_defender(kp_tackler)
             if kp_tackler.position == "Keeper":
                 kp_tackler.game_keeper_tackles += 1
             if random.random() < 0.25:
                 kp_assist = self._pick_def_tackler(kp_def_team, total_yards)
                 if kp_assist != kp_tackler:
                     kp_assist.game_tackles += 1
+                    self._credit_defender(kp_assist)
                     if kp_assist.position == "Keeper":
                         kp_assist.game_keeper_tackles += 1
                     kp_assist.game_plays_involved += 1
@@ -13672,6 +13711,7 @@ class ViperballEngine:
             # The matched defender gets first crack at the INT
             interceptor = matched_defender
             interceptor.game_kick_pass_ints += 1
+            self._credit_defender(interceptor)
             int_tag = player_tag(interceptor)
 
             # Drain: kicker threw, interceptor ran it back
@@ -13689,7 +13729,7 @@ class ViperballEngine:
                 self.state.down = 1
                 self.state.yards_to_go = 20
                 self.add_score(9)
-                interceptor.game_tds += 1
+                interceptor.game_int_return_tds += 1
 
                 self.apply_stamina_drain(4)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -16209,6 +16249,8 @@ class ViperballEngine:
             stats["kick_passes_attempted"] = sum(p.game_kick_passes_thrown for p in team.players)
             stats["kick_passes_completed"] = sum(p.game_kick_passes_completed for p in team.players)
             stats["kick_pass_interceptions"] = sum(p.game_kick_pass_interceptions for p in team.players)
+            opponent = self.away_team if team is self.home_team else self.home_team
+            stats["lateral_interceptions"] = sum(p.game_lateral_interceptions for p in opponent.players)
             # Both kicker and target receive a personal KP TD credit;
             # team touchdowns must count the scoring event only once.
             stats["kick_pass_tds"] = sum(
@@ -16405,6 +16447,8 @@ class ViperballEngine:
             stats["timeouts_used"] = len(team_tos)
             stats["timeouts_remaining"] = (self.state.home_timeouts if side == "home"
                                            else self.state.away_timeouts)
+            # Timeouts reset each half and OT period; remaining is for the last one.
+            stats["timeouts_remaining_period"] = "OT" if self.state.quarter > 4 else "2H"
             # Breakdown by category
             stats["timeouts_by_category"] = {}
             for t in team_tos:
@@ -16498,7 +16542,15 @@ class ViperballEngine:
             involved = pd.get("players", [])
             if not involved:
                 continue
-            side = pd.get("possession", "home")
+            side = pd.get("snap_possession") or pd.get("possession", "home")
+            def_side = "away" if side == "home" else "home"
+            defenders = pd.get("defenders") or []
+            for dl in defenders:
+                def_player = _player_lookup.get((def_side, dl))
+                if def_player:
+                    def_player.game_wpa -= wpa_val / len(defenders)
+                    def_player.game_vpa -= wpa_val / len(defenders)  # legacy alias
+                    def_player.game_plays_involved += 1
             # Last player in the list is the ball carrier / primary actor
             # Split WPA: primary gets 60%, others split 40% evenly
             primary_label = involved[-1]
@@ -16542,6 +16594,7 @@ class ViperballEngine:
                                p.game_st_tackles > 0 or p.game_tackles > 0 or
                                p.game_sacks > 0 or p.game_hurries > 0 or
                                p.game_kick_pass_ints > 0 or p.game_kick_passes_thrown > 0 or
+                               p.game_lateral_interceptions > 0 or
                                p.game_kick_pass_receptions > 0 or
                                p.game_blocks > 0 or p.game_pancakes > 0 or
                                p.game_plays_involved > 0 or p.game_offensive_snaps > 0 or
@@ -16619,6 +16672,9 @@ class ViperballEngine:
                         "offensive_snaps": p.game_offensive_snaps,
                         "defensive_snaps": p.game_defensive_snaps,
                         "kick_pass_ints": p.game_kick_pass_ints,
+                        "lateral_ints": p.game_lateral_interceptions,
+                        "def_ints": p.game_kick_pass_ints + p.game_lateral_interceptions,
+                        "int_return_tds": p.game_int_return_tds,
                         "wpa": round(p.game_wpa, 2),
                         "plays_involved": p.game_plays_involved,
                         "wpa_per_play": round(p.game_wpa / max(1, p.game_plays_involved), 3),
@@ -16910,7 +16966,8 @@ class ViperballEngine:
 
         laterals = [p for p in plays if p.laterals > 0]
         total_laterals = sum(p.laterals for p in laterals)
-        successful_laterals = sum(1 for p in laterals if not p.fumble)
+        successful_laterals = sum(1 for p in laterals if not p.fumble
+                                  and p.result not in ("lateral_intercepted", "int_return_td"))
 
         drop_kicks = [p for p in plays if p.play_type == "drop_kick" and p.result == "successful_kick"]
         # Accepted live-ball fouls can wipe out a kick, restoring player
@@ -17054,6 +17111,7 @@ class ViperballEngine:
             "formation": getattr(play, "formation", "") or "",
             "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,
+            "defenders": getattr(play, "defenders_involved", None) or [],
             "yards": int(round(play.yards_gained)) if play.yards_gained is not None else None,
             "result": play.result,
             "description": play.description,

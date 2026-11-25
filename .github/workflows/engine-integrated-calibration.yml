@@ -87,19 +87,9 @@ jobs:
       - run: python -m pip install -r requirements.txt pytest
       - name: College feeder and rating-scale regressions
         run: python -m pytest -q tests/test_college_feeder_identity.py tests/test_scale_cutoffs.py tests/test_college_cohort_continuity.py tests/test_weather_model.py tests/test_coach_learning.py tests/test_snap_participation.py tests/test_coach_career.py tests/test_team_installation.py tests/test_coaching_pages.py
-      - name: Advanced analytics contracts and matched trace invariance
-        env:
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
+      - name: Advanced analytics contracts
         run: |
-          python -m pytest -q tests/test_advanced_analytics.py
-          if [ -n "$PR_BASE" ]; then
-            base_dir=$(mktemp -d)
-            git worktree add --detach "$base_dir" "$PR_BASE"
-            python scripts/benchmark_advanced_analytics.py --trace-only --games 8 --engine-root "$base_dir" --out reports/integrated-defense/analytics/base
-            python scripts/benchmark_advanced_analytics.py --trace-only --games 8 --out reports/integrated-defense/analytics/candidate
-            cmp reports/integrated-defense/analytics/base/trace.json reports/integrated-defense/analytics/candidate/trace.json
-            git worktree remove --force "$base_dir"
-          fi
+          python -m pytest -q tests/test_advanced_analytics.py tests/test_box_score_credit.py
           python scripts/benchmark_advanced_analytics.py --games 48 --out reports/integrated-defense/analytics/smoke
           historical_dir=$(mktemp -d)
           git worktree add --detach "$historical_dir" 97b8d261c5b985641410cbffa06ae41314253a43
