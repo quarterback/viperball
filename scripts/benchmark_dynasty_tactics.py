@@ -345,6 +345,26 @@ def run(seasons, nteams, seed, out, *, national=False):
                   "weekly":weekly,"groups":{k:dict(v) for k,v in groups.items()},"packages":{k:dict(v) for k,v in packages.items()}}
             item["active_programs"] = len(active)
             item["retired_programs"] = sorted(retired)
+            # Descriptive rating and depth distributions on the actual new
+            # talent baseline; no target for scoring or roster strength.
+            from engine.player_card import player_to_card
+            ratings = defaultdict(list)
+            depth = Counter()
+            for name, team in season.teams.items():
+                positions = Counter(p.position for p in team.players)
+                for pos, count in positions.items():
+                    depth[pos] += count
+                for p in team.players:
+                    card = player_to_card(p, name)
+                    ratings[str(p.year)].append(card.overall)
+            item["roster_observations"] = {
+                "class_ratings": {k: {"n":len(v), "mean":average(v),
+                    "median":statistics.median(v), "min":min(v), "max":max(v)}
+                    for k,v in ratings.items()},
+                "position_counts":dict(depth),
+                "program_count":len(active),
+            }
+            print("ROSTER",year,json.dumps(item["roster_observations"],sort_keys=True),flush=True)
             report["years"].append(item)
             checkpoint()
             print("YEAR",year,"regular",item["regular_games"],"playoffs",item["playoff_games"],

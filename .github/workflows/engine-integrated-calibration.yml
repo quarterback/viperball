@@ -44,7 +44,7 @@ jobs:
           enabled=false
           if [ "$MANUAL" = "true" ]; then
             enabled=true
-          elif [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq scripts/benchmark_national_dynasty.py; then
+          elif [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Eq '^scripts/benchmark_(national_dynasty|dynasty_tactics)\.py$|^\.github/workflows/engine-integrated-calibration\.yml$'; then
             enabled=true
           fi
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
@@ -53,16 +53,17 @@ jobs:
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          RUN_NATIONAL: ${{ steps.national-scope.outputs.enabled }}
         run: |
           changed() {
             [ -n "$PR_BASE" ] && git diff --name-only "$PR_BASE" "$PR_HEAD" | grep -Fxq "$1"
           }
-          if changed scripts/benchmark_dynasty_tactics.py; then
+          if [ "$RUN_NATIONAL" = "true" ] || changed scripts/benchmark_dynasty_tactics.py; then
             failed=0
             for seed in 20261124 20261125 20261126; do
               python scripts/benchmark_dynasty_tactics.py --seasons 3 --teams 16 --seed "$seed" --out "reports/integrated-defense/dynasty-$seed" || failed=1
             done
-            if changed scripts/benchmark_rare_tactics.py; then
+            if [ "$RUN_NATIONAL" = "true" ] || changed scripts/benchmark_rare_tactics.py; then
               python scripts/benchmark_rare_tactics.py --games 48 --cap 120 --out reports/integrated-defense/rare || failed=1
             fi
             exit "$failed"
