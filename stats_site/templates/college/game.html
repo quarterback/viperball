@@ -44,7 +44,7 @@
 </div>
 <div style="text-align:right;margin:-8px 0 8px;">
   <button class="copy-boxscore-btn" onclick="copyBoxScore(this)">Copy Box Score</button>
-  {% if not oneoff %}<a class="action-link" href="/stats/college/{{ session_id }}/analytics?view=plays&week={{ week }}&match={{ game_idx }}">Explore game plays</a> · <a href="/stats/college/{{ session_id }}/analytics?view=drives&week={{ week }}&match={{ game_idx }}">Drives</a> · <a href="/stats/college/{{ session_id }}/analytics">Analytics portal</a>{% endif %}
+  {% if not oneoff %}<a class="action-link" href="/stats/college/{{ session_id }}/analytics?view=plays&group=raw&week={{ week }}&match={{ game_idx }}">Explore game plays</a> · <a href="/stats/college/{{ session_id }}/analytics?view=drives&group=raw&week={{ week }}&match={{ game_idx }}">Drives</a> · <a href="/stats/college/{{ session_id }}/analytics">Analytics portal</a>{% endif %}
 </div>
 
 {% if game.full_result %}
