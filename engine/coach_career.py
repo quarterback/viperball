@@ -195,7 +195,8 @@ def grow(card,evidence=None):
 
 def position_boost(staff,position):
     staff=staff or {}
-    role="dc" if position in ("Defensive Line","Keeper") else "oc"
+    from .coach_roles import position_role
+    role=POSITION_DISCIPLINE.get(position_role(position),"oc")
     card=staff.get(role)
     if card is None:
         return 0.
