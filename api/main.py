@@ -524,7 +524,7 @@ def _ensure_hs_pipeline(dynasty):
 
         prestige = getattr(dynasty, "team_prestige", {}) or {}
         team_names = list(prestige.keys())
-        class_size = max(300, (len(team_names) or 200) * 8)
+        class_size = max(300, (len(team_names) or 200) * 12)
         dynasty._hs_pipeline = HSRecruitingPipeline()
         dynasty._hs_pipeline.generate_initial_pipeline(
             base_seed=year, size_per_class=class_size,
@@ -2683,7 +2683,7 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         dynasty._hs_league = simulate_hs_season(dynasty._hs_league, rng=_rng)
 
         num_teams = len(teams) or 200
-        _class_size = max(300, num_teams * 8)
+        _class_size = max(300, num_teams * 12)
         _t_names = list(teams.keys())
         _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
         dynasty._hs_pipeline = HSRecruitingPipeline()
@@ -3275,7 +3275,7 @@ def dynasty_advance(session_id: str):
     # ── HS Recruiting Pipeline (run before recruit pool so graduates feed the pool) ──
     from engine.recruiting import HSRecruitingPipeline
     num_teams = len(season.teams) if hasattr(season, "teams") else 200
-    pool_size = max(300, num_teams * 8)
+    pool_size = max(300, num_teams * 12)
     _t_names = list(season.teams.keys()) if hasattr(season, "teams") else []
     _t_prestige = dynasty.team_prestige if hasattr(dynasty, "team_prestige") else None
     if dynasty._hs_pipeline is None:
@@ -3293,7 +3293,10 @@ def dynasty_advance(session_id: str):
         # Use pipeline graduates (12th graders) as the recruit pool
         recruit_pool = [g.recruit for g in graduates] if graduates else generate_recruit_class(year=year, size=pool_size, rng=random.Random(year))
 
-    recruit_board = RecruitingBoard(team_name=human_team, scholarships_available=8)
+    from engine.roster_continuity import COLLEGE_ROSTER_TARGET
+    continuing_count = sum(c.year != "Graduate" for c in offseason_player_cards.get(human_team, []))
+    recruit_board = RecruitingBoard(team_name=human_team,
+                                     scholarships_available=max(0, COLLEGE_ROSTER_TARGET-continuing_count))
 
     human_nil = dynasty._nil_programs.get(human_team)
     try:
@@ -4069,6 +4072,7 @@ def offseason_recruiting_resolve(session_id: str):
         player_cards = projected_rosters(offseason.get("player_cards", {}), portal)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    recruit_board.scholarships_available = max(0, COLLEGE_ROSTER_TARGET-len(player_cards.get(human_team, [])))
     team_rosters: Dict[str, list] = {}
     for tn, cards in player_cards.items():
         team_rosters[tn] = [{"position": getattr(c, "position", "")} for c in cards]
