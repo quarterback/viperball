@@ -57,8 +57,28 @@ def run(games=12, seed=20261124):
                 failures.append([n, side, "scoring incidence", buckets])
             points = sum(b["points"] for b in buckets)
             official = result["final_score"][side]["score"]
-            if points > official + .01 or points < 0:
-                failures.append([n, side, "offensive drive points exceed final",points,official])
+            recon = st.get("scoring_reconciliation")
+            if recon is None:
+                failures.append([n, side, "missing scoring reconciliation"])
+            else:
+                non_drive = recon["non_drive_by_method"]
+                profile = st["viperball_metrics"]["scoring_profile"]
+                if (points != recon["drive_points"]
+                        or sum(non_drive.values()) != recon["non_drive_points"]
+                        or points + recon["non_drive_points"] != official
+                        or recon["unreconciled_points"] != 0
+                        or not recon["score_consistent"]):
+                    failures.append([n, side, "drive/non-drive score mismatch", points, official, recon])
+                if non_drive["bell"] != profile["bells"] * .5 or non_drive["safety"] != profile["safeties"] * 2:
+                    failures.append([n, side, "bell/safety attribution mismatch", recon])
+                if sum(d["offensive_points"] for d in side_drives) != points:
+                    failures.append([n, side, "drive ledger total mismatch"])
+                ppd = st["viperball_metrics"]["ppd"]
+                if ppd != (round(points / len(side_drives), 2) if side_drives else 0):
+                    failures.append([n, side, "overall PPD mismatch", ppd])
+                counts["non_drive_points_x2"] += round(recon["non_drive_points"] * 2)
+            if points > official or points < 0:
+                failures.append([n, side, "offensive drive points exceed final", points, official])
             if any(b["count"] and abs(
                     b["points_per_drive"] - b["points"]/b["count"]) > .011 for b in buckets):
                 failures.append([n, side, "points per drive",buckets])
