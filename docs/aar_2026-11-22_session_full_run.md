@@ -122,6 +122,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     league. Fixed the FIV, heavy wind and fumble rule bugs and two more old scale leftovers.
     → `aar_2026-11-25_wea02_weather_model.md`
 
+29. **Merged the open PRs, second round** (November 25). #371 through #377 marked ready and
+    merged with no conflicts. → `aar_2026-11-25_merge_open_prs_round2.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
