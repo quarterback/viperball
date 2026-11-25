@@ -169,9 +169,9 @@ def run(seasons, nteams, seed, out, *, national=False):
         api.TEAMS_DIR=str(league_dir)
         conf={"Calibration East":names[:nteams//2],"Calibration West":names[nteams//2:]}
         human=names[0]
-        c=TestClient(api.app)
+        client=TestClient(api.app)
         def post(path, payload=None):
-            r=c.post(path,json=payload if payload is not None else {})
+            r=client.post(path,json=payload if payload is not None else {})
             if r.status_code>=400:
                 raise RuntimeError(f"{path}: {r.status_code} {r.text[:1200]}")
             return r.json()
