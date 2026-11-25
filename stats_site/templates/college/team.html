@@ -17,17 +17,11 @@
 {% endif %}
 <style>
 .championship-banners { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 11px; font-weight: bold; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+.banner { display:inline-flex; align-items:center; gap:8px; padding:4px 8px; font-size:12px; font-weight:500; border-radius:4px; background:var(--bg-alt); border:1px solid var(--border); color:var(--fg); }
 .banner .banner-count { font-size: 13px; }
-.banner .banner-years { font-size: 10px; font-weight: normal; opacity: 0.8; text-transform: none; letter-spacing: 0; }
-.banner-champion { background: linear-gradient(135deg, #78350f, #92400e); color: #fbbf24; border: 1px solid #fbbf24; }
-.banner-finalist { background: linear-gradient(135deg, #1e293b, #334155); color: #cbd5e1; border: 1px solid #94a3b8; }
-.banner-final_four { background: linear-gradient(135deg, #451a03, #78350f); color: #d97706; border: 1px solid #b45309; }
-.banner-sweet_16 { background: linear-gradient(135deg, #1c1917, #44403c); color: #a8a29e; border: 1px solid #78716c; }
-.banner-playoff { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
-.banner-conference { background: linear-gradient(135deg, #1e3a5f, #1e40af); color: #93c5fd; border: 1px solid #60a5fa; }
-.banner-bowl_win { background: #14532d; color: #4ade80; border: 1px solid #22c55e; }
-.banner-bowl_appearance { background: #1f2937; color: #6b7280; border: 1px solid #374151; }
+.banner .banner-years { font-size:12px; font-weight:400; color:var(--fg-dim); }
+.banner-champion { color:var(--yellow); border-color:var(--yellow); font-weight:600; }
+.banner-finalist, .banner-final_four, .banner-sweet_16, .banner-playoff, .banner-conference, .banner-bowl_win, .banner-bowl_appearance { color:var(--fg); }
 </style>
 
 <div class="page-header">
@@ -111,7 +105,7 @@
 </div>
 
 {% if record.dtw %}
-<h3 style="margin-bottom:8px; color:var(--accent);">Deserve to Win (DTW)</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Deserve to Win (DTW)</h3>
 <div class="grid-4" style="margin-bottom: 16px;">
   <div class="metric">
     <div class="label stat-tip" data-tip="Expected wins based on game quality metrics">Expected Wins</div>
@@ -151,7 +145,7 @@
 {% endif %}
 
 {% if record.conversion_by_zone %}
-<h3 style="margin-bottom:8px; color:var(--accent);">Late-Down Conversion by Field Zone</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Late-Down Conversion by Field Zone</h3>
 <table style="margin-bottom:16px;">
   <thead>
     <tr><th>Zone</th><th class="num">4D Att</th><th class="num">4D%</th><th class="num">5D Att</th><th class="num">5D%</th><th class="num">6D Att</th><th class="num">6D%</th></tr>
@@ -180,7 +174,7 @@
 <h2 style="margin-top:24px; margin-bottom:12px;">Season Stats <span style="color:var(--fg-dim); font-size:0.7em;">({{ team_stats.games_played }} games)</span></h2>
 
 {# ── Offense ── #}
-<h3 style="margin-bottom:8px; color:var(--accent);">Offense</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Offense</h3>
 <table style="margin-bottom:16px;">
   <thead>
     <tr><th>Category</th><th class="num">Total</th><th class="num">Per Game</th><th class="num">Detail</th></tr>
@@ -221,7 +215,7 @@
 
 {# ── Efficiency ── #}
 {% set bm = benchmarks if benchmarks is defined else {} %}
-<h3 style="margin-bottom:8px; color:var(--accent);">Efficiency</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Efficiency</h3>
 <div class="grid-4" style="margin-bottom:16px;">
   {% if team_stats.avg_viper_eff is not none %}
   {% set bve = bm.get('viper_efficiency') if bm else none %}
@@ -275,7 +269,7 @@
 </table>
 
 {# ── Turnovers ── #}
-<h3 style="margin-bottom:8px; color:var(--accent);">Turnovers & Discipline</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Turnovers & Discipline</h3>
 <div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Fumbles Lost</div>
@@ -296,7 +290,7 @@
 </div>
 
 {# ── Delta System ── #}
-<h3 style="margin-bottom:8px; color:var(--accent);">Delta System</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Delta System</h3>
 <div class="grid-4" style="margin-bottom:16px;">
   <div class="metric">
     <div class="label">Delta Yards</div>
@@ -317,7 +311,7 @@
 </div>
 
 {# ── Bonus Possessions ── #}
-<h3 style="margin-bottom:8px; color:var(--accent);">Bonus Possessions</h3>
+<h3 style="margin-bottom:8px; color:var(--fg-bright);">Bonus Possessions</h3>
 <div class="grid-4" style="margin-bottom:24px;">
   <div class="metric">
     <div class="label">Bonus Possessions</div>
@@ -342,15 +336,15 @@
 {% set completed_games = games|selectattr('completed')|list %}
 {% if completed_games|length >= 3 %}
 <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;padding:8px 10px;background:var(--bg-alt);border:1px solid var(--border);">
-  <div style="font-size:10px;color:var(--fg-dim);">
+  <div style="font-size:12px;color:var(--fg-dim);">
     Points Scored
     <span class="sparkline" data-width="100" data-height="20" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ g.home_score if is_h else g.away_score }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
   </div>
-  <div style="font-size:10px;color:var(--fg-dim);">
+  <div style="font-size:12px;color:var(--fg-dim);">
     Points Allowed
     <span class="sparkline" data-width="100" data-height="20" data-color="var(--red)" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ g.away_score if is_h else g.home_score }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
   </div>
-  <div style="font-size:10px;color:var(--fg-dim);">
+  <div style="font-size:12px;color:var(--fg-dim);">
     Margin
     <span class="sparkline" data-width="100" data-height="20" data-color="var(--yellow)" data-values="{% for g in completed_games %}{% set is_h = (g.home_team == team_name) %}{{ (g.home_score - g.away_score) if is_h else (g.away_score - g.home_score) }}{% if not loop.last %},{% endif %}{% endfor %}"></span>
   </div>
@@ -391,8 +385,8 @@
         {% set is_h = (g.home_team == team_name) %}
         {% set my_dtw = g.home_dtw if is_h else g.away_dtw %}
         {% set opp_dtw = g.away_dtw if is_h else g.home_dtw %}
-        <span class="{% if my_dtw > opp_dtw %}stat-good{% elif my_dtw < opp_dtw %}stat-bad{% endif %}" style="font-size:11px;">{{ "%.0f"|format(my_dtw * 100) }}%</span>
-        {% if g.get('dtw_upset') %}<span style="font-size:9px;color:var(--yellow);margin-left:2px;" title="DTW Upset">&#9888;</span>{% endif %}
+        <span class="{% if my_dtw > opp_dtw %}stat-good{% elif my_dtw < opp_dtw %}stat-bad{% endif %}" style="font-size:12px;">{{ "%.0f"|format(my_dtw * 100) }}%</span>
+        {% if g.get('dtw_upset') %}<span style="font-size:12px;color:var(--yellow);margin-left:2px;" title="DTW Upset">&#9888;</span>{% endif %}
       {% else %}&mdash;{% endif %}
     </td>
     <td>
@@ -400,7 +394,7 @@
       {% if g.get('is_playoff') %}<span class="tag" style="border-color:var(--yellow);color:var(--yellow)">PLAYOFF</span>{% endif %}
       {% if g.is_conference_game %}<span class="tag tag-conf">CONF</span>{% endif %}
       {% if g.is_rivalry_game %}<span class="tag tag-rivalry">RIV</span>{% endif %}
-      {% if g.get('is_overseas_classic') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">🌍 {{ g.get('neutral_site_location', 'INTL') }}</span>{% endif %}
+      {% if g.get('is_overseas_classic') %}<span class="tag" style="border-color:var(--cyan);color:var(--cyan)">{{ g.get('neutral_site_location', 'INTL') }}</span>{% endif %}
     </td>
   </tr>
   {% endfor %}
@@ -425,17 +419,17 @@
     <td>{% if c.face_src %}<img src="{{ c.face_src }}" alt="" style="width:20px;height:20px;image-rendering:pixelated;vertical-align:middle;margin-right:4px;">{% endif %}<a href="/stats/college/{{ session_id }}/coach/{{ team_name }}/{{ c.role }}">{{ c.name }}</a></td>
     <td class="num {% if c.overall >= 80 %}stat-elite{% elif c.overall >= 65 %}stat-good{% endif %}">{{ '%.0f'|format(c.overall) }}</td>
     <td class="num">{{ c.reputation }}</td>
-    <td style="font-size:11px;">{{ c.calls|join(", ") if c.calls else "—" }}{% if c.former_hc %} <span class="tag">Former HC</span>{% endif %}</td>
-    <td style="font-size:11px;">{{ c.classification_label }}</td>
-    <td style="font-size:11px;">{{ c.composure_label }}</td>
-    <td class="num" style="font-size:11px;">{{ c.career_wins }}-{{ c.career_losses }}</td>
+    <td style="font-size:12px;">{{ c.calls|join(", ") if c.calls else "—" }}{% if c.former_hc %} <span class="tag">Former HC</span>{% endif %}</td>
+    <td style="font-size:12px;">{{ c.classification_label }}</td>
+    <td style="font-size:12px;">{{ c.composure_label }}</td>
+    <td class="num" style="font-size:12px;">{{ c.career_wins }}-{{ c.career_losses }}</td>
     <td class="num">{{ '%.3f'|format(c.win_pct) }}</td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
 {% if coaching_staff[0].philosophy %}
-<div style="margin-top:6px;font-size:11px;color:var(--fg-dim);">
+<div style="margin-top:6px;font-size:12px;color:var(--fg-dim);">
   <strong>Philosophy:</strong> {{ coaching_staff[0].philosophy }}
   {% if coaching_staff[0].coaching_style %} &mdash; <em>{{ coaching_staff[0].coaching_style }}</em>{% endif %}
 </div>
@@ -481,7 +475,7 @@
 <style>
 .tac-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 32px; }
 .tac-grid h3 { margin: 4px 0 8px; }
-.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-dim); }
+.tac-grid h4 { margin: 18px 0 6px; font-size: 14px; text-transform:none; letter-spacing:0; color: var(--fg-dim); }
 .tac-bar { display: grid; grid-template-columns: 140px 1fr 44px; gap: 10px; align-items: center; font-size: 14px; margin: 4px 0; }
 .tac-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
 .tac-track span { display: block; height: 100%; background: var(--accent); }
@@ -534,19 +528,19 @@
 <h2>Academic Profile</h2>
 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
   <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Median GPA</div>
+    <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Median GPA</div>
     <div style="font-size:28px;font-weight:bold;color:{% if academics.median_gpa >= 3.5 %}var(--green){% elif academics.median_gpa >= 3.0 %}var(--fg-bright){% elif academics.median_gpa >= 2.5 %}var(--yellow){% else %}var(--red){% endif %};">{{ "%.2f"|format(academics.median_gpa) }}</div>
   </div>
   <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Median VAT</div>
+    <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Median VAT</div>
     <div style="font-size:28px;font-weight:bold;color:{% if academics.median_vat >= 1300 %}var(--green){% elif academics.median_vat >= 1050 %}var(--fg-bright){% elif academics.median_vat >= 900 %}var(--yellow){% else %}var(--red){% endif %};">{{ academics.median_vat }}</div>
   </div>
   <div style="background:var(--bg-alt);border:1px solid var(--border);padding:12px 20px;text-align:center;min-width:120px;">
-    <div style="font-size:9px;color:var(--fg-dim);text-transform:uppercase;letter-spacing:0.5px;">Academic Tier</div>
+    <div style="font-size:12px;color:var(--fg-dim);text-transform:none;letter-spacing:0;">Academic Tier</div>
     <div style="font-size:14px;font-weight:bold;color:var(--fg-bright);margin-top:6px;">{{ academics.academic_tier|replace('_', ' ')|title if academics.academic_tier else '—' }}</div>
   </div>
 </div>
-<div style="font-size:10px;color:var(--fg-dim);">
+<div style="font-size:12px;color:var(--fg-dim);">
   Academic profile affects recruiting — higher-tier schools can't offer recruits below their academic floor.
   VAT = Viperball Aptitude Test (equivalent to SAT).
 </div>
@@ -631,13 +625,13 @@
 <h2>Team Chemistry</h2>
 
 {% if tc.hc_archetype %}
-<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;">
+<div style="font-size:12px;color:var(--fg-dim);margin-bottom:8px;">
   HC mapping: <strong style="color:var(--fg-bright);">{{ tc.hc_classification }}</strong> &rarr;
   <span style="color:var(--accent);font-weight:bold;">{{ tc.hc_archetype }}</span> archetype
   &middot; sub-scores: msg {{ tc.hc_message }} &middot; std {{ tc.hc_standard }} &middot; grw {{ tc.hc_growth }}
 </div>
 {% else %}
-<div style="font-size:11px;color:var(--fg-dim);margin-bottom:8px;font-style:italic;">No HC archetype mapped &mdash; chemistry runs without archetype-mediated drag suppression.</div>
+<div style="font-size:12px;color:var(--fg-dim);margin-bottom:8px;font-style:italic;">No HC archetype mapped &mdash; chemistry runs without archetype-mediated drag suppression.</div>
 {% endif %}
 
 <table>
@@ -668,7 +662,7 @@
   <tr>
     <td><strong>{{ label }}</strong></td>
     <td class="num">{{ val }}</td>
-    <td><span style="color:{{ color }};font-weight:bold;">{{ tag }}</span> <span style="color:var(--fg-dim);font-size:11px;">&middot; {{ desc }}</span></td>
+    <td><span style="color:{{ color }};font-weight:bold;">{{ tag }}</span> <span style="color:var(--fg-dim);font-size:12px;">&middot; {{ desc }}</span></td>
     <td>
       <div style="background:var(--border);height:8px;width:120px;display:inline-block;vertical-align:middle">
         <div style="background:{{ color }};height:100%;width:{{ val }}%"></div>
@@ -679,14 +673,14 @@
   <tr>
     <td><strong>Franchise icons</strong></td>
     <td class="num" style="color:{% if tc.franchise_count > 0 %}var(--yellow){% else %}var(--fg-dim){% endif %};">{{ tc.franchise_count }}</td>
-    <td colspan="2" style="color:var(--fg-dim);font-size:11px;">long-tenured stars who stabilize the room</td>
+    <td colspan="2" style="color:var(--fg-dim);font-size:12px;">long-tenured stars who stabilize the room</td>
   </tr>
   </tbody>
 </table>
 
 <details style="margin:6px 0 14px;">
-  <summary style="cursor:pointer;color:var(--fg-dim);font-size:11px;">How to read this</summary>
-  <div style="font-size:11px;color:var(--fg-dim);margin-top:6px;line-height:1.5;">
+  <summary style="cursor:pointer;color:var(--fg-dim);font-size:12px;">How to read this</summary>
+  <div style="font-size:12px;color:var(--fg-dim);margin-top:6px;line-height:1.5;">
     <strong>Tone</strong> measures voice saturation. 1-2 strong voices is the peak; 3+ saturates unless the room has high glue or <em>big_stage</em> veterans who've proven they can play in stacked rooms.<br>
     <strong>Fabric</strong> is the cohesion of the room &mdash; high glue + high pull. Franchise icons get a 1.3x pull multiplier here.<br>
     <strong>Drag</strong> is drama load. Modulated by the HC's archetype: a players_coach broadly suppresses; a disciplinarian only handles drama when talent justifies it.<br>
@@ -701,12 +695,12 @@
 <h2>Roster ({{ players|length }})</h2>
 
 {# ── Sort Controls ── #}
-<div style="margin-bottom:6px;font-size:11px;">
+<div style="margin-bottom:6px;font-size:12px;">
   <strong style="color:var(--fg-dim)">Offense:</strong>
   {% set sorts = [('yards', 'Yards'), ('tds', 'TDs'), ('touches', 'Touches'), ('rush_carries', 'Carries'), ('rushing_tds', 'Rush TD'), ('ypc', 'YPC'), ('fumbles', 'Fumbles')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
 </div>
-<div style="margin-bottom:6px;font-size:11px;">
+<div style="margin-bottom:6px;font-size:12px;">
   <strong style="color:var(--fg-dim)">Lateral:</strong>
   {% set sorts = [('laterals', 'Thrown'), ('lateral_rec', 'Rec'), ('lateral_tds', 'TDs')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
@@ -716,7 +710,7 @@
   &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Kicking:</strong>
   <a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort=kick_pct" {% if sort == 'kick_pct' %}style="color:var(--accent);font-weight:bold"{% endif %}>Kick%</a>
 </div>
-<div style="margin-bottom:6px;font-size:11px;">
+<div style="margin-bottom:6px;font-size:12px;">
   <strong style="color:var(--fg-dim)">Defense:</strong>
   {% set sorts = [('tackles', 'Tackles'), ('tfl', 'TFL'), ('sacks', 'Sacks'), ('hurries', 'Hurries'), ('def_ints', 'INTs')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
@@ -724,7 +718,7 @@
   {% set sorts = [('kr_yds', 'KR Yds'), ('pr_yds', 'PR Yds'), ('st_tackles', 'ST Tkl')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
 </div>
-<div style="margin-bottom:12px;font-size:11px;">
+<div style="margin-bottom:12px;font-size:12px;">
   <strong style="color:var(--fg-dim)">Keeper:</strong>
   {% set sorts = [('bells', 'Bells'), ('deflections', 'Deflections')] %}
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
