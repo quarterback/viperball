@@ -114,3 +114,37 @@ def test_school_fit_changes_equal_quality_cpu_recruit_rankings():
     board, _ = auto_recruit_team("A", [r, prospect("five_star", {"awareness", "agility", "hands"}, 5)],
         80, "midwest", rng=NoNoise(), style_config={"offense_style":"shock_and_awe"})
     assert board.offered[0] == "five_star"
+
+
+def test_cpu_schools_are_stable_except_at_real_coaching_transitions():
+    from engine.coach_school_continuity import plan_schools
+
+    old = card("head_coach")
+    incoming = card("head_coach")
+    # Fixture must represent a distinct coach with a valid owned profile.
+    incoming.coach_id = "new-head-coach"
+    incoming.tactical_profile["coach_id"] = incoming.coach_id
+    incoming.tactical_profile["identity"]["offense_interpretation"] = "vertical_attack"
+    incoming.career_development["management"]["specialty"] = "oc"
+    config = {"offense_style": "ground_pound", "defense_style": "fortress", "st_scheme": "aces"}
+    previous = {"A": config, "Human": config}
+    catalogs = ({"ground_pound": {}, "shock_and_awe": {}}, {"fortress": {}})
+
+    same = plan_schools(previous, {"A": {"head_coach": old}, "Human": {"head_coach": old}},
+                        {"A": old.coach_id}, "Human", *catalogs)
+    assert same == {"A": config}
+    assert same["A"] is not config
+
+    changed = plan_schools(previous, {"A": {"head_coach": incoming}},
+                           {"A": old.coach_id}, "Human", *catalogs)
+    assert changed["A"] == {**config, "offense_style": "shock_and_awe"}
+    assert previous["A"] == config
+
+    incoming.coaching_tree.append({"coach_id": old.coach_id, "team_name": "A",
+                                   "year_start": 2024, "year_end": 2026})
+    internal = plan_schools(previous, {"A": {"head_coach": incoming}},
+                            {"A": old.coach_id}, "Human", *catalogs)
+    assert internal["A"] == config
+    retired_style = plan_schools(previous, {"A": {"head_coach": old}},
+                                 {"A": old.coach_id}, "Human", {}, catalogs[1])
+    assert "offense_style" not in retired_style["A"]
