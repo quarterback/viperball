@@ -259,17 +259,6 @@ class BoxScoreGenerator:
             if away_muffs or home_muffs:
                 lines.append(f"| Muffs | {away_muffs} | {home_muffs} |")
 
-        # Penalties
-        away_pen = self.away_stats.get('penalties', 0)
-        home_pen = self.home_stats.get('penalties', 0)
-        away_pen_dec = self.away_stats.get('penalties_declined', 0)
-        home_pen_dec = self.home_stats.get('penalties_declined', 0)
-        if away_pen or home_pen or away_pen_dec or home_pen_dec:
-            lines.append(f"| **--- PENALTIES ---** | | |")
-            lines.append(f"| Penalties | {away_pen} for {self.away_stats.get('penalty_yards', 0)} yds | {home_pen} for {self.home_stats.get('penalty_yards', 0)} yds |")
-            if away_pen_dec or home_pen_dec:
-                lines.append(f"| Penalties Declined | {away_pen_dec} | {home_pen_dec} |")
-
         # Down Conversions
         away_dc = self.away_stats.get('down_conversions', {})
         home_dc = self.home_stats.get('down_conversions', {})
@@ -300,6 +289,9 @@ class BoxScoreGenerator:
         lines.append("")
         lines.append("---")
         lines.append("")
+
+        # Penalty records are separate from scoring and turnover totals.
+        lines.extend(self._discipline_lines(away_name, home_name))
 
         # ══════════════════════════════════════════════════════════
         # INDIVIDUAL LEADERS
@@ -559,6 +551,65 @@ class BoxScoreGenerator:
         lines.append(f"*Collegiate Viperball League (CVL) Official Box Score — {away_name} at {home_name}*")
 
         return "\n".join(lines)
+
+    def _discipline_lines(self, away_name, home_name):
+        """Render official discipline data without inferring from descriptions."""
+        a, h = self.away_stats, self.home_stats
+        available = "player_discipline" in self.game_data and "ejections" in self.game_data
+        if not available and "penalties" not in a and "penalties" not in h:
+            return []
+        def cell(value):
+            return str(value if value is not None else "—").replace("|", "\\|").replace("\n", " ")
+        lines = ["## PENALTIES & DISCIPLINE", "",
+                 f"| {cell(away_name)} | Statistic | {cell(home_name)} |",
+                 "|---:|---|---:|"]
+        rows = [("penalties", "Accepted penalties"), ("penalty_yards", "Penalty yards"),
+                ("penalties_declined", "Declined penalties")]
+        if available:
+            rows += [("unsportsmanlike_fouls", "Qualifying unsportsmanlike fouls"),
+                     ("ejections", "Ejections")]
+        for key, label in rows:
+            lines.append(f"| {cell(a.get(key))} | {label} | {cell(h.get(key))} |")
+        lines.append("")
+        if not available:
+            lines += ["*Player discipline and ejection records are unavailable for this game.*", ""]
+            return lines
+        events = self.game_data.get("ejections") or []
+        if events:
+            lines += ["### Ejections", "",
+                      "| Period / time | Team | Player | Foul / reason | Yardage ruling | Replacement |",
+                      "|---|---|---|---|---|---|"]
+            for e in events:
+                q = e["quarter"]
+                period = f"OT{q - 4}" if q > 4 else f"Q{q}"
+                reason = e["foul"] if e["reason"] == e["foul"] else f"{e['foul']} — {e['reason']}"
+                values = [f"{period} {_fmt_time(e['time_remaining'])}",
+                          away_name if e["side"] == "away" else home_name,
+                          f"{e['tag']} {e['player']}", reason,
+                          "Declined" if e["declined"] else "Accepted", e.get("substitute") or "Not recorded"]
+                lines.append("| " + " | ".join(map(cell, values)) + " |")
+        else:
+            lines.append("No ejections.")
+        lines.append("")
+        at, ht = a.get("penalties_by_type") or {}, h.get("penalties_by_type") or {}
+        if at or ht:
+            lines += ["### Accepted penalties by type", "", "| Away | Foul | Home |", "|---:|---|---:|"]
+            for kind in sorted(set(at) | set(ht)):
+                lines.append(f"| {at.get(kind, 0)} | {cell(kind)} | {ht.get(kind, 0)} |")
+            lines.append("")
+        pd = self.game_data.get("player_discipline") or {}
+        if pd.get("away") or pd.get("home"):
+            lines += ["### Player disciplinary record", "",
+                      "| Team | Player | Flags | Accepted | Unsportsmanlike | Status |",
+                      "|---|---|---:|---:|---:|---|"]
+            for side, team in (("away", away_name), ("home", home_name)):
+                for d in sorted(pd.get(side, []), key=lambda row: -row["flags"]):
+                    status = "Ejected" if d["ejected"] else "One conduct foul" if d["unsportsmanlike"] == 1 else "—"
+                    values = [team, f"{d['tag']} {d['player']}", d["flags"], d["accepted"], d["unsportsmanlike"], status]
+                    lines.append("| " + " | ".join(map(cell, values)) + " |")
+            lines.append("")
+        lines += ["*Counts are charged to the offending team. Ejections stand even when penalty yardage is declined. Player records exclude team-only or unattributed flags.*", "", "---", ""]
+        return lines
 
     def save_to_file(self, filepath: str):
         """Save box score to markdown file"""
