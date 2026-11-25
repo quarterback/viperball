@@ -86,9 +86,11 @@ def build_events(game, game_id):
         row={"id":f"{game_id}:p{i}","sequence":i,"play_number":p.get("play_number"),
              "drive_id":f"{game_id}:d{owners[i]}" if i in owners else None,
              "quarter":p.get("quarter"),"clock":before.get("clock") if before else p.get("time_remaining"),
-             "before_state":before,"after_state":None,
+             "before_state":before,"resolution_state":p.get("analytics_resolution"),"after_state":None,
              "score_before":dict(prev),"score_after":after,
              "snap_possession":before.get("possession") if before else p.get("snap_possession"),
+             "possession_after_resolution":(p.get("analytics_resolution") or {}).get("possession"),
+             "next_possession":None,"bonus_source_event_id":None,
              "restart":d.get("possession_origin") or p.get("possession_origin"),
              "delta_cost":d.get("delta_cost"),"bonus_drive":d.get("bonus_drive"),
              "result":p.get("result"),"play_type":p.get("play_type"),
@@ -104,8 +106,32 @@ def build_events(game, game_id):
         before=row["before_state"]
         if before and next_state and half(before["quarter"])==half(next_state["quarter"]):
             row["after_state"]=next_state
+            row["next_possession"]=next_state["possession"]
         if before:
             next_state=before
+    # Attribute a pending bonus only to a logged interception followed by
+    # the actual recipient in the next recorded state. Clear at half/end
+    # or cancellation. Marker awards carry the confirmed source when known.
+    source=None
+    for row in rows:
+        a,b=row["before_state"],row["after_state"]
+        if row["marker"]:
+            if row["play_type"]=="bonus_possession":
+                row["bonus_source_event_id"]=source
+                source=None
+            elif row["play_type"]=="overtime":
+                source=None
+            continue
+        if a and a.get("bonus_recipient") not in SIDES and not a.get("bonus_active"):
+            source=None
+        if a and (a.get("bonus_recipient") in SIDES or a.get("bonus_active")):
+            row["bonus_source_event_id"]=source
+        if (a and b and row["result"] in ("kick_pass_intercepted","lateral_intercepted","int_return_td")
+                and not row["nullified"] and a.get("bonus_recipient") not in SIDES
+                and not a.get("bonus_active") and b.get("bonus_recipient") in SIDES):
+            source=row["id"]
+        if b is None or (b.get("bonus_recipient") not in SIDES and not b.get("bonus_active")):
+            source=None
     totals={s:sum(e["points"] for row in rows for e in row["score_events"] if e["team"]==s) for s in SIDES}
     score_ok=all(ledger[s]["score_consistent"] and totals[s]==final[s] for s in SIDES)
     return {"version":VERSION,"game_id":game_id,"available":True,"score_consistent":score_ok,
