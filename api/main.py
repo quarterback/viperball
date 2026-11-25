@@ -3473,6 +3473,10 @@ def dynasty_coaching_history(session_id: str):
             "teams_with_changes": len(changes),
             "marketplace_summary": data.get("portal_summary",summary),
             "portal_hires": data.get("portal_hires",[]),
+            "position_staff_additions": data.get("position_staff_additions",[]),
+            "position_evaluations": data.get("position_evaluations",{}),
+            "alumni_candidates": len(data.get("alumni_candidates",[])),
+            "alumni_available": data.get("alumni_available",[]),
             "retirements": [{k:v for k,v in row.items() if k!="card"} | {"name":row.get("card",{}).get("first_name","")+" "+row.get("card",{}).get("last_name","")} for row in data.get("retirements",[])],
         }
 
