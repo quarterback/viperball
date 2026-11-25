@@ -481,10 +481,13 @@ def run(seasons, nteams, seed, out, *, national=False):
             portal=post(base+"/offseason/portal/resolve")
             # The designated human program uses the same existing AI recruiting
             # helper for its board; no forced signings or manual hires.
+            from engine.roster_continuity import projected_rosters, COLLEGE_ROSTER_TARGET
+            human_roster = projected_rosters(off["player_cards"], off["portal"])[human]
             board,offers=auto_recruit_team(human,off["recruit_pool"],dyn.team_prestige.get(human,50),
-                dyn._estimate_team_regions().get(human,"midwest"),scholarships=8,
+                dyn._estimate_team_regions().get(human,"midwest"),
+                scholarships=max(0,COLLEGE_ROSTER_TARGET-len(human_roster)),
                 nil_budget=nil.recruiting_pool,rng=random.Random(seed+year),
-                current_roster=[{"position":p.position} for p in off["player_cards"].get(human,[])])
+                current_roster=[{"position":p.position} for p in human_roster])
             off["recruit_board"],off["nil_offers"]=board,offers
             recruiting=post(base+"/offseason/recruiting/resolve")
             signed_ids = {r.recruit_id for recruits in (dyn._pending_signed_recruits or {}).values()
