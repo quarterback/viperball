@@ -101,6 +101,12 @@ jobs:
             git worktree remove --force "$base_dir"
           fi
           python scripts/benchmark_advanced_analytics.py --games 48 --out reports/integrated-defense/analytics/smoke
+          historical_dir=$(mktemp -d)
+          git worktree add --detach "$historical_dir" 97b8d261c5b985641410cbffa06ae41314253a43
+          python scripts/benchmark_advanced_analytics.py --raw-baseline --games 24 --engine-root "$historical_dir" --out reports/integrated-defense/analytics/pr360
+          python scripts/benchmark_advanced_analytics.py --raw-baseline --games 24 --out reports/integrated-defense/analytics/current
+          python scripts/benchmark_advanced_analytics.py --compare-baselines reports/integrated-defense/analytics/pr360/raw_baseline.json reports/integrated-defense/analytics/current/raw_baseline.json --out reports/integrated-defense/analytics
+          git worktree remove --force "$historical_dir"
       - name: Combined engine smoke and calibration
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
