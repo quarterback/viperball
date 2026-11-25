@@ -39,8 +39,8 @@
 .vba-heat-cell { min-height:52px; padding:5px; text-align:center; border:1px solid var(--border); background:var(--bg-alt); }
 .vba-heat-cell strong { display:block; font-size:15px; }
 .vba-heat-cell small { color:var(--fg-dim); }
-.vba-heat-cell.pos { border-bottom:3px solid var(--green); }
-.vba-heat-cell.neg { border-bottom:3px solid var(--red); }
+.vba-heat-cell.pos { border-bottom:3px solid var(--green); background:color-mix(in srgb,var(--green) var(--intensity,10%),var(--bg-alt)); }
+.vba-heat-cell.neg { border-bottom:3px solid var(--red); background:color-mix(in srgb,var(--red) var(--intensity,10%),var(--bg-alt)); }
 .vba-heat-row { display:flex; align-items:center; gap:8px; margin:3px 0; }
 .vba-heat-row>.vba-heat { flex:1; }
 .vba-heat-row>.vba-axis { width:44px; flex:none; font-size:11px; }
@@ -146,10 +146,10 @@
 {% endif %}
 {% if view=="scoring" %}<p class="vba-muted">Score totals use completed records; scoring channels are limited to audited games. Unavailable attribution is not a zero.</p>{% endif %}
 {% if view=="players" %}<p class="vba-muted">Whole-season player totals, with at least five touches or ten plays involved. Game-situation filters are available in Play finder.</p>{% endif %}
-{% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability.</p>{% endif %}
+{% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability. Research xW is a distinct retrospective alignment model, fitted on separate earlier games and evaluated on later games only. {% if training.get("dtw_train_games",0)>=30 %}Candidate training sample: {{ training.dtw_train_games }} games.{% else %}Insufficient disjoint training support for candidate estimates.{% endif %}</p>{% endif %}
 {% if view=="compare" %}
 <h2 class="vba-section">Team percentile comparison</h2>
-{% if compare_rows and compare_rows[0].values is defined and compare %}<p class="vba-muted">Peer set uses the selected conference, weeks and game scope. Higher percentile is better. Minimum three peers.</p>
+{% if compare_rows and compare_rows[0]['values'] and compare %}<p class="vba-muted">Peer set uses the selected conference, weeks and game scope. Higher percentile is better. Minimum three peers.</p>
 <div class="vba-table"><table><thead><tr><th>Metric</th><th>Peers</th>{% for v in compare_rows[0]['values'] %}<th>{{ v.team }}</th>{% endfor %}</tr></thead><tbody>
 {% for metric in compare_rows %}<tr><th>{{ metric.metric }}</th><td>{{ metric.peers }}</td>{% for v in metric['values'] %}<td>{% if v.value is not none %}{{ v.value }}{% else %}—{% endif %}{% if v.percentile is not none %}<div class="vba-scale" role="img" aria-label="{{ v.percentile }}th percentile"><span style="width:{{ v.percentile }}%"></span></div><small>{{ v.percentile }} pctile</small>{% endif %}</td>{% endfor %}</tr>{% endfor %}
 </tbody></table></div>{% else %}<p class="vba-muted">Choose teams above to compare their measured performance.</p>{% endif %}
@@ -159,7 +159,7 @@
 <p class="vba-muted">Points from the possession side's perspective. Cells require at least 10 matching observations; n is the number represented. Each cell links to that split.</p>
 <div class="vba-heat-wrap">
 <div class="vba-heat-row"><span class="vba-axis">Down</span><div class="vba-heat">{% for z in zones %}<div class="vba-heat-cell">{{ z }}</div>{% endfor %}</div></div>
-{% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}"><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
+{% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}" {% if cell.value is not none %}style="--intensity:{{ [35,5+cell.value|abs*6]|min }}%"{% endif %}><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
 </div>
 {% endif %}
 {% if cols %}
@@ -177,7 +177,7 @@
 {% elif key=="name" and view=="players" %}<a href="/stats/college/{{ session_id }}/player/{{ quote(r.team,safe='') }}/{{ quote(val,safe='') }}">{{ val }}</a>
 {% elif key=="week" and 'idx' in r %}<a href="/stats/college/{{ session_id }}/game/{{ r.week }}/{{ r.idx }}">W{{ val }}</a>
 {% elif key in ("action","result","bucket","origin") %}{{ val|string|replace('_',' ')|title }}
-{% elif val is number %}{{ "%.3f"|format(val)|trim('0')|trim('.') if val is float else val }}
+{% elif val is number %}{{ "%.3f"|format(val) if val is float else val }}
 {% else %}{{ val }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
 {% if not rows %}<p class="vba-note">No matching records or supported estimates. Simulate more games, broaden your filters, or check data coverage in the glossary.</p>{% endif %}
 <div class="vba-pager">{% if page>1 %}<a class="vba-btn" href="{{ url(page=page-1) }}">Previous</a>{% endif %}<span>Page {{ page }} of {{ last }}</span>{% if page<last %}<a class="vba-btn" href="{{ url(page=page+1) }}">Next</a>{% endif %}</div>
