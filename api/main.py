@@ -4050,6 +4050,7 @@ def offseason_recruiting_resolve(session_id: str):
             nil_budget=nil_budget,
             rng=rng,
             current_roster=team_rosters.get(team_name),
+            coaching_staff=(dynasty._coaching_staffs or {}).get(team_name),
         )
         boards[team_name] = board
         all_nil[team_name] = nil
