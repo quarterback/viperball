@@ -42,6 +42,10 @@ def staff(oc, hc=None, dc=None):
 def fresh(oc, **kw):
     recs = {}
     s = staff(oc, **kw)
+    # The legacy installation tests isolate coordinator/lineage effects.
+    # Leadership continuity is tested independently through the same API.
+    from engine.coach_career import active_management
+    active_management(s["head_coach"])["continuity"] = 0.0
     rec = ti.sync_installation(recs, "Team", s, "boot_raid", "lockdown", STATS, 2026)
     return recs, rec, s
 
@@ -275,3 +279,21 @@ def test_engine_full_installation_matches_no_record_and_packages_show_up():
             assert call["package_id"] in call["eligible"]
             assert call["family_matched"] == call["matches"].get("family", False)
     assert pk["coach_tactics"]["home"]["installation"]["execution_factor"] == 1.0
+
+
+@pytest.mark.parametrize("continuity,expected", [(0.0,0.300),(0.5,0.345),(1.0,0.390)])
+def test_leadership_continuity_changes_actual_installation(continuity,expected):
+    from engine.coach_career import active_management
+    recs, rec, s = fresh(card("oc-a","oc",archetype="run_to_kick"))
+    active_management(s["head_coach"])["continuity"] = continuity
+    s["oc"] = card("oc-b","oc",archetype="vertical_attack")
+    ti.sync_installation(recs,"Team",s,"boot_raid","lockdown",STATS,2027)
+    unit = rec["offense"]
+    assert unit["coach_id"] == "oc-b"
+    assert unit["familiarity"] == pytest.approx(expected,abs=.001)
+    assert unit["family_familiarity"] == ti.ESTABLISHED_FAMILIARITY
+    assert unit["vestigial"][0]["coach_id"] == "oc-a"
+    assert unit["vestigial"][0]["weight"] == round(ti.ESTABLISHED_FAMILIARITY*ti.VESTIGE_SHARE,3)
+    assert any(e["event"]=="offense_coordinator_change" and e["start_familiarity"]==pytest.approx(expected,abs=.001) for e in rec["history"])
+    ti.record_game(rec)
+    assert unit["familiarity"] == pytest.approx(expected+ti.GAME_GROWTH,abs=.001)
