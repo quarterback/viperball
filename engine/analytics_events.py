@@ -92,7 +92,9 @@ def build_events(game, game_id):
              "possession_after_resolution":(p.get("analytics_resolution") or {}).get("possession"),
              "next_possession":None,"bonus_source_event_id":None,
              "restart":d.get("possession_origin") or p.get("possession_origin"),
-             "delta_cost":d.get("delta_cost"),"bonus_drive":d.get("bonus_drive"),
+             "delta_cost":d.get("delta_cost"),
+             "delta_bucket":("penalty_kill" if d.get("delta_cost",0)>0 else "power_play" if d.get("delta_cost",0)<0 else "neutral") if d else None,
+             "bonus_drive":d.get("bonus_drive"),
              "result":p.get("result"),"play_type":p.get("play_type"),
              "penalty":p.get("penalty"),"nullified":nullified,"marker":marker,
              "state_score_matches":not before or all(before.get(s+"_score")==prev[s] for s in SIDES),
@@ -118,7 +120,6 @@ def build_events(game, game_id):
         if row["marker"]:
             if row["play_type"]=="bonus_possession":
                 row["bonus_source_event_id"]=source
-                source=None
             elif row["play_type"]=="overtime":
                 source=None
             continue
