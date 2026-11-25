@@ -994,8 +994,10 @@ class Dynasty:
                         sub_fx = get_sub_archetype_effects(hc)
                         team_dev_boost *= sub_fx.get("development_bonus_multiplier", 1.0)
                 from engine.coach_career import position_boost
+                from engine.position_staff import instruction
                 report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost,
-                    position_boosts={p.position:position_boost(unit_staff,p.position) for p in cards})
+                    position_boosts={p.position:position_boost(unit_staff,p.position) for p in cards},
+                    position_instructions={p.position:instruction(unit_staff,p.position) for p in cards})
                 for ev in report.notable_events:
                     dev_events.append({
                         "team": team_name,
@@ -1346,6 +1348,13 @@ class Dynasty:
                         "year":year,"age":card.age,"card":card.to_dict()})
                     coaching_portal.add_vacancy(team_name,role)
         retired_ids = {row["coach_id"] for row in retirements}
+        from engine.position_staff import alumni_candidates, available_alumni, ensure_position_staff, personnel_report
+        from engine.coaching_portal import CoachingPortalEntry
+        alumni = alumni_candidates(player_cards,year,self.coaching_history)
+        alumni_pool = available_alumni(self.coaching_history,year,self._coaching_staffs)
+        for candidate in alumni_pool:
+            coaching_portal.add_entry(CoachingPortalEntry(coach=candidate,origin_team="",
+                reason="alumni_entry",year_entered=year,seeking_roles=[candidate.role]))
         # Run the coaching portal (NRMP-style matching)
         populate_coaching_portal(
             coaching_portal,
@@ -1369,6 +1378,7 @@ class Dynasty:
         )
 
         self._coaching_staffs.update(active_staffs)
+        new_positions = ensure_position_staff(self._coaching_staffs,self.team_prestige,year,active_staffs)
         self.coaching_history[year] = {
             "changes": coaching_changes,
             "portal_summary": coaching_portal.get_summary(),
@@ -1377,6 +1387,11 @@ class Dynasty:
             "tactical_learning": tactical_learning,
             "career_development": career_events,
             "retirements": retirements,
+            "alumni_candidates": alumni,
+            "alumni_available": [c.coach_id for c in alumni_pool],
+            "position_staff_additions": new_positions,
+            "position_evaluations": {team:personnel_report(staff,player_cards.get(team,[]))
+                                     for team,staff in active_staffs.items()},
         }
         result["coaching"] = self.coaching_history[year]
         return result["coaching"]
@@ -1590,7 +1605,8 @@ class Dynasty:
             rec = sr.season_records.get(prev_year, {"wins": 5, "losses": 5})
             team_records[team_name] = (rec.get("wins", 5), rec.get("losses", 5))
 
-        coaching_retention = {}
+        from engine.position_staff import retention_bonus
+        coaching_retention = {tn:retention_bonus(staff) for tn,staff in self._coaching_staffs.items()}
         for tn, staff in self._coaching_staffs.items():
             hc = staff.get("head_coach")
             if hc and hasattr(hc, 'classification') and hc.classification == "players_coach":
@@ -1601,7 +1617,7 @@ class Dynasty:
                 sub_fx = get_sub_archetype_effects(hc)
                 retention *= sub_fx.get("retention_bonus_multiplier", 1.0)
                 retention += sub_fx.get("portal_suppression_bonus", 0.0)
-                coaching_retention[tn] = retention
+                coaching_retention[tn] += retention
 
         portal = TransferPortal(year=year)
         populate_portal(portal, player_cards, team_records, rng=rng,
