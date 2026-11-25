@@ -9,6 +9,7 @@ on:
       - data/playbooks/packages.json
       - scripts/benchmark_defensive_packages.py
       - scripts/benchmark_rare_tactics.py
+      - scripts/benchmark_offensive_packages.py
       - scripts/benchmark_dynasty_tactics.py
       - scripts/benchmark_national_dynasty.py
       - engine/db.py
@@ -115,3 +116,22 @@ jobs:
         with:
           name: national-dynasty-${{ matrix.seed }}
           path: reports/national-dynasty/
+
+  offensive-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONHASHSEED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Paired offensive package policy study
+        run: python scripts/benchmark_offensive_packages.py --seeds 2 --out reports/offensive-calibration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offensive-calibration
+          path: reports/offensive-calibration/
