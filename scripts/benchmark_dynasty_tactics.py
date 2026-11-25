@@ -34,6 +34,23 @@ def snapshot(teams):
 def staff_ids(dyn):
     return {t: {role:c.coach_id for role,c in s.items()} for t,s in dyn._coaching_staffs.items()}
 
+def verify_staffs(dyn, active):
+    from engine.coaching import ROLES
+    owners = defaultdict(list)
+    for team in sorted(active):
+        staff = dyn._coaching_staffs.get(team, {})
+        if set(staff) != set(ROLES):
+            raise RuntimeError(f"Incomplete staff at {team}: {sorted(staff)}")
+        for role, card in staff.items():
+            if card.team_name != team or card.role != role:
+                raise RuntimeError(f"Coach employment metadata mismatch: {team}/{role}/{card.coach_id}")
+            owners[card.coach_id].append((team, role))
+    duplicates = {cid: slots for cid, slots in owners.items() if len(slots) > 1}
+    if duplicates:
+        raise RuntimeError("Duplicate active coach employment: " + json.dumps(duplicates))
+    return {c.coach_id: c for team in active for c in dyn._coaching_staffs[team].values()}
+
+
 def add_play(bucket, play):
     bucket["snaps"] += 1
     y = play.get("yards") or 0
@@ -152,9 +169,9 @@ def run(seasons, nteams, seed, out, *, national=False):
         api.TEAMS_DIR=str(league_dir)
         conf={"Calibration East":names[:nteams//2],"Calibration West":names[nteams//2:]}
         human=names[0]
-        c=TestClient(api.app)
+        client=TestClient(api.app)
         def post(path, payload=None):
-            r=c.post(path,json=payload if payload is not None else {})
+            r=client.post(path,json=payload if payload is not None else {})
             if r.status_code>=400:
                 raise RuntimeError(f"{path}: {r.status_code} {r.text[:1200]}")
             return r.json()
@@ -269,6 +286,7 @@ def run(seasons, nteams, seed, out, *, national=False):
                             differences[t]={"missing":list((want-got).items()),"extra":list((got-want).items())}
                     raise RuntimeError("Reloaded next-season roster differs from finalized roster: "
                                        +json.dumps(differences,sort_keys=True))
+            verify_staffs(dyn, active)
             staff=staff_ids(dyn)
             changes={t for t in names if prev_staff and staff[t].get("dc")!=prev_staff[t].get("dc")}
             groups,packages=defaultdict(Counter),defaultdict(Counter)
@@ -395,7 +413,25 @@ def run(seasons, nteams, seed, out, *, national=False):
             if index+1==seasons:
                 break
             pre=deepcopy(dyn._team_installations)
+            from engine.coach_tactics import ensure_coach_tactical_profile
+            before_coaches = {cid: (c.team_name, c.age, c.seasons_coached, c.career_wins, c.career_losses,
+                                   deepcopy(ensure_coach_tactical_profile(c)))
+                              for cid,c in verify_staffs(dyn, active).items()}
+            played_records = {t: (rec.wins, rec.losses) for t,rec in season.standings.items()}
             adv=post(base+"/dynasty/advance")
+            after_coaches = verify_staffs(dyn, active)
+            retained_coaches = set(before_coaches) & set(after_coaches)
+            for cid in retained_coaches:
+                old_team, age, seasons_coached, wins, losses, profile = before_coaches[cid]
+                c = after_coaches[cid]
+                w,l = played_records[old_team]
+                if (c.age, c.seasons_coached, c.career_wins, c.career_losses) != (age+1,seasons_coached+1,wins+w,losses+l):
+                    raise RuntimeError(f"Coach season credit mismatch: {cid}")
+                if ensure_coach_tactical_profile(c) != profile:
+                    raise RuntimeError(f"Coach signature changed during employment transition: {cid}")
+            coach_events = dyn.coaching_history[year+1].get("development", [])
+            if len(coach_events) != len(before_coaches) or len({e["coach_id"] for e in coach_events}) != len(before_coaches):
+                raise RuntimeError("Coaching development ledger does not cover each prior active coach once")
             off=sess["offseason"]
             nil=off["nil_program"]
             budget=nil.annual_budget
@@ -412,6 +448,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             post(base+"/offseason/complete")
             expected=deepcopy(dyn._team_installations)
             expected_staff=staff_ids(dyn)
+            expected_coach_cards = {t:{role:deepcopy(c.to_dict()) for role,c in staff.items()}
+                                    for t,staff in dyn._coaching_staffs.items()}
             expected_pipeline=dyn._hs_pipeline.save_state() if dyn._hs_pipeline else None
             expected_dispersal=list(dyn._pending_retired_dispersal)
             if expected_dispersal:
@@ -424,6 +462,8 @@ def run(seasons, nteams, seed, out, *, national=False):
             loaded=db.load_dynasty(save_key=sid)
             if loaded is None or loaded._team_installations!=expected or staff_ids(loaded)!=expected_staff or loaded._next_season_rosters!=saved_rosters:
                 raise RuntimeError("Application DB roundtrip lost installation, staff or roster")
+            if {t:{role:c.to_dict() for role,c in staff.items()} for t,staff in loaded._coaching_staffs.items()} != expected_coach_cards:
+                raise RuntimeError("Application DB roundtrip lost coaching career or tactical profile")
             loaded_pipeline=loaded._hs_pipeline.save_state() if loaded._hs_pipeline else None
             if loaded._pending_retired_dispersal != expected_dispersal or set(loaded.retired_programs) != retired:
                 raise RuntimeError("Application DB roundtrip lost program retirement state")
@@ -432,6 +472,10 @@ def run(seasons, nteams, seed, out, *, national=False):
             # Reload into the live session via the actual endpoint and continue.
             post(base+"/dynasty/load?save_key="+sid)
             trans={"from_year":year,"to_year":year+1,"database_roundtrip":True,
+                "coach_career_continuity":{"retained":len(retained_coaches),
+                    "departed":len(set(before_coaches)-set(after_coaches)),
+                    "new":len(set(after_coaches)-set(before_coaches)),
+                    "development_events":len(coach_events)},
                 "coach_hires":off["coaching"]["hires"],"teams_with_changes":off["coaching"]["teams_with_changes"],
                 "transfers":portal["total_transfers"],"signed":recruiting["total_signed"],
                 "retained_installations":len(expected),"roster_sizes":{t:len(r) for t,r in saved_rosters.items()},
