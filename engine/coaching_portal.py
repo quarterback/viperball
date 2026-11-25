@@ -78,6 +78,8 @@ PORTAL_REASONS = (
     "contract_expired",
     "fired",
     "seeking_hc",
+    "seeking_coordinator",
+    "alumni_entry",
     "mutual_parting",
     "free_agent",
 )
@@ -262,7 +264,10 @@ def populate_coaching_portal(
                     else:
                         # An extension must actually renew the contract.
                         years = rng.randint(2, 4) if role != "stc" else rng.randint(1, 3)
-                        salary = calculate_coach_salary(card, rng=rng)
+                        from .coach_roles import POSITION_ROLES
+                        from .position_staff import position_salary
+                        salary = (position_salary(card, team_prestige.get(team_name,50),rng,role)
+                                  if role in POSITION_ROLES else calculate_coach_salary(card, rng=rng))
                         card.contract_years_remaining = years
                         card.contract_salary = salary
                         card.contract_buyout = int(salary * years * 0.5)
@@ -273,12 +278,6 @@ def populate_coaching_portal(
                 # Roles are fluid: HCs can take coordinator jobs and
                 # coordinators can seek HC positions.
                 seeking = get_acceptable_roles(card)
-                # Coordinators also consider adjacent coordinator roles
-                if card.role in ("oc", "dc", "stc"):
-                    for r in ("oc", "dc", "stc"):
-                        if r not in seeking:
-                            if rng.random() < 0.30:
-                                seeking.append(r)
 
                 entry = CoachingPortalEntry(
                     coach=card,
@@ -303,10 +302,19 @@ def populate_coaching_portal(
             if role == "head_coach" or card.coach_id in retired_ids:
                 continue
             from .coach_career import seeks_hc
-            if not seeks_hc(card):
-                continue
             # Already in portal?
             if any(e.coach_id == card.coach_id for e in portal.entries):
+                continue
+            from .coach_roles import POSITION_ROLES
+            promotions = [r for r in get_acceptable_roles(card) if r in ("oc","dc","stc") and r != role]
+            if role == "stc":
+                promotions = [r for r in promotions if r in ("oc","dc")]
+            if (role in POSITION_ROLES or role == "stc") and promotions:
+                # An employed coach only departs after accepting a promotion.
+                portal.add_entry(CoachingPortalEntry(coach=card, origin_team=team_name,
+                    reason="seeking_coordinator",year_entered=portal.year,seeking_roles=promotions + (["head_coach"] if seeks_hc(card) else [])))
+                continue
+            if not seeks_hc(card):
                 continue
             # HC meter 90+ = hot name, always enters pool (if overall ok)
             # HC meter 75-89 = wants it, needs overall 65+ and 30% chance
@@ -340,7 +348,9 @@ def populate_coaching_portal(
     occupied = {c.coach_id for staff in coaching_staffs.values() for c in staff.values()}
 
     for _ in range(to_generate):
-        role = rng.choice(["head_coach", "oc", "dc", "stc"])
+        from .coach_roles import ALL_ROLES
+        vacant_roles = [r for roles in portal.vacancies.values() for r in roles]
+        role = rng.choice(vacant_roles or list(ALL_ROLES))
         card = generate_coach_card(
             role=role,
             team_name="",
@@ -388,7 +398,8 @@ def _team_score_coach(
     - Development rating — the player dev skill (weight: 20%)
     - Classification fit bonus (weight: 10%)
     """
-    from .coach_career import reputation, veteran_premium
+    from .coach_career import reputation, veteran_premium, ensure
+    from .coach_roles import POSITION_ROLES, experience, role_readiness
     # Market reputation plus role fit; bound overlapping pedigree credit.
     overall_score = coach.overall
 
@@ -408,6 +419,8 @@ def _team_score_coach(
                       + coach.rotations * 0.25
                       + coach.composure * 0.20
                       + coach.leadership * 0.15)
+    elif role in POSITION_ROLES:
+        role_score = (coach.development * .50 + coach.recruiting * .25 + coach.instincts * .15 + coach.composure * .10)
     else:  # stc
         role_score = (coach.rotations * 0.35
                       + coach.composure * 0.25
@@ -456,6 +469,8 @@ def _team_score_coach(
         + .40*(reputation(coach)-50)
         + (5*veteran_premium(coach) if role != "head_coach" else 4*veteran_premium(coach))
         + hot_name_bonus
+        + min(4,experience(coach,role,ensure(coach))*.25)
+        - (1-role_readiness(coach,role,ensure(coach)))*18
         + noise
     )
 
@@ -466,6 +481,9 @@ def _team_score_coach(
 
 def _get_area_positions(role: str) -> set:
     """Which player positions a coach cares about for area scoring."""
+    from .coach_roles import POSITION_ROLES, position_role
+    if role in POSITION_ROLES:
+        return {p for p in _OFFENSE_POSITIONS | _DEFENSE_POSITIONS if position_role(p)==role or (role=="pos_kicks" and p in ("Zeroback","Keeper"))}
     if role in ("oc", "head_coach"):
         return _OFFENSE_POSITIONS
     elif role == "dc":
@@ -530,6 +548,12 @@ def _coach_score_team(
         # Negative gap = program prestige below ambition → penalty
         ambition_bonus = max(-15, min(10, gap * 0.3))
 
+    from .coach_roles import POSITION_ROLES
+    # A senior coach generally prefers a comparable senior job; a position
+    # coach or ST specialist seeking advancement values the actual promotion.
+    role_move = (8 if coach.role in POSITION_ROLES and role in ("oc","dc","stc") else
+                 6 if coach.role=="stc" and role in ("oc","dc") else
+                 -12 if role in POSITION_ROLES and coach.role not in POSITION_ROLES else 0)
     noise = rng.uniform(-5, 5)
 
     return (
@@ -540,7 +564,7 @@ def _coach_score_team(
         + alumni_bonus
         + hc_bonus
         + ambition_bonus
-        + noise
+        + role_move + noise
     )
 
 
@@ -587,6 +611,12 @@ def _build_preference_lists(
                     area_ovrs.setdefault("defense", []).append(ovr)
                 if pos in _ST_POSITIONS:
                     area_ovrs.setdefault("st", []).append(ovr)
+                from .coach_roles import position_role
+                group = position_role(pos)
+                if group:
+                    area_ovrs.setdefault(group, []).append(ovr)
+                if pos in ("Zeroback","Keeper"):
+                    area_ovrs.setdefault("pos_kicks", []).append(ovr)
             roster_data[tn] = (all_ovrs, area_ovrs)
 
     # Pre-compute conference strength
@@ -645,7 +675,8 @@ def _build_preference_lists(
                 role_area = "offense" if role in ("oc", "head_coach") else (
                     "defense" if role == "dc" else "st"
                 )
-                area_list = area_ovrs.get(role_area, [])
+                from .coach_roles import POSITION_ROLES
+                area_list = area_ovrs.get(role if role in POSITION_ROLES else role_area, [])
 
                 score = _coach_score_team(
                     entry.coach, team_name, role,
@@ -826,7 +857,10 @@ def run_coaching_match(
         contract_years = rng.randint(2, 4) if role != "head_coach" else rng.randint(3, 5)
         from .coach_career import appoint, reputation
         previous_role = coach.role
-        salary = calculate_coach_salary(coach, rng=rng, target_role=role)
+        from .coach_roles import POSITION_ROLES
+        from .position_staff import position_salary
+        salary = (position_salary(coach, team_prestige.get(team_name,50), rng, role)
+                  if role in POSITION_ROLES else calculate_coach_salary(coach, rng=rng, target_role=role))
 
         coach.team_name = team_name
         appoint(coach, role)
@@ -876,6 +910,11 @@ def run_coaching_match(
             )
         occupied.add(fill.coach_id)
         fill.contract_years_remaining = rng.randint(1, 3)
+        from .coach_roles import POSITION_ROLES
+        from .position_staff import salary_cap
+        if role in POSITION_ROLES:
+            fill.contract_salary = min(fill.contract_salary,salary_cap(prestige))
+            fill.contract_buyout = fill.contract_salary * fill.contract_years_remaining // 2
         coaching_staffs.setdefault(team_name, {})[role] = fill
         changes.setdefault(team_name, {})[role] = fill
         portal.hires.append({
