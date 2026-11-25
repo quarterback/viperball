@@ -263,4 +263,15 @@ def test_engine_full_installation_matches_no_record_and_packages_show_up():
     pk = run(deepcopy(rec))
     used = pk["coach_tactics"]["home"]["selected"].get("packages", {})
     assert used and set(used) <= {"gp_heavy_push", "ec_quick_kick_chain"}
+    from collections import Counter
+    calls = [p["offensive_call"] for p in pk["play_by_play"]
+             if (p.get("offensive_call") or {}).get("offense_side") == "home"]
+    assert calls
+    assert Counter(c["package_id"] for c in calls if c.get("package_id")) == Counter(used)
+    selected = pk["coach_tactics"]["home"]["selected"]
+    assert Counter(pid for c in calls for pid in c["eligible"]) == Counter(selected["packages_eligible"])
+    for call in calls:
+        if call.get("package_id"):
+            assert call["package_id"] in call["eligible"]
+            assert call["family_matched"] == call["matches"].get("family", False)
     assert pk["coach_tactics"]["home"]["installation"]["execution_factor"] == 1.0
