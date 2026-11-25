@@ -4154,6 +4154,12 @@ def offseason_complete(session_id: str):
         history = dynasty.recruiting_history.setdefault(dynasty.current_year, {})
         history["walkons"] = {t:len(rows) for t,rows in walkons.items()}
         history["walkon_details"] = walkons
+        # Keep signed reserve players discoverable in the recruiting profile
+        # after graduation, without putting thousands of unsigned reserves
+        # into the public signing pool.
+        used_reserves = [r for r in offseason.get("hs_walkon_reserve", []) if r.signed]
+        if used_reserves:
+            dynasty._last_recruit_pool = list(dynasty._last_recruit_pool or []) + used_reserves
         dynasty._pending_signed_recruits = None
         dynasty._next_season_rosters = {t:[c.to_dict() for c in cards]
                                          for t,cards in player_cards.items()}
