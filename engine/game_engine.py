@@ -14,6 +14,9 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from copy import deepcopy
+from engine.rating_scale import current_to_legacy as _old
+# _old(rating): a current scale rating as its 60 to 100 equivalent, for
+# fixed cutoffs written on the old scale (SCALE-01).
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -965,11 +968,12 @@ POSITION_ARCHETYPES = {
 
 def assign_archetype(player) -> str:
     pos = player.position
-    spd = player.speed
-    kick = player.kicking
-    lat = player.lateral_skill
-    stam = player.stamina
-    tck = player.tackling
+    # Cutoffs below are old scale numbers (SCALE-01).
+    spd = _old(player.speed)
+    kick = _old(player.kicking)
+    lat = _old(player.lateral_skill)
+    stam = _old(player.stamina)
+    tck = _old(player.tackling)
 
     if "Zeroback" in pos:
         if kick >= 80 and kick >= spd:
@@ -1022,14 +1026,15 @@ def assign_variance_archetype(player) -> str:
     - High speed + low awareness → Explosive (raw athleticism, volatile)
     - High power + high awareness → Clutch (rises under pressure)
     """
-    awareness = getattr(player, 'awareness', 75)
-    stamina = player.stamina
-    speed = player.speed
-    power = getattr(player, 'power', 75)
+    # Old scale equivalents: the (100 - awareness) term assumes 60 to 100 (SCALE-01).
+    awareness = _old(getattr(player, 'awareness', 35))
+    stamina = _old(player.stamina)
+    speed = _old(player.speed)
+    power = _old(getattr(player, 'power', 35))
 
     # Score each archetype
     reliable_score = awareness * 0.5 + stamina * 0.3 + power * 0.2
-    explosive_score = speed * 0.5 + getattr(player, 'agility', 75) * 0.3 + (100 - awareness) * 0.2
+    explosive_score = speed * 0.5 + _old(getattr(player, 'agility', 35)) * 0.3 + (100 - awareness) * 0.2
     clutch_score = power * 0.3 + awareness * 0.4 + stamina * 0.3
 
     # Highest score wins
@@ -1054,7 +1059,7 @@ def designate_stars(players: List, max_stars: int = 3) -> List[str]:
     eligible = sorted(players, key=lambda p: p.overall, reverse=True)
     stars = []
     for p in eligible[:max_stars]:
-        if p.overall >= 75:  # Minimum threshold to be a star
+        if _old(p.overall) >= 75:  # Minimum threshold to be a star (old scale)
             p.star_designated = True
             stars.append(p.name)
     return stars
@@ -1279,7 +1284,7 @@ def assign_game_roles(team, offense_style: str = "balanced") -> dict:
     # Change-of-pace: fastest rush-capable player NOT already LEAD/COMPLEMENT.
     # Must have speed >= 82 to qualify (needs to be genuinely fast).
     cop_candidates = [p for p in rush_capable
-                      if p.game_rush_rank == "" and p.speed >= 82]
+                      if p.game_rush_rank == "" and _old(p.speed) >= 82]
     if cop_candidates:
         fastest = max(cop_candidates, key=lambda p: p.speed + getattr(p, 'agility', 75) * 0.3)
         fastest.game_rush_rank = "CHANGE_OF_PACE"
@@ -9602,7 +9607,7 @@ class ViperballEngine:
 
         # ── Kicker physical gate ──
         # Weak-legged kickers can't throw Bombs effectively.
-        kick_power = getattr(kicker, 'kick_power', 70)
+        kick_power = _old(getattr(kicker, 'kick_power', 35))
         if kick_power < 70:
             power_gate = (kick_power / 70.0) ** 2
             base["bomb"] *= power_gate
@@ -10182,7 +10187,7 @@ class ViperballEngine:
             base_fumble += 0.012
 
         if carrier:
-            ball_security = getattr(carrier, 'hands', getattr(carrier, 'power', 75))
+            ball_security = _old(getattr(carrier, 'hands', getattr(carrier, 'power', 35)))
             if ball_security >= 85:
                 base_fumble *= 0.70
             elif ball_security < 60:
@@ -10306,8 +10311,8 @@ class ViperballEngine:
         base_return = max(0, int(random.gauss(12, 8)))
 
         # Returner skill factor (speed + agility)
-        speed_factor = returner.speed / 80.0
-        agility_factor = getattr(returner, 'agility', 75) / 80.0
+        speed_factor = _old(returner.speed) / 80.0
+        agility_factor = _old(getattr(returner, 'agility', 35)) / 80.0
         returner_modifier = speed_factor * 0.60 + agility_factor * 0.40
 
         # Keeper archetype: return_keeper gets the archetype's return_yards_modifier
@@ -10812,7 +10817,7 @@ class ViperballEngine:
             return raw_yards  # Explosive keeps full variance even when starred
 
         # Performance floor: scale overall to yardage (overall 90 → floor ~4.0)
-        floor = max(0.0, (player.overall - 50) / 10.0)
+        floor = max(0.0, (_old(player.overall) - 50) / 10.0)
         return max(raw_yards, floor)
 
     def _should_use_halo(self, carrier) -> bool:
@@ -11317,7 +11322,7 @@ class ViperballEngine:
         """
         if yards_gained <= 0:
             return 0.0
-        tackle_skill = max(0.0, min(1.0, (tackler.tackling - 30) / 69))
+        tackle_skill = max(0.0, min(1.0, (_old(tackler.tackling) - 30) / 69))
         reduction = random.uniform(0.56, 0.88) * tackle_skill
         # Kick pass floor-spacing: defense spread thin after a completion
         # Widened lanes → tacklers arrive late, weaker angles
@@ -11998,7 +12003,7 @@ class ViperballEngine:
         skill_pool = self._offense_skill(team)
         # Weighted selection for the lateral chain — spread touches across the roster
         _lat_count = min(chain_length, len(skill_pool))
-        _lat_weights = [max(1.0, (p.speed + getattr(p, 'lateral_skill', 70)) / 2.0 - 40) for p in skill_pool]
+        _lat_weights = [max(1.0, (_old(p.speed) + _old(getattr(p, 'lateral_skill', 35))) / 2.0 - 40) for p in skill_pool]
         _lat_weights = self._spread_the_love_offense(skill_pool, _lat_weights)
         players_involved = []
         _remaining_pool = list(skill_pool)
@@ -12622,7 +12627,7 @@ class ViperballEngine:
             if subfamily == KickPassSubFamily.KICK_LATERAL:
                 catch_spot = min(99, self.state.field_position + kick_distance)
                 # Lateral chain entry quality: receiver's lateral_skill gates it
-                recv_lat_skill = getattr(receiver, 'lateral_skill', 70)
+                recv_lat_skill = _old(getattr(receiver, 'lateral_skill', 35))
                 if recv_lat_skill >= 80:
                     chain_fumble_bonus = 0.0
                 elif recv_lat_skill >= 60:
@@ -12651,7 +12656,7 @@ class ViperballEngine:
                 for lat_i in range(chain_length):
                     if not _lat_pool:
                         break
-                    _lat_w = [max(1.0, (p.speed + getattr(p, 'lateral_skill', 70)) / 2.0 - 40) for p in _lat_pool]
+                    _lat_w = [max(1.0, (_old(p.speed) + _old(getattr(p, 'lateral_skill', 35))) / 2.0 - 40) for p in _lat_pool]
                     lat_player = random.choices(_lat_pool, weights=_lat_w, k=1)[0]
                     _lat_pool.remove(lat_player)
                     chain_tags.append(player_tag(lat_player))
@@ -13559,9 +13564,9 @@ class ViperballEngine:
         if td_returner:
             # Returner speed bonus: elite speedsters break more
             speed_bonus = 1.0
-            if td_returner.speed >= 92:
+            if _old(td_returner.speed) >= 92:
                 speed_bonus = 1.40
-            elif td_returner.speed >= 85:
+            elif _old(td_returner.speed) >= 85:
                 speed_bonus = 1.20
             # Keeper return_keeper archetype bonus
             archetype_info = get_archetype_info(td_returner.archetype) if td_returner.archetype != "none" else {}
@@ -13891,9 +13896,9 @@ class ViperballEngine:
                     catch_spot_returner = max(1, 100 - raw_catch + random.randint(-5, 5))
 
                     td_rate = 0.04
-                    if returner.speed >= 92:
+                    if _old(returner.speed) >= 92:
                         td_rate = 0.08
-                    elif returner.speed >= 85:
+                    elif _old(returner.speed) >= 85:
                         td_rate = 0.06
 
                     td_rate *= self._returning_team_st()["return_td_modifier"] / self._kicking_team_st()["coverage_modifier"]
@@ -14852,8 +14857,8 @@ class ViperballEngine:
                                     zb_backups,
                                     key=lambda b: getattr(b, 'overall', 0),
                                 )
-                                starter_ovr = getattr(p, 'overall', 70)
-                                backup_ovr = getattr(best_backup, 'overall', 60)
+                                starter_ovr = _old(getattr(p, 'overall', 35))
+                                backup_ovr = _old(getattr(best_backup, 'overall', 15))
                                 ovr_gap = starter_ovr - backup_ovr
 
                                 abs_diff = abs(self._get_score_diff())

@@ -113,6 +113,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     weather model, into the queue; logged SCALE-01 for raw rating checks still on the old
     scale. → `WEA-02_weather_model.md`
 
+27. **Old scale cutoffs** (November 25). Fourteen fixed cutoffs in the engine still compared
+    current ratings to old scale numbers; all now read the old scale equivalent. Nearly every
+    player had been getting the default archetype. → `aar_2026-11-25_scale01_old_scale_cutoffs.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
