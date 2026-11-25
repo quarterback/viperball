@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-header">
   <h1>{{ state_name|upper }}</h1>
-  <div class="subtitle">{{ league.year }} season{% if champion %} &middot; State champion <a href="/stats/high-school/team/{{ (team_keys.get(champion, champion))|urlencode }}">{{ champion }}</a>{% endif %}</div>
+  <div class="subtitle">{{ league.year }} season{% if champion %} &middot; State champion <a href="/stats/high-school/team/{{ champion_key|urlencode }}">{{ champion }}</a>{% endif %}</div>
 </div>
 
 {% set tab = 'state' %}{% set state_tab = {'code': code, 'name': state_name} %}
@@ -24,9 +24,9 @@
   {% for g in playoff_games %}
   <tr>
     <td>{{ g.round }}</td>
-    <td>{% if g.winner == g.home %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.home, g.home))|urlencode }}">{{ g.home }}</a>{% if g.winner == g.home %}</strong>{% endif %}</td>
+    <td>{% if g.winner_key == g.home_key %}<strong>{% endif %}<a href="/stats/high-school/team/{{ g.home_key|urlencode }}">{{ g.home }}</a>{% if g.winner_key == g.home_key %}</strong>{% endif %}</td>
     <td class="num">{{ g.home_score }}</td>
-    <td>{% if g.winner == g.away %}<strong>{% endif %}<a href="/stats/high-school/team/{{ (team_keys.get(g.away, g.away))|urlencode }}">{{ g.away }}</a>{% if g.winner == g.away %}</strong>{% endif %}</td>
+    <td>{% if g.winner_key == g.away_key %}<strong>{% endif %}<a href="/stats/high-school/team/{{ g.away_key|urlencode }}">{{ g.away }}</a>{% if g.winner_key == g.away_key %}</strong>{% endif %}</td>
     <td class="num">{{ g.away_score }}</td>
   </tr>
   {% endfor %}
