@@ -41,7 +41,7 @@ def verify_pipeline(league, pipeline):
                 raise ValueError("Recruiting prospect grade differs from competition")
             if (r.full_name, r.position, r.high_school, r.hometown) != (p.name, p.position, team.school_name, p.hometown):
                 raise ValueError("Recruiting prospect biography differs from competition")
-            if any(getattr(r, "true_"+attr) != getattr(p, attr) for attr in STAT_KEYS):
+            if r.true_overall != p.overall or any(getattr(r, "true_"+attr) != getattr(p, attr) for attr in STAT_KEYS):
                 raise ValueError("Recruiting prospect ratings differ from competition")
             if (r.true_work_rate, r.true_potential, r.true_development) != (p.work_rate, p.potential, p.development):
                 raise ValueError("Recruiting prospect development metadata differs from competition")
