@@ -63,6 +63,7 @@ V2_ENGINE_CONFIG = {
     "defensive_coach_tactics_enabled": True,
     # CCH-04: team familiarity and installed package decisions.
     "team_installation_enabled": True,
+    "offensive_packages_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -4176,6 +4177,11 @@ class ViperballEngine:
                      "featured_rushes": 0, "featured_targets": 0},
         }
 
+        self._offensive_package_rng = {side: random.Random(f"offensive-packages:{seed}:{side}")
+                                       for side in ("home", "away")}
+        self._active_offensive_plan = None
+        self._offensive_plan_event = None
+
         # CCH-03 uses the same saved CoachCard but does not alter packages
         # or the offense resolver. Separate toggle for controlled tests.
         from .coach_tactics import resolve_defensive_tactics
@@ -4376,17 +4382,62 @@ class ViperballEngine:
             return getattr(self, "home_oc_tactics", {})
         return getattr(self, "away_oc_tactics", {})
 
-    def _oc_bias(self, key: str) -> Dict:
-        """Resolve installed OC packages against this play's live situation."""
+    def _begin_offensive_plan(self):
+        """Select one installed package before formation and play selection."""
+        self._active_offensive_plan = None
+        self._offensive_plan_event = None
         tactics = self._current_oc_tactics()
-        if not tactics.get("packages"):
-            return tactics.get(key, {})
-        from .team_installation import situational_bias
+        if not tactics.get("packages") or not V2_ENGINE_CONFIG.get("offensive_packages_enabled", True):
+            return
+        from .team_installation import choose_offensive_package
         st = self.state
-        diff = (st.home_score - st.away_score) if st.possession == "home" else (st.away_score - st.home_score)
-        context = self._package_context(diff)
-        return situational_bias(tactics, key, context,
-                                self._coach_tactics_usage[st.possession])
+        diff = st.home_score - st.away_score
+        context = self._package_context(diff if st.possession == "home" else -diff)
+        picked, eligible, live = choose_offensive_package(
+            tactics, context, self._offensive_package_rng[st.possession])
+        if not eligible:
+            return
+        self._active_offensive_plan = picked
+        self._offensive_plan_event = {
+            "offense_side": st.possession,
+            "eligible": eligible,
+            "package_id": picked["package_id"] if picked else None,
+            "situations": live,
+            "choices": {},
+        }
+        if picked:
+            self._offensive_plan_event["familiarity"] = picked.get("familiarity", 0.0)
+
+    def _oc_bias(self, key: str) -> Dict:
+        """Use the same optional plan throughout this snap's three choices."""
+        from .team_installation import offensive_plan_bias
+        return offensive_plan_bias(self._current_oc_tactics(), key,
+                                  getattr(self, "_active_offensive_plan", None))
+
+    def _finish_offensive_plan(self, play):
+        event = self._offensive_plan_event
+        if event is None:
+            return
+        from .team_installation import offensive_plan_matches
+        usage = self._coach_tactics_usage[event["offense_side"]]
+        eligible = usage.setdefault("packages_eligible", {})
+        for pid in event["eligible"]:
+            eligible[pid] = eligible.get(pid, 0) + 1
+        pkg = self._active_offensive_plan
+        if pkg:
+            pid = pkg["package_id"]
+            selected = usage.setdefault("packages", {})
+            selected[pid] = selected.get(pid, 0) + 1
+            matches = offensive_plan_matches(pkg, event["choices"])
+            event["matches"] = matches
+            event["family_matched"] = matches.get("family", False)
+            if event["family_matched"]:
+                family_counts = usage.setdefault("packages_family_matched", {})
+                family_counts[pid] = family_counts.get(pid, 0) + 1
+            if matches and all(matches.values()) and event["family_matched"]:
+                complete = usage.setdefault("packages_all_matched", {})
+                complete[pid] = complete.get(pid, 0) + 1
+        play.offensive_call = event
 
     def _package_context(self, score_diff):
         st = self.state
@@ -4419,6 +4470,9 @@ class ViperballEngine:
             return
         bucket = self._coach_tactics_usage[self.state.possession][category]
         bucket[value] = bucket.get(value, 0) + 1
+        event = getattr(self, "_offensive_plan_event", None)
+        if event is not None:
+            event["choices"][category] = value
 
     def _coach_tactics_summary(self, side: str) -> Dict:
         tactics = self.home_oc_tactics if side == "home" else self.away_oc_tactics
@@ -8705,7 +8759,9 @@ class ViperballEngine:
         self._pending_transition = None
         self._fast_break = None
         self._lineup_cache = {}
-        # Do not leak a prior defensive call onto a kick or penalty snap.
+        # Do not leak a prior call onto a kick or penalty snap.
+        self._active_offensive_plan = None
+        self._offensive_plan_event = None
         self._active_defensive_call = None
         self._rush_event = None
         self._rush_plan = None
@@ -8746,6 +8802,7 @@ class ViperballEngine:
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
         self._finish_st_event(play)
+        self._finish_offensive_plan(play)
         # Copy the actual pre-snap call, even when the resulting play changes
         # possession. No additional RNG or defensive ratings are involved.
         dc_call = getattr(self, "_active_defensive_call", None)
@@ -8893,6 +8950,7 @@ class ViperballEngine:
         # Kicks belong on 6th down.  No snap kick interrupts on early downs.
 
         # ── Formation-First: select formation, then play family ──
+        self._begin_offensive_plan()
         self._current_formation = self.select_formation()
         self._begin_defensive_call(self._current_formation)
         play_family = self.select_play_family(formation=self._current_formation)
@@ -16537,6 +16595,7 @@ class ViperballEngine:
             "play_type": play.play_type,
             "play_family": play.play_family,
             "defensive_call": getattr(play, "defensive_call", None),
+            "offensive_call": getattr(play, "offensive_call", None),
             "rush_event": getattr(play, "rush_event", None),
             "special_teams_event": getattr(play, "special_teams_event", None),
             "defense_energy": getattr(play, "defense_energy", None),
