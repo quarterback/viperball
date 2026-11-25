@@ -6653,6 +6653,7 @@ class ViperballEngine:
         if origin is not None:
             self._drive_origin = origin
             self._possession_snap_count = 0
+            self._analytics_possession_id = getattr(self,"_analytics_possession_id",-1)+1
         self._next_drive_origin = None
         style = self._current_style()
         tempo = style["tempo"]
@@ -6713,7 +6714,10 @@ class ViperballEngine:
 
         while self.drive_play_count < max_plays and self.state.time_remaining > 0:
             self.drive_play_count += 1
+            analytics_before = self._analytics_state()
             play = self.simulate_play()
+            play.analytics_before = analytics_before
+            play.analytics_resolution = self._analytics_state()
             play.home_score_after = self.state.home_score
             play.away_score_after = self.state.away_score
             self.play_log.append(play)
@@ -7251,6 +7255,7 @@ class ViperballEngine:
             # here; a blocked kick changes possession before the Play exists
             # and the box score charges attempts to the side at the snap.
             final_snap_side = self.state.possession
+            analytics_before = self._analytics_state()
             self._snap_possession = final_snap_side
 
             final_fg_dist = (100 - fp) + 10
@@ -7291,6 +7296,9 @@ class ViperballEngine:
                 final_play = self.simulate_punt(PlayFamily.PUNT)
 
             final_play.snap_possession = final_snap_side
+            final_play.analytics_before = analytics_before
+            final_play.analytics_resolution = self._analytics_state()
+            final_play.analytics_terminal_kick = True
             self._finish_st_event(final_play)
             final_play.home_score_after = self.state.home_score
             final_play.away_score_after = self.state.away_score
@@ -16698,6 +16706,8 @@ class ViperballEngine:
             },
             "drive_summary": self.drive_log,
             "play_by_play": play_dicts,
+            "analytics_contract_version": 1,
+            "analytics_restart_baseline": V2_ENGINE_CONFIG.get("starting_yard_line",20),
             "in_game_injuries": [
                 {
                     "player": e.player_name,
@@ -17002,6 +17012,20 @@ class ViperballEngine:
             "penalties_declined": len(penalties_declined),
         }
 
+    def _analytics_state(self) -> Dict:
+        """Observed state before resolution, including pending bonus entitlement."""
+        return {
+            "possession": self.state.possession, "field_position": self.state.field_position,
+            "down": self.state.down, "yards_to_go": self.state.yards_to_go,
+            "quarter": self.state.quarter, "clock": self.state.time_remaining,
+            "home_score": self.state.home_score, "away_score": self.state.away_score,
+            "possession_id": getattr(self,"_analytics_possession_id",0),
+            "origin": getattr(self,"_drive_origin",None),
+            "bonus_active": bool(getattr(self,"_is_bonus_drive",False)),
+            "bonus_recipient": getattr(self,"_bonus_recipient","") or self.state.bonus_possession_team or None,
+            "bonus_wait": getattr(self,"_bonus_drives_remaining",-1),
+        }
+
     def play_to_dict(self, play: Play) -> Dict:
         d = {
             "play_number": play.play_number,
@@ -17021,6 +17045,9 @@ class ViperballEngine:
             "possession_origin": getattr(play, "possession_origin", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
+            "analytics_before": getattr(play,"analytics_before",None),
+            "analytics_resolution": getattr(play,"analytics_resolution",None),
+            "analytics_terminal_kick": getattr(play,"analytics_terminal_kick",False),
             "snap_lineup": getattr(play, "snap_lineup", None),
             "spot_error": getattr(play, "spot_error", None),
             "spot_error_corrected": getattr(play, "spot_error_corrected", None),

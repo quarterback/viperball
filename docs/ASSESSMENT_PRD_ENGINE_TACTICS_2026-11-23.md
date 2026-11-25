@@ -1,5 +1,7 @@
 # Viperball engine and tactics assessment: implementation PRD and agent work queue
 
+**Current status and ownership:** See [the consolidated development plan](DEVELOPMENT_PLAN.md). This document retains its original assessment, requirements and historical task statuses; it is no longer an independent active queue.
+
 **Assessment date:** 2026-11-23  
 **Status:** Active work queue, revised after all November 23 CCH-03/CCH-04 integrations merged. Historical assessment sections remain dated to their original review.  
 **Repository:** quarterback/viperball  

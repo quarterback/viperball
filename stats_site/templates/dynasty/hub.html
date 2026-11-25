@@ -139,6 +139,7 @@
     {% if season.champion %}<p>Champion: {{ season.champion }}</p>{% endif %}
     <div class="run-bar">
       <a class="action-link primary" href="/stats/college/{{ session_id }}/">{{ icon("play") }}Play the season</a>
+      <a class="action-link" href="/stats/college/{{ session_id }}/analytics">Analytics portal</a>
       {% if season.champion %}{{ action('/sessions/' ~ session_id ~ '/dynasty/advance', 'Advance to offseason', here) }}{% endif %}
     </div>
     {% if not season.champion %}<p class="hint" style="color:var(--fg-dim);font-size:13px;margin-top:8px">Finish the season, including the playoffs, to advance.</p>{% endif %}

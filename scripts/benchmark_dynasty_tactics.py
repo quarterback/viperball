@@ -202,7 +202,7 @@ def roster_fit(season, records):
                     mismatches.append({"team":name,"side":side,"package":pkg["package_id"]})
     return mismatches
 
-def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
+def run(seasons, nteams, seed, out, *, national=False, longitudinal=False, analytics=False):
     from fastapi.testclient import TestClient
     with tempfile.TemporaryDirectory(prefix="viperball-dynasty-") as tmp:
         os.environ["VIPERBALL_DB_PATH"] = str(Path(tmp)/"study.sqlite3")
@@ -253,6 +253,7 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
         if longitudinal:
             from benchmark_longitudinal import Study
             observer = Study(out,seed,seasons)
+        analytics_paths=[]
         prev_rosters=None
         prev_staff=None
         prev_units={}
@@ -462,6 +463,9 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
                 "program_count":len(active),
             }
             print("ROSTER",year,json.dumps(item["roster_observations"],sort_keys=True),flush=True)
+            if analytics:
+                from benchmark_advanced_analytics import write_season
+                analytics_paths.append(write_season(out,season,year,seed))
             report["years"].append(item)
             checkpoint()
             if observer:
@@ -674,6 +678,9 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False):
             if observer:
                 observer.transition(year,dyn,active,trans)
             print("TRANSITION",json.dumps(trans,sort_keys=True),flush=True)
+        if analytics:
+            from benchmark_advanced_analytics import analyze
+            analyze(analytics_paths,out/"analytics",2026)
         report["complete"]=True
         checkpoint()
         if observer:

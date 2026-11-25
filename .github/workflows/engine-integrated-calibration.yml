@@ -4,6 +4,11 @@ on:
     branches: [main]
     paths:
       - engine/game_engine.py
+      - engine/analytics_events.py
+      - engine/empirical_ep.py
+      - engine/dtw_research.py
+      - scripts/benchmark_advanced_analytics.py
+      - tests/test_advanced_analytics.py
       - engine/team_installation.py
       - engine/defensive_commitments.py
       - data/playbooks/packages.json
@@ -82,6 +87,26 @@ jobs:
       - run: python -m pip install -r requirements.txt pytest
       - name: College feeder and rating-scale regressions
         run: python -m pytest -q tests/test_college_feeder_identity.py tests/test_scale_cutoffs.py tests/test_college_cohort_continuity.py tests/test_weather_model.py tests/test_coach_learning.py tests/test_snap_participation.py tests/test_coach_career.py tests/test_team_installation.py tests/test_coaching_pages.py
+      - name: Advanced analytics contracts and matched trace invariance
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python -m pytest -q tests/test_advanced_analytics.py
+          if [ -n "$PR_BASE" ]; then
+            base_dir=$(mktemp -d)
+            git worktree add --detach "$base_dir" "$PR_BASE"
+            python scripts/benchmark_advanced_analytics.py --trace-only --games 8 --engine-root "$base_dir" --out reports/integrated-defense/analytics/base
+            python scripts/benchmark_advanced_analytics.py --trace-only --games 8 --out reports/integrated-defense/analytics/candidate
+            cmp reports/integrated-defense/analytics/base/trace.json reports/integrated-defense/analytics/candidate/trace.json
+            git worktree remove --force "$base_dir"
+          fi
+          python scripts/benchmark_advanced_analytics.py --games 48 --out reports/integrated-defense/analytics/smoke
+          historical_dir=$(mktemp -d)
+          git worktree add --detach "$historical_dir" 97b8d261c5b985641410cbffa06ae41314253a43
+          python scripts/benchmark_advanced_analytics.py --raw-baseline --games 24 --engine-root "$historical_dir" --out reports/integrated-defense/analytics/pr360
+          python scripts/benchmark_advanced_analytics.py --raw-baseline --games 24 --out reports/integrated-defense/analytics/current
+          python scripts/benchmark_advanced_analytics.py --compare-baselines reports/integrated-defense/analytics/pr360/raw_baseline.json reports/integrated-defense/analytics/current/raw_baseline.json --out reports/integrated-defense/analytics
+          git worktree remove --force "$historical_dir"
       - name: Combined engine smoke and calibration
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
@@ -129,7 +154,7 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - name: National two-season dynasty
-        run: python scripts/benchmark_national_dynasty.py --seed ${{ matrix.seed }} --out reports/national-dynasty
+        run: python scripts/benchmark_national_dynasty.py --seed ${{ matrix.seed }} --out reports/national-dynasty --analytics
       - uses: actions/upload-artifact@v4
         if: always()
         with:

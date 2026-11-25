@@ -3476,40 +3476,147 @@ def college_alumni_profile(request: Request, session_id: str, player_name: str):
 
 
 @router.get("/college/{session_id}/analytics", response_class=HTMLResponse)
-def college_analytics(request: Request, session_id: str, sort: str = "war", conference: str = ""):
+def college_analytics(request: Request, session_id: str, view: str = "", sort: str = "",
+                      conference: str = "", team: str = "", opponent: str = "",
+                      scope: str = "all", week: str = "", match: str = "", down: str = "", quarter: str = "",
+                      zone: str = "", action: str = "", result: str = "", margin: str = "",
+                      bucket: str = "", position: str = "", q: str = "", min_n: int = 0,
+                      order: str = "desc", page: int = 1, compare: str = "",
+                      columns: str = "", export: str = "", group: str = "", family: str = "",
+                      offense_school: str = "", defense_school: str = "", distance_band: str = "",
+                      pressure: str = "", origin: str = ""):
+    from stats_site.analytics_portal import (VIEWS, COLS, DEFAULT_SORT, ZONES, games_for,
+        build_report, fit_session_model, sorted_rows, comparison, player_compare, PLAY_GROUPS, DRIVE_GROUPS, SPLIT_COLS)
+    from urllib.parse import urlencode, quote
+    import csv
+    import io
+    from fastapi.responses import Response
     api = _get_api()
     sess = api["get_session"](session_id)
     season = api["require_season"](sess)
-
-    # Reuse cached player aggregation (already has WAR/ZBR/VPR)
-    all_players = _cached_college_player_agg(season)
-    if conference:
-        all_players = [p for p in all_players if p.get("conference") == conference]
-
-    # Add all_purpose_yards and filter to meaningful activity
-    players = []
-    for r in all_players:
-        r.setdefault("all_purpose_yards",
-                      r.get("rushing_yards", 0) + r.get("kick_return_yards", 0)
-                      + r.get("punt_return_yards", 0) + r.get("kick_pass_yards", 0))
-        if r.get("touches", 0) >= 5 or r.get("plays_involved", 0) >= 10:
-            players.append(r)
-
-    valid_sorts = {
-        "war": "war", "zbr": "zbr", "vpr": "vpr",
-        "wpa": "wpa", "wpa_per_play": "wpa_per_play",
-        "yards": "yards", "ypc": "yards_per_touch", "tds": "tds",
-    }
-    sort_key = valid_sorts.get(sort, "war")
-    players.sort(key=lambda x: x.get(sort_key, 0), reverse=True)
-
-    conferences = sorted(season.conferences.keys())
-
-    return templates.TemplateResponse("college/analytics.html", _ctx(
-        request, section="college", session_id=session_id,
-        players=players, sort=sort, conference=conference,
-        conferences=conferences,
-        season_name=getattr(season, "name", "Season"),
+    view = view or ("players" if sort in ("war","zbr","vpr","wpa","wpa_per_play","yards","ypc","tds") else "overview")
+    if view not in VIEWS:
+        raise HTTPException(400, "Unknown analytics view")
+    if scope not in ("all","regular","postseason"):scope="all"
+    compare="|".join(t for val in request.query_params.getlist("compare") for t in val.split("|") if t)
+    player_ids=request.query_params.getlist("player_id")
+    group_options=PLAY_GROUPS if view=="plays" else DRIVE_GROUPS if view=="drives" else {}
+    group=group if group in group_options else ("team" if group_options else "raw")
+    filters = dict(conference=conference,team=team,opponent=opponent,scope=scope,week=week,match=match,
+                   down=down,quarter=quarter,zone=zone,action=action,result=result,margin=margin,bucket=bucket,q=q,
+                   family=family,offense_school=offense_school,defense_school=defense_school,distance_band=distance_band,
+                   pressure=pressure,origin=origin,group=group)
+    team_names=sorted(season.teams)
+    games=list(games_for(season,session_id))
+    conferences=sorted(season.conferences)
+    conf_map=getattr(season,"team_conferences",{}) or {}
+    training={"model":None,"cutoff":None,"train_games":0,"reason":None}
+    if view in ("expected","decisions","delta","plays","drives","dtw"):
+        training=_cache_get(season,"analytics_portal_training")
+        if training is None:
+            training=fit_session_model(games)
+            # Only retain the latest model for this season, not each weekly snapshot.
+            for cache_key in list(_season_cache):
+                if cache_key[0]==id(season) and cache_key[-1]=="analytics_portal_training":_season_cache.pop(cache_key,None)
+            _cache_set(season,"analytics_portal_training",training)
+    compare_rows=[];player_options=[]
+    report={"rows":[],"coverage":{},"heatmap":[]}
+    if view=="players":
+        rows=[dict(p) for p in _cached_college_player_agg(season)
+              if (p.get("touches",0)>=5 or p.get("plays_involved",0)>=10)
+              and (not conference or p.get("conference")==conference)
+              and (not team or p.get("team")==team)
+              and (not position or p.get("position")==position or p.get("tag")==position)
+              and (not q or q.casefold() in p.get("name","").casefold())
+              and p.get("touches",0)>=min_n]
+        # Player totals are for the whole current season; game filters apply
+        # to the separate event/team tools, not to this legacy aggregation.
+        cols=[("name","Player"),("team","Team"),("tag","Pos"),("games_played","G"),("touches","Touches"),
+              ("war","WAR"),("zbr","ZBR"),("vpr","VPR"),("wpa","WPA"),("wpa_per_play","WPA/P"),
+              ("yards","Yds"),("yards_per_touch","Y/T"),("tds","TD"),("tackles","Tkl"),("sacks","Sacks"),("kick_att","Kick att"),("kick_made","Kick made")]
+        sort="yards_per_touch" if sort=="ypc" else sort or "war"
+    elif view=="glossary":
+        rows=[];cols=[]
+    elif view=="player_compare":
+        peers=[dict(p) for p in _cached_college_player_agg(season)
+               if p.get("games_played",0)>0 and (not conference or p.get("conference")==conference)]
+        compare_rows=player_compare(peers,player_ids)
+        player_options=[{"id":json.dumps([p["team"],p["name"]],ensure_ascii=False,separators=(",",":")),
+                         "label":p["name"]+" · "+p["team"]+" · "+p.get("position","")} for p in peers]
+        player_options.sort(key=lambda x:x["label"].casefold())
+        rows=[];cols=[]
+    elif view=="compare":
+        # Compare against the full filtered league, not only selected teams.
+        peer_filters={**filters,"team":"","opponent":""}
+        report=build_report(games,"teams",peer_filters,conf_map)
+        selected=[t for t in dict.fromkeys(compare.split("|")) if t in team_names][:4]
+        if not selected and team in team_names:selected=[team]
+        compare_rows=comparison(report["rows"],selected)
+        rows=[];cols=[]
+    else:
+        kind="overview" if view=="overview" else view
+        report=build_report(games,kind,filters,conf_map,training)
+        rows=report["rows"]
+        cols=SPLIT_COLS if group_options and group!="raw" else COLS.get("teams" if view=="overview" else view,[])
+        sort=sort or ("n" if group_options and group!="raw" else DEFAULT_SORT.get(view,"ppg"))
+        if q and view not in ("plays","drives"):rows=[r for r in rows if q.casefold() in " ".join(str(r.get(k,"")) for k in ("team","opponent","description","result")).casefold()]
+        if min_n and (view not in ("plays","drives") or group!="raw"):
+            rows=[r for r in rows if r.get("games",r.get("n",r.get("drives",r.get("event_n",0))))>=min_n]
+    valid={k for k,_ in cols}
+    if sort not in valid:sort=next(iter([k for k,_ in cols]),"")
+    if sort:rows=sorted_rows(rows,sort,order!="asc")
+    all_cols=cols
+    if columns:
+        wanted=set(columns.split(","))
+        selected=[(k,label) for k,label in cols if k in wanted or k in ("name","team","action","bucket","week","split")]
+        if selected:cols=selected
+    base=f"/stats/college/{session_id}/analytics"
+    params={k:v for k,v in {**filters,"view":view,"sort":sort,"order":order,"position":position,
+            "q":q,"min_n":min_n,"compare":compare,"columns":columns}.items() if v not in ("",None,0)}
+    def url(**changes):
+        return base+"?"+urlencode({k:v for k,v in {**params,**changes}.items() if v not in ("",None,0)})
+    if export=="csv" and cols:
+        def clean(v):
+            # Prevent spreadsheet formula injection from arbitrary team names.
+            return "'"+v if isinstance(v,str) and v.startswith(("=","+","-","@","\t","\r")) else v
+        data=io.StringIO()
+        writer=csv.writer(data)
+        writer.writerow([label for _,label in cols])
+        writer.writerows([[clean(r.get(k)) for k,_ in cols] for r in rows])
+        return Response(data.getvalue(),media_type="text/csv",headers={"Content-Disposition":f'attachment; filename="viperball-{view}.csv"'})
+    total=len(rows)
+    per_page=100
+    last=max(1,(total+per_page-1)//per_page)
+    page=max(1,min(page,last))
+    visible=rows[(page-1)*per_page:page*per_page]
+    leaders=rows[:5] if view=="overview" else []
+    positions=sorted({p.get("position") for p in _cached_college_player_agg(season) if p.get("position")}) if view=="players" else []
+    # Use all completed results for filter choices, not just the selected rows.
+    play_types=set();play_results=set();families=set();offense_schools=set();defense_schools=set();origins=set()
+    if view in ("plays","drives","expected","decisions","delta"):
+        for g in games:
+            fr=g["result"] or {}
+            for side in ("home","away"):
+                if fr.get(side+"_style"):offense_schools.add(fr[side+"_style"])
+                if fr.get(side+"_defense_style"):defense_schools.add(fr[side+"_defense_style"])
+            for p in fr.get("drive_summary" if view in ("drives","delta") else "play_by_play",[]):
+                if p.get("play_type"):play_types.add(p["play_type"])
+                if p.get("result"):play_results.add(p["result"])
+                if p.get("play_family"):families.add(p["play_family"])
+                if p.get("possession_origin"):origins.add(p["possession_origin"])
+        if view in ("decisions","expected"):play_types={"continue","drop_kick","place_kick","punt"}
+    return templates.TemplateResponse("college/analytics_portal.html", _ctx(
+        request,section="college",session_id=session_id,season_name=getattr(season,"name","Season"),
+        views=VIEWS,view=view,rows=visible,cols=cols,all_cols=all_cols,selected_columns=columns.split(",") if columns else [],
+        total=total,page=page,last=last,sort=sort,order=order,url=url,filters=filters,team_names=team_names,
+        conferences=conferences,positions=positions,position=position,q=q,min_n=min_n,
+        weeks=sorted({g["week"] for g in games}),zones=ZONES,play_types=sorted(play_types),play_results=sorted(play_results),
+        coverage=report["coverage"],heatmap=report["heatmap"],leaders=leaders,compare_rows=compare_rows,
+        compare=compare,player_options=player_options,player_ids=player_ids,
+        training={k:v for k,v in training.items() if k not in ("model","dtw_model")},games_count=len(games),
+        result_count=sum(bool(g["result"]) for g in games),quote=quote,
+        group_options=group_options,group=group,families=sorted(families),offense_schools=sorted(offense_schools),
+        defense_schools=sorted(defense_schools),origins=sorted(origins),
     ))
 
 

@@ -1,5 +1,7 @@
 # Viperball analytics development plan — November 24, 2026
 
+**Current status and ownership:** See [the consolidated development plan](DEVELOPMENT_PLAN.md). This document retains its original assessment, requirements and historical task statuses; it is no longer an independent active queue.
+
 Status: proposed work, ready for assignment. No implementation claimed here. Baseline: PR #360, merge 97b8d26. Historical record: [AAR](aar_2026-11-24_scoring_dtw_epa_scope.md). Preserve that report.
 
 ## Baseline and constraints
