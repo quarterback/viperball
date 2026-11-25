@@ -631,63 +631,35 @@ def simulate_hs_season(league: HSLeague, rng: Optional[random.Random] = None) ->
 # HS → COLLEGE RECRUITING PIPELINE
 # ──────────────────────────────────────────────
 
+def hs_player_to_recruit(player: HSPlayer, team: HSTeam):
+    """One authoritative competition player, one persistent recruit ID."""
+    from engine.recruiting import Recruit
+    from engine.talent import stars_for_level, STAT_KEYS
+    if not player.player_id:
+        raise ValueError("High school player is missing her persistent identity")
+    first, _, last = player.name.partition(" ")
+    base_stars = stars_for_level(player.level) if player.level else player.potential
+    performance = int(player.season_tds >= 8) + int(player.season_yards >= 500) + int(team.state_champ)
+    # Biographical attributes are generated once per identity, never per year.
+    bio = random.Random(f"hs-bio:{player.player_id}")
+    height = f"5-{bio.randint(4, 11)}"
+    weight = bio.randint(140, 210)
+    return Recruit(
+        recruit_id=player.player_id, first_name=first, last_name=last or first,
+        position=player.position, region=player.region, hometown=player.hometown,
+        high_school=team.school_name, height=height, weight=weight,
+        stars=min(5, max(1, base_stars + int(player.year == "Senior" and performance >= 2))),
+        true_potential=player.potential, true_development=player.development,
+        true_work_rate=player.work_rate,
+        **{"true_"+attr: getattr(player, attr) for attr in STAT_KEYS},
+    )
+
+
 def graduating_class_to_recruits(league: HSLeague):
-    """Convert HS seniors into Recruit objects for college recruiting.
-
-    Returns a list of Recruit objects sorted by star rating.
-    """
-    from engine.recruiting import Recruit, _pick_region
-
-    recruits = []
-    for team in league.teams.values():
-        for p in team.seniors:
-            rid = f"HS-{league.year}-{team.state}-{len(recruits):04d}"
-
-            # Star rating influenced by performance + overall
-            perf_bonus = 0
-            if p.season_tds >= 8:
-                perf_bonus += 1
-            if p.season_yards >= 500:
-                perf_bonus += 1
-            if team.state_champ:
-                perf_bonus += 1
-
-            # Stars from her ladder level (older leagues without one fall
-            # back on potential), boosted by a big senior season.
-            from engine.talent import stars_for_level
-            base_stars = stars_for_level(p.level) if p.level else p.potential
-            stars = min(5, max(1, base_stars + (1 if perf_bonus >= 2 else 0)))
-
-            recruit = Recruit(
-                recruit_id=rid,
-                first_name=p.name.split()[0] if " " in p.name else p.name,
-                last_name=p.name.split()[-1] if " " in p.name else "Smith",
-                position=p.position,
-                region=p.region,
-                hometown=p.hometown,
-                high_school=p.high_school,
-                height=f"{5}-{random.randint(4, 11)}",
-                weight=random.randint(140, 210),
-                stars=stars,
-                true_speed=p.speed,
-                true_stamina=p.stamina,
-                true_agility=p.agility,
-                true_power=p.power,
-                true_awareness=p.awareness,
-                true_hands=p.hands,
-                true_kicking=p.kicking,
-                true_kick_power=p.kick_power,
-                true_kick_accuracy=p.kick_accuracy,
-                true_lateral_skill=p.lateral_skill,
-                true_tackling=p.tackling,
-                true_work_rate=p.work_rate,
-                true_potential=p.potential,
-                true_development=p.development,
-            )
-            recruits.append(recruit)
-
-    recruits.sort(key=lambda r: (-r.stars, -r.true_overall))
-    return recruits
+    """All senior competition players, with their original identities."""
+    recruits = [hs_player_to_recruit(p, t) for t in league.teams.values()
+                for p in t.seniors]
+    return sorted(recruits, key=lambda r: (-r.stars, -r.true_overall, r.recruit_id))
 
 
 # ──────────────────────────────────────────────
