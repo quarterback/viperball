@@ -263,7 +263,7 @@ def analyze(paths,out,first_season):
     return report
 
 
-def sample(games,seed,out,trace_only=False,engine_root=ROOT):
+def sample(games,seed,out,trace_only=False,engine_root=ROOT,raw_baseline=False):
     sys.path.insert(0,str(engine_root))
     from engine.game_engine import ViperballEngine,load_team_from_json
     files=sorted((engine_root/"data"/"teams").glob("*.json"))
@@ -271,6 +271,19 @@ def sample(games,seed,out,trace_only=False,engine_root=ROOT):
     random.seed(seed)
     teams=[load_team_from_json(str(files[i*(len(files)-1)//15]),fresh=False) for i in range(16)]
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
+    if raw_baseline:
+        # Cross-version comparison uses only common observable measures.
+        # Identical seeds do not imply identical roster generation or rules.
+        rows=[]
+        for i in range(games):
+            home,away=deepcopy(teams[i%16]),deepcopy(teams[(i+5)%16])
+            roster=hashlib.sha256(json.dumps([[p.name,p.position,p.overall] for t in (home,away) for p in t.players],sort_keys=True).encode()).hexdigest()
+            result=ViperballEngine(home,away,seed=seed+i,neutral_site=True).simulate_game()
+            rows.append({"seed":seed+i,"roster_fingerprint":roster,
+                         "score":{s:result["final_score"][s]["score"] for s in ("home","away")},
+                         "scoring_profile":{s:result["stats"][s].get("viperball_metrics",{}).get("scoring_profile",{}) for s in ("home","away")}})
+        dump(out/"raw_baseline.json",{"revision":revision(engine_root),"games":rows,"scope":"common observed results; no cross-version EPA/PPD equivalence"})
+        return
     if trace_only:
         traces=[]
         for i in range(games):
@@ -298,6 +311,7 @@ if __name__=="__main__":
     p.add_argument("--seed",type=int,default=20261124)
     p.add_argument("--out",type=Path,default=Path("reports/advanced-analytics"))
     p.add_argument("--trace-only",action="store_true")
+    p.add_argument("--raw-baseline",action="store_true")
     p.add_argument("--engine-root",type=Path,default=ROOT)
     args=p.parse_args()
-    sample(args.games,args.seed,args.out,args.trace_only,args.engine_root)
+    sample(args.games,args.seed,args.out,args.trace_only,args.engine_root,args.raw_baseline)
