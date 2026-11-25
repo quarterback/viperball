@@ -76,6 +76,39 @@ def measure_game(game, year, groups, packages, teams, changes, fatigue, records)
         stats = fr["stats"][side]
         if stats.get("viperball_metrics", {}).get("scoring_profile", {}).get("score_consistent") is False:
             raise RuntimeError(f"Score ledger mismatch for {name}")
+        # Offensive package ledger distinguishes opportunities, calls and
+        # actual matching choices. All are attributed to the snapping side.
+        oc = fr.get("coach_tactics", {}).get(side, {})
+        choices = oc.get("selected", {})
+        expected = {key: Counter() for key in ("packages_eligible", "packages",
+                                               "packages_family_matched", "packages_all_matched")}
+        for play in fr["play_by_play"]:
+            call = play.get("offensive_call") or {}
+            if call.get("offense_side") != side:
+                continue
+            for pid in call.get("eligible", []):
+                expected["packages_eligible"][pid] += 1
+                groups["offense_package:" + pid]["eligible"] += 1
+            pid = call.get("package_id")
+            if not pid:
+                continue
+            if pid not in call["eligible"]:
+                raise RuntimeError("Offensive package selected outside eligibility")
+            expected["packages"][pid] += 1
+            row = groups["offense_package:" + pid]
+            row["selected"] += 1
+            matches = call.get("matches", {})
+            if call.get("family_matched"):
+                expected["packages_family_matched"][pid] += 1
+                row["family_matched"] += 1
+                if matches and all(matches.values()):
+                    expected["packages_all_matched"][pid] += 1
+                    row["all_matched"] += 1
+            if not (play.get("penalty") or {}).get("nullified"):
+                add_play(row, play)
+        for key, counts in expected.items():
+            if Counter(choices.get(key, {})) != counts:
+                raise RuntimeError(f"Offensive package ledger mismatch: {name}/{key}")
         dc = fr["defensive_coach_tactics"][side]
         if not dc:
             raise RuntimeError("Active program without DC decisions: "+name)
@@ -405,7 +438,7 @@ def run(seasons, nteams, seed, out, *, national=False):
             for key,g in sorted(packages.items()):
                 print("PACKAGE",year,key,dict(g),flush=True)
             for key,g in sorted(groups.items()):
-                if key.startswith(("cohort:","familiarity:","offense_energy:","defense_energy:","rush_count:")):
+                if key.startswith(("cohort:","familiarity:","offense_energy:","defense_energy:","rush_count:","offense_package:")):
                     print("GROUP",year,key,dict(g),flush=True)
             prev_rosters=start
             prev_staff=staff
