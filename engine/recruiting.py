@@ -2767,6 +2767,7 @@ class HSRecruitingPipeline:
     """
     classes: Dict[str, List[HSProspect]] = field(default_factory=dict)
     next_graduation_year: Optional[int] = None
+    source_league_year: Optional[int] = None
 
     def generate_initial_pipeline(
         self,
@@ -2958,7 +2959,8 @@ class HSRecruitingPipeline:
     def save_state(self) -> dict:
         """Lossless internal save; keep the public flattened to_dict unchanged."""
         from dataclasses import asdict
-        return {"version": 1, "next_graduation_year": self.next_graduation_year, "classes": {
+        return {"version": 1, "next_graduation_year": self.next_graduation_year,
+                "source_league_year": self.source_league_year, "classes": {
             grade: [asdict(p) for p in prospects]
             for grade, prospects in self.classes.items()
         }}
@@ -2975,7 +2977,8 @@ class HSRecruitingPipeline:
                 HSProspect(**{**p, "recruit": Recruit(**p["recruit"])})
                 for p in prospects
             ]
-        return cls(classes=classes, next_graduation_year=data.get("next_graduation_year"))
+        return cls(classes=classes, next_graduation_year=data.get("next_graduation_year"),
+                   source_league_year=data.get("source_league_year"))
 
     def pipeline_summary(self) -> dict:
         """Summary stats for each grade in the pipeline."""
