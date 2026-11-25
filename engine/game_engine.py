@@ -8274,6 +8274,20 @@ class ViperballEngine:
             prob = pen_def["prob"] * rate_scale * occurrence_multiplier(kind)
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
+            if kind:
+                # Use bounded game-state and coaching effects on misconduct only.
+                # For either-side infractions use the two teams' mean pressure.
+                other = "away" if snap_side == "home" else "home"
+                sides = ([snap_side] if pen_def["on"] == "offense" else
+                         [other] if pen_def["on"] == "defense" else [snap_side, other])
+                factors = []
+                for side in sides:
+                    composure = self.state.home_composure if side == "home" else self.state.away_composure
+                    mods = self.home_coaching_mods if side == "home" else self.away_coaching_mods
+                    leadership = max(-1.0, min(1.0, mods.get("leadership_factor", 0.0)))
+                    intensity = (self.home_def_intensity if side == "home" else self.away_def_intensity) if side != snap_side else 1.0
+                    factors.append(max(0.70, min(1.40, (1.0 + (100.0 - composure) / 150.0 - 0.10 * leadership) * intensity)))
+                prob *= sum(factors) / len(factors)
 
             if random.random() < prob:
                 on_side = pen_def["on"]
@@ -11030,7 +11044,7 @@ class ViperballEngine:
         else:
             pool = dl + kp * 4 + db * 2
         if not pool:
-            pool = [p for p in def_team.players if p.name not in injured] or def_team.players
+            pool = [p for p in def_team.players if p.name not in injured] or [p for p in def_team.players if p.name not in self._ejected_names(def_team)]
         weights = []
         for p in pool:
             w = p.tackling * 0.5 + p.speed * 0.3 + getattr(p, 'awareness', 75) * 0.2
