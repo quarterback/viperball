@@ -59,14 +59,27 @@ def build_events(game, game_id):
               "defense" if method=="safety" else
               "defense" if method=="return_td" and p.get("result")=="int_return_td" else
               "special_teams" if method=="return_td" and p.get("play_type") in {"punt","drop_kick","place_kick"} else None)
+        st=p.get("special_teams_event") or {}
+        player_label=None
+        if method in {"dk","pk"} and st.get("kicking_side")==side:
+            player_label=st.get("kicker")
+        elif method=="return_td" and unit=="special_teams" and st.get("kicking_side")!=side:
+            player_label=st.get("returner")
         by_play[i].append({"id":f"{game_id}:p{i}:s{len(by_play[i])}","team":side,
-            "method":method,"points":points,"unit":unit,"player_id":None,
+            "method":method,"points":points,"unit":unit,"player_id":None,"player_label":player_label,
             "drive_credit":bool(d and d.get("team")==side and method in DRIVE_METHODS)})
     rows=[]
     prev={s:0. for s in SIDES}
     for i,p in enumerate(plays):
         d=drives[owners[i]] if i in owners else {}
         before=p.get("analytics_before")
+        if before:
+            before=dict(before)
+            side=before["possession"];opp="away" if side=="home" else "home"
+            before["offense_school"]=game.get(side+"_style")
+            before["defense_school"]=game.get(opp+"_defense_style")
+            expectation=game.get("coach_expectation_home")
+            before["strength_band"]=int((expectation if side=="home" else 1-expectation)*5) if expectation is not None else None
         after={s:float(p[s+"_score"]) for s in SIDES}
         marker=p.get("play_type") in MARKERS
         nullified=bool((p.get("penalty") or {}).get("nullified"))
@@ -80,6 +93,7 @@ def build_events(game, game_id):
              "delta_cost":d.get("delta_cost"),"bonus_drive":d.get("bonus_drive"),
              "result":p.get("result"),"play_type":p.get("play_type"),
              "penalty":p.get("penalty"),"nullified":nullified,"marker":marker,
+             "state_score_matches":not before or all(before.get(s+"_score")==prev[s] for s in SIDES),
              "action":action_of(p) if before and not marker and not nullified and not p.get("analytics_terminal_kick") else None,
              "score_events":by_play[i],"net_home":after["home"]-prev["home"]-after["away"]+prev["away"]}
         rows.append(row);prev=after
@@ -98,6 +112,7 @@ def build_events(game, game_id):
             "drive_spans_valid":span_valid,"final":final,"score_totals":totals,
             "missing_states":sum(not r["before_state"] and not r["marker"] for r in rows),
             "unknown_score_units":sum(e["unit"] is None for r in rows for e in r["score_events"]),
+            "state_score_mismatches":sum(not r["state_score_matches"] for r in rows),
             "restart_baseline":game.get("analytics_restart_baseline"),
             "events":rows}
 
@@ -114,7 +129,7 @@ def label_states(contract):
     Values are from the pre-state ball owner's perspective. Both horizons
     (one or two possessions remaining) are modeled to make EPA telescopic.
     """
-    if not contract.get("score_consistent") or contract.get("missing_states"):
+    if not contract.get("score_consistent") or contract.get("missing_states") or contract.get("state_score_mismatches"):
         return []
     rows=contract["events"]
     # Exclude synthetic scoreless markers. If a marker scores, the contract
