@@ -168,10 +168,12 @@ def record_season(card,role,year,team,wins,losses,evidence,playoff=False,confere
     st["history"].append(event)
     return event
 
-def grow(card,evidence=None):
+def grow(card,evidence=None,mentor=None):
     st=ensure(card)
     rate=st["interest_rate"]
     context=1+min(.15,max(0.,(evidence or {}).get("above_expectation") or 0.)*.3)
+    if card.role in POSITION_ROLES and mentor is not None:
+        context *= 1 + .05 * clip((mentor.development-50)/45) * slider(card,"adaptability")
     age_factor=1. if card.age<55 else .75 if card.age<60 else .5 if card.age<65 else .25
     result={}
     for attr,focus in zip(ATTRS,FOCUS.get(card.role,(.85,.85,1,1.05,1.35,1.20) if card.role in POSITION_ROLES else FOCUS["oc"])):
