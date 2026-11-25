@@ -1,0 +1,29 @@
+# Viperball current development plan
+Updated November 25, 2026. Baseline main a6f1660a96a87934651cfcb76bd91ecdc50b89f4. This is the current queue; earlier assessment, handoff, analytics plan and AARs are historical evidence and retain their original statuses. No open PRs at review. Do not reopen work based solely on stale OPEN headings.
+
+## Closed implementation work
+- DEF-01–08, CCH-01–06, PBK-01/02/04, VAL-02, DEL-01/02, PEN-01/02, INJ-01, ST-01/02 and STI-VAL: merged #325–361; see assessment and special-teams AARs. DEF-09 sack-rate investigation/tuning, ROST-01, SIM-01 and RULE-01 merged #367; HS regular season intentionally uses fitted quick model, not full engine.
+- ENG-01 schedule quota repair #364; DEF-10/10B/10C adoption/fatigue instrumentation #365/366/368; DYNA-01/02 #369/370; VAL-04/05 #371/372; DEF-11 #373; CCH-07 #374; PBK-05 #375; ROST-02/HS-01 #376/377; CCH-08/09, FAT-01, DEF-04/05 #378; VAL-06/CCH-10 #379. Earlier 32-team schedule failure repaired; [all seven jobs passed](https://github.com/quarterback/viperball/actions/runs/45547173141) on pre-position-coach candidate, not current main.
+- WEA-02 weather, DEF-12/13 and COACH-FP-01 school/weekly/trait/fingerprint implementation on main (see Nov 25 AAR). BOX-02 #382; Step 7 #383; position coaches/career paths #384. Combined merge resolves overlapping recruiting inputs and plain-season NameError. #384 integrated smoke, national two-season seeds and offense calibration passed on branch; browser test timed out. #383 regression had NameError fixed in combined merge; combined revision not yet verified. Do not conflate merged with calibrated.
+
+## Active work in order
+| ID | Work | Status / acceptance |
+|---|---|---|
+| AN-02 | Versioned score/possession event adapter | Active; reconcile all score channels exactly, explicit unknowns, no gameplay changes |
+| EPA-02 | Empirical state value | Active; reproducible corpus, held-out seeds, uncertainty and legacy comparison |
+| EPA-03 | Legal-action alternative values | Active; observational estimates explicitly noncausal unless paired replay exists; suppress unsupported cells |
+| EPA-04 | Delta/bonus decomposition | Active; fixed perspective, support, interaction residual, no double-counting |
+| DTW-02 | Audit/recalibration | Active; descriptive index remains distinct from retrospective outcome model; ablations and held-out checks |
+| AN-03 | National statistical baselines | Active; weighted denominators, distributions and provenance |
+| AN-VAL | Integrated release gate | Active; existing CI, same-seed invariance, independent national samples; retain legacy stats until accepted |
+| VAL-07 | Combined main / long dynasty | Open; 10/20/30-season runs after #383/#384, compare VAL-06 cohort growth, actual STC careers, crossovers, salaries, generated fills, alumni, fit and schedule |
+| UI-VAL | Browser regression | Open; #384 browser wait timed out; verify merged main; preserve mobile changes |
+| UI-01 / DEL-03 | Remaining game/team/season reporting | Partial; scoring/drive/game-plan/fingerprint displays shipped; audit remaining halftime, weather splits and career/analytics presentation against live surfaces |
+| DEF-10 follow-up | Natural rare package adoption/effectiveness | Instrumented; further tuning only if repeated evidence supports it; no forced prevalence |
+| ENG-02 | TD/turnover drift | Investigated and tuned in #367 and later school work; monitor current distributions, no automatic scoring target |
+| PBK-03 | Additional playbook families | Deferred; new schools now exist; expand only with explicit gameplay need |
+| PEN follow-up | Keeper Hunt roughing fouls | Open research from Nov 25 identity AAR; no approved rate change |
+| DEP-01 / OPS-01 | Live Fly deployment / release proof | Open; verify deployed revision, game/season/dynasty paths and stats site |
+
+## Ownership and gates
+Current analytics implementation follows [the detailed analytics contract](analytics_development_plan_2026-11-24.md). Use current main and existing integrated regression workflow; no duplicate feature workflows. Keep legacy EPA, DTW and historical box-score data unchanged until held-out acceptance. Any remaining estimate, missing event attribution, unsupported counterfactual or failed CI check is explicit. No rule or balance changes in analytics. Record code revision, seeds, corpus sizes, tests and failures in the AAR. Future work should update this plan, not rewrite historical AARs.
