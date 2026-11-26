@@ -15,7 +15,7 @@ STATE_REGION = {state: region for region, states in REGIONS.items()
 
 
 def build_regional_polls(week, team_states, standings, schedule,
-                         power_rankings, previous, national_ranks):
+                         power_rankings, previous, national_ranks, history=()):
     """Blend national resume (60%) with regional results (40%).
 
     No invented ballots. Unmapped schools remain nationally eligible.
@@ -25,6 +25,7 @@ def build_regional_polls(week, team_states, standings, schedule,
                   for name, state in team_states.items()}
     power = {name: (score, qw) for name, score, qw in power_rankings}
     results = {}
+    historical = {p.week: getattr(p, 'regional_rankings', {}) for p in history}
     for region in REGIONS:
         members = {name for name in power if membership.get(name) == region}
         if not members:
@@ -45,7 +46,9 @@ def build_regional_polls(week, team_states, standings, schedule,
                     continue
                 rec = records[name]
                 rec[0 if score > against else 1 if score < against else 2] += 1
-                if score > against and opp in prior:
+                earlier = [w for w in historical if w < game.week]
+                ranked = historical[max(earlier)].get(region, []) if earlier else []
+                if score > against and any(row['team_name'] == opp for row in ranked):
                     rec[3] += 1
         rows = []
         for name in sorted(members):
