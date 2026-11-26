@@ -63,7 +63,7 @@ ORANGE = (255, 106, 0)
 LIGHT = (233, 234, 238)
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=5)
 def render_png(width, height, social=False):
     rows = [bytearray(bytes(DARK) * width) for _ in range(height)]
 
@@ -104,7 +104,7 @@ def render_png(width, height, social=False):
 
 @router.get("/pwa/icon-{size}.png", include_in_schema=False)
 def icon(size: int):
-    if size not in (180, 192, 512):
+    if size not in (32, 180, 192, 512):
         raise HTTPException(404)
     return Response(render_png(size, size), media_type="image/png",
                     headers={"Cache-Control": "public, max-age=86400"})
@@ -113,4 +113,13 @@ def icon(size: int):
 @router.get("/pwa/social.png", include_in_schema=False)
 def social_card():
     return Response(render_png(1200, 630, True), media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/pwa/favicon.ico", include_in_schema=False)
+def favicon():
+    png = render_png(32, 32)
+    header = struct.pack("<HHH", 0, 1, 1)
+    entry = struct.pack("<BBBBHHII", 32, 32, 0, 0, 1, 32, len(png), 22)
+    return Response(header + entry + png, media_type="image/x-icon",
                     headers={"Cache-Control": "public, max-age=86400"})
