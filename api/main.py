@@ -202,6 +202,10 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 def _stats_redirect():
     return RedirectResponse("/stats/", status_code=301)
 
+@app.get("/favicon.ico", include_in_schema=False)
+def _favicon_redirect():
+    return RedirectResponse("/stats/pwa/favicon.ico", status_code=307)
+
 _stats_app = FastAPI()
 from stats_site.pwa import router as pwa_router
 _stats_app.include_router(pwa_router)
