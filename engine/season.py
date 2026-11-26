@@ -950,6 +950,7 @@ class WeeklyPoll:
     week: int
     rankings: List[PollRanking] = field(default_factory=list)
     full_ranking_map: Dict[str, int] = field(default_factory=dict)
+    regional_rankings: Dict[str, List[Dict]] = field(default_factory=dict)
 
 
 @dataclass
@@ -2892,8 +2893,15 @@ class Season:
             ))
 
         full_rank_map = {name: i + 1 for i, (name, _, _) in enumerate(power_rankings)}
+        from .regional_polls import build_regional_polls
+        regional = build_regional_polls(
+            week, self.team_states, self.standings, self.schedule,
+            power_rankings, getattr(prev_poll, "regional_rankings", {}),
+            full_rank_map,
+        )
         self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings,
-                                            full_ranking_map=full_rank_map))
+                                            full_ranking_map=full_rank_map,
+                                            regional_rankings=regional))
 
     def get_standings_sorted(self) -> List[TeamRecord]:
         """Get standings sorted by win percentage, then point differential"""
