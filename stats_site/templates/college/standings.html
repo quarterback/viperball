@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-header">
   <h1>STANDINGS</h1>
-  <div class="subtitle">{{ season_name }} &middot; {{ standings|length }} teams</div>
+  <div class="subtitle">{{ season_name }}</div>
 </div>
 
 <div class="tabs">
@@ -31,7 +31,7 @@
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
   <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
-  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DraftyQueenz</a>
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 
@@ -73,8 +73,8 @@
     <td class="num">{{ s.avg_lateral_pct }}%</td>
     <td class="num">{{ s.avg_explosive }}</td>
     <td class="num {% if s.avg_to_margin > 0 %}stat-good{% elif s.avg_to_margin < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.avg_to_margin) }}</td>
-    <td>{{ s.offense_style }}</td>
-    <td>{{ s.defense_style }}</td>
+    <td>{{ s.offense_style|scheme }}</td>
+    <td>{{ s.defense_style|scheme }}</td>
     {% set dtw = s.get('dtw', {}) if s.get is defined else {} %}
     <td class="num">{{ dtw.get('expected_wins', '—') }}</td>
     <td class="num {% if (dtw.get('luck_differential', 0)|float) > 1 %}stat-good{% elif (dtw.get('luck_differential', 0)|float) < -1 %}stat-bad{% endif %}">{{ "%+.1f"|format(dtw.get('luck_differential', 0)) if dtw.get('expected_wins') else '—' }}</td>

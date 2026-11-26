@@ -10,7 +10,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Alumni &amp; Hall of Fame</h1>
-  <div class="subtitle">{{ alumni|length }} graduated players{% if dynasty %} &middot; {{ dynasty.dynasty_name }}{% endif %}</div>
+  {% if dynasty %}<div class="subtitle">{{ dynasty.dynasty_name }}</div>{% endif %}
 </div>
 
 <div class="tabs">
@@ -30,7 +30,7 @@
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
   <a href="/stats/college/{{ session_id }}/alumni" class="active">Alumni</a>
-  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DraftyQueenz</a>
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 

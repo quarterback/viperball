@@ -8,10 +8,8 @@
 <div class="page-header">
   <h1>GALACTIC PREMIERSHIP &middot; {{ st.year }}</h1>
   <div class="subtitle">
-    {% if st.phase == 'complete' %}Season complete{% else %}Week {{ st.current_week }}/{{ st.total_weeks }}{% endif %}
-    &middot; {{ st.tracked_players }} careers tracked &middot; {{ st.active_players }} active
-    &middot; {{ st.seasons_completed }} seasons done
-    {% if st.champion %}&middot; <span class="stat-elite">&#127942; {{ st.champion }}</span>{% endif %}
+    {% if st.phase == 'complete' %}Season complete{% else %}Week {{ st.current_week }} of {{ st.total_weeks }}{% endif %}
+    {% if st.champion %}&middot; <span class="stat-elite">Champion: {{ st.champion }}</span>{% endif %}
   </div>
 </div>
 

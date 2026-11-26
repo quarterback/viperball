@@ -129,6 +129,20 @@ templates.env.filters["flag"] = _flag_emoji
 from stats_site.pixel_icons import icon as _px_icon
 templates.env.globals["icon"] = _px_icon
 
+
+def _scheme_label(key) -> str:
+    """Offense, defense or special teams key to its display name."""
+    from engine.game_engine import OFFENSE_STYLES, DEFENSE_STYLES
+    if not key:
+        return ""
+    for table in (OFFENSE_STYLES, DEFENSE_STYLES):
+        if key in table:
+            return table[key].get("label", key)
+    return str(key).replace("_", " ").title()
+
+
+templates.env.filters["scheme"] = _scheme_label
+
 # ── Pixel-art face pool ──
 _FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
 _face_pool_size: int | None = None

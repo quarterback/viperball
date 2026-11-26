@@ -10,7 +10,6 @@
 {% block content %}
 <div class="page-header">
   <h1>FIV — INTERNATIONAL VIPERBALL</h1>
-  <div class="subtitle">Continental Championships &middot; World Cup &middot; National Team Rankings</div>
   {% set ph = fiv_data.get('phase') if fiv_data else None %}
   {% set steps = {
     'roster_generation': ('/api/fiv/continental/sim-all', 'Sim the continental championships'),

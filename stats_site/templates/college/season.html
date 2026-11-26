@@ -12,7 +12,6 @@
 <div class="page-header">
   <h1>{{ season.name if season else 'Season' }}{% if dynasty %} &middot; {{ dynasty.dynasty_name }} ({{ dynasty.current_year }}){% endif %}</h1>
   {% if champion %}<div class="subtitle stat-elite">Champion: {{ champion }}</div>{% endif %}
-  <div style="margin-top:8px"><a class="action-link" href="/stats/college/{{ session_id }}/analytics">Analytics portal</a></div>
   {# Run controls: these replace the /app workbench's Sim Week / Sim Rest /
      postseason buttons. One form, the action rides on the button pressed. #}
   {% if dynasty and phase == 'complete' %}
@@ -89,7 +88,7 @@
   <a href="/stats/college/{{ session_id }}/playoffs">Playoffs</a>
   <a href="/stats/college/{{ session_id }}/awards">Awards</a>
   <a href="/stats/college/{{ session_id }}/alumni">Alumni</a>
-  <a href="/stats/college/{{ session_id }}/draftyqueenz">DQ</a>
+  <a href="/stats/college/{{ session_id }}/draftyqueenz">DraftyQueenz</a>
   <a href="/stats/college/{{ session_id }}/data">Data</a>
 </div>
 
@@ -127,7 +126,7 @@
 
   {# ── Top standings ── #}
   <div>
-    <h2>Standings (Top 25)</h2>
+    <h2>Standings</h2>
     <table>
       <thead>
         <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">PPD</th><th class="num">Rating</th></tr>

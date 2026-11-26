@@ -669,7 +669,6 @@ td.rank {
 .footer {
   margin-top: 32px;
   padding: 12px 0;
-  border-top: 1px solid var(--border);
   font-size: 10px;
   color: var(--fg-dim);
   text-align: center;
@@ -1204,6 +1203,9 @@ tbody tr:hover { background: var(--row-hover); }
 
 /* Tabs */
 .tabs { border-bottom: 0; gap: 4px; flex-wrap: wrap; margin-bottom: 20px; }
+/* The first heading under the tabs sits right under them. */
+:is(.tabs, .tabs-wrapper) + :is(.grid-2, .grid-3) > div > h2:first-child,
+:is(.tabs, .tabs-wrapper) + h2 { margin-top: 0; }
 .tabs a { font-size: 14px; text-transform: none; letter-spacing: 0; padding: 8px 10px; color: var(--fg-dim); border-bottom: 3px solid transparent; }
 .tabs a.active { color: var(--fg-bright); border-bottom-color: var(--accent); }
 
@@ -1457,7 +1459,6 @@ button, .action-link, summary.btn-run, summary.btn-small { transition:color 150m
       <button type="button" class="theme-btn" id="pwa-install" hidden>Install Viperball</button>
       <p id="pwa-install-help" hidden>On iPhone or iPad, open the browser's Share menu and choose Add to Home Screen.</p>
     </div>
-    Viperball &middot; <span class="kb-hint" onclick="document.getElementById('kb-overlay').classList.add('open')">Press <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:0 4px;font-family:inherit;font-size:10px;color:var(--fg-bright)">?</kbd> for keyboard shortcuts</span>
   </div>
 </div>
 <script>
@@ -1725,19 +1726,6 @@ function copyTableText(btn, table) {
   });
 }
 
-/* Auto-add Copy buttons to every table with a thead */
-(function() {
-  var tables = document.querySelectorAll('table');
-  tables.forEach(function(table) {
-    if (!table.querySelector('thead')) return;
-    var btn = document.createElement('button');
-    btn.className = 'copy-table-btn';
-    btn.textContent = table.dataset.copyLabel || 'Copy';
-    btn.type = 'button';
-    btn.addEventListener('click', function() { copyTableText(btn, table); });
-    table.parentNode.insertBefore(btn, table);
-  });
-})();
 
 function showToast(msg) {
   var toast = document.getElementById('vb-toast');

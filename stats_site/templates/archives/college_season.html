@@ -11,8 +11,7 @@
 <div class="page-header">
   <h1>{{ archive.label }}</h1>
   <div class="subtitle">
-    Archived &middot; {{ (archive.standings or [])|length }} teams &middot; {{ archive.games_played|default(0) }} of {{ archive.total_games|default(0) }} games played
-    {% if archive.champion %} &middot; <span class="stat-elite">Champion: {{ archive.champion }}</span>{% endif %}
+    {% if archive.champion %}<span class="stat-elite">Champion: {{ archive.champion }}</span>{% endif %}
   </div>
 </div>
 
@@ -31,7 +30,7 @@
   <div>
     {% if archive.polls %}
     {% set latest_poll = archive.polls[-1] %}
-    <h2>Final Poll (Week {{ latest_poll.week }})</h2>
+    <h2>{% if archive.champion %}Final poll{% else %}Poll after week {{ latest_poll.week }}{% endif %}</h2>
     <table>
       <thead>
         <tr><th class="num">#</th><th>Team</th><th>Record</th><th>Conf</th><th class="num">PWR</th></tr>
@@ -57,7 +56,7 @@
 
   {# ── Top standings ── #}
   <div>
-    <h2>Standings (Top 25)</h2>
+    <h2>Standings</h2>
     <table>
       <thead>
         <tr><th class="num">#</th><th>Team</th><th>W-L</th><th class="num">PF</th><th class="num">PA</th><th class="num">PPD</th><th class="num">Rating</th></tr>
