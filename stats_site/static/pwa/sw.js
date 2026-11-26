@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
       !url.pathname.startsWith('/stats/')) return;
   // Do not intercept API calls, forms, save downloads, or mutable page data.
   if (req.mode === 'navigate' && req.destination === 'document') {
-    event.respondWith(fetch(req).catch(async () => {
+    event.respondWith(fetch(req, {cache: 'no-store'}).catch(async () => {
       const cache = await caches.open(CACHE);
       return (await cache.match(OFFLINE)) || new Response('Viperball is offline. Reconnect and try again.', {
         status: 503, headers: {'Content-Type': 'text/plain; charset=utf-8'}
