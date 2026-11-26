@@ -56,6 +56,22 @@
   {% endfor %}
   </tbody>
 </table>
+{% if poll.regional_rankings %}
+<h2>Regional Top 10</h2>
+{% for region, rows in poll.regional_rankings.items() %}
+<details>
+  <summary>{{ region }} — {{ rows[0].team_name }}</summary>
+  <table>
+    <thead><tr><th>#</th><th>Team</th><th>Overall</th><th>Region</th><th>Conference</th><th>National rank</th><th>Regional quality wins</th><th>Score</th><th>+/-</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr><td>{{ r.rank }}</td><td><a href="/stats/archives/{{ archive_key }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td><td>{{ r.record }}</td><td>{{ r.regional_record }}</td><td>{{ r.conference }}</td><td>{{ r.national_rank if r.national_rank and r.national_rank <= 25 else '—' }}</td><td>{{ r.regional_quality_wins }}</td><td>{{ "%.1f"|format(r.poll_score) }}</td><td>{{ '%+d'|format(r.rank_change) if r.rank_change is not none else 'NEW' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endfor %}
+{% endif %}
 {% endfor %}
 
 {% if not polls %}
