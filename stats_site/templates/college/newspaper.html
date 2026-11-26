@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}CVL Newspaper — {{ season_name }}{% endblock %}
+{% block content %}
+<div class="page-header"><h1>CVL Newspaper</h1><div class="subtitle">{{ season_name }} · Week {{ selected_week }}</div></div>
+<div class="tabs">
+<a href="/stats/college/{{ session_id }}/">Overview</a>
+<a href="/stats/college/{{ session_id }}/standings">Standings</a>
+<a href="/stats/college/{{ session_id }}/schedule">Schedule</a>
+<a href="/stats/college/{{ session_id }}/polls">Polls</a>
+<a class="active" href="/stats/college/{{ session_id }}/newspaper">Newspaper</a>
+</div>
+<form method="get">
+<label>Edition <select name="week">{% for w in weeks %}<option value="{{ w }}" {% if w == selected_week %}selected{% endif %}>Week {{ w }}</option>{% endfor %}</select></label>
+<label>Desk <select name="region">{% for r in regions %}<option {% if r == region %}selected{% endif %}>{{ r }}</option>{% endfor %}</select></label>
+<button type="submit">Read edition</button>
+</form>
+<h2>{{ region }} edition</h2>
+{% if rankings %}
+<h2>{{ rankings[0].team_name }} leads the {{ region }} poll</h2>
+<p>Overall record: {{ rankings[0].record }}</p>
+<table><thead><tr><th>Rank</th><th>Team</th><th>Record</th></tr></thead><tbody>
+{% for r in rankings %}<tr><td>{{ r.rank }}</td><td><a href="/stats/college/{{ session_id }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td><td>{{ r.record }}</td></tr>{% endfor %}
+</tbody></table>
+{% else %}<p>No poll available for this edition.</p>{% endif %}
+<h2>Results desk</h2>
+{% for g in games %}
+<article style="margin-bottom:16px">
+<h3>{% if g.home_score > g.away_score %}{{ g.home_team }} defeats {{ g.away_team }}{% elif g.away_score > g.home_score %}{{ g.away_team }} defeats {{ g.home_team }}{% else %}{{ g.home_team }} and {{ g.away_team }} draw{% endif %}</h3>
+<p>{{ g.home_team }} {{ g.home_score }} — {{ g.away_team }} {{ g.away_score }}</p>
+</article>
+{% else %}<p>No completed games in this edition.</p>{% endfor %}
+{% endblock %}
