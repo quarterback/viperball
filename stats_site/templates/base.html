@@ -8,6 +8,31 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#15171c">
 <title>{% block title %}Viperball Stats{% endblock %}</title>
+{% set social_title = self.title()|striptags|trim %}
+{% set social_description = "Simulate Viperball games, manage college and professional dynasties, explore league results, rosters, recruiting and detailed game statistics." %}
+{% set social_origin = "https://viperball.xyz" %}
+<meta name="description" content="{{ social_description }}">
+<meta name="application-name" content="Viperball">
+<meta name="apple-mobile-web-app-title" content="Viperball">
+<link rel="manifest" href="/stats/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/stats/pwa/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/stats/pwa/icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Viperball">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="{{ social_title }}">
+<meta property="og:description" content="{{ social_description }}">
+<meta property="og:url" content="{{ social_origin }}{{ request.url.path if request else '/stats/' }}">
+<meta property="og:image" content="{{ social_origin }}/stats/pwa/social.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Viperball — Leagues, Dynasties, Stats, Game Simulation">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ social_title }}">
+<meta name="twitter:description" content="{{ social_description }}">
+<meta name="twitter:image" content="{{ social_origin }}/stats/pwa/social.png">
+<meta name="twitter:image:alt" content="Viperball — Leagues, Dynasties, Stats, Game Simulation">
 <link rel="preconnect" href="https://api.fontshare.com">
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap">
 <style>
@@ -1426,6 +1451,10 @@ button, .action-link, summary.btn-run, summary.btn-small { transition:color 150m
 
 <div class="container">
   <div class="footer">
+    <div style="margin-bottom:10px">
+      <button type="button" class="theme-btn" id="pwa-install" hidden>Install Viperball</button>
+      <p id="pwa-install-help" hidden>On iPhone or iPad, open the browser's Share menu and choose Add to Home Screen.</p>
+    </div>
     Viperball &middot; <span class="kb-hint" onclick="document.getElementById('kb-overlay').classList.add('open')">Press <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:0 4px;font-family:inherit;font-size:10px;color:var(--fg-bright)">?</kbd> for keyboard shortcuts</span>
   </div>
 </div>
@@ -2051,5 +2080,6 @@ function showToast(msg) {
 
 <div class="toast" id="vb-toast"></div>
 
+<script defer src="/stats/static/pwa/install.js"></script>
 </body>
 </html>
