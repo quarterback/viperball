@@ -10,7 +10,7 @@ def test_regional_polls():
               home_team="A", away_team="B", home_score=30, away_score=20)
     prior = {"Pacific": [{"team_name": "B", "rank": 1}]}
     ranks = {n: i for i, (n, _, _) in enumerate(power, 1)}
-    result = build_regional_polls(1, states, standings, [game], power, prior, ranks)
+    result = build_regional_polls(1, states, standings, [game], power, prior, ranks, [NS(week=0, regional_rankings=prior)])
     assert result["Pacific"][0]["team_name"] == "A"
     assert result["Pacific"][0]["regional_record"] == "1-0"
     assert result["Pacific"][1]["rank_change"] == -1
