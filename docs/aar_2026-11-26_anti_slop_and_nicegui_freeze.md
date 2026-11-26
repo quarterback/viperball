@@ -22,7 +22,7 @@ Stats site:
 3. Taglines that repeated the heading or the nav are gone from the home, search, archive,
    college, dynasty, pro, international, recruiting, commissioner, signing tracker, pro
    pipeline and WVL index pages.
-4. The auto added table Copy buttons, the footer keyboard hint and the footer rule are gone.
+4. The footer keyboard hint and the footer rule are gone. The table Copy buttons were removed and then put back: Ron uses them to paste game data, since the pages don't paste cleanly otherwise.
 5. The duplicate Analytics portal button on the season page is gone. "DQ" tabs read
    "DraftyQueenz".
 6. Scheme keys show as their labels through a new `scheme` template filter.

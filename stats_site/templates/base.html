@@ -1726,6 +1726,19 @@ function copyTableText(btn, table) {
   });
 }
 
+/* Copy buttons on every table with a header row, for pasting game data elsewhere */
+(function() {
+  var tables = document.querySelectorAll('table');
+  tables.forEach(function(table) {
+    if (!table.querySelector('thead')) return;
+    var btn = document.createElement('button');
+    btn.className = 'copy-table-btn';
+    btn.textContent = table.dataset.copyLabel || 'Copy';
+    btn.type = 'button';
+    btn.addEventListener('click', function() { copyTableText(btn, table); });
+    table.parentNode.insertBefore(btn, table);
+  });
+})();
 
 function showToast(msg) {
   var toast = document.getElementById('vb-toast');

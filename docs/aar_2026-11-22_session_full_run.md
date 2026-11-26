@@ -150,7 +150,7 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     → `aar_2026-11-25_merge_383_384.md`
 
 36. **Stats site anti-slop pass and NiceGUI freeze** (November 26). Game counts, count
-    subtitles, restating taglines, Copy buttons and the footer hint are gone; all caps
+    subtitles, restating taglines and the footer hint are gone (table Copy buttons restored); all caps
     titles are sentence case. Another agent's NiceGUI newspaper tab was reverted, and a
     test now fails on any NiceGUI change.
     → `aar_2026-11-26_archive_and_site_slop.md`, `aar_2026-11-26_anti_slop_and_nicegui_freeze.md`
