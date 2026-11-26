@@ -2897,7 +2897,7 @@ class Season:
         regional = build_regional_polls(
             week, self.team_states, self.standings, self.schedule,
             power_rankings, getattr(prev_poll, "regional_rankings", {}),
-            full_rank_map,
+            full_rank_map, self.weekly_polls,
         )
         self.weekly_polls.append(WeeklyPoll(week=week, rankings=rankings,
                                             full_ranking_map=full_rank_map,
