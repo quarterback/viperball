@@ -7736,3 +7736,34 @@ def high_school_team(request: Request, key: str):
         players=[{**_hs_player_row(p), "tracked": p.player_id in tracked} for p in players], games=game_rows,
         team_keys=_hs_team_keys(league, prefer_state=team.state),
     ))
+
+
+@router.get("/college/{session_id}/newspaper", response_class=HTMLResponse)
+def college_newspaper(request: Request, session_id: str, week: int = 0, region: str = "National"):
+    from engine.regional_polls import REGIONS, STATE_REGION
+    api = _get_api()
+    season = api["require_season"](api["get_session"](session_id))
+    weeks = sorted({g.week for g in season.schedule if g.completed})
+    if week not in weeks:
+        week = weeks[-1] if weeks else 0
+    if region not in REGIONS:
+        region = "National"
+    membership = {name: STATE_REGION.get(str(state).strip().upper())
+                  for name, state in season.team_states.items()}
+    poll = next((p for p in season.weekly_polls if p.week == week), None)
+    serialized = api["serialize_poll"](poll) if poll else {}
+    rankings = (serialized.get("rankings", []) if region == "National"
+                else serialized.get("regional_rankings", {}).get(region, []))
+    games = []
+    for g in season.schedule:
+        if not g.completed or g.week != week or g.home_score is None or g.away_score is None:
+            continue
+        if region != "National" and region not in (membership.get(g.home_team), membership.get(g.away_team)):
+            continue
+        games.append(g)
+    games.sort(key=lambda g: abs(g.home_score - g.away_score))
+    return templates.TemplateResponse("college/newspaper.html", _ctx(
+        request, section="college", session_id=session_id, season_name=season.name,
+        weeks=weeks, selected_week=week, regions=["National", *REGIONS],
+        region=region, rankings=rankings, games=games,
+    ))
