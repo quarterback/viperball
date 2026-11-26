@@ -25,7 +25,7 @@
   {% for s in sessions %}
     <label style="display:flex;gap:6px;align-items:center;font-weight:400">
       <input type="checkbox" name="run" value="{{ s.session_id }}" {% if s.session_id in picked %}checked{% endif %}>
-      {{ s.name }} <span style="color:var(--fg-dim)">({{ s.games_played }}/{{ s.total_games }} games{% if s.champion %}, {{ s.champion }}{% endif %})</span>
+      {{ s.name }} <span style="color:var(--fg-dim)">({{ s.games_played }} of {{ s.total_games }} games{% if s.champion %}, {{ s.champion }}{% endif %})</span>
     </label>
   {% endfor %}
   </div>

@@ -108,7 +108,7 @@
         <td class="num rank">{{ r.rank }}</td>
         <td><a href="/stats/college/{{ session_id }}/team/{{ r.team_name }}">{{ r.team_name }}</a></td>
         <td class="record">{{ r.record }}</td>
-        <td>{{ r.conference[:12] }}</td>
+        <td>{{ r.conference }}</td>
         <td class="num">{{ "%.1f"|format(r.power_index) if r.power_index else '—' }}</td>
         <td class="num {% if r.rank_change and r.rank_change > 0 %}change-up{% elif r.rank_change and r.rank_change < 0 %}change-down{% else %}change-none{% endif %}">
           {% if r.rank_change and r.rank_change > 0 %}+{{ r.rank_change }}{% elif r.rank_change and r.rank_change < 0 %}{{ r.rank_change }}{% else %}—{% endif %}
@@ -117,7 +117,7 @@
       {% endfor %}
       </tbody>
     </table>
-    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/polls">Full poll &rarr;</a></div>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/polls">Full poll</a></div>
     {% else %}
     <h2>Rankings</h2>
     <p class="empty">No polls generated yet.</p>
@@ -145,7 +145,7 @@
       {% endfor %}
       </tbody>
     </table>
-    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/standings">Full standings &rarr;</a></div>
+    <div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/standings">Full standings</a></div>
   </div>
 
 </div>
@@ -154,7 +154,7 @@
 {# ── Recent Results ── #}
 <h2 style="margin-top: 24px;">Recent Results (Week {{ current_week }})</h2>
 {{ matchups(recent_games, session_id) }}
-<div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/schedule">Full schedule &rarr;</a></div>
+<div style="margin-top: 4px; font-size: 11px;"><a href="/stats/college/{{ session_id }}/schedule">Full schedule</a></div>
 {% endif %}
 
 {% endblock %}

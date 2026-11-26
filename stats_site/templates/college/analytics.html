@@ -46,7 +46,7 @@
   <strong>Conference:</strong>
   <a href="/stats/college/{{ session_id }}/analytics?sort={{ sort }}" {% if not conference %}style="color:var(--accent);font-weight:bold"{% endif %}>All</a>
   {% for c in conferences %}
-  &middot; <a href="/stats/college/{{ session_id }}/analytics?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c[:15] }}</a>
+  &middot; <a href="/stats/college/{{ session_id }}/analytics?sort={{ sort }}&conference={{ c }}" {% if conference == c %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ c }}</a>
   {% endfor %}
 </div>
 

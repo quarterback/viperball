@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>{{ archive.label }} &middot; Standings <span class="tag">ARCHIVED</span></h1>
+  <h1>{{ archive.label }} &middot; Standings</h1>
 </div>
 
 <div class="tabs">
@@ -37,7 +37,7 @@
     <td class="num rank">{{ loop.index }}</td>
     <td><a href="/stats/archives/{{ archive_key }}/team/{{ s.team_name }}">{{ s.team_name }}</a></td>
     <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span></td>
-    <td>{{ (s.get('conference', '') or '')[:12] }}</td>
+    <td>{{ s.get('conference', '') or '' }}</td>
     <td class="num">{{ s.points_for|default(0) }}</td>
     <td class="num">{{ s.points_against|default(0) }}</td>
     <td class="num {% if s.point_differential is defined and s.point_differential and s.point_differential > 0 %}stat-good{% elif s.point_differential is defined and s.point_differential and s.point_differential < 0 %}stat-bad{% endif %}">{{ s.point_differential|default(0) }}</td>

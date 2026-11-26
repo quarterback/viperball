@@ -1117,7 +1117,7 @@
   <tr class="pbp-row{% if is_score %} game-event-score{% elif is_turnover %} game-event-turnover{% elif is_penalty %} game-event-penalty{% endif %}" data-q="{{ p.quarter }}">
     <td class="num">{{ p.quarter }}</td>
     <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
-    <td>{% if p.possession == 'home' %}{{ game.home_team[:15] }}{% else %}{{ game.away_team[:15] }}{% endif %}</td>
+    <td>{% if p.possession == 'home' %}{{ game.home_team }}{% else %}{{ game.away_team }}{% endif %}</td>
     <td class="num">{% if p.field_position is defined %}{% set fp = p.field_position|round(0)|int %}{% if fp < 50 %}OWN {{ fp }}{% elif fp == 50 %}50{% else %}OPP {{ 100 - fp }}{% endif %}{% else %}&mdash;{% endif %}</td>
     <td>{% if p.down and p.yards_to_go %}{{ p.down }}&amp;{{ p.yards_to_go|round(0)|int }}{% else %}&mdash;{% endif %}</td>
     <td>

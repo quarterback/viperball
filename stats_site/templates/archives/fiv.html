@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>{{ archive.label }} <span class="tag">ARCHIVED</span></h1>
+  <h1>{{ archive.label }}</h1>
   <div class="subtitle">
     Phase: {{ archive.phase | replace('_', ' ') | title }}
     {% if archive.host_nation %} &middot; Host: {{ archive.host_nation }}{% endif %}

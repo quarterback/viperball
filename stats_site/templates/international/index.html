@@ -99,7 +99,7 @@
     </td>
     <td class="num">{{ cc.get('all_results', []) | length }}</td>
     <td>{{ cc.get('phase', '?') | replace('_', ' ') | title }}</td>
-    <td><a href="/stats/international/confederation/{{ conf_id }}">Details &rarr;</a></td>
+    <td><a href="/stats/international/confederation/{{ conf_id }}">Details</a></td>
   </tr>
   {% endfor %}
   </tbody>
@@ -121,7 +121,7 @@
   {% endfor %}
   </tbody>
 </table>
-<div style="margin-top:4px;font-size:11px;"><a href="/stats/international/rankings">Full rankings &rarr;</a></div>
+<div style="margin-top:4px;font-size:11px;"><a href="/stats/international/rankings">Full rankings</a></div>
 {% endif %}
 
 {% else %}

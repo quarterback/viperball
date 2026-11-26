@@ -163,7 +163,7 @@
     {% set status_label = gb|round(1) ~ " GB" %}
   {% endif %}
   <div style="display:flex;align-items:center;gap:8px;margin:3px 0;">
-    <span style="width:120px;font-size:10px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg,#e0e0e0);">{{ t.team_name[:15] }}</span>
+    <span style="width:120px;font-size:10px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg,#e0e0e0);">{{ t.team_name }}</span>
     <div style="flex:1;height:14px;background:var(--border,#333);border-radius:2px;position:relative;overflow:hidden;">
       <div style="height:100%;width:{{ win_pct|round(1) }}%;background:{{ bar_color }};border-radius:2px;transition:width 0.3s;"></div>
     </div>

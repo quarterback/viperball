@@ -50,7 +50,7 @@
   <strong>Conference:</strong>
   <a href="/stats/college/{{ session_id }}/alumni?sort={{ sort }}">All</a>
   {% for c in conferences %}
-  &middot; <a href="/stats/college/{{ session_id }}/alumni?sort={{ sort }}&conference={{ c }}"{% if conference == c %} style="color:var(--accent)"{% endif %}>{{ c[:15] }}</a>
+  &middot; <a href="/stats/college/{{ session_id }}/alumni?sort={{ sort }}&conference={{ c }}"{% if conference == c %} style="color:var(--accent)"{% endif %}>{{ c }}</a>
   {% endfor %}
 </div>
 {% endif %}
@@ -81,7 +81,7 @@
       <td><a href="/stats/college/{{ session_id }}/alumni/{{ a.name }}">{{ a.name }}</a></td>
       <td><span class="tag tag-pos">{{ a.position }}</span></td>
       <td><a href="/stats/college/{{ session_id }}/team/{{ a.college_team }}">{{ a.college_team[:20] }}</a></td>
-      <td style="font-size:11px">{{ a.conference[:12] if a.conference else '' }}</td>
+      <td style="font-size:11px">{{ a.conference if a.conference else '' }}</td>
       <td class="num">{{ a.graduation_year }}</td>
       <td class="num">{{ a.college_seasons_count }}</td>
       <td class="num {% if a.peak_overall >= 70 %}stat-elite{% elif a.peak_overall >= 55 %}stat-good{% endif %}">{{ a.peak_overall }}</td>

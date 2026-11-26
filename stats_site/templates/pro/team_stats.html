@@ -96,7 +96,7 @@
 {% macro team_row(t, rank) %}
     <td class="num rank">{{ rank }}</td>
     <td><a href="/stats/pro/{{ league }}/{{ session_id }}/team/{{ t.team_key }}">{{ t.team }}</a></td>
-    <td style="font-size:10px;">{{ t.division[:12] if t.division else '—' }}</td>
+    <td style="font-size:10px;">{{ t.division if t.division else '—' }}</td>
     <td class="record"><span class="w">{{ t.wins }}</span>-<span class="l">{{ t.losses }}</span></td>
     <td class="num">{{ t.games }}</td>
 {% endmacro %}

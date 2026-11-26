@@ -30,7 +30,7 @@
     <td><a href="/stats/archives/{{ a.key }}/">{{ a.label }}</a></td>
     <td><span class="tag {% if a.type == 'fiv' %}tag-conf{% endif %}">{{ a.type | upper }}</span></td>
     <td class="num">{{ a.team_count }}</td>
-    <td class="num">{{ a.games_played }}/{{ a.total_games }}</td>
+    <td class="num">{{ a.games_played }} of {{ a.total_games }}</td>
     <td>{% if a.champion %}<span class="stat-elite">{{ a.champion }}</span>{% else %}&mdash;{% endif %}</td>
   </tr>
   {% endfor %}
