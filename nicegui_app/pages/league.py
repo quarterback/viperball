@@ -285,7 +285,7 @@ async def render_league_section(state, shared):
     has_history = bool(history) or bool(dynasty_awards)
 
     # -- Tabs --
-    tab_names = ["Standings", "Power Rankings", "Newspaper"]
+    tab_names = ["Standings", "Power Rankings"]
     if has_conferences:
         tab_names.append("Conferences")
     tab_names.extend(["Player Stats", "Team Browser", "Postseason", "Schedule", "Awards & Stats", "Injury Report"])
@@ -328,8 +328,6 @@ async def render_league_section(state, shared):
             try:
                 if tab_name == "Power Rankings":
                     await _render_power_rankings(session_id, standings, user_team)
-                elif tab_name == "Newspaper":
-                    await _render_newspaper(session_id, completed_games)
                 elif tab_name == "Conferences":
                     await _render_conferences(session_id, conferences, user_team)
                 elif tab_name == "Player Stats":
@@ -2207,58 +2205,3 @@ def _render_dynasty_league_history(awards: dict):
                 for team, count in sorted(champ_counts.items(), key=lambda x: -x[1])
             ]
             stat_table(dynasty_rows)
-
-
-async def _render_newspaper(session_id, completed_games):
-    """A results-backed weekly edition, with national and regional desks."""
-    try:
-        response = await run.io_bound(api_client.get_polls, session_id)
-        polls = {p["week"]: p for p in response.get("polls", [])}
-    except api_client.APIError:
-        polls = {}
-    weeks = sorted(set(polls) | {g["week"] for g in completed_games if "week" in g})
-    ui.label("CVL Newspaper").classes("text-3xl font-bold")
-    ui.label("Weekly editions • Results and rankings").classes("text-sm")
-    if not weeks:
-        ui.label("Play a week to publish the first edition.")
-        return
-    week = ui.select(weeks, value=weeks[-1], label="Edition")
-    from engine.regional_polls import REGIONS
-    region = ui.select(["National", *REGIONS], value="National", label="Desk")
-    body = ui.column().classes("w-full")
-
-    def render():
-        body.clear()
-        poll = polls.get(week.value, {})
-        regional = poll.get("regional_rankings") or {}
-        rows = poll.get("rankings", []) if region.value == "National" else regional.get(region.value, [])
-        members = {r["team_name"] for r in rows}
-        games = [g for g in completed_games if g.get("week") == week.value
-                 and g.get("home_score") is not None and g.get("away_score") is not None]
-        if region.value != "National":
-            games = [g for g in games if g.get("home_team") in members or g.get("away_team") in members]
-        with body:
-            ui.label(f"Week {week.value} | {region.value} edition").classes("text-xl font-bold")
-            if rows:
-                leader = rows[0]
-                ui.label(f'{leader["team_name"]} leads the {region.value} poll').classes("text-2xl font-bold")
-                ui.label(f'Overall record: {leader.get("record", "")}')
-                stat_table([{"#": r["rank"], "Team": r["team_name"], "Record": r.get("record", "")} for r in rows])
-            else:
-                ui.label("No rankings available for this edition.")
-            ui.label("Results desk" if region.value == "National" else "Ranked teams: results desk").classes("text-lg font-bold")
-            for g in sorted(games, key=lambda g: abs(g["home_score"] - g["away_score"])):
-                home, away = g["home_score"], g["away_score"]
-                if home == away:
-                    headline = f'{g["home_team"]} and {g["away_team"]} draw'
-                else:
-                    winner, loser = (g["home_team"], g["away_team"]) if home > away else (g["away_team"], g["home_team"])
-                    headline = f"{winner} defeats {loser}"
-                with ui.card().classes("w-full"):
-                    ui.label(headline).classes("font-bold")
-                    ui.label(f'{g["home_team"]} {fmt_vb_score(home)} — {g["away_team"]} {fmt_vb_score(away)}')
-            if not games:
-                ui.label("No matching completed games.")
-    week.on_value_change(lambda _: render())
-    region.on_value_change(lambda _: render())
-    render()
