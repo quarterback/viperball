@@ -619,7 +619,7 @@ def _serialize_poll(poll: WeeklyPoll, prestige_map: Optional[dict] = None) -> di
         if prestige_map:
             entry["prestige"] = prestige_map.get(r.team_name)
         rankings.append(entry)
-    return {"week": poll.week, "rankings": rankings}
+    return {"week": poll.week, "rankings": rankings, "regional_rankings": getattr(poll, "regional_rankings", {})}
 
 
 def _serialize_standings(season: Season) -> list:

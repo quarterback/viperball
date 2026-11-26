@@ -516,6 +516,26 @@ def _render_poll_table(poll, user_team):
             entry["Prestige"] = r["prestige"]
         poll_data.append(entry)
     stat_table(poll_data)
+    regions = poll.get("regional_rankings") or {}
+    ui.label("Regional Top 10").classes("text-lg font-bold mt-4")
+    if not regions:
+        ui.label("Regional rankings are available for newly simulated weeks.")
+    for region, rows in regions.items():
+        with ui.expansion(region, value=False).classes("w-full"):
+            stat_table([
+                {
+                    "#": row["rank"],
+                    "Team": _team_label(row["team_name"], user_team),
+                    "Record": row["record"],
+                    "Regional": row["regional_record"],
+                    "Conf": row["conference"],
+                    "National": row["national_rank"] if row.get("national_rank") and row["national_rank"] <= 25 else "--",
+                    "Quality Wins": row["regional_quality_wins"],
+                    "Score": row["poll_score"],
+                    "Move": "NEW" if row.get("rank_change") is None else f'{row["rank_change"]:+d}',
+                }
+                for row in rows
+            ])
 
 
 # ---------------------------------------------------------------------------
