@@ -414,6 +414,7 @@ def calculate_scoring_profile(plays: List[Dict], drives: List[Dict],
             "safety_pct": pct(points["safety"]), "pindown_pct": pct(points["pindown"]),
             "bell_pct": pct(points["bell"]), "other_pct": pct(points["other"]),
             "bonus_pts": 0, "bonus_pct": 0,
+            "return_kinds": dict(row.get("return_kinds", {})),
         }
 
     # Historical analytics fixtures may lack after-score snapshots.

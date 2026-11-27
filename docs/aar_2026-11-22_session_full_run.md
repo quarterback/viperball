@@ -160,6 +160,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     /stats/data, open to notebooks, linked from the Export page.
     → `aar_2026-11-27_data_tables_for_observable.md`
 
+38. **Portal model and bowl box score audit** (November 27). The portal fits on the whole
+    season and lost its slop; box scores show points per scoring method, split return TDs
+    and itemize drive points; quarter split drives are joined; adjusted yards and defensive
+    WPA fixed. → `aar_2026-11-27_portal_model_and_bowl_box_scores.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

@@ -31,6 +31,7 @@ def scoring_ledger(plays, final_scores=None, *, events=None):
 
     out = {side: {"counts": {m: 0 for m in METHODS},
                   "points": {m: 0.0 for m in METHODS},
+                  "return_kinds": {},
                   "score_from_plays": 0.0,
                   "unrecorded_points": 0.0,
                   "score_consistent": True}
@@ -69,6 +70,9 @@ def scoring_ledger(plays, final_scores=None, *, events=None):
                     "int_return_td", "blocked_kick",
                 ):
                     method = "return_td"
+                    kind = result if result != "touchdown" else "defensive_td"
+                    kinds = out[side]["return_kinds"]
+                    kinds[kind] = kinds.get(kind, 0) + 1
                 elif typ == "kick_pass":
                     method = "kp_td"
                 elif p.get("laterals"):
@@ -135,6 +139,7 @@ def reconcile_drive_scoring(plays, drives, final_scores):
     per_drive = [{m: 0.0 for m in METHODS} for _ in drives]
     teams = {side: {
         "drive_points": 0.0,
+        "drive_by_method": {m: 0.0 for m in METHODS},
         "non_drive_by_method": {m: 0.0 for m in METHODS},
         "non_drive_points": 0.0,
         "final_score": float(final_scores[side]),
@@ -146,6 +151,7 @@ def reconcile_drive_scoring(plays, drives, final_scores):
                 and method in DRIVE_METHODS):
             per_drive[i][method] += points
             team["drive_points"] += points
+            team["drive_by_method"][method] += points
         else:
             team["non_drive_by_method"][method] += points
             team["non_drive_points"] += points

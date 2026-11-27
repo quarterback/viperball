@@ -6668,6 +6668,9 @@ class ViperballEngine:
         self._is_bonus_drive = is_bonus_drive
         # Quarter boundaries can split a drive without a new possession.
         origin = "bonus_possession" if is_bonus_drive else self._next_drive_origin
+        # No new origin means the same possession carried over a quarter
+        # break. The drive log joins it to the drive it continues.
+        self._drive_continues = origin is None and bool(self.drive_log)
         if origin is not None:
             self._drive_origin = origin
             self._possession_snap_count = 0
@@ -7359,7 +7362,29 @@ class ViperballEngine:
         # Collect timeouts called during this drive
         drive_timeouts = self.timeout_log[drive_timeout_log_start:]
 
-        self.drive_log.append({
+        prev_drive = self.drive_log[-1] if self.drive_log else None
+        if (getattr(self, "_drive_continues", False) and prev_drive
+                and prev_drive["team"] == drive_team
+                and prev_drive["result"] == "stall"
+                and prev_drive["play_log_end"] == drive_play_log_start):
+            # One possession across a quarter break is one drive.
+            prev_drive.update({
+                "play_log_end": len(self.play_log),
+                "plays": prev_drive["plays"] + drive_plays,
+                "yards": prev_drive["yards"] + drive_yards,
+                "result": drive_result,
+                "scoring_channel": (
+                    self.play_log[-1].play_type if self.play_log and
+                    drive_result == "successful_kick" and
+                    self.play_log[-1].result == "successful_kick" else None
+                ),
+                "delta_drive": prev_drive["delta_drive"] or drive_delta,
+                "timeouts": prev_drive["timeouts"] + drive_timeouts,
+                "home_score_after": self.state.home_score,
+                "away_score_after": self.state.away_score,
+            })
+        else:
+          self.drive_log.append({
             "team": drive_team,
             "play_log_start": drive_play_log_start,
             "play_log_end": len(self.play_log),
@@ -16379,8 +16404,10 @@ class ViperballEngine:
                                                 home_stats["delta_yards"])
         away_stats["delta_restart_unplayed"] = (self.state.away_delta_yards -
                                                 away_stats["delta_yards"])
-        home_stats["adjusted_yards"] = home_stats["total_yards"] + self.state.home_delta_yards
-        away_stats["adjusted_yards"] = away_stats["total_yards"] + self.state.away_delta_yards
+        # Adjusted yards add the Delta yards actually played, the same figure
+        # the box score shows, so the line reads as total plus Delta.
+        home_stats["adjusted_yards"] = home_stats["total_yards"] + home_stats["delta_yards"]
+        away_stats["adjusted_yards"] = away_stats["total_yards"] + away_stats["delta_yards"]
 
         # Fake punt stats
         home_fake_punts = [p for p in home_plays if p.play_type == "fake_punt"]
@@ -16630,6 +16657,12 @@ class ViperballEngine:
         for _p in self.away_team.players:
             _player_lookup[("away", player_label(_p))] = _p
 
+        # The EP table runs a little high for this scoring environment, so
+        # the average offensive snap carries positive EPA. Charge defenders
+        # against that game average: holding a play below it earns credit,
+        # and a tackler on an ordinary gain is not penalized for it.
+        _epa_vals = [pd.get("epa", 0) or 0 for pd in play_dicts if pd.get("players")]
+        _def_baseline = sum(_epa_vals) / len(_epa_vals) if _epa_vals else 0.0
         for pd in play_dicts:
             wpa_val = pd.get("epa", 0)
             involved = pd.get("players", [])
@@ -16641,8 +16674,9 @@ class ViperballEngine:
             for dl in defenders:
                 def_player = _player_lookup.get((def_side, dl))
                 if def_player:
-                    def_player.game_wpa -= wpa_val / len(defenders)
-                    def_player.game_vpa -= wpa_val / len(defenders)  # legacy alias
+                    def_share = ((wpa_val or 0) - _def_baseline) / len(defenders)
+                    def_player.game_wpa -= def_share
+                    def_player.game_vpa -= def_share  # legacy alias
                     def_player.game_plays_involved += 1
             # Last player in the list is the ball carrier / primary actor
             # Split WPA: primary gets 60%, others split 40% evenly
