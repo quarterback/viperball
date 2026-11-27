@@ -60,9 +60,9 @@ _REQUIRED_PACKAGE_FIELDS = (
     "version", "package_id", "side", "name", "origin_family", "compatible_families",
     "formation_tags", "play_family_tags", "kick_pass_tags", "personnel_tags",
     "situation_tags", "countered_by", "tradeoffs", "inspiration", "scenario",
-    "benefits", "cost", "counter",
+    "benefits", "cost", "counter", "summary",
 )
-_TEXT_FIELDS = ("name", "inspiration", "scenario", "benefits", "cost", "counter")
+_TEXT_FIELDS = ("name", "inspiration", "scenario", "benefits", "cost", "counter", "summary")
 _LIST_FIELDS = ("compatible_families", "formation_tags", "play_family_tags",
                 "kick_pass_tags", "personnel_tags", "situation_tags",
                 "countered_by", "tradeoffs")

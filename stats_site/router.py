@@ -1062,7 +1062,7 @@ def _playbook_editor(request, book=None, key="", error=None, status=200, import_
                     package["alignment"], _, package["focus"] = posture
                 packages[pid] = package
     return templates.TemplateResponse("playbooks.html", _ctx(
-        request, section="tools", books=list_books(), book=book or {}, book_id=key,
+        request, section="playbooks", books=list_books(), book=book or {}, book_id=key,
         schools=schools, packages=packages, vocabulary=vocabulary(),
         max_packages=MAX_PACKAGES, error=error, import_text=import_text,
     ), status_code=status)

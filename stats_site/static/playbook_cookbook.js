@@ -24,6 +24,7 @@
   const label = (value) => value.replaceAll("_", " ");
   let checked = new Set(data.draft.packages || []);
   let packageId;
+  let openDescription;
   let scene;
   let ball;
 
@@ -31,6 +32,7 @@
     const base = data.schools[side.value].find((entry) => entry.scheme_id === school.value);
     const ids = base?.packages || [];
     checked = new Set(ids.filter((id) => checked.has(id)));
+    if (!ids.includes(openDescription)) openDescription = undefined;
     const rows = ids.map((id) => {
       const item = data.packages[id];
       const row = document.createElement("div");
@@ -49,7 +51,27 @@
       button.className = "btn-small";
       button.textContent = "Preview";
       button.setAttribute("aria-label", "Preview " + item.name);
-      button.addEventListener("click", () => preview(id));
+      const summary = document.createElement("p");
+      summary.className = "book-package-summary";
+      summary.id = "package-summary-" + id;
+      summary.textContent = item.summary;
+      summary.hidden = openDescription !== id;
+      button.setAttribute("aria-controls", summary.id);
+      button.setAttribute("aria-expanded", String(!summary.hidden));
+      button.addEventListener("click", () => {
+        const previous = list.querySelector('button[aria-expanded="true"]');
+        const expanding = previous !== button;
+        if (previous) {
+          previous.setAttribute("aria-expanded", "false");
+          document.getElementById(previous.getAttribute("aria-controls")).hidden = true;
+        }
+        if (expanding) {
+          button.setAttribute("aria-expanded", "true");
+          summary.hidden = false;
+        }
+        openDescription = expanding ? id : undefined;
+        preview(id);
+      });
       checkbox.addEventListener("change", () => {
         if (checkbox.checked) {
           checked.add(id);
@@ -59,7 +81,7 @@
         }
         updateChoices(preferred.value);
       });
-      row.append(checkbox, name, button);
+      row.append(checkbox, name, button, summary);
       return row;
     });
     list.replaceChildren(...rows);

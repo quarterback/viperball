@@ -1233,7 +1233,7 @@ select, input[type="text"], input[type="search"], input[type="number"], textarea
 /* Between tablet and wide desktop the nav shows icons only, keeping the
    active section's name; labels stay in the link title and for screen readers. */
 @media (min-width: 769px) and (max-width: 1240px) {
-  #main-nav a:not(.active) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #main-nav a:not(.active, .playbook-nav) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #main-nav a { padding: 6px 9px; }
   #main-nav { flex-wrap: nowrap; }
 }
@@ -1411,6 +1411,7 @@ button, .action-link, summary.btn-run, summary.btn-small { transition:color 150m
       <a title="Home" href="/stats/" {% if section == 'home' %}class="active"{% endif %}>{{ icon("home") }}<span>Home</span></a>
       <a title="College" href="/stats/college/" {% if section == 'college' %}class="active"{% endif %}>{{ icon("ball") }}<span>College</span></a>
       <a title="Dynasty" href="/stats/dynasty/" {% if section == 'dynasty' %}class="active"{% endif %}>{{ icon("crown") }}<span>Dynasty</span></a>
+      <a title="Playbooks" href="/stats/playbooks" class="playbook-nav{% if section == 'playbooks' %} active{% endif %}"{% if section == 'playbooks' %} aria-current="page"{% endif %}>{{ icon("card") }}<span>Playbooks</span></a>
       <a title="Pro" href="/stats/pro/" {% if section == 'pro' %}class="active"{% endif %}>{{ icon("trophy") }}<span>Pro</span></a>
       <a title="WVL" href="/stats/wvl/" {% if section == 'wvl' %}class="active"{% endif %}>{{ icon("planet") }}<span>WVL</span></a>
       <a title="High School" href="/stats/high-school/" {% if section == 'high-school' %}class="active"{% endif %}>{{ icon("school") }}<span>High School</span></a>
