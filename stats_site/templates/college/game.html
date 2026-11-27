@@ -1097,6 +1097,36 @@
 {# ══════════════════════════════════════════════════════════
    PLAY-BY-PLAY — Unchanged from original
    ══════════════════════════════════════════════════════════ #}
+{% if custom_book_report %}
+<h2>Custom playbook usage</h2>
+<p class="hint">Offensive calls count as run when the selected formation and action matched. Nullified snaps are excluded from run counts on both sides.</p>
+{% for book in custom_book_report %}
+<h3>{{ book.team }} · {{ book.name }} · {{ book.unit|capitalize }}</h3>
+<table>
+  <thead><tr><th>Package</th><th class="num">Eligible</th><th class="num">Selected</th><th class="num">Run</th><th>Outcomes</th></tr></thead>
+  <tbody>
+    {% for package in book.packages %}
+    <tr>
+      <td>{{ package.name }}{% if not package.ready %} <span class="hint">Roster requirement unmet</span>{% endif %}</td>
+      <td class="num">{{ package.eligible }}</td><td class="num">{{ package.selected }}</td>
+      <td class="num">{{ package.snaps|selectattr('ran')|list|length }}</td>
+      <td style="white-space:normal">
+        {% if package.snaps %}
+        <details>
+          <summary>Selected snaps</summary>
+          {% for snap in package.snaps %}
+          <div><a href="#play-snap-{{ snap.index }}">Snap {{ snap.index }}</a> · {{ snap.description }}</div>
+          {% endfor %}
+        </details>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+{% endif %}
+
 {% set pbp = fr.get('play_by_play', []) %}
 {% if pbp %}
 <h2>Play-by-Play ({{ pbp|length }} plays)</h2>
@@ -1128,7 +1158,7 @@
   {% set is_score = p.result in ('touchdown', 'successful_kick', 'punt_return_td', 'int_return_td', 'missed_dk_return_td') if p.result else false %}
   {% set is_turnover = p.result in ('kick_pass_intercepted', 'lateral_intercepted', 'fumble') if p.result else false %}
   {% set is_penalty = (p.play_type == 'penalty' or p.get('penalty')) %}
-  <tr class="pbp-row{% if is_score %} game-event-score{% elif is_turnover %} game-event-turnover{% elif is_penalty %} game-event-penalty{% endif %}" data-q="{{ p.quarter }}">
+  <tr id="play-snap-{{ loop.index }}" class="pbp-row{% if is_score %} game-event-score{% elif is_turnover %} game-event-turnover{% elif is_penalty %} game-event-penalty{% endif %}" data-q="{{ p.quarter }}">
     <td class="num">{{ p.quarter }}</td>
     <td class="num" style="font-variant-numeric:tabular-nums">{{ '%d:%02d'|format(p.time_remaining // 60, p.time_remaining % 60) if p.time_remaining is defined and p.time_remaining is not none else '—' }}</td>
     <td>{% if p.possession == 'home' %}{{ game.home_team }}{% else %}{{ game.away_team }}{% endif %}</td>

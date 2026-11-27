@@ -1,0 +1,11 @@
+{% macro playbook_selects(playbooks, prefix='', default_label='Staff default') %}
+  {% for side in ('offense', 'defense') %}
+    {% set options = playbooks|selectattr('side', 'equalto', side)|list %}
+    {% if options %}
+      <select name="{{ prefix }}{{ side }}_book" aria-label="{{ side|capitalize }} playbook">
+        <option value="">{{ side|capitalize }} book · {{ default_label }}</option>
+        {% for book in options %}<option value="{{ book.id }}">{{ book.name }}</option>{% endfor %}
+      </select>
+    {% endif %}
+  {% endfor %}
+{% endmacro %}

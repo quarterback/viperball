@@ -311,6 +311,8 @@ class Dynasty:
     # CCH-04: team installations (what each program has learned), saved
     # with the dynasty and attached to each season.
     _team_installations: Dict[str, dict] = field(default_factory=dict, repr=False)
+    playbook_assignments: Dict[str, dict] = field(default_factory=dict, repr=False)
+    pending_computer_books: List[dict] = field(default_factory=list, repr=False)
     coaching_history: Dict[int, dict] = field(default_factory=dict)
 
     # High school recruiting pipeline (persisted by the application database)
@@ -1894,6 +1896,7 @@ class Dynasty:
         if not hasattr(self, "_team_installations") or self._team_installations is None:
             self._team_installations = {}
         season.team_installations = self._team_installations
+        season.playbook_assignments = self.playbook_assignments
         season.dynasty_year = self.current_year
 
     def _record_awards_to_cards(
@@ -2340,6 +2343,8 @@ class Dynasty:
             } if self._coaching_staffs else {},
             "coaching_history": {str(k): v for k, v in self.coaching_history.items()},
             "team_installations": dict(getattr(self, "_team_installations", {}) or {}),
+            "playbook_assignments": self.playbook_assignments,
+            "pending_computer_books": self.pending_computer_books,
         }
 
         if self._hs_league is not None:
@@ -2394,6 +2399,8 @@ class Dynasty:
         # CCH-04 team installations (older saves have none: tracking starts
         # at the next game with the staff then in place).
         from engine.team_installation import ensure_installation
+        dynasty.playbook_assignments = data.get("playbook_assignments") or {}
+        dynasty.pending_computer_books = data.get("pending_computer_books") or []
         dynasty._team_installations = {
             name: ensure_installation(rec, name)
             for name, rec in (data.get("team_installations") or {}).items() if rec

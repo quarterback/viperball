@@ -420,10 +420,28 @@ def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict
     }
 
 
+def _sync_packages(side, unit, card, team_stats, year, book):
+    if not book:
+        unit.pop("custom_book", None)
+        _choose_packages(side, unit, card, team_stats, year)
+        return
+    from .playbook_catalog import packages_for_roster
+
+    compatible = packages_for_roster(side, unit["family"], team_stats)
+    ready = {p["package_id"] for p in compatible if p["meets_personnel"]}
+    previous = {p["package_id"]: p for p in unit["packages"]}
+    unit["custom_book"] = book
+    unit["packages"] = [
+        previous.get(pid) or {"package_id": pid, "familiarity": PACKAGE_START,
+                              "installed_by": _coach_id(card), "installed_year": year}
+        for pid in book["packages"] if pid in ready
+    ]
+
+
 def sync_installation(installations: Dict[str, dict], team_name: str, staff: Optional[dict],
                       offense_family: str, defense_family: str,
                       team_stats: Optional[Dict[str, float]] = None,
-                      year: Optional[int] = None) -> Optional[Dict[str, Any]]:
+                      year: Optional[int] = None, books: Optional[dict] = None) -> Optional[Dict[str, Any]]:
     """Bring a team's record in line with its current staff and books.
 
     Called before each game. Does nothing when nothing changed; handles
@@ -431,6 +449,7 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
     (stored in `installations`), or None when the team has no staff."""
     if not staff:
         return None
+    books = books or {}
     rec = ensure_installation(installations.get(team_name), team_name)
     # Reassess eligibility when the actual roster crosses a personnel threshold.
     # Keep learned packages that still fit; do not reset the coordinator.
@@ -443,7 +462,7 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
         for side, key in (("offense", "oc"), ("defense", "dc")):
             card = caller(staff,key)
             rec[side]["mentors"] = sorted(_mentors(card))
-            _choose_packages(side, rec[side], card, team_stats, year)
+            _sync_packages(side, rec[side], card, team_stats, year, books.get(side))
         rec["roster_fit_tags"] = current_fit
         installations[team_name] = rec
         return rec
@@ -480,8 +499,9 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
                 unit["bias"] = _offense_bias(card)
                 unit["vestigial"] = [v for v in unit.get("vestigial", []) if v.get("coach_id") != new_id]
             changed = True
-        if changed or fit_changed or not unit.get("packages"):
-            _choose_packages(side, unit, card, team_stats, year)
+        book = books.get(side)
+        if changed or fit_changed or not unit.get("packages") or book != unit.get("custom_book"):
+            _sync_packages(side, unit, card, team_stats, year, book)
     if current_fit is not None:
         rec["roster_fit_tags"] = current_fit
     rec["staff_ids"] = sorted(_coach_id(c) for c in staff.values() if _coach_id(c))
@@ -581,6 +601,8 @@ def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) 
                          "play_family_tags": pkg["play_family_tags"],
                          "kick_pass_tags": pkg["kick_pass_tags"]})
     out["packages"] = packages
+    if unit.get("custom_book"):
+        out["preferred_package"] = unit["custom_book"].get("preferred")
     out["installation"] = {
         "familiarity": unit.get("familiarity"),
         "family": unit.get("family"),
@@ -692,6 +714,10 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
     authority = _clamp(tactics.get("authority", 1.0))
     if rng.random() >= .90 * authority * max(f for _, f in candidates):
         return None, eligible, sorted(live)
+    preferred = tactics.get("preferred_package")
+    for package, _ in candidates:
+        if package["package_id"] == preferred:
+            return package, eligible, sorted(live)
     picked = rng.choices([p for p, _ in candidates],
                          weights=[f for _, f in candidates], k=1)[0]
     return picked, eligible, sorted(live)

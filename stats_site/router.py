@@ -8,7 +8,7 @@ All data comes from the in-memory sessions/pro_sessions/FIV state — no extra H
 import json
 import os
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
 router = APIRouter()
@@ -1042,9 +1042,95 @@ def saves_page(request: Request):
 # send the browser back to the page it came from. No second implementation:
 # every rule about phases and request shapes stays in api/main.py.
 
+def _playbook_editor(request, book=None, key="", error=None, status=200, import_text=""):
+    from engine.custom_playbooks import list_books
+    from engine.playbook_catalog import get_package, get_scheme_family, vocabulary
+    from engine.game_engine import DEFENSE_STYLES, OFFENSE_STYLES, ViperballEngine
+    from engine.team_installation import MAX_PACKAGES
+
+    schools = {}
+    packages = {}
+    for side, styles in (("offense", OFFENSE_STYLES), ("defense", DEFENSE_STYLES)):
+        schools[side] = [get_scheme_family(side, school) for school in styles]
+        for school in schools[side]:
+            for pid in school["packages"]:
+                if pid in packages:
+                    continue
+                package = get_package(pid)
+                posture = ViperballEngine._DEFENSIVE_PACKAGE_POSTURES.get(pid)
+                if posture:
+                    package["alignment"], _, package["focus"] = posture
+                packages[pid] = package
+    return templates.TemplateResponse("playbooks.html", _ctx(
+        request, section="tools", books=list_books(), book=book or {}, book_id=key,
+        schools=schools, packages=packages, vocabulary=vocabulary(),
+        max_packages=MAX_PACKAGES, error=error, import_text=import_text,
+    ), status_code=status)
+
+
+@router.get("/playbooks", response_class=HTMLResponse)
+def playbook_editor(request: Request, edit: str = ""):
+    from engine.custom_playbooks import get_book
+    try:
+        book = get_book(edit) if edit else None
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _playbook_editor(request, book, edit)
+
+
+@router.post("/playbooks", response_class=HTMLResponse)
+async def playbook_save(request: Request):
+    from engine.custom_playbooks import VERSION, save_book
+    form = await request.form()
+    key = str(form.get("book_id") or "")
+    book = {"version": VERSION, "name": str(form.get("name") or ""),
+            "side": str(form.get("side") or ""), "school": str(form.get("school") or ""),
+            "packages": [str(pid) for pid in form.getlist("packages")],
+            "preferred": str(form.get("preferred") or "") or None}
+    try:
+        key = save_book(book, key or None)
+    except ValueError as exc:
+        return _playbook_editor(request, book, key, str(exc), 400)
+    return RedirectResponse(f"/stats/playbooks?edit={key}", status_code=303)
+
+
+@router.post("/playbooks/import", response_class=HTMLResponse)
+async def playbook_import(request: Request):
+    from engine.custom_playbooks import validate_book
+    form = await request.form()
+    raw = str(form.get("playbook_json") or "")
+    try:
+        if len(raw) > 8192:
+            raise ValueError("Playbook imports are limited to 8 KB.")
+        try:
+            data = json.loads(raw)
+        except (ValueError, RecursionError) as exc:
+            raise ValueError("Enter a valid playbook JSON document.") from exc
+        book = validate_book(data)
+    except ValueError as exc:
+        return _playbook_editor(request, error=str(exc), status=400, import_text=raw[:8192])
+    return _playbook_editor(request, book)
+
+
+@router.get("/playbooks/{book_id}/export")
+def playbook_export(book_id: str):
+    from engine.custom_playbooks import get_book
+    try:
+        book = get_book(book_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return JSONResponse(book, headers={"Content-Disposition": 'attachment; filename="viperball-playbook.json"'})
+
+
+def _book_choices(form, prefix=""):
+    return {side: str(form.get(f"{prefix}{side}_book") or "")
+            for side in ("offense", "defense") if form.get(f"{prefix}{side}_book")}
+
+
 def _setup_data():
     """Defaults every setup form needs: conference alignment, styles, archetypes."""
     from api.main import conference_defaults, list_styles, program_archetypes
+    from engine.custom_playbooks import list_books
     confs = conference_defaults()["conferences"]
     teams = sorted({t for members in confs.values() for t in members})
     return {
@@ -1052,6 +1138,7 @@ def _setup_data():
         "teams": teams,
         "styles": list_styles(),
         "archetypes": program_archetypes()["archetypes"],
+        "playbooks": list_books(),
     }
 
 
@@ -1084,11 +1171,14 @@ async def college_new_submit(request: Request):
     from urllib.parse import quote
     from api.main import create_session, create_season_endpoint, CreateSeasonRequest
     form = await request.form()
-    human, configs = [], {}
+    human, configs, playbooks = [], {}, {}
     for i in range(4):
         team = form.get(f"human_{i}")
         if team and team not in human:
             human.append(team)
+            choices = _book_choices(form, f"h{i}_")
+            if choices:
+                playbooks[team] = choices
             configs[team] = {
                 "offense_style": form.get(f"h{i}_offense_style") or "balanced",
                 "defense_style": form.get(f"h{i}_defense_style") or "swarm",
@@ -1103,6 +1193,8 @@ async def college_new_submit(request: Request):
         history_years=_form_int(form, "history_years", 0),
         human_teams=human,
         human_configs=configs,
+        playbooks=playbooks,
+        computer_playbooks=form.get("computer_playbooks") == "1",
         conferences=confs,
         num_conferences=len(confs) if confs else 10,
     )
@@ -1282,6 +1374,8 @@ async def dynasty_new_submit(request: Request):
         "dynasty_name": (form.get("dynasty_name") or "My Viperball Dynasty").strip(),
         "coach_name": (form.get("coach_name") or "Coach").strip(),
         "coach_team": form.get("coach_team"),
+        "playbooks": _book_choices(form),
+        "computer_playbooks": form.get("computer_playbooks") == "1",
         "starting_year": _form_int(form, "starting_year", 2026),
         "program_archetype": form.get("program_archetype") or None,
         "history_years": _form_int(form, "history_years", 0),
@@ -2460,6 +2554,51 @@ def college_game_calls(request: Request, session_id: str, week: int, game_idx: i
     ))
 
 
+def _custom_book_report(result):
+    if not result or not result.get("custom_playbooks"):
+        return []
+    from engine.playbook_catalog import get_package
+
+    report = []
+    for side, books in result["custom_playbooks"].items():
+        team = result.get("final_score", {}).get(side, {}).get("team", side)
+        for unit, book in books.items():
+            offense = unit == "offense"
+            if offense:
+                counts = result.get("coach_tactics", {}).get(side, {}).get("selected", {})
+                eligible = counts.get("packages_eligible", {})
+                selected = counts.get("packages", {})
+            else:
+                counts = result.get("defensive_coach_tactics", {}).get(side, {}).get("packages", {})
+                eligible = counts.get("eligible", {})
+                selected = counts.get("selected", {})
+            packages = {}
+            for pid in book["packages"]:
+                try:
+                    name = get_package(pid)["name"]
+                except KeyError:
+                    name = pid
+                packages[pid] = {
+                    "name": name, "eligible": eligible.get(pid, 0),
+                    "selected": selected.get(pid, 0), "ready": pid in book["ready"],
+                    "snaps": [],
+                }
+            for index, play in enumerate(result.get("play_by_play", []), 1):
+                call = play.get("offensive_call" if offense else "defensive_call") or {}
+                pid = call.get("package_id")
+                if call.get("offense_side" if offense else "defending_side") != side or pid not in packages:
+                    continue
+                nullified = (play.get("penalty") or {}).get("nullified")
+                packages[pid]["snaps"].append({
+                    "index": index, "description": play.get("description"),
+                    "ran": not nullified and (not offense or (
+                        call.get("family_matched") and all(call.get("matches", {}).values()))),
+                })
+            report.append({"team": team, "unit": unit, "name": book["name"],
+                           "packages": list(packages.values())})
+    return report
+
+
 @router.get("/college/{session_id}/game/{week}/{game_idx}", response_class=HTMLResponse)
 def college_game(request: Request, session_id: str, week: int, game_idx: int):
     api = _get_api()
@@ -2530,7 +2669,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         bowl_name=bowl_name, is_playoff=is_playoff,
         analysis_text=analysis_text, tactics=tactics,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
-        benchmarks=benchmarks,
+        benchmarks=benchmarks, custom_book_report=_custom_book_report(fr),
     ))
 
 

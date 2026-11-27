@@ -19,6 +19,7 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. Open [http://
 |---|---|
 | Play one game | /stats/game-sim |
 | Run a college season | /stats/college/new |
+| Build or import a custom playbook | /stats/playbooks |
 | Manage a college program across years | /stats/dynasty/new |
 | Find current sessions and saves | /stats/ and /stats/saves |
 | Follow the high-school feeder | /stats/high-school/ |
@@ -29,6 +30,14 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. Open [http://
 In a college season, choose the programs and settings, select your offense and defense when applicable, complete or skip the portal stage, then simulate a week or the remaining games. The season page has controls for the postseason. A dynasty adds annual recruiting, player development, retention, staff changes and a new season.
 
 The supplied school files provide the source data. The game creates rosters; you do not need to generate every roster before playing. The actual league size and schedule depend on your selected settings and the available school files.
+
+## Build a custom playbook
+
+Open the **Playbook Cookbook** from My Team or either college setup page. Choose offense or defense and a base school. Add up to four compatible packages. Preview a concept on the field and optionally give one package priority when it is eligible. Save the book, then select it for the appropriate side when creating a college season or dynasty. The chosen book sets that side's base school. The coordinator still uses the base school when no package fits the situation.
+
+Enable **Let computer teams use saved playbooks** at setup to put some of your library into AI teams’ hands. This also works in an all computer college season. Teams draw from books that fit their school and roster.
+
+Use **Download JSON** to share a saved book. Importing a file opens a draft you can preview before saving. After a game, **Custom playbook usage** in the box score shows eligible, selected, and executed package calls with links to their snaps.
 
 ## Study a game
 
