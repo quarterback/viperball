@@ -62,8 +62,8 @@
     <td>{{ s.conference }}</td>
     <td class="record"><span class="w">{{ s.wins }}</span>-<span class="l">{{ s.losses }}</span>{% if s.ties %}-<span class="t">{{ s.ties }}</span>{% endif %}</td>
     <td><span class="w">{{ s.conf_wins }}</span>-<span class="l">{{ s.conf_losses }}</span>{% if s.conf_ties %}-<span class="t">{{ s.conf_ties }}</span>{% endif %}</td>
-    <td class="num">{{ s.points_for }}</td>
-    <td class="num">{{ s.points_against }}</td>
+    <td class="num">{{ s.points_for|stat }}</td>
+    <td class="num">{{ s.points_against|stat }}</td>
     <td class="num {% if s.point_differential > 0 %}stat-good{% elif s.point_differential < 0 %}stat-bad{% endif %}">{{ "%+.1f"|format(s.point_differential) }}</td>
     <td class="num {% if s.avg_team_rating >= 80 %}stat-elite{% elif s.avg_team_rating >= 60 %}stat-good{% endif %}">{{ s.avg_team_rating }}</td>
     <td class="num">{{ s.avg_ppd }}</td>
@@ -208,8 +208,8 @@
         <div style="height:100%;width:{{ conf_win_pct|round(1) }}%;background:{{ gb_color }};border-radius:2px;"></div>
       </div>
     </td>
-    <td class="num">{{ s.points_for }}</td>
-    <td class="num">{{ s.points_against }}</td>
+    <td class="num">{{ s.points_for|stat }}</td>
+    <td class="num">{{ s.points_against|stat }}</td>
     <td class="num">{{ s.avg_team_rating }}</td>
     <td class="num">{{ s.avg_ppd }}</td>
     <td class="num">{{ s.season_5d_pct }}%</td>

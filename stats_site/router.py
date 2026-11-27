@@ -143,6 +143,24 @@ def _scheme_label(key) -> str:
 
 templates.env.filters["scheme"] = _scheme_label
 
+
+def _stat(v, places: int = 3) -> str:
+    """A number for a stat table: no decimals when the value is whole, and
+    otherwise only the digits it needs, up to `places` (828.5, not 828.500;
+    261, not 261.000; .538 stays .538)."""
+    if v is None:
+        return "—"
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    if f.is_integer():
+        return str(int(f))
+    return f"{f:.{places}f}".rstrip("0").rstrip(".")
+
+
+templates.env.filters["stat"] = _stat
+
 # ── Pixel-art face pool ──
 _FACES_DIR = os.path.join(os.path.dirname(__file__), "static", "faces")
 _face_pool_size: int | None = None

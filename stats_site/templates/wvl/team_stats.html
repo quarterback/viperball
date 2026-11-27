@@ -126,9 +126,9 @@
   {% for t in teams %}
   <tr>
     {{ team_row(t, loop.index) }}
-    <td class="num">{{ '%.1f'|format(t.points_for) }}</td>
+    <td class="num">{{ t.points_for|stat(1) }}</td>
     <td class="num {% if sort == 'ppg' %}stat-good{% endif %}">{{ t.ppg }}</td>
-    <td class="num">{{ '%.1f'|format(t.points_against) }}</td>
+    <td class="num">{{ t.points_against|stat(1) }}</td>
     <td class="num">{{ t.opp_ppg }}</td>
     <td class="num {% if sort == 'scoring_margin' %}stat-good{% endif %} {% if t.scoring_margin > 0 %}stat-good{% elif t.scoring_margin < 0 %}stat-bad{% endif %}">{{ '%+.1f'|format(t.scoring_margin) }}</td>
     <td class="num">{{ t.touchdowns }}</td>
@@ -298,7 +298,7 @@
   {% for t in teams %}
   <tr>
     {{ team_row(t, loop.index) }}
-    <td class="num">{{ '%.1f'|format(t.points_against) }}</td>
+    <td class="num">{{ t.points_against|stat(1) }}</td>
     <td class="num stat-good">{{ t.opp_ppg }}</td>
     <td class="num">{{ t.ppg }}</td>
     <td class="num {% if t.scoring_margin > 0 %}stat-good{% elif t.scoring_margin < 0 %}stat-bad{% endif %}">{{ '%+.1f'|format(t.scoring_margin) }}</td>

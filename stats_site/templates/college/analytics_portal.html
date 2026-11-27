@@ -195,7 +195,7 @@
 {% elif key=="split" and group!="raw" and r.group_key is not none %}<a href="{{ url(**{group:r.group_key|string,"group":"raw","page":1}) }}">{{ val }}</a>
 {% elif key=="week" and 'idx' in r %}<a href="/stats/college/{{ session_id }}/game/{{ r.week }}/{{ r.idx }}">W{{ val }}</a>
 {% elif key in ("action","result","bucket","origin") %}{{ val|string|replace('_',' ')|title }}
-{% elif val is number %}{{ "%.3f"|format(val) if val is float else val }}
+{% elif val is number %}{{ val|stat }}
 {% else %}{{ val }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
 {% if not rows %}<p class="vba-note">No matching records or supported estimates. Simulate more games, broaden your filters, or check data coverage in the glossary.</p>{% endif %}
 <div class="vba-pager">{% if page>1 %}<a class="vba-btn" href="{{ url(page=page-1) }}">Previous</a>{% endif %}<span>Page {{ page }} of {{ last }}</span>{% if page<last %}<a class="vba-btn" href="{{ url(page=page+1) }}">Next</a>{% endif %}</div>
