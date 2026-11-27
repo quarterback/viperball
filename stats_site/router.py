@@ -6,12 +6,16 @@ All data comes from the in-memory sessions/pro_sessions/FIV state — no extra H
 """
 
 import json
+import logging
 import os
+import sqlite3
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.templating import Jinja2Templates
 
 router = APIRouter()
+_logger = logging.getLogger(__name__)
 
 # ─── Deprecated: /stats recruiting hub ───────────────────────────
 # This recruiting flow was only meant to be an editor but ended up recreating
@@ -1042,7 +1046,8 @@ def saves_page(request: Request):
 # send the browser back to the page it came from. No second implementation:
 # every rule about phases and request shapes stays in api/main.py.
 
-def _playbook_editor(request, book=None, key="", error=None, status=200, import_text=""):
+def _playbook_editor(request, book=None, key="", error=None, status=200,
+                     import_text="", load_library=True):
     from engine.custom_playbooks import list_books
     from engine.playbook_catalog import get_package, get_scheme_family, vocabulary
     from engine.game_engine import DEFENSE_STYLES, OFFENSE_STYLES, ViperballEngine
@@ -1062,7 +1067,8 @@ def _playbook_editor(request, book=None, key="", error=None, status=200, import_
                     package["alignment"], _, package["focus"] = posture
                 packages[pid] = package
     return templates.TemplateResponse("playbooks.html", _ctx(
-        request, section="playbooks", books=list_books(), book=book or {}, book_id=key,
+        request, section="playbooks", books=list_books() if load_library else [],
+        book=book or {}, book_id=key,
         schools=schools, packages=packages, vocabulary=vocabulary(),
         max_packages=MAX_PACKAGES, error=error, import_text=import_text,
     ), status_code=status)
@@ -1088,9 +1094,16 @@ async def playbook_save(request: Request):
             "packages": [str(pid) for pid in form.getlist("packages")],
             "preferred": str(form.get("preferred") or "") or None}
     try:
-        key = save_book(book, key or None)
+        key = await run_in_threadpool(save_book, book, key or None)
     except ValueError as exc:
         return _playbook_editor(request, book, key, str(exc), 400)
+    except sqlite3.Error:
+        _logger.exception("Could not save a Cookbook playbook")
+        return _playbook_editor(
+            request, book, key,
+            error="The playbook could not be saved. Your draft is still here. Try saving again.",
+            status=503, load_library=False,
+        )
     return RedirectResponse(f"/stats/playbooks?edit={key}", status_code=303)
 
 
