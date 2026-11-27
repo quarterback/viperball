@@ -33,7 +33,7 @@ The supplied school files provide the source data. The game creates rosters; you
 
 ## Build a custom playbook
 
-Open the **Playbook Cookbook** from My Team or either college setup page. Choose offense or defense and a base school. Add up to four compatible packages. Preview a concept on the field and optionally give one package priority when it is eligible. Save the book, then select it for the appropriate side when creating a college season or dynasty. The chosen book sets that side's base school. The coordinator still uses the base school when no package fits the situation.
+Choose **Playbooks** in the main menu to open the Cookbook. Choose offense or defense and a base school. Add up to four compatible packages. Preview a concept on the field and optionally give one package priority when it is eligible. Save the book, then select it for the appropriate side when creating a college season or dynasty. The chosen book sets that side's base school. The coordinator still uses the base school when no package fits the situation.
 
 Enable **Let computer teams use saved playbooks** at setup to put some of your library into AI teams’ hands. This also works in an all computer college season. Teams draw from books that fit their school and roster.
 

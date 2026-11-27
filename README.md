@@ -23,7 +23,7 @@ Open [http://localhost:5000/stats/](http://localhost:5000/stats/). Use College o
 
 ## Playbook Cookbook
 
-Open `/stats/playbooks` from **My Team** or from College or Dynasty setup. Choose an offensive or defensive school, add one to four compatible packages, and preview their formations and intended actions on an animated 2D field. Save your book or share it as JSON. Imported books open as drafts for review before saving.
+Choose **Playbooks** in the main menu to open `/stats/playbooks`. Choose an offensive or defensive school, add one to four compatible packages, and preview their formations and intended actions on an animated 2D field. Save your book or share it as JSON. Imported books open as drafts for review before saving.
 
 Choose an offensive book, a defensive book, or both when setting up your team. The coordinator considers package fit and game situation during the normal season simulation. Enable **Let computer teams use saved playbooks** to give some computer teams compatible books, even in a college season where you manage zero teams. The box score shows which packages the coordinator could call, selected, and ran.
 

@@ -6,6 +6,7 @@
   .book-library { display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:24px }
   .book-package { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--border) }
   .book-package button { justify-self:end }
+  .book-package-summary { grid-column:2 / -1; margin:0; color:var(--fg-dim); font-size:13px; line-height:1.4 }
   #book-field { width:100%; aspect-ratio:2/1; background:#1b4438; overflow:hidden }
   #book-field svg { display:block; width:100%; height:100% }
   .book-preview { min-width:0 }
@@ -43,7 +44,7 @@
     </div>
     <div>
       <strong>Packages</strong>
-      <p class="hint">Choose up to {{ max_packages }}. The coach uses the base school alongside packages that fit your roster.</p>
+      <p class="hint">Choose up to {{ max_packages }}. Select Preview to see what each package does.</p>
       <div id="book-packages"></div>
       <p id="book-count" class="hint" role="status"></p>
     </div>
