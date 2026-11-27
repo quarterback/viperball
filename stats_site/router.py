@@ -728,6 +728,12 @@ def export_college_standings(session_id: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404)
     season = api["require_season"](sess)
+    return {"session_id": session_id,
+            "season": getattr(season, "name", "Season"),
+            "standings": _standings_export_rows(api, season)}
+
+
+def _standings_export_rows(api, season):
     rows = api["serialize_standings"](season)
     out = []
     for s in rows:
@@ -741,9 +747,59 @@ def export_college_standings(session_id: str):
             "tempo": kp.get("tempo"), "luck": kp.get("luck"),
             "em": kp.get("em"),  # efficiency margin
         })
-    return {"session_id": session_id,
-            "season": getattr(season, "name", "Season"),
-            "standings": out}
+    return out
+
+
+# Open to any origin so an Observable notebook can fetch these straight from
+# the site. They are read only and hold nothing private.
+_DATA_HEADERS = {"Access-Control-Allow-Origin": "*", "Cache-Control": "no-store"}
+
+
+@router.get("/data/college/{session_id}/")
+def data_index(request: Request, session_id: str):
+    """Every data table for a season, with its CSV and JSON address."""
+    from stats_site.data_export import TABLES
+    from fastapi.responses import JSONResponse
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    if not sess:
+        raise HTTPException(status_code=404)
+    season = api["require_season"](sess)
+    base = f"{request.url.scheme}://{request.url.netloc}/stats/data/college/{session_id}"
+    return JSONResponse({
+        "session_id": session_id,
+        "season": getattr(season, "name", "Season"),
+        "filters": "Add ?week=N or ?team=Name to any table.",
+        "tables": [{"name": k, "about": v, "csv": f"{base}/{k}.csv", "json": f"{base}/{k}.json"}
+                   for k, v in TABLES.items()],
+    }, headers=_DATA_HEADERS)
+
+
+@router.get("/data/college/{session_id}/{table}.{fmt}")
+def data_table(session_id: str, table: str, fmt: str, week: str = "", team: str = ""):
+    """One flat season table as CSV or JSON. Built for Observable notebooks,
+    spreadsheets and scripts: one row per record, one value per column."""
+    from stats_site import data_export as dx
+    from fastapi.responses import JSONResponse, Response
+    if table not in dx.TABLES or fmt not in ("csv", "json"):
+        raise HTTPException(status_code=404)
+    api = _get_api()
+    sess = api["get_session"](session_id)
+    if not sess:
+        raise HTTPException(status_code=404)
+    season = api["require_season"](sess)
+    wk = week or None
+    if table == "standings":
+        rows = [r for r in _standings_export_rows(api, season) if not team or r["team"] == team]
+    elif table == "players":
+        rows = list(dx.players_rows(_cached_college_player_agg(season), team or None))
+    else:
+        rows = list(getattr(dx, table + "_rows")(season, session_id, wk, team or None))
+    if fmt == "json":
+        return JSONResponse(rows, headers=_DATA_HEADERS)
+    name = f"viperball-{table}" + (f"-week{week}" if week else "") + ".csv"
+    return Response(dx.to_csv(rows), media_type="text/csv",
+                    headers={**_DATA_HEADERS, "Content-Disposition": f'inline; filename="{name}"'})
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -1168,6 +1224,8 @@ def _archive_rows():
 def export_page(request: Request):
     return templates.TemplateResponse("export.html", _ctx(
         request, section="tools", sessions=_find_all_sessions(), archives=_archive_rows(),
+        data_tables=__import__("stats_site.data_export", fromlist=["TABLES"]).TABLES,
+        site_root=f"{request.url.scheme}://{request.url.netloc}",
     ))
 
 

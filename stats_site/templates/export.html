@@ -38,6 +38,26 @@
 <div class="empty">No seasons running.</div>
 {% endif %}
 
+{% for s in sessions %}
+<h2>{{ s.name }} data tables</h2>
+<p>Flat tables, one row per record. Any notebook or script can read them from these addresses. Add <code>?week=3</code> or <code>?team=Gonzaga</code> to narrow a table.</p>
+<table>
+  <thead><tr><th>Table</th><th>Rows</th><th></th></tr></thead>
+  <tbody>
+  {% for name, about in data_tables.items() %}
+  <tr><td>{{ name }}</td><td>{{ about }}</td>
+    <td style="text-align:right;white-space:nowrap">
+      <a href="/stats/data/college/{{ s.session_id }}/{{ name }}.csv">CSV</a>
+      &nbsp;<a href="/stats/data/college/{{ s.session_id }}/{{ name }}.json">JSON</a>
+    </td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p>In an Observable notebook:</p>
+<pre><code>games = d3.csv("{{ site_root }}/stats/data/college/{{ s.session_id }}/games.csv", d3.autoType)
+plays = d3.csv("{{ site_root }}/stats/data/college/{{ s.session_id }}/plays.csv?week=1", d3.autoType)</code></pre>
+{% endfor %}
+
 <h2>Archives</h2>
 {% if archives %}
 <table>
