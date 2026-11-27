@@ -155,6 +155,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     test now fails on any NiceGUI change.
     → `aar_2026-11-26_archive_and_site_slop.md`, `aar_2026-11-26_anti_slop_and_nicegui_freeze.md`
 
+37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
+    as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
+    season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
+
 ## Numbers, start to end (benchmark, per team per game)
 
 | | Start | End | Target |
