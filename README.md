@@ -21,6 +21,14 @@ Open [http://localhost:5000/stats/](http://localhost:5000/stats/). Use College o
 - [Engine](ENGINE_README.md), [application architecture](ARCHITECTURE_STATS_SITE_AND_RECRUITING.md) and [stats-site guide](docs/stats-site.md) — for developers.
 - [Documentation index](docs/README.md) and [current development plan](docs/DEVELOPMENT_PLAN.md) — current references and unresolved validation.
 
+## Playbook Cookbook
+
+Open `/stats/playbooks` from **My Team** or from College or Dynasty setup. Choose an offensive or defensive school, add one to four compatible packages, and preview their formations and intended actions on an animated 2D field. Save your book or share it as JSON. Imported books open as drafts for review before saving.
+
+Choose an offensive book, a defensive book, or both when setting up your team. The coordinator considers package fit and game situation during the normal season simulation. Enable **Let computer teams use saved playbooks** to give some computer teams compatible books, even in a college season where you manage zero teams. The box score shows which packages the coordinator could call, selected, and ran.
+
+See the [quick start](QUICKSTART.md#build-a-custom-playbook) and [package catalog](docs/playbook_packages/INVENTORY.md).
+
 ## The simulation today
 
 The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
