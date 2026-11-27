@@ -113,20 +113,24 @@ def contract_for(g):
 
 
 def fit_session_model(games):
-    """Train only on earlier regular-season weeks, never on displayed holdout.
+    """Fit state values on the season's own completed regular season games.
 
-    Limit training to 120 games chosen by stable hash for bounded request cost.
-    The model is experimental, local to the season and distinct from CI's
-    national research corpus. No on-disk model or other session is loaded.
+    Uses every completed week. Past 600 games a stable hash picks which ones,
+    spread across the whole season, to keep the first page load short; the
+    result is cached until the season changes. The model is local to this
+    season. No on-disk model or other session is loaded.
     """
     weeks=sorted({g["week"] for g in games if g["kind"]=="regular" and g["result"]})
-    if len(weeks)<2:return {"model":None,"cutoff":None,"train_games":0,"reason":"At least two completed weeks are needed."}
-    cutoff=weeks[(len(weeks)-1)//2]
-    early=[g for g in games if g["kind"]=="regular" and g["week"]<=cutoff and g["result"]
-           and g["result"].get("analytics_contract_version")==1]
-    early.sort(key=lambda g:sha256(g["id"].encode()).hexdigest())
-    ep_games=[g for g in early if int(sha256(g["id"].encode()).hexdigest()[:8],16)%4!=0][:120]
-    dtw_games=[g for g in early if int(sha256(g["id"].encode()).hexdigest()[:8],16)%4==0][:120]
+    if not weeks:return {"model":None,"cutoff":None,"train_games":0,"reason":"No completed games yet."}
+    cutoff=weeks[-1]
+    pool=[g for g in games if g["kind"]=="regular" and g["result"]
+          and g["result"].get("analytics_contract_version")==1]
+    pool.sort(key=lambda g:sha256(g["id"].encode()).hexdigest())
+    # The Deserve to Win research fit keeps its own disjoint sample so its
+    # estimates are judged on games it never saw.
+    dtw_games=[g for g in pool if int(sha256(g["id"].encode()).hexdigest()[:8],16)%4==0][:150]
+    dtw_ids={g["id"] for g in dtw_games}
+    ep_games=[g for g in pool if g["id"] not in dtw_ids][:600]
     n=0
     def rows():
         nonlocal n
@@ -139,7 +143,7 @@ def fit_session_model(games):
             for r in labels:yield {**r,"game_id":g["id"]}
     model=fit(rows())
     if n<8 or not model["states"]:
-        return {"model":None,"cutoff":cutoff,"train_games":n,"reason":"Not enough new-contract games with supported state cells."}
+        return {"model":None,"cutoff":cutoff,"train_games":n,"reason":"Not enough completed games yet to estimate state values."}
     # DTW research fit uses separate earlier games, never EP training games
     # or later games. Sparse coverage may make it unavailable.
     from engine.dtw_research import fit as fit_dtw
@@ -153,7 +157,7 @@ def fit_session_model(games):
             candidate_rows.append({"features":features,"outcome":outcome})
     dtw_model=fit_dtw(candidate_rows,("exchange_epa","turnover_margin","stop_rate","kick_pass_pct","kicking_eff"))
     return {"model":model,"cutoff":cutoff,"train_games":n,"dtw_model":dtw_model,
-            "dtw_train_games":len(candidate_rows),"reason":None}
+            "dtw_train_games":len(candidate_rows),"dtw_train_ids":dtw_ids,"reason":None}
 
 
 def dtw_features(g,model,old):
@@ -174,7 +178,7 @@ def dtw_features(g,model,old):
 
 
 def heldout_model(g,training):
-    return training["model"] if training.get("model") and (g["kind"]!="regular" or g["week"]>training["cutoff"]) else None
+    return training.get("model")
 
 
 def play_matches(row,filters):
@@ -357,7 +361,7 @@ def build_report(games,view,filters,conferences,training=None):
         st=fr.get("stats",{})
         dtw=calculate_game_dtw(fr,st.get("home",{}).get("viperball_metrics"),st.get("away",{}).get("viperball_metrics")) if view=="dtw" else None
         candidate=None
-        if dtw and model and training.get("dtw_model"):
+        if dtw and model and training.get("dtw_model") and g["id"] not in training.get("dtw_train_ids",()):
             from engine.dtw_research import predict
             candidate=predict(training["dtw_model"],dtw_features(g,model,dtw))
         for side in ("home","away"):

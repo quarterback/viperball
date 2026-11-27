@@ -59,36 +59,13 @@
 </style>
 {% set base="/stats/college/" ~ session_id ~ "/analytics" %}
 <div class="vba-header">
- <div><div class="vba-kicker">Viperball research &amp; statistics</div><h1>Analytics</h1><p>{{ season_name }} · {{ result_count }} completed game records available</p></div>
+ <div><h1>Analytics</h1><p>{{ season_name }}</p></div>
  <div><a href="/stats/college/{{ session_id }}/">Season</a> · <a href="/stats/college/{{ session_id }}/team-stats">Team stats</a> · <a href="/stats/college/{{ session_id }}/kenpom">Ratings</a> · <a href="/stats/college/{{ session_id }}/luck">Luck</a></div>
 </div>
 <nav class="vba-nav" aria-label="Analytics navigation">
  {% for key,label in views.items() %}<a href="{{ base }}?view={{ key }}" {% if view==key %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
 </nav>
 {% if view=="overview" %}
-<div class="vba-statline">
- <div><strong>{{ games_count }}</strong><span>Completed games</span></div>
- <div><strong>{{ result_count }}</strong><span>Game records available</span></div>
- <div><strong>{{ coverage.get('audited',0) }}</strong><span>Score-audited games in selection</span></div>
- <div><strong>{{ coverage.get('new_contract',0) }}</strong><span>Audited games with state snapshots</span></div>
-</div>
-<div class="vba-tools">
- {% for k,title,desc in [
- ('players','Player leaderboards','WAR, position ratings, kicking, defense and player profiles.'),
- ('teams','Team leaderboards','Scoring, offense, defense, possession and special teams.'),
- ('scoring','Scoring lab','All six scoring channels, return touchdowns and drive reconciliation.'),
- ('expected','Expected points','Observed and expected net points by field position and down.'),
- ('decisions','Decision value','Compare supported kick, punt and continue-offense outcomes.'),
- ('delta','Delta & bonus','Power play, penalty kill, neutral drives and bonus context.'),
- ('dtw','Deserve to Win','Actual wins, index expected wins and performance components.'),
- ('plays','Play finder','Search completed plays by down, zone, action and game situation.'),
- ('drives','Drive finder','Find drives by starting position, origin and outcome.'),
- ('compare','Team comparison','Peer percentiles for up to four programs.'),
- ('player_compare','Player comparison','Position-matched percentiles with metric-specific qualification.'),
- ('glossary','Metric glossary','Definitions, denominators, coverage and model limitations.')] %}
- <a class="vba-tool" href="{{ base }}?view={{ k }}"><strong>{{ title }}</strong><span>{{ desc }}</span></a>
- {% endfor %}
-</div>
 <h2 class="vba-section">Team leaderboard</h2>
 {% elif view=="glossary" %}
 <h2 class="vba-section">Definitions and data coverage</h2>
@@ -96,7 +73,7 @@
 {% for name,desc in [
  ('Offensive points per drive','Drive-credited points divided by audited drive segments. Non-drive bells, safeties and return touchdowns are excluded.'),
  ('Scoring channels','Touchdowns 9; snap kicks 5; field goals 3; safeties 2; pindowns 1; bells 0.5. Return touchdowns are attributed separately. Unknown score events are not inferred.'),
- ('Expected points (experimental)','Mean signed net points through the current and next possession, stopping at the half or overtime period. Earlier weeks train a season-local model; later weeks are evaluated. Minimum 30 observations and 8 games per supported cell.'),
+ ('Expected points (experimental)','Mean signed net points through the current and next possession, stopping at the half or overtime period. Fitted on the completed games of this season. Minimum 30 observations and 8 games per supported cell.'),
  ('Expected points added (EPA)','Signed immediate score plus remaining-horizon continuation value minus pre-play value. Rolling exchange EPA is not total scoreboard accounting. Legacy EPA uses a fixed lookup.'),
  ('Decision value (experimental)','Observed conditional net points among action groups in comparable states. Above continue compares with supported continue-offense observations. Regret compares with the highest supported mean. Neither is causal.'),
  ('Delta & bonus (experimental)','Sequential context contrast: neutral field without bonus, actual field without bonus, actual bonus state. Not a causal estimate of gaining an extra possession.'),
@@ -155,15 +132,8 @@
  <button class="primary" type="submit">Apply filters</button><a class="vba-btn" href="{{ base }}?view={{ view }}">Reset</a>
 </form>
 {% endif %}
-{% if view in ("expected","decisions","delta","plays","drives") %}
-<div class="vba-note"><strong>Experimental state values.</strong> {% if training.reason %}{{ training.reason }}{% else %}Trained on {{ training.train_games }} audited games through week {{ training.cutoff }}; estimates are shown only for later weeks and supported cells.{% endif %}
- {% if view=="decisions" %}Observed action comparisons are not causal recommendations.{% elif view=="delta" %}Context values are conditional contrasts, not the causal value of another possession.{% endif %}
-</div>
-{% endif %}
-{% if view in ("plays","drives") and group!="raw" %}<p class="vba-muted">Grouped results use count-weighted averages over matching observations. Select a split to inspect its individual records.</p>{% endif %}
-{% if view=="scoring" %}<p class="vba-muted">Score totals use completed records; scoring channels are limited to audited games. Unavailable attribution is not a zero.</p>{% endif %}
-{% if view=="players" %}<p class="vba-muted">Whole-season player totals, with at least five touches or ten plays involved. Game-situation filters are available in Play finder.</p>{% endif %}
-{% if view=="dtw" %}<p class="vba-muted">Legacy descriptive DTW, 55–45 upset band. Postgame index, not a calibrated probability. Research xW is a distinct retrospective alignment model, fitted on separate earlier games and evaluated on later games only. {% if training.get("dtw_train_games",0)>=30 %}Candidate training sample: {{ training.dtw_train_games }} games.{% else %}Insufficient disjoint training support for candidate estimates.{% endif %}</p>{% endif %}
+{% if view in ("expected","decisions","delta","plays","drives") and training.reason %}<p class="vba-note">{{ training.reason }}</p>{% endif %}
+{% if view=="players" %}<p class="vba-muted">Players with at least five touches or ten plays.</p>{% endif %}
 {% if view in ("compare","player_compare") %}
 <h2 class="vba-section">{{ "Player" if view=="player_compare" else "Team" }} percentile comparison</h2>
 {% if compare_rows and compare_rows[0]['values'] %}<p class="vba-muted">{% if view=="player_compare" %}Each player is compared with qualified players at the same position in the selected conference or league. Peer counts are metric-specific.{% else %}Peer set uses the selected conference, weeks and game scope.{% endif %} Higher percentile is better. Minimum three peers.</p>
@@ -173,7 +143,7 @@
 {% endif %}
 {% if heatmap and view in ("expected","plays") %}
 <h2 class="vba-section">{{ "Expected net points" if view=="expected" else "Immediate net points" }} by down and field zone</h2>
-<p class="vba-muted">Points from the possession side's perspective. Cells require at least 10 matching observations; n is the number represented. Each cell links to that split.</p>
+<p class="vba-muted">Points for the team with the ball. A cell needs 10 plays.</p>
 <div class="vba-heat-wrap">
 <div class="vba-heat-row"><span class="vba-axis">Down</span><div class="vba-heat">{% for z in zones %}<div class="vba-heat-cell">{{ z }}</div>{% endfor %}</div></div>
 {% for line in heatmap %}{% set d=loop.index %}<div class="vba-heat-row"><span class="vba-axis">{{ d }}</span><div class="vba-heat">{% for cell in line %}<a href="{{ url(down=d,zone=loop.index0|string,group="raw" if view=="plays" else "",page=1) }}" class="vba-heat-cell {% if cell.value is not none %}{{ 'pos' if cell.value>0 else 'neg' if cell.value<0 else '' }}{% endif %}" {% if cell.value is not none %}style="--intensity:{{ [35,5+cell.value|abs*6]|min }}%"{% endif %}><strong>{{ "%.2f"|format(cell.value) if cell.value is not none else "—" }}</strong><small>n={{ cell.n }}</small></a>{% endfor %}</div></div>{% endfor %}
@@ -181,7 +151,7 @@
 {% endif %}
 {% if cols %}
 {% if view!="overview" %}<h2 class="vba-section">{{ views[view] }}</h2>{% endif %}
-<div class="vba-toolbar"><span class="vba-muted">{{ total }} matching rows{% if coverage.get('games') is not none %} · {{ coverage.get('with_results',0) }} of {{ coverage.games }} matching games have records{% endif %}</span><a class="vba-btn" href="{{ url(export='csv',page=1) }}">Download CSV</a></div>
+<div class="vba-toolbar"><span></span><a class="vba-btn" href="{{ url(export='csv',page=1) }}">Download CSV</a></div>
 <details class="vba-details"><summary>Customize table columns</summary>
 <form method="get" action="{{ base }}" onsubmit="this.elements.columns.value=Array.from(this.querySelectorAll('input[type=checkbox]:checked')).map(x=>x.value).join(',')">
 {% for k,v in filters.items() %}{% if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}

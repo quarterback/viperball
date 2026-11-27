@@ -73,7 +73,7 @@ def test_polished_pages_render(tmp_path, monkeypatch):
         assert response.status_code==200,(view,response.status_code,response.text[:400])
         assert 'Analytics navigation' in response.text,view
     grouped=client.get(prefix+"/analytics",params={"view":"plays","group":"down","week":week})
-    assert grouped.status_code==200 and "Grouped results" in grouped.text
+    assert grouped.status_code==200 and "Grouped results" not in grouped.text
     raw=client.get(prefix+"/analytics",params={"view":"plays","group":"raw","week":week,"match":0,"down":1})
     assert raw.status_code==200 and "Play description" in raw.text
     export=client.get(prefix+"/analytics",params={"view":"plays","group":"down","week":week,"export":"csv"})

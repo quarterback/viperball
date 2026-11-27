@@ -150,14 +150,14 @@ def test_analytics_portal_filters_scores_and_export_rows():
     assert sorted_rows([{"v":None},{"v":1},{"v":2}],"v")==[{"v":2},{"v":1},{"v":None}]
 
 
-def test_portal_model_is_held_out_and_missing_is_explicit():
+def test_portal_model_uses_whole_season_and_missing_is_explicit():
     from stats_site.analytics_portal import fit_session_model,heldout_model,build_report
     early=[portal_game(i,1) for i in range(65)]
     late=[portal_game(i,2) for i in range(5)]
-    assert fit_session_model(early)["model"] is None
+    assert fit_session_model([])["model"] is None
     train=fit_session_model(early+late)
-    assert train["model"] is not None and train["cutoff"]==1
-    assert heldout_model(early[0],train) is None
+    assert train["model"] is not None and train["cutoff"]==2
+    assert heldout_model(early[0],train) is train["model"]
     assert heldout_model(late[0],train) is train["model"]
     results=build_report(early+late,"expected",{"week":"2"},{},train)["rows"]
     assert results and sum(r["event_n"] for r in results)==8*len(late)
