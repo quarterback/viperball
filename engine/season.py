@@ -1250,6 +1250,7 @@ class Season:
     # CCH-04 team installations: team_name -> installation record. A dynasty
     # attaches its own dict so records carry from season to season.
     team_installations: Dict[str, dict] = field(default_factory=dict)
+    playbook_assignments: Dict[str, dict] = field(default_factory=dict)
 
     # FCS/lower-division teams generated for schedule fill (name -> mascot)
     fcs_teams: Dict[str, str] = field(default_factory=dict)
@@ -2034,7 +2035,8 @@ class Season:
                 _cfg.get("offense_style", getattr(_tobj, "offense_style", "balanced")),
                 _cfg.get("defense_style", getattr(_tobj, "defense_style", "swarm")),
                 team_stats=self._roster_profiles.get(_tname),
-                year=getattr(self, "dynasty_year", None))
+                year=getattr(self, "dynasty_year", None),
+                books=self.playbook_assignments.get(_tname))
             _tobj.installation = _rec
             _installs.append(_rec)
 

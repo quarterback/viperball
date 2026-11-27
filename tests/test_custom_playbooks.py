@@ -1,0 +1,167 @@
+import json
+import random
+from pathlib import Path
+from shutil import copyfile
+
+from fastapi.testclient import TestClient
+
+from engine import db, team_installation
+from engine.custom_playbooks import get_book, save_book
+from engine.team_installation import sync_installation
+from tests.test_team_installation import STATS, card, staff
+
+
+def book(name, side, school, *packages):
+    return {"version": 1, "name": name, "side": side, "school": school,
+            "packages": list(packages), "preferred": packages[0]}
+
+
+def test_playbook_library_team_setup_and_simulated_week(tmp_path, monkeypatch):
+    from api import main
+
+    monkeypatch.setattr(main, "sessions", {})
+    monkeypatch.setattr(db, "_db_path", tmp_path / "cookbook.db")
+    db.init_db()
+    team_dir = tmp_path / "teams"
+    team_dir.mkdir()
+    for team in ("alabama", "duke", "gonzaga", "lafayette"):
+        copyfile(Path("data/teams") / f"{team}.json", team_dir / f"{team}.json")
+    monkeypatch.setattr(main, "TEAMS_DIR", str(team_dir))
+    monkeypatch.setattr(team_installation, "league_roster_profiles",
+                        lambda teams: {name: STATS.copy() for name in teams})
+
+    client = TestClient(main.app)
+    draft = book("Opening Script", "offense", "ghost", "rugby_first_phase_strike")
+    imported = client.post("/stats/playbooks/import", data={"playbook_json": json.dumps(draft)})
+    assert imported.status_code == 200
+    assert 'value="Opening Script"' in imported.text
+    assert db.list_saves("playbook") == []
+    invalid = client.post("/stats/playbooks", data={**draft, "school": "swarm"})
+    assert invalid.status_code == 400
+    saved = client.post("/stats/playbooks", data=draft, follow_redirects=False)
+    assert saved.status_code == 303
+    offense = saved.headers["location"].split("edit=")[1]
+    assert client.get(f"/stats/playbooks/{offense}/export").json() == draft
+    defense = save_book(book("Early Containment", "defense", "fortress", "swarm_containment"))
+    for mode in ("college", "dynasty"):
+        page = client.get(f"/stats/{mode}/new")
+        assert page.status_code == 200
+        assert offense in page.text and defense in page.text
+        assert 'name="computer_playbooks"' in page.text
+
+    sid = client.post("/sessions").json()["session_id"]
+    teams = list(main.load_teams_from_directory(str(team_dir)))
+    controlled = teams[0]
+    setup = client.post(f"/sessions/{sid}/season", json={
+        "games_per_team": 2, "human_teams": [controlled],
+        "conferences": {"Test": teams},
+        "playbooks": {controlled: {"offense": offense, "defense": defense}},
+        "ai_seed": 26,
+    })
+    assert setup.status_code == 200, setup.text
+    season = main.sessions[sid]["season"]
+    assert season.style_configs[controlled]["offense_style"] == "ghost"
+    assert season.style_configs[controlled]["defense_style"] == "fortress"
+    save_book({**get_book(offense), "name": "Later revision"}, offense)
+    assert client.post(f"/sessions/{sid}/season/portal/skip").status_code == 200
+    rng_state = random.getstate()
+    try:
+        random.seed(104)
+        week = client.post(f"/sessions/{sid}/season/simulate-week", json={})
+    finally:
+        random.setstate(rng_state)
+    assert week.status_code == 200, week.text
+    number = week.json()["week"]
+    games = [game for game in season.schedule if game.week == number]
+    game = next(game for game in games if controlled in (game.home_team, game.away_team))
+    side = "home" if game.home_team == controlled else "away"
+    assert game.full_result["custom_playbooks"][side]["offense"]["name"] == draft["name"]
+    assert game.full_result["custom_playbooks"][side]["defense"]["ready"] == ["swarm_containment"]
+    assert game.full_result["coach_tactics"][side]["selected"]["packages"]["rugby_first_phase_strike"] > 0
+    assert game.full_result["defensive_coach_tactics"][side]["packages"]["selected"]["swarm_containment"] > 0
+    page = client.get(f"/stats/college/{sid}/game/{number}/{games.index(game)}")
+    assert page.status_code == 200
+    assert "Custom playbook usage" in page.text and "Selected snaps" in page.text
+    snapshot = db.load_blob("season_archive", f"college_{sid}")
+    assert snapshot["playbook_assignments"][controlled]["offense"] == draft
+
+    ai_styles = {team: {"offense_style": "ghost", "defense_style": "fortress"} for team in teams}
+    config = {"games_per_team": 2, "conferences": {"Test": teams},
+              "style_configs": ai_styles, "ai_seed": 26}
+    ai_id = client.post("/sessions").json()["session_id"]
+    assert client.post(f"/sessions/{ai_id}/season", json=config).status_code == 200
+    assert not main.sessions[ai_id]["season"].playbook_assignments
+
+    ai_id = client.post("/sessions").json()["session_id"]
+    setup = client.post(f"/sessions/{ai_id}/season", json={**config, "computer_playbooks": True})
+    assert setup.status_code == 200, setup.text
+    ai_season = main.sessions[ai_id]["season"]
+    assert not ai_season.human_teams
+    for unit in ("offense", "defense"):
+        assert sum(unit in books for books in ai_season.playbook_assignments.values()) == 2
+    rng_state = random.getstate()
+    try:
+        random.seed(104)
+        week = client.post(f"/sessions/{ai_id}/season/simulate-week", json={})
+    finally:
+        random.setstate(rng_state)
+    assert week.status_code == 200, week.text
+    assert any(
+        "offense" in result.get("custom_playbooks", {}).get(side, {})
+        and counts.get("selected", {}).get("packages", {}).get("rugby_first_phase_strike", 0)
+        for game in ai_season.schedule if (result := game.full_result)
+        for side, counts in result["coach_tactics"].items()
+    )
+
+    from engine import college_feeder
+
+    monkeypatch.setattr(college_feeder, "build_college_feeder_in_background", lambda *args, **kwargs: None)
+    monkeypatch.setattr(main, "auto_assign_all_teams", lambda *args, **kwargs: ai_styles)
+    dynasty_id = client.post("/sessions").json()["session_id"]
+    created = client.post(f"/sessions/{dynasty_id}/dynasty", json={
+        "dynasty_name": "Cookbook Dynasty", "coach_name": "Coach",
+        "coach_team": controlled, "games_per_team": 2,
+        "conferences": {"Test": teams},
+        "playbooks": {"offense": offense, "defense": defense},
+        "computer_playbooks": True,
+    })
+    assert created.status_code == 200, created.text
+    dynasty = db.load_dynasty(dynasty_id)
+    assert dynasty.playbook_assignments[controlled]["offense"]["name"] == "Later revision"
+    assert dynasty.pending_computer_books
+    main.sessions[dynasty_id]["dynasty"] = dynasty
+    started = client.post(f"/sessions/{dynasty_id}/dynasty/start-season", json={"ai_seed": 26})
+    assert started.status_code == 200, started.text
+    next_season = main.sessions[dynasty_id]["season"]
+    assert next_season.playbook_assignments == dynasty.playbook_assignments
+    assert next_season.style_configs[controlled]["offense_style"] == "ghost"
+    assert next_season.style_configs[controlled]["defense_style"] == "fortress"
+    assert next_season.playbook_assignments.keys() - {controlled}
+    persisted = db.load_dynasty(dynasty_id)
+    assert persisted.playbook_assignments == next_season.playbook_assignments
+    assert not persisted.pending_computer_books
+
+
+def test_book_survives_dynasty_reload_and_coordinator_change(tmp_path, monkeypatch):
+    from engine.dynasty import create_dynasty
+
+    monkeypatch.setattr(db, "_db_path", tmp_path / "dynasty.db")
+    db.init_db()
+    dynasty = create_dynasty("Cookbook", "Coach", "Team")
+    offense = book("Set plays", "offense", "ghost", "gp_heavy_push", "ec_two_minute")
+    dynasty.playbook_assignments["Team"] = {"offense": offense}
+    db.save_dynasty(dynasty, save_key="book")
+    restored = db.load_dynasty("book")
+    assert restored.playbook_assignments == dynasty.playbook_assignments
+
+    records = restored._team_installations
+    coaches = staff(card("first", "oc"))
+    first = sync_installation(records, "Team", coaches, "ghost", "swarm",
+                              STATS, books=restored.playbook_assignments["Team"])
+    assert [p["package_id"] for p in first["offense"]["packages"]] == offense["packages"]
+    coaches["oc"] = card("second", "oc")
+    second = sync_installation(records, "Team", coaches, "ghost", "swarm",
+                               STATS, books=restored.playbook_assignments["Team"])
+    assert second["offense"]["coach_id"] == "second"
+    assert second["offense"]["custom_book"] == offense
+    assert [p["package_id"] for p in second["offense"]["packages"]] == offense["packages"]

@@ -4799,6 +4799,22 @@ class ViperballEngine:
         counters["alignments"][alignment] = counters["alignments"].get(alignment, 0) + 1
         counters["blitz_calls"] += int(blitz)
 
+    _DEFENSIVE_PACKAGE_POSTURES = {
+        "fortress_goal_line_stand": ("stacked", -0.04, ["dive_option", "power"]),
+        "fortress_short_yardage_wall": ("stacked", -0.04, ["dive_option", "power"]),
+        "lockdown_kick_range_shell": ("spread", -0.06, ["kick_pass"]),
+        "lockdown_long_yardage_bracket": ("spread", -0.06, ["kick_pass"]),
+        "drift_prevent": ("spread", -0.08, ["kick_pass", "lateral_spread"]),
+        "blitz_short_yardage_pressure": ("aggressive", 0.10, ["dive_option", "power", "sweep_option"]),
+        "rugby_rush_line": ("aggressive", 0.06, ["sweep_option", "speed_option", "lateral_spread"]),
+        "afl_kick_in_press": ("aggressive", 0.06, ["kick_pass"]),
+        "lax_ride": ("aggressive", 0.08, ["speed_option", "viper_jet", "kick_pass"]),
+        "swarm_containment": ("spread", -.06, ["sweep_option", "speed_option", "viper_jet"]),
+        "shadow_robber": ("spread", -.05, ["kick_pass"]),
+        "chaos_lateral_trap": ("spread", -.04, ["lateral_spread"]),
+        "predator_exhaustion_press": ("aggressive", .14, ["kick_pass", "speed_option"]),
+    }
+
     def _choose_defensive_package(self, side: str, tactics: Dict, situations=None, context=None):
         """Choose at most one installed package before the play family is known."""
         if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
@@ -4822,21 +4838,7 @@ class ViperballEngine:
         from .defensive_commitments import eligibility, execution_strength, PRESS_PACKAGES, COVER_PACKAGES
         # Existing alignments have real run-direction costs. The focus is a
         # finite read allocation, not a universal defense multiplier.
-        effects = {
-            "fortress_goal_line_stand": ("stacked", -0.04, ["dive_option", "power"]),
-            "fortress_short_yardage_wall": ("stacked", -0.04, ["dive_option", "power"]),
-            "lockdown_kick_range_shell": ("spread", -0.06, ["kick_pass"]),
-            "lockdown_long_yardage_bracket": ("spread", -0.06, ["kick_pass"]),
-            "drift_prevent": ("spread", -0.08, ["kick_pass", "lateral_spread"]),
-            "blitz_short_yardage_pressure": ("aggressive", 0.10, ["dive_option", "power", "sweep_option"]),
-            "rugby_rush_line": ("aggressive", 0.06, ["sweep_option", "speed_option", "lateral_spread"]),
-            "afl_kick_in_press": ("aggressive", 0.06, ["kick_pass"]),
-            "lax_ride": ("aggressive", 0.08, ["speed_option", "viper_jet", "kick_pass"]),
-            "swarm_containment": ("spread", -.06, ["sweep_option", "speed_option", "viper_jet"]),
-            "shadow_robber": ("spread", -.05, ["kick_pass"]),
-            "chaos_lateral_trap": ("spread", -.04, ["lateral_spread"]),
-            "predator_exhaustion_press": ("aggressive", .14, ["kick_pass", "speed_option"]),
-        }
+        effects = self._DEFENSIVE_PACKAGE_POSTURES
         # Drive-specific packages have primary and lower-frequency secondary triggers.
         choices = []
         counts = self._defensive_package_usage[side]
@@ -4867,7 +4869,10 @@ class ViperballEngine:
         # between packages does not inflate the overall activation probability.
         if rng.random() >= 0.90 * max(p["familiarity"]*p["eligibility"] for p in choices):
             return None
-        selected = rng.choices(choices, weights=[p["weight"] for p in choices], k=1)[0]
+        preferred = (unit.get("custom_book") or {}).get("preferred")
+        selected = next((p for p in choices if p["package_id"] == preferred), None)
+        if selected is None:
+            selected = rng.choices(choices, weights=[p["weight"] for p in choices], k=1)[0]
         pid = selected["package_id"]
         counts["selected"][pid] = counts["selected"].get(pid, 0) + 1
         if selected["eligibility"] < 1:
@@ -16964,6 +16969,17 @@ class ViperballEngine:
             },
         }
 
+        custom_books = {}
+        for side, team in (("home", self.home_team), ("away", self.away_team)):
+            for unit, installation in (getattr(team, "installation", None) or {}).items():
+                if unit not in ("offense", "defense") or not installation.get("custom_book"):
+                    continue
+                custom_books.setdefault(side, {})[unit] = {
+                    **installation["custom_book"],
+                    "ready": [p["package_id"] for p in installation["packages"]],
+                }
+        if custom_books:
+            summary["custom_playbooks"] = custom_books
         return summary
 
     def _build_modifier_stack_summary(self) -> Dict:

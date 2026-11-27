@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_controls.html" import conference_editor, style_selects %}
+{% from "_playbook_selects.html" import playbook_selects %}
 {% block title %}New season — Viperball Stats{% endblock %}
 
 {% block breadcrumb %}
@@ -29,10 +30,11 @@
           {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
         </select>
         {{ style_selects(styles, 'h' ~ i ~ '_') }}
+        {{ playbook_selects(playbooks, 'h' ~ i ~ '_', 'Use selected school') }}
       </div>
       {% endfor %}
     </div>
-    <div class="hint">Offense, defense and special teams apply to the team on the same line.</div>
+    <div class="hint">A custom book sets the base school for its side. <a href="/stats/playbooks">Create or import a playbook</a>.</div>
   </div>
 
   <div>
@@ -60,6 +62,8 @@
       <div class="hint">0 rolls a new one each run</div>
     </div>
   </div>
+
+  {% include "_computer_playbooks.html" %}
 
   {{ conference_editor(conferences) }}
 

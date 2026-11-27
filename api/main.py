@@ -346,6 +346,8 @@ class CreateSeasonRequest(BaseModel):
     bowl_count: int = 4
     human_teams: List[str] = []
     human_configs: Dict[str, Dict[str, str]] = {}
+    playbooks: Dict[str, Dict[str, str]] = {}
+    computer_playbooks: bool = False
     num_conferences: int = 10
     ai_seed: int = 0
     conferences: Optional[Dict[str, List[str]]] = None
@@ -360,6 +362,8 @@ class CreateDynastyRequest(BaseModel):
     dynasty_name: str = "My Viperball Dynasty"
     coach_name: str = "Coach"
     coach_team: str
+    playbooks: Dict[str, str] = {}
+    computer_playbooks: bool = False
     starting_year: int = 2026
     num_conferences: int = 10
     history_years: int = 0
@@ -1309,6 +1313,15 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
                 tname, {"offense_style": "balanced", "defense_style": "swarm", "st_scheme": "aces"}
             ))
 
+    from engine.custom_playbooks import apply_schools, assign_computer_books, library_snapshot, resolve_choices
+    try:
+        if set(req.playbooks) - (set(req.human_teams) & teams.keys()):
+            raise ValueError("Choose playbooks only for your teams.")
+        assignments = {team: resolve_choices(books) for team, books in req.playbooks.items()}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    apply_schools(style_configs, assignments)
+
     pinned = None
     if req.pinned_matchups:
         pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
@@ -1322,6 +1335,12 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
 
     coaching_staffs = load_coaching_staffs_from_directory(TEAMS_DIR)
 
+    if req.computer_playbooks:
+        excluded = set(req.human_teams) | (teams.keys() - coaching_staffs.keys())
+        assignments.update(assign_computer_books(
+            library_snapshot(), teams, style_configs, excluded, req.ai_seed or stable_hash(session_id),
+        ))
+
     season = create_season(
         req.name,
         teams,
@@ -1333,6 +1352,8 @@ def create_season_endpoint(session_id: str, req: CreateSeasonRequest):
         rivalries=rivalries_dict,
         coaching_staffs=coaching_staffs,
     )
+
+    season.playbook_assignments = assignments
 
     history_results = []
     history_years = max(0, min(100, req.history_years))
@@ -2463,6 +2484,7 @@ def _build_college_archive(session: dict, session_id: str, include_full_result: 
         "dynasty_year": dynasty.current_year if dynasty else None,
         "team_conferences": dict(season.team_conferences) if season.team_conferences else {},
         "style_configs": dict(season.style_configs) if season.style_configs else {},
+        "playbook_assignments": season.playbook_assignments,
     }
 
 
@@ -2621,6 +2643,12 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
     if req.coach_team not in teams:
         raise HTTPException(status_code=400, detail=f"Team '{req.coach_team}' not found")
 
+    from engine.custom_playbooks import library_snapshot, resolve_choices
+    try:
+        books = resolve_choices(req.playbooks)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     dynasty = create_dynasty(
         dynasty_name=req.dynasty_name,
         coach_name=req.coach_name,
@@ -2630,6 +2658,11 @@ def create_dynasty_endpoint(session_id: str, req: CreateDynastyRequest):
         playoff_size=req.playoff_size,
         bowl_count=req.bowl_count,
     )
+
+    if books:
+        dynasty.playbook_assignments[req.coach_team] = books
+    if req.computer_playbooks:
+        dynasty.pending_computer_books = library_snapshot()
 
     if req.conferences:
         conferences = req.conferences
@@ -2778,6 +2811,9 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         if tname != dynasty.coach.team_name:
             style_configs[tname].update(next_schools.get(tname, {}))
 
+    from engine.custom_playbooks import apply_schools
+    apply_schools(style_configs, dynasty.playbook_assignments)
+
     pinned = None
     if req.pinned_matchups:
         pinned = [(pair[0], pair[1]) for pair in req.pinned_matchups if len(pair) == 2]
@@ -2907,6 +2943,16 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
     from engine.position_staff import ensure_position_staff
     ensure_position_staff(dynasty._coaching_staffs,dynasty.team_prestige,dynasty.current_year,teams)
 
+    computer_books = {}
+    pending_books = dynasty.pending_computer_books
+    if pending_books:
+        from engine.custom_playbooks import assign_computer_books
+
+        excluded = {dynasty.coach.team_name} | set(dynasty.retired_programs)
+        computer_books = assign_computer_books(
+            pending_books, teams, style_configs, excluded, seed,
+        )
+
     season = create_season(
         f"{dynasty.current_year} CVL Season",
         teams,
@@ -2920,6 +2966,8 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         dynasty_year=dynasty.current_year,
     )
 
+    dynasty.playbook_assignments.update(computer_books)
+    dynasty.pending_computer_books = []
     session["season"] = season
     season.human_teams = list(session.get("human_teams", []))
     # Attach live prestige tracking so it updates after every game
@@ -2953,6 +3001,10 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         dynasty._next_season_rosters = None
     dynasty._pending_retired_dispersal = [
         t for t in dynasty._pending_retired_dispersal if t not in dispersal_sources]
+    if pending_books:
+        from engine.db import save_dynasty as db_save_dynasty
+
+        db_save_dynasty(dynasty, save_key=session_id)
     return _status
 
 

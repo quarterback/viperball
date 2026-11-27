@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Playbook Cookbook · Viperball Stats{% endblock %}
+{% block content %}
+<style>
+  .book-layout { display:grid; align-items:start; gap:24px; grid-template-columns:minmax(270px, .85fr) minmax(330px, 1.3fr) }
+  .book-library { display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:24px }
+  .book-package { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--border) }
+  .book-package button { justify-self:end }
+  #book-field { width:100%; aspect-ratio:2/1; background:#1b4438; overflow:hidden }
+  #book-field svg { display:block; width:100%; height:100% }
+  .book-preview { min-width:0 }
+  .book-preview p { margin:8px 0 }
+  .book-key { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.85rem }
+  .book-key span::before { content:""; display:inline-block; width:.7em; height:.7em; margin-right:.4em; background:var(--mark); border:1px solid #39705d }
+  .book-error { color:var(--red); font-weight:600 }
+  @media(max-width:800px) { .book-layout { grid-template-columns:minmax(0, 1fr) } }
+</style>
+<div class="page-header">
+  <h1>Playbook Cookbook</h1>
+  <p>Build an offense or defense from existing packages. Choose your saved book when setting up a season or dynasty.</p>
+</div>
+<nav class="book-library" aria-label="Saved playbooks">
+  <a href="/stats/playbooks">New playbook</a>
+  {% for saved in books %}
+    <a href="/stats/playbooks?edit={{ saved.id }}" {% if saved.id == book_id %}aria-current="page"{% endif %}>{{ saved.name }} · {{ saved.side }}</a>
+  {% endfor %}
+</nav>
+
+{% if error %}<p class="book-error" role="alert">{{ error }}</p>{% endif %}
+<div class="book-layout">
+  <form class="setup-form" id="book-form" method="post" action="/stats/playbooks">
+    <input type="hidden" name="book_id" value="{{ book_id }}">
+    <div>
+      <label for="book-name">Book name</label>
+      <input id="book-name" name="name" maxlength="80" value="{{ book.get('name', '') }}" required>
+    </div>
+    <div class="row">
+      <div>
+        <label for="book-side">Side</label>
+        <select id="book-side" name="side"><option value="offense">Offense</option><option value="defense">Defense</option></select>
+      </div>
+      <div><label for="book-school">Base school</label><select id="book-school" name="school"></select></div>
+    </div>
+    <div>
+      <strong>Packages</strong>
+      <p class="hint">Choose up to {{ max_packages }}. The coach uses the base school alongside packages that fit your roster.</p>
+      <div id="book-packages"></div>
+      <p id="book-count" class="hint" role="status"></p>
+    </div>
+    <div>
+      <label for="book-preferred">Preferred package</label>
+      <select id="book-preferred" name="preferred"></select>
+      <div class="hint">Gets first choice when eligible and the coordinator opts to call a package.</div>
+    </div>
+    <div>
+      <button class="btn-run" type="submit" id="book-save">{% if book_id %}Save changes{% else %}Save playbook{% endif %}</button>
+      {% if book_id %}<a href="/stats/playbooks/{{ book_id }}/export">Download JSON</a>{% endif %}
+    </div>
+  </form>
+
+  <section class="book-preview" aria-labelledby="book-preview-title">
+    <h2 id="book-preview-title">Field preview</h2>
+    <div id="book-field" role="img" aria-label="Illustrated formation and intended action"></div>
+    <p id="book-field-key" class="book-key">
+      <span style="--mark:#f8f5cc">Run</span>
+      <span style="--mark:#ffcf68">Lateral</span>
+      <span style="--mark:#a4f6df">Kick pass</span>
+      <span style="--mark:#ffa98d">Defensive movement</span>
+    </p>
+    <p class="hint">Illustrated concept. Game results are resolved by the simulation.</p>
+    <p><strong id="book-package-name"></strong></p>
+    <p id="book-package-origin"></p>
+    <p id="book-package-shape"></p>
+    <p id="book-package-scenario"></p>
+    <p id="book-package-personnel"></p>
+    <p id="book-package-tradeoff"></p>
+    <button class="btn-small" id="book-replay" type="button" disabled>Animate concept</button>
+  </section>
+</div>
+
+<details style="margin-top:24px" {% if import_text %}open{% endif %}>
+  <summary>Import a playbook</summary>
+  <form class="setup-form" method="post" action="/stats/playbooks/import">
+    <label for="book-import-file">Choose a playbook JSON file</label>
+    <input type="file" id="book-import-file" accept="application/json,.json">
+    <label for="book-import">Or paste playbook JSON</label>
+    <textarea id="book-import" name="playbook_json" rows="6" maxlength="8192" required>{{ import_text }}</textarea>
+    <button class="btn-small" type="submit">Review draft</button>
+  </form>
+</details>
+<noscript><p>Enable JavaScript to configure and preview packages.</p></noscript>
+<script type="application/json" id="book-data">{{ {'schools': schools, 'packages': packages, 'vocabulary': vocabulary, 'draft': book, 'maxPackages': max_packages}|tojson }}</script>
+<script defer src="/stats/static/vendor/phaser-3.90.0.min.js"
+  integrity="sha384-AvQiDMZAVLda3VtAoU5MCfBz8pzXhteb2CiUJeKBmPlWzpXj1uJ96Km11+YuFNu/"></script>
+<script defer src="/stats/static/playbook_cookbook.js"></script>
+{% endblock %}

@@ -1366,6 +1366,8 @@ def serialize_dynasty(dynasty) -> dict:
         data["coaching_staffs"] = {}
 
     # Preserve learned coordinator and package familiarity in real app saves.
+    data["playbook_assignments"] = dynasty.playbook_assignments
+    data["pending_computer_books"] = dynasty.pending_computer_books
     data["team_installations"] = dict(getattr(dynasty, "_team_installations", {}) or {})
 
     # Preserve prospective recruits and their development across reloads.
@@ -1477,6 +1479,8 @@ def deserialize_dynasty(data: dict):
             conf.championship_history = {int(k): v for k, v in conf.championship_history.items()}
 
     from engine.team_installation import ensure_installation
+    dynasty.playbook_assignments = data.get("playbook_assignments") or {}
+    dynasty.pending_computer_books = data.get("pending_computer_books") or []
     dynasty._team_installations = {
         name: ensure_installation(rec, name)
         for name, rec in (data.get("team_installations") or {}).items() if rec
