@@ -1,5 +1,6 @@
 import json
 import random
+import sqlite3
 from pathlib import Path
 from shutil import copyfile
 
@@ -165,3 +166,39 @@ def test_book_survives_dynasty_reload_and_coordinator_change(tmp_path, monkeypat
     assert second["offense"]["coach_id"] == "second"
     assert second["offense"]["custom_book"] == offense
     assert [p["package_id"] for p in second["offense"]["packages"]] == offense["packages"]
+
+
+
+def test_failed_save_keeps_the_draft_and_can_be_retried(tmp_path, monkeypatch):
+    from api import main
+
+    db_path = tmp_path / "cookbook.db"
+    monkeypatch.setattr(db, "_db_path", db_path)
+    db.init_db()
+    client = TestClient(main.app)
+
+    saved = book("Opening Script", "offense", "ghost", "rugby_first_phase_strike")
+    key = save_book(saved)
+    draft = {**saved, "name": "Revised Opening Script",
+             "packages": ["rugby_first_phase_strike", "gp_heavy_push"],
+             "preferred": "gp_heavy_push"}
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("""
+            CREATE TRIGGER reject_playbook_update BEFORE UPDATE ON saves
+            WHEN NEW.save_type = 'playbook'
+            BEGIN SELECT RAISE(ABORT, 'write failed'); END;
+        """)
+    failed = client.post("/stats/playbooks", data={**draft, "book_id": key})
+    assert failed.status_code == 503
+    assert "Your draft is still here." in failed.text
+    assert 'value="Revised Opening Script"' in failed.text
+    assert f'name="book_id" value="{key}"' in failed.text
+    assert '"preferred": "gp_heavy_push"' in failed.text
+    assert get_book(key) == saved
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DROP TRIGGER reject_playbook_update")
+    retried = client.post("/stats/playbooks", data={**draft, "book_id": key})
+    assert retried.status_code == 200
+    assert retried.url.params["edit"] == key
+    assert get_book(key) == draft
