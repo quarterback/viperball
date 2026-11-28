@@ -84,7 +84,8 @@ call.
 
 **Not done.** The clinic's new schools (Free Motion, Phase Attack, Relay, Crossfire as
 schools of their own) are not activated; the calls ship as packages for existing schools.
-Directional run previews on the Playbooks page are the generic ones for each family.
+Previews on the Playbooks page were the generic ones for each family at first; each call
+now has its own drawing (`aar_2026-11-28_cross_code_previews.md`).
 
 ## Study
 

@@ -189,3 +189,13 @@ def test_defensive_answers_act_in_a_full_game():
         done = rush["cross_code"]["away"]["defense"].get(XC.D_CROSS_RUSH, {})
         acted += done.get("passed_off", 0) + done.get("came_free", 0)
     assert moved > 0 and acted > 0
+
+
+def test_every_cross_code_call_has_its_own_preview():
+    from pathlib import Path
+    js = Path("stats_site/static/playbook_cookbook.js").read_text()
+    for pid in XC.OFFENSE | XC.DEFENSE:
+        assert f"    {pid}: (" in js, pid
+    # Calls with more than one branch let the viewer pick the branch.
+    for pid in XC.OFFENSE - {XC.CF_HANDOFF_PUNISH}:
+        assert f"    {pid}: [[" in js, pid
