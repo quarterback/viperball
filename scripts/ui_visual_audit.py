@@ -74,7 +74,8 @@ def run():
                 for label,path in pages.items():
                     response=page.goto("http://testserver"+path,wait_until="load")
                     assert response is not None and response.ok,(label,response.status if response else None)
-                    page.locator("h1").first.wait_for()
+                    ready_selector = ".box-score-header" if label == "game" else "h1"
+                    page.locator(ready_selector).first.wait_for()
                     page.evaluate("document.fonts.ready")
                     assert page.locator("html").get_attribute("data-theme")==theme
                     page.screenshot(path=str(out/f"{label}-{engine}-{theme}-{width}.png"),full_page=False)

@@ -460,6 +460,25 @@
   {{ inst_bar("Knows the base book", u.family_familiarity) }}
   <p class="inst-note">{{ u.seasons_together }} season{{ '' if u.seasons_together == 1 else 's' }} together. The coordinator's tendencies show at {{ ((u.execution_factor or 0) * 100) | round | int }}% strength.{% if u.vestigial %} Old habits: {% for v in u.vestigial %}{{ v.signature | replace('_', ' ') | title }} ({{ ((v.weight or 0) * 100) | round | int }}%){% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}</p>
   {% if u.packages %}{% for pk in u.packages %}{{ inst_bar(pk.name, pk.familiarity) }}{% endfor %}{% else %}<p class="inst-note">No packages installed.</p>{% endif %}
+  {% if u.practice and (u.practice.game or u.practice.offseason) %}
+  <details class="inst-note">
+    <summary>Practice allocation</summary>
+    {% for period, label in [('game', 'Since the last game'), ('offseason', 'Last offseason')] %}
+    {% set practice = u.practice.get(period) %}
+    {% if practice %}
+    <p>{{ label }} · {{ practice.budget - practice.unused }} of {{ practice.budget }} points assigned</p>
+    <ul>
+      {% for id, points in practice.allocated.items() %}
+      {% set package = u.packages | selectattr('package_id', 'equalto', id) | first %}
+      <li>{{ package.name if package else (id | replace('_', ' ') | title) }} · {{ points }}</li>
+      {% else %}
+      <li>No eligible packages</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endfor %}
+  </details>
+  {% endif %}
 </div>
 {% endif %}
 {% endfor %}

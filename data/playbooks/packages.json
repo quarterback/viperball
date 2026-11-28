@@ -6,6 +6,7 @@
       "package_id": "gp_heavy_push",
       "side": "offense",
       "name": "Heavy Push",
+      "summary": "Run behind extra blockers for a few yards.",
       "origin_family": "ground_control",
       "compatible_families": [
         "ground_control",
@@ -56,6 +57,7 @@
       "package_id": "gp_goal_line_jumbo",
       "side": "offense",
       "name": "Goal Line Jumbo",
+      "summary": "Pack the line and run into the end zone.",
       "origin_family": "ground_control",
       "compatible_families": [
         "ground_control",
@@ -101,6 +103,7 @@
       "package_id": "ironclad_four_minute",
       "side": "offense",
       "name": "Four Minute Grind",
+      "summary": "Use inside runs and short kick passes to protect a lead.",
       "origin_family": "ironclad",
       "compatible_families": [
         "ironclad",
@@ -149,6 +152,7 @@
       "package_id": "br_launch_pad_kick_set",
       "side": "offense",
       "name": "Launch Pad Kick Set",
+      "summary": "Use short kick passes to reach snap kick range.",
       "origin_family": "boot_raid",
       "compatible_families": [
         "boot_raid",
@@ -196,6 +200,7 @@
       "package_id": "sa_vertical_shot",
       "side": "offense",
       "name": "Vertical Shot",
+      "summary": "Send a long kick pass downfield.",
       "origin_family": "shock_and_awe",
       "compatible_families": [
         "shock_and_awe",
@@ -245,6 +250,7 @@
       "package_id": "ec_quick_kick_chain",
       "side": "offense",
       "name": "Quick Kick Chain",
+      "summary": "Gain manageable chunks with quick kick passes.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -295,6 +301,7 @@
       "package_id": "ec_two_minute",
       "side": "offense",
       "name": "Two Minute Chain",
+      "summary": "Move toward scoring range with quick kicks and laterals.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -341,6 +348,7 @@
       "package_id": "cg_chase_chain",
       "side": "offense",
       "name": "Chase Chain",
+      "summary": "Chase a deficit with laterals and kick passes.",
       "origin_family": "chain_gang",
       "compatible_families": [
         "chain_gang",
@@ -386,6 +394,7 @@
       "package_id": "afl_kick_in_breakout",
       "side": "offense",
       "name": "Kick-In Breakout",
+      "summary": "Kick to a teammate to escape deep field position.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -438,6 +447,7 @@
       "package_id": "afl_restart_go_to",
       "side": "offense",
       "name": "Restart Go-To",
+      "summary": "Open the drive with a jet or sweep.",
       "origin_family": "ghost",
       "compatible_families": [
         "ghost",
@@ -484,6 +494,7 @@
       "package_id": "rugby_first_phase_strike",
       "side": "offense",
       "name": "First Phase Strike",
+      "summary": "Open the drive with a misdirection run.",
       "origin_family": "slick_n_slide",
       "compatible_families": [
         "slick_n_slide",
@@ -529,6 +540,7 @@
       "package_id": "league_last_tackle_kick",
       "side": "offense",
       "name": "Last Tackle Kick",
+      "summary": "Send a kick pass deep on a late down.",
       "origin_family": "six_shooter",
       "compatible_families": [
         "six_shooter",
@@ -575,6 +587,7 @@
       "package_id": "lax_fast_break",
       "side": "offense",
       "name": "Fast Break",
+      "summary": "Attack quickly on the first snap after a takeaway.",
       "origin_family": "quick_strike",
       "compatible_families": [
         "quick_strike",
@@ -623,6 +636,7 @@
       "package_id": "lax_extra_attacker",
       "side": "offense",
       "name": "Extra Attacker",
+      "summary": "Run wide against a tired defense.",
       "origin_family": "stampede",
       "compatible_families": [
         "stampede",
@@ -665,9 +679,221 @@
     },
     {
       "version": 1,
+      "package_id": "gaelic_kick_and_follow",
+      "side": "offense",
+      "name": "Viper Trail",
+      "summary": "Catch a short kick and use a trailing runner if crowded.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "slick_n_slide",
+        "ball_control",
+        "ghost",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos"
+      ],
+      "tradeoffs": [
+        "lateral_turnover"
+      ],
+      "inspiration": "Gaelic football support running after a kick pass.",
+      "scenario": "Downs 1 to 4 between your own 20 and the opponent's 20.",
+      "benefits": "The receiver can keep the ball or feed a fresher runner behind them.",
+      "cost": "The extra exchange can be intercepted or dropped.",
+      "counter": "Follow the support runner and close the lateral lane."
+    },
+    {
+      "version": 1,
+      "package_id": "afl_boundary_switch",
+      "side": "offense",
+      "name": "Far Side Coil",
+      "summary": "Work one edge with short kicks, then switch across the field.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "ghost",
+        "mousetrap",
+        "boot_raid",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "lockdown",
+        "drift"
+      ],
+      "tradeoffs": [
+        "longer_kick"
+      ],
+      "inspiration": "Australian rules boundary play and switching the point of attack.",
+      "scenario": "Use during a drive with room on either side. The switch follows two setups and observed pressure.",
+      "benefits": "Uses short kicks to move the defense before testing the far side.",
+      "cost": "The cross field kick takes longer and the setup can use several downs.",
+      "counter": "Keep coverage wide so the far side stays protected."
+    },
+    {
+      "version": 1,
+      "package_id": "rugby_carry_release",
+      "side": "offense",
+      "name": "Third Strike",
+      "summary": "Draw pressure with repeat carries, then sweep the other edge.",
+      "origin_family": "slick_n_slide",
+      "compatible_families": [
+        "slick_n_slide",
+        "mousetrap",
+        "ground_control",
+        "ghost",
+        "stampede",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "power",
+        "sweep_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "swarm",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "uses_downs"
+      ],
+      "inspiration": "Rugby phase play and sevens compression before expansion.",
+      "scenario": "Use on downs 1 to 4. Release to the opposite edge when the defense presses after two setups.",
+      "benefits": "The same look can threaten both edges over a series.",
+      "cost": "The setup can stall against a strong front.",
+      "counter": "Keep edge support in place while defending the carries."
+    },
+    {
+      "version": 1,
+      "package_id": "ball_protect_bonus",
+      "side": "offense",
+      "name": "Bonus Guard",
+      "summary": "Use inside carries and short outlets while a bonus is pending.",
+      "origin_family": "ball_control",
+      "compatible_families": [
+        "ball_control",
+        "quick_strike",
+        "ground_control",
+        "ironclad",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "dive_option",
+        "power",
+        "kick_pass"
+      ],
+      "kick_pass_tags": ["quick_kick"],
+      "personnel_tags": [],
+      "situation_tags": [
+        "pending_bonus"
+      ],
+      "countered_by": [
+        "fortress",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "lower_explosive_ceiling"
+      ],
+      "inspiration": "Viperball's bonus possession creates a two drive scoring opportunity.",
+      "scenario": "Downs 1 to 4 after earning an interception bonus, outside the opponent’s 28.",
+      "benefits": "Uses inside runs in ordinary situations and a short kick pass when there is ground to make up on second or third down.",
+      "cost": "A defense waiting inside can stall the first drive.",
+      "counter": "Stack the box and make the offense spend its downs."
+    },
+    {
+      "version": 1,
+      "package_id": "cfl_corner_chase",
+      "side": "offense",
+      "name": "Pindown Chase",
+      "summary": "Aim a late punt toward the end zone with a designated chaser.",
+      "origin_family": "ironclad",
+      "compatible_families": [
+        "ironclad",
+        "ball_control",
+        "boot_raid",
+        "six_shooter",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight"
+      ],
+      "play_family_tags": [
+        "punt"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "corner_punt"
+      ],
+      "countered_by": [
+        "drift",
+        "rotation"
+      ],
+      "tradeoffs": [
+        "short_punt_risk"
+      ],
+      "inspiration": "Canadian football singles and rugby kick chase.",
+      "scenario": "On sixth down near midfield when tied or leading by at most five points and a scoring kick has low expected value.",
+      "benefits": "A directional punt and an available coverage player can earn a pindown.",
+      "cost": "Inaccurate placement can hand the return team better field position.",
+      "counter": "Field the kick cleanly and beat the first coverage player."
+    },
+    {
+      "version": 1,
       "package_id": "fortress_goal_line_stand",
       "side": "defense",
       "name": "Goal Line Stand",
+      "summary": "Stack the middle to stop runs near the goal line.",
       "origin_family": "fortress",
       "compatible_families": [
         "fortress",
@@ -712,6 +938,7 @@
       "package_id": "fortress_short_yardage_wall",
       "side": "defense",
       "name": "Short Yardage Wall",
+      "summary": "Crowd the middle to deny short inside gains.",
       "origin_family": "fortress",
       "compatible_families": [
         "fortress",
@@ -755,6 +982,7 @@
       "package_id": "lockdown_kick_range_shell",
       "side": "defense",
       "name": "Kick Range Shell",
+      "summary": "Drop into coverage to defend deeper kick passes.",
       "origin_family": "lockdown",
       "compatible_families": [
         "lockdown",
@@ -799,6 +1027,7 @@
       "package_id": "lockdown_long_yardage_bracket",
       "side": "defense",
       "name": "Long Yardage Bracket",
+      "summary": "Spread the defense to take away long kick passes.",
       "origin_family": "lockdown",
       "compatible_families": [
         "lockdown",
@@ -839,6 +1068,7 @@
       "package_id": "drift_prevent",
       "side": "defense",
       "name": "Prevent",
+      "summary": "Protect deep space and concede short gains.",
       "origin_family": "drift",
       "compatible_families": [
         "drift",
@@ -879,6 +1109,7 @@
       "package_id": "blitz_short_yardage_pressure",
       "side": "defense",
       "name": "Short Yardage Pressure",
+      "summary": "Send extra rushers to disrupt short runs.",
       "origin_family": "blitz_pack",
       "compatible_families": [
         "blitz_pack",
@@ -918,6 +1149,7 @@
       "package_id": "afl_kick_in_press",
       "side": "defense",
       "name": "Kick-In Press",
+      "summary": "Pressure an offense trying to kick out from deep.",
       "origin_family": "predator",
       "compatible_families": [
         "predator",
@@ -959,6 +1191,7 @@
       "package_id": "lax_ride",
       "side": "defense",
       "name": "Ride",
+      "summary": "Press the new offense after a change of possession.",
       "origin_family": "chaos",
       "compatible_families": [
         "chaos",
@@ -1000,6 +1233,7 @@
       "package_id": "rugby_rush_line",
       "side": "defense",
       "name": "Rush Line",
+      "summary": "Rush wide to cut off sweeps and laterals.",
       "origin_family": "blitz_pack",
       "compatible_families": [
         "blitz_pack",
@@ -1038,6 +1272,7 @@
       "package_id": "swarm_containment",
       "side": "defense",
       "name": "Containment",
+      "summary": "Keep wide runs in front of the defense.",
       "origin_family": "swarm",
       "compatible_families": [
         "swarm",
@@ -1076,6 +1311,7 @@
       "package_id": "shadow_robber",
       "side": "defense",
       "name": "Robber Coverage",
+      "summary": "Take away the middle depth kick pass.",
       "origin_family": "shadow",
       "compatible_families": [
         "shadow",
@@ -1116,6 +1352,7 @@
       "package_id": "chaos_lateral_trap",
       "side": "defense",
       "name": "Lateral Trap",
+      "summary": "Invite the first lateral and contest the next.",
       "origin_family": "chaos",
       "compatible_families": [
         "chaos",
@@ -1153,6 +1390,7 @@
       "package_id": "predator_exhaustion_press",
       "side": "defense",
       "name": "Exhaustion Press",
+      "summary": "Send extra rushers to hurry short kick passes.",
       "origin_family": "predator",
       "compatible_families": [
         "predator",
@@ -1195,6 +1433,7 @@
       "package_id": "clinic_anchor_crease",
       "side": "offense",
       "name": "Anchor Crease",
+      "summary": "Use inside leverage to keep a short power drive moving.",
       "origin_family": "ground_control",
       "compatible_families": [
         "ground_control",
@@ -1236,6 +1475,7 @@
       "package_id": "clinic_pod_two",
       "side": "offense",
       "name": "Pod Two",
+      "summary": "Keep two runners close for quick, controlled lateral support.",
       "origin_family": "lateral_spread",
       "compatible_families": [
         "lateral_spread",
@@ -1277,6 +1517,7 @@
       "package_id": "clinic_edge_three",
       "side": "offense",
       "name": "Edge Three",
+      "summary": "Use a wider chain of support runners to stretch the edge.",
       "origin_family": "lateral_spread",
       "compatible_families": [
         "lateral_spread",
@@ -1317,6 +1558,7 @@
       "package_id": "clinic_last_wave",
       "side": "offense",
       "name": "Last Wave",
+      "summary": "String together wide laterals when a late deficit calls for a big gain.",
       "origin_family": "chain_gang",
       "compatible_families": [
         "chain_gang",
@@ -1355,6 +1597,7 @@
       "package_id": "clinic_corridor_switch",
       "side": "offense",
       "name": "Corridor Switch",
+      "summary": "Kick across a compact defense to find room farther downfield.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -1398,6 +1641,7 @@
       "package_id": "clinic_third_runner",
       "side": "offense",
       "name": "Third Runner",
+      "summary": "Use a kick pass to start a second transfer to a support runner.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -1440,6 +1684,7 @@
       "package_id": "clinic_launch_option",
       "side": "offense",
       "name": "Launch Option",
+      "summary": "Use an option look to advance into scoring kick range.",
       "origin_family": "boot_raid",
       "compatible_families": [
         "boot_raid",
@@ -1483,6 +1728,7 @@
       "package_id": "pp_advantage_entry",
       "side": "offense",
       "name": "Advantage Entry",
+      "summary": "Start a Power Play possession with short outlets and controlled gains.",
       "origin_family": "east_coast",
       "compatible_families": [
         "east_coast",
@@ -1524,6 +1770,7 @@
       "package_id": "pp_umbrella",
       "side": "offense",
       "name": "Umbrella",
+      "summary": "Threaten a scoring kick through the middle with outlets on either side.",
       "origin_family": "boot_raid",
       "compatible_families": [
         "boot_raid",
@@ -1567,6 +1814,7 @@
       "package_id": "pp_overload",
       "side": "offense",
       "name": "Overload",
+      "summary": "Use multiple threats on one side to draw the defense and open a counter.",
       "origin_family": "lateral_spread",
       "compatible_families": [
         "lateral_spread",
@@ -1609,6 +1857,7 @@
       "package_id": "pp_double_threat",
       "side": "offense",
       "name": "Double Threat",
+      "summary": "Keep the run and kick pass available from the same look.",
       "origin_family": "slick_n_slide",
       "compatible_families": [
         "slick_n_slide",
@@ -1648,6 +1897,7 @@
       "package_id": "pp_five_nine",
       "side": "offense",
       "name": "Five-Nine",
+      "summary": "Advance toward the goal line or take a good scoring kick on a late down.",
       "origin_family": "boot_raid",
       "compatible_families": [
         "boot_raid",
@@ -1689,6 +1939,7 @@
       "package_id": "pp_compression",
       "side": "offense",
       "name": "Compression",
+      "summary": "Attack the short field with a run and a quick kick threat.",
       "origin_family": "ground_control",
       "compatible_families": [
         "ground_control",
@@ -1730,6 +1981,7 @@
       "package_id": "pp_rapid_finish",
       "side": "offense",
       "name": "Rapid Finish",
+      "summary": "Press for a quick score when trailing late in the fourth quarter.",
       "origin_family": "quick_strike",
       "compatible_families": [
         "quick_strike",
@@ -1772,6 +2024,7 @@
       "package_id": "pp_second_shot",
       "side": "offense",
       "name": "Second Shot",
+      "summary": "Reassess the scoring kick after a retained miss uses up a down.",
       "origin_family": "boot_raid",
       "compatible_families": [
         "boot_raid",
@@ -1813,6 +2066,7 @@
       "package_id": "pko_escape",
       "side": "offense",
       "name": "Escape",
+      "summary": "Get clear of safety danger near your own goal line.",
       "origin_family": "ironclad",
       "compatible_families": [
         "ironclad",
@@ -1853,6 +2107,7 @@
       "package_id": "pko_secure_twenty",
       "side": "offense",
       "name": "Secure Twenty",
+      "summary": "Use conservative gains to renew the downs after clearing your goal line.",
       "origin_family": "ground_control",
       "compatible_families": [
         "ground_control",
@@ -1891,6 +2146,7 @@
       "package_id": "pko_territory_exit",
       "side": "offense",
       "name": "Territory Exit",
+      "summary": "Take a late down territorial exit when the drive stalls.",
       "origin_family": "ironclad",
       "compatible_families": [
         "ironclad",
@@ -1930,6 +2186,7 @@
       "package_id": "pko_counterpunch",
       "side": "offense",
       "name": "Counterpunch",
+      "summary": "Use quick outlets to attack space conceded by pressure.",
       "origin_family": "ghost",
       "compatible_families": [
         "ghost",
@@ -1970,6 +2227,7 @@
       "package_id": "pk_compact_box",
       "side": "defense",
       "name": "Compact Box",
+      "summary": "Crowd interior runs and short kick passes near the goal line.",
       "origin_family": "fortress",
       "compatible_families": [
         "fortress",
@@ -2004,6 +2262,7 @@
       "package_id": "pk_kicker_diamond",
       "side": "defense",
       "name": "Kicker Diamond",
+      "summary": "Pressure the kicker while conceding some space underneath.",
       "origin_family": "keeper_hunt",
       "compatible_families": [
         "keeper_hunt",
@@ -2037,6 +2296,7 @@
       "package_id": "pk_side_lock",
       "side": "defense",
       "name": "Side Lock",
+      "summary": "Spread toward repeated lateral and outside run threats.",
       "origin_family": "swarm",
       "compatible_families": [
         "swarm",
@@ -2071,6 +2331,7 @@
       "package_id": "pk_rotating_shell",
       "side": "defense",
       "name": "Rotating Shell",
+      "summary": "Layer coverage against kick passes and wide support chains.",
       "origin_family": "lockdown",
       "compatible_families": [
         "lockdown",
@@ -2105,6 +2366,7 @@
       "package_id": "pk_range_denial",
       "side": "defense",
       "name": "Range Denial",
+      "summary": "Make balanced stops to keep the offense outside comfortable kick range.",
       "origin_family": "fortress",
       "compatible_families": [
         "fortress",
@@ -2140,6 +2402,7 @@
       "package_id": "pk_goal_line_wall",
       "side": "defense",
       "name": "Goal-Line Wall",
+      "summary": "Stack the front near the goal line to stop a nine point finish.",
       "origin_family": "fortress",
       "compatible_families": [
         "fortress",
@@ -2174,6 +2437,7 @@
       "package_id": "pk_late_down_surge",
       "side": "defense",
       "name": "Late-Down Surge",
+      "summary": "Send extra rushers late in the set and accept some counter risk.",
       "origin_family": "keeper_hunt",
       "compatible_families": [
         "keeper_hunt",
@@ -2208,6 +2472,7 @@
       "package_id": "pk_takeaway_trap",
       "side": "defense",
       "name": "Takeaway Trap",
+      "summary": "Anticipate repeated distributions and contest the next exchange.",
       "origin_family": "chaos",
       "compatible_families": [
         "chaos",

@@ -35,6 +35,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Optional
 
+from .offensive_concepts import CORNER_CHASE
+
 INSTALLATION_VERSION = 1
 
 # Starting points
@@ -52,6 +54,10 @@ SEASON_GROWTH = 0.20
 PACKAGE_START = 0.30
 PACKAGE_GAME_GROWTH = 0.03
 PACKAGE_SEASON_GROWTH = 0.25
+PRACTICE_VERSION = 1
+PRACTICE_SCALE = 1000
+# Two equally practiced packages grow at the previous rate.
+PRACTICE_BUDGETS = {"game": 60, "offseason": 500}
 VESTIGE_SHARE = 0.60             # how much of the old OC's habit survives the hire
 VESTIGE_GAME_DECAY = 0.97
 VESTIGE_SEASON_DECAY = 0.40
@@ -190,6 +196,7 @@ def _new_unit(side: str, family: str, card: Any, familiarity: float, year: Optio
         "games_together": 0,
         "vestigial": [],
         "packages": [],
+        "practice": {"version": PRACTICE_VERSION},
     }
     if side == "offense":
         unit["bias"] = _offense_bias(card)
@@ -333,6 +340,24 @@ def _package_rank_key(side: str, card: Any, score, pid: str):
     return (-score(pid), pid)
 
 
+def _active_practice(unit: dict) -> Optional[dict]:
+    from .custom_playbooks import LEGACY_VERSION
+
+    practice = unit.get("practice")
+    book = unit.get("custom_book") or {}
+    if (practice and practice.get("version") == PRACTICE_VERSION
+            and book.get("version") != LEGACY_VERSION):
+        return practice
+    return None
+
+
+def _preferred_repertoire_size(coach_id: str) -> int:
+    """A stable policy choice independent of the caller's ratings and school."""
+    from .stable_hash import stable_hash
+
+    return (1, 2, 2, 3)[stable_hash(f"repertoire-v1:{coach_id}") % 4]
+
+
 def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
                      year: Optional[int]) -> None:
     """Keep what still fits this book and roster; let a new coordinator add
@@ -351,28 +376,35 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
     kept = [p for p in unit.get("packages", []) if p.get("package_id") in fits]
     have = {p["package_id"] for p in kept}
     coach_id = _coach_id(card)
-    already_by_coach = sum(1 for p in kept if p.get("installed_by") == coach_id)
-    if coach_id and already_by_coach < PACKAGES_PER_COORDINATOR:
+    practice = _active_practice(unit)
+    if practice is not None:
+        limit = _preferred_repertoire_size(coach_id) if coach_id else 0
+        practice["target"] = limit
+        vacancies = limit - len(kept)
+    else:
+        limit = MAX_PACKAGES
+        already_by_coach = sum(1 for p in kept if p.get("installed_by") == coach_id)
+        vacancies = PACKAGES_PER_COORDINATOR - already_by_coach
+    if coach_id and vacancies > 0:
         score = _package_preference_score(side, family, card)
 
         ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: _package_rank_key(side, card, score, pid))
-        if side == "offense":
+        if side == "offense" and practice is None:
             ranked = [pid for pid in ranked if score(pid) > 0] or ranked
         # Preserve the existing finite installation budget. A new caller
         # with room for two concepts reserves one for a compatible situational
         # module if one fits; existing practiced concepts are never evicted.
         from .delta_playbook import ALL as delta_ids
-        slots = PACKAGES_PER_COORDINATOR - already_by_coach
-        if slots >= 2 and not (have & delta_ids):
+        if vacancies >= 2 and not (have & delta_ids):
             specialist = next((pid for pid in ranked if pid in delta_ids), None)
             ordinary = next((pid for pid in ranked if pid not in delta_ids), None)
             if specialist and ordinary:
                 ranked = [ordinary, specialist] + [pid for pid in ranked if pid not in (ordinary, specialist)]
-        for pid in ranked[:slots]:
+        for pid in ranked[:vacancies]:
             kept.append({"package_id": pid, "familiarity": PACKAGE_START,
                          "installed_by": coach_id, "installed_year": year})
     kept.sort(key=lambda p: (-p.get("familiarity", 0.0), p["package_id"]))
-    unit["packages"] = kept[:MAX_PACKAGES]
+    unit["packages"] = kept[:limit]
 
 
 def defensive_adoption_snapshot(unit: dict, card: Any, team_stats: dict) -> dict:
@@ -435,12 +467,19 @@ def _sync_packages(side, unit, card, team_stats, year, book):
         unit.pop("custom_book", None)
         _choose_packages(side, unit, card, team_stats, year)
         return
+    from .custom_playbooks import VERSION
     from .playbook_catalog import packages_for_roster
 
     compatible = packages_for_roster(side, unit["family"], team_stats)
-    ready = {p["package_id"] for p in compatible if p["meets_personnel"]}
+    managed = book.get("version") == VERSION
+    callable_now = evaluable_situations() if managed else None
+    ready = {p["package_id"] for p in compatible if p["meets_personnel"]
+             and (callable_now is None or set(p["situation_tags"]) & callable_now)}
     previous = {p["package_id"]: p for p in unit["packages"]}
     unit["custom_book"] = book
+    if managed:
+        practice = unit.setdefault("practice", {"version": PRACTICE_VERSION})
+        practice.pop("target", None)
     unit["packages"] = [
         previous.get(pid) or {"package_id": pid, "familiarity": PACKAGE_START,
                               "installed_by": _coach_id(card), "installed_year": year}
@@ -518,6 +557,30 @@ def sync_installation(installations: Dict[str, dict], team_name: str, staff: Opt
     return rec
 
 
+def _practice_packages(unit: dict, period: str, legacy_growth: float) -> None:
+    practice = _active_practice(unit)
+    packages = unit.get("packages", [])
+    if practice is None:
+        for package in packages:
+            package["familiarity"] = round(_clamp(package.get("familiarity", 0.0) + legacy_growth), 3)
+        return
+
+    budget = PRACTICE_BUDGETS[period]
+    focus = (unit.get("custom_book") or {}).get("practice_focus")
+    weights = {p["package_id"]: 2 if p["package_id"] == focus else 1 for p in packages}
+    total_weight = sum(weights.values())
+    shares = {pid: divmod(budget * weight, total_weight) for pid, weight in weights.items()}
+    allocation = {pid: share for pid, (share, _) in shares.items()}
+    remainder_order = sorted(shares, key=lambda pid: (-shares[pid][1], pid))
+    for pid in remainder_order[:budget - sum(allocation.values())]:
+        allocation[pid] += 1
+    practice[period] = {"budget": budget, "allocated": allocation,
+                        "unused": budget - sum(allocation.values())}
+    for package in packages:
+        growth = allocation[package["package_id"]] / PRACTICE_SCALE
+        package["familiarity"] = round(_clamp(package.get("familiarity", 0.0) + growth), 3)
+
+
 def record_game(rec: Optional[dict]) -> None:
     """In season learning: one more game with this staff."""
     if not rec:
@@ -527,8 +590,7 @@ def record_game(rec: Optional[dict]) -> None:
         u["games_together"] = u.get("games_together", 0) + 1
         u["familiarity"] = round(_clamp(u.get("familiarity", 0.0) + GAME_GROWTH), 3)
         u["family_familiarity"] = round(_clamp(u.get("family_familiarity", 0.0) + GAME_GROWTH), 3)
-        for p in u.get("packages", []):
-            p["familiarity"] = round(_clamp(p.get("familiarity", 0.0) + PACKAGE_GAME_GROWTH), 3)
+        _practice_packages(u, "game", PACKAGE_GAME_GROWTH)
         vest = []
         for v in u.get("vestigial", []):
             v["weight"] = round(v.get("weight", 0.0) * VESTIGE_GAME_DECAY, 3)
@@ -550,8 +612,7 @@ def advance_offseason(rec: Optional[dict], year: Optional[int] = None, staff: Op
             u["familiarity"] = round(_clamp(u.get("familiarity", 0.0) + SEASON_GROWTH), 3)
         u["family_familiarity"] = round(_clamp(u.get("family_familiarity", 0.0) + SEASON_GROWTH + teaching), 3)
         u["games_together"] = 0
-        for p in u.get("packages", []):
-            p["familiarity"] = round(_clamp(p.get("familiarity", 0.0) + PACKAGE_SEASON_GROWTH), 3)
+        _practice_packages(u, "offseason", PACKAGE_SEASON_GROWTH)
         vest = []
         for v in u.get("vestigial", []):
             v["weight"] = round(v.get("weight", 0.0) * VESTIGE_SEASON_DECAY, 3)
@@ -577,6 +638,33 @@ def defense_execution_factor(rec: Optional[dict]) -> float:
     if not rec:
         return 1.0
     return execution_factor(rec["defense"])
+
+
+def _repertoire_summary(unit: dict) -> dict:
+    practice = _active_practice(unit)
+    if practice is None:
+        return {}
+    book = unit.get("custom_book") or {}
+    ready = {p["package_id"] for p in unit.get("packages", [])}
+    pairs = book.get("same_look_pairs", [])
+    if not book and len(ready) > 1:
+        from .custom_playbooks import same_look_options
+        from .playbook_catalog import get_package
+
+        catalog = {}
+        for pid in sorted(ready):
+            try:
+                catalog[pid] = get_package(pid)
+            except KeyError:
+                continue
+        pairs = same_look_options(catalog)
+    return {
+        "practice": {**practice, "budgets": dict(PRACTICE_BUDGETS),
+                     "focus": book.get("practice_focus")},
+        "book_revision": book.get("revision"),
+        "same_look_pairs": [pair for pair in pairs
+                            if ready.issuperset(pair["packages"])],
+    }
 
 
 def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) -> Dict[str, Any]:
@@ -621,6 +709,7 @@ def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) 
         "vestigial": [{"coach_id": v.get("coach_id"), "signature": v.get("signature"),
                        "weight": v.get("weight")} for v in unit.get("vestigial", [])],
         "packages": [{"package_id": p["package_id"], "familiarity": p["familiarity"]} for p in packages],
+        **_repertoire_summary(unit),
     }
     return out
 
@@ -629,7 +718,8 @@ _EVALUABLE_RULE_KEYS = {"delta_bucket","yards_per_down_min", "yards_to_go_max", 
                         "field_position_min", "field_position_max", "down_min", "down_max",
                         "lead_min_q4", "lead_min_second_half", "deficit_min_second_half",
                         "deficit_min_last_300s", "quarters", "time_remaining_max",
-                        "drive_play_index", "drive_start", "defense_energy_max"}
+                        "drive_play_index", "drive_start", "defense_energy_max",
+                        "pending_bonus", "action", "score_diff_min", "score_diff_max"}
 
 
 def evaluable_situations() -> set:
@@ -680,6 +770,14 @@ def active_situations(context: Dict[str, Any]) -> set:
             ok = False
         if "drive_start" in rule and context.get("drive_start") not in rule["drive_start"]:
             ok = False
+        if "pending_bonus" in rule and context.get("pending_bonus") != rule["pending_bonus"]:
+            ok = False
+        if "action" in rule and context.get("action") != rule["action"]:
+            ok = False
+        if "score_diff_min" in rule and diff < rule["score_diff_min"]:
+            ok = False
+        if "score_diff_max" in rule and diff > rule["score_diff_max"]:
+            ok = False
         if "defense_energy_max" in rule:
             energy = context.get("defense_energy")
             if energy is None or energy >= rule["defense_energy_max"]:
@@ -708,7 +806,7 @@ def offensive_package_eligible(pkg: dict, live: set) -> bool:
     return bool(tags & live)
 
 
-def choose_offensive_package(tactics: dict, context: dict, rng):
+def choose_offensive_package(tactics: dict, context: dict, rng, *, followup=None):
     """One optional practiced plan per snap; base playbook is always available.
 
     No global RNG draws, no post-snap information, no changes to legal
@@ -717,6 +815,8 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
     live = active_situations(context)
     candidates = []
     for pkg in sorted(tactics.get("packages") or [], key=lambda p: p["package_id"]):
+        if (context.get("action") == "punt") != (pkg["package_id"] == CORNER_CHASE):
+            continue
         familiarity = _clamp(pkg.get("familiarity", 0.0))
         if familiarity > 0 and offensive_package_eligible(pkg, live):
             from .clinic_playbook import concept_weight
@@ -728,6 +828,12 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
     if not candidates:
         return None, eligible, sorted(live)
     authority = _clamp(tactics.get("authority", 1.0))
+    response = next(((pkg, familiarity) for pkg, familiarity, _ in candidates
+                     if pkg["package_id"] == followup), None)
+    if response is not None:
+        pkg, familiarity = response
+        picked = pkg if rng.random() < .90 * authority * familiarity else None
+        return picked, eligible, sorted(live)
     if rng.random() >= .90 * authority * max(f for _, f, _ in candidates):
         return None, eligible, sorted(live)
     preferred = tactics.get("preferred_package")
@@ -810,6 +916,7 @@ def summarize(rec: Optional[dict]) -> Dict[str, Any]:
                           for v in u.get("vestigial", [])],
             "packages": [{"package_id": p["package_id"], "name": pkg_name(p["package_id"]),
                           "familiarity": p.get("familiarity")} for p in u.get("packages", [])],
+            **_repertoire_summary(u),
         }
     out["recent_changes"] = [h for h in rec.get("history", []) if h.get("event") != "offseason"][-6:]
     return out

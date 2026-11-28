@@ -40,8 +40,11 @@ import copy
 import json
 import os
 import re
+
 from functools import lru_cache
 from typing import Dict, Iterable, List, Optional, Set
+
+from .offensive_concepts import CORNER_CHASE
 
 _DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                          "data", "playbooks")
@@ -51,18 +54,17 @@ _SLUG = re.compile(r"^[a-z0-9]+(_[a-z0-9]+)*$")
 # Families with no identity of their own: they can install packages but
 # are never a package's origin.
 NO_ORIGIN = {"balanced"}
-# Play families a package may name. Kicks that end a possession (snap kick,
-# field goal, punt) and kneels are the engine's rule gated decisions, not
-# installable package content.
+# Terminal kicks and kneels are gated by the game state. The validator
+# permits Pindown Chase as a narrowly scoped punt plan.
 _NOT_PACKAGE_FAMILIES = {"snap_kick", "field_goal", "punt", "kneel", "territory_kick"}
 
 _REQUIRED_PACKAGE_FIELDS = (
     "version", "package_id", "side", "name", "origin_family", "compatible_families",
     "formation_tags", "play_family_tags", "kick_pass_tags", "personnel_tags",
     "situation_tags", "countered_by", "tradeoffs", "inspiration", "scenario",
-    "benefits", "cost", "counter",
+    "benefits", "cost", "counter", "summary",
 )
-_TEXT_FIELDS = ("name", "inspiration", "scenario", "benefits", "cost", "counter")
+_TEXT_FIELDS = ("name", "inspiration", "scenario", "benefits", "cost", "counter", "summary")
 _LIST_FIELDS = ("compatible_families", "formation_tags", "play_family_tags",
                 "kick_pass_tags", "personnel_tags", "situation_tags",
                 "countered_by", "tradeoffs")
@@ -192,7 +194,7 @@ def validate_catalog(families: dict, packages: dict, vocabulary: dict) -> List[s
         if not p.get("play_family_tags"):
             errs.append(f"{where}: needs at least one play family")
         for t in p.get("play_family_tags", []):
-            if t not in ids["play_families"]:
+            if t not in ids["play_families"] and not (pid == CORNER_CHASE and side == "offense" and t == "punt"):
                 errs.append(f"{where}: {t} is not an installable play family")
         for t in p.get("kick_pass_tags", []):
             if t not in ids["kick_pass"]:
@@ -319,6 +321,19 @@ def list_compatible_packages(side: str, scheme_id: str) -> List[dict]:
     pk = _catalog()["packages"]
     return [copy.deepcopy(p) for pid, p in sorted(pk.items())
             if p["side"] == side and scheme_id in p["compatible_families"]]
+
+
+def same_look_formations(first: dict, second: dict) -> List[str]:
+    """Shared offensive formations with distinct advancement options."""
+    if first["side"] != "offense" or second["side"] != "offense":
+        return []
+    first_families = set(first["play_family_tags"]) - _NOT_PACKAGE_FAMILIES
+    second_families = set(second["play_family_tags"]) - _NOT_PACKAGE_FAMILIES
+    first_actions = (first_families, set(first["kick_pass_tags"]))
+    second_actions = (second_families, set(second["kick_pass_tags"]))
+    if not first_families or not second_families or first_actions == second_actions:
+        return []
+    return sorted(set(first["formation_tags"]) & set(second["formation_tags"]))
 
 
 # ── PBK-04: what a roster can run ──

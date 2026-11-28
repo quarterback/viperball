@@ -6,12 +6,16 @@ All data comes from the in-memory sessions/pro_sessions/FIV state — no extra H
 """
 
 import json
+import logging
 import os
+import sqlite3
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.templating import Jinja2Templates
 
 router = APIRouter()
+_logger = logging.getLogger(__name__)
 
 # ─── Deprecated: /stats recruiting hub ───────────────────────────
 # This recruiting flow was only meant to be an editor but ended up recreating
@@ -1042,8 +1046,9 @@ def saves_page(request: Request):
 # send the browser back to the page it came from. No second implementation:
 # every rule about phases and request shapes stays in api/main.py.
 
-def _playbook_editor(request, book=None, key="", error=None, status=200, import_text=""):
-    from engine.custom_playbooks import list_books
+def _playbook_editor(request, book=None, key="", error=None, status=200,
+                     import_text="", load_library=True):
+    from engine.custom_playbooks import VERSION, list_books, same_look_options
     from engine.playbook_catalog import get_package, get_scheme_family, vocabulary
     from engine.game_engine import DEFENSE_STYLES, OFFENSE_STYLES, ViperballEngine
     from engine.team_installation import MAX_PACKAGES
@@ -1062,8 +1067,12 @@ def _playbook_editor(request, book=None, key="", error=None, status=200, import_
                     package["alignment"], _, package["focus"] = posture
                 packages[pid] = package
     return templates.TemplateResponse("playbooks.html", _ctx(
-        request, section="tools", books=list_books(), book=book or {}, book_id=key,
+        request, section="playbooks", books=list_books() if load_library else [],
+        book=book or {}, book_id=key,
         schools=schools, packages=packages, vocabulary=vocabulary(),
+        book_version=VERSION, same_look_options=same_look_options({
+            pid: package for pid, package in packages.items() if package["side"] == "offense"
+        }),
         max_packages=MAX_PACKAGES, error=error, import_text=import_text,
     ), status_code=status)
 
@@ -1080,17 +1089,32 @@ def playbook_editor(request: Request, edit: str = ""):
 
 @router.post("/playbooks", response_class=HTMLResponse)
 async def playbook_save(request: Request):
-    from engine.custom_playbooks import VERSION, save_book
+    from engine.custom_playbooks import LEGACY_VERSION, VERSION, save_book
     form = await request.form()
     key = str(form.get("book_id") or "")
-    book = {"version": VERSION, "name": str(form.get("name") or ""),
+    use_budget = form.get("practice_budget") == "1" or form.get("version") == str(VERSION)
+    book = {"version": VERSION if use_budget else LEGACY_VERSION,
+            "name": str(form.get("name") or ""),
             "side": str(form.get("side") or ""), "school": str(form.get("school") or ""),
             "packages": [str(pid) for pid in form.getlist("packages")],
             "preferred": str(form.get("preferred") or "") or None}
+    if use_budget:
+        book["practice_focus"] = str(form.get("practice_focus") or "") or None
+        book["same_look_pairs"] = [
+            {"formation": formation, "packages": members}
+            for formation, *members in (str(value).split("|") for value in form.getlist("same_look_pairs"))
+        ]
     try:
-        key = save_book(book, key or None)
+        key = await run_in_threadpool(save_book, book, key or None)
     except ValueError as exc:
         return _playbook_editor(request, book, key, str(exc), 400)
+    except sqlite3.Error:
+        _logger.exception("Could not save a Cookbook playbook")
+        return _playbook_editor(
+            request, book, key,
+            error="The playbook could not be saved. Your draft is still here. Try saving again.",
+            status=503, load_library=False,
+        )
     return RedirectResponse(f"/stats/playbooks?edit={key}", status_code=303)
 
 
@@ -2554,6 +2578,37 @@ def college_game_calls(request: Request, session_id: str, week: int, game_idx: i
     ))
 
 
+def _drive_plan_report(result):
+    labels = {
+        "probe": "Tested the defensive front",
+        "counter": "Countered the earlier front",
+        "held_width": "Kept the usual calls against a front that held its width",
+        "package_ineligible": "Paired package did not fit this situation",
+        "ordinary_call": "Caller stayed with the base book",
+        "action_unavailable": "Paired action was unavailable",
+        "clock_priority": "Clock management took priority",
+        "down_and_distance": "Down and distance took priority",
+        "kick_mode": "Kick mode took priority",
+        "game_action": "Game situation took priority",
+        "penalty": "Penalty paused the plan",
+    }
+    report = {}
+    for index, play in enumerate((result or {}).get("play_by_play", []), 1):
+        call = play.get("offensive_call") or {}
+        sequence = call.get("sequence")
+        if not sequence:
+            continue
+        report[index] = {
+            "reason": labels.get(sequence["status"], _label(sequence["status"])),
+            "formation": _label(sequence["formation"]),
+            "target": _package_name(sequence["target"]),
+            "front": _label(sequence.get("front")),
+            "available": [_package_name(pid) for pid in sequence["eligible"]],
+            "pace": sequence.get("pace"),
+        }
+    return report
+
+
 def _custom_book_report(result):
     if not result or not result.get("custom_playbooks"):
         return []
@@ -2670,6 +2725,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         analysis_text=analysis_text, tactics=tactics,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
         benchmarks=benchmarks, custom_book_report=_custom_book_report(fr),
+        drive_plan_report=_drive_plan_report(fr),
     ))
 
 

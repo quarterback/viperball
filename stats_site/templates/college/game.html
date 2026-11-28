@@ -1175,6 +1175,15 @@
     <td class="num {% if p.epa is defined and p.epa > 2 %}stat-good{% elif p.epa is defined and p.epa < -2 %}stat-bad{% endif %}">{{ '%.1f'|format(p.epa) if p.epa is defined and p.epa is not none else '—' }}</td>
     <td style="white-space:normal;max-width:400px;{% if is_score %}color:var(--yellow);font-weight:bold{% elif is_turnover %}color:var(--red){% elif is_penalty %}color:var(--fg-dim){% endif %}">
       {% if p.get('penalty', {}) and p.penalty.get('ejection') %}<span class="tag" style="color:var(--red);border-color:var(--red)">EJECTED</span> {% endif %}{{ p.description if p.description else '—' }}
+      {% if drive_plan_report is defined and loop.index in drive_plan_report %}
+      {% set plan = drive_plan_report[loop.index] %}
+      <details>
+        <summary>Drive plan · {{ plan.reason }}</summary>
+        <div>{{ plan.target }} from {{ plan.formation }} was the paired option{% if plan.front %} against the observed {{ plan.front|lower }} front{% endif %}.</div>
+        {% if plan.available %}<div>Eligible packages · {{ plan.available|join(', ') }}</div>{% endif %}
+        {% if plan.pace and plan.pace.choice == 'quick' %}<div>Quick setup · {{ plan.pace.setup_seconds }} seconds</div>{% endif %}
+      </details>
+      {% endif %}
     </td>
   </tr>
   {% endfor %}

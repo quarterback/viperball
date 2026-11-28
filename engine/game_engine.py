@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from copy import deepcopy
+from engine.offensive_concepts import CORNER_CHASE
 from engine.rating_scale import current_to_legacy as _old
 from engine.weather import GameWeather
 # _old(rating): a current scale rating as its 60 to 100 equivalent, for
@@ -64,6 +65,7 @@ V2_ENGINE_CONFIG = {
     # CCH-04: team familiarity and installed package decisions.
     "team_installation_enabled": True,
     "offensive_packages_enabled": True,
+    "paired_drive_plans_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -4427,6 +4429,9 @@ class ViperballEngine:
         self._rush_plan = None
         self._next_drive_origin = "opening"
         self._drive_origin = "opening"
+        self._offensive_setup = {}
+        self._drive_probe = None
+        self._drive_plan_trace = None
         self._possession_snap_count = 0
         self._recent_defensive_plays = {"home": [], "away": []}
         self._defensive_commitment_rng = {side: random.Random(f"defensive-commitment:{seed}:{side}") for side in ("home", "away")}
@@ -4619,10 +4624,12 @@ class ViperballEngine:
 
     def _program_objective(self, side):
         from .program_policy import live_objective
-        diff = self.state.home_score-self.state.away_score
-        return live_objective(getattr(self,"_program_objectives",{}).get(side,{}),
-                              diff if side=="home" else -diff,
-                              self.state.quarter,self.state.time_remaining)
+        plan = getattr(self, "_program_objectives", {}).get(side)
+        if not plan:
+            return {}
+        diff = self.state.home_score - self.state.away_score
+        return live_objective(plan, diff if side == "home" else -diff,
+                              self.state.quarter, self.state.time_remaining)
 
     def _program_choice_bias(self, side, unit, weights=None):
         from .program_policy import objective_bias
@@ -4641,17 +4648,21 @@ class ViperballEngine:
             return getattr(self, "home_oc_tactics", {})
         return getattr(self, "away_oc_tactics", {})
 
-    def _begin_offensive_plan(self):
+    def _begin_offensive_plan(self, action=None):
         """Select one installed package before formation and play selection."""
         self._active_offensive_plan = None
         self._offensive_plan_event = None
         tactics = self._current_oc_tactics()
         if not tactics.get("packages") or not V2_ENGINE_CONFIG.get("offensive_packages_enabled", True):
             return
+        if action == "punt" and not any(p["package_id"] == CORNER_CHASE for p in tactics["packages"]):
+            return
         from .team_installation import choose_offensive_package
         st = self.state
         diff = st.home_score - st.away_score
         context = self._package_context(diff if st.possession == "home" else -diff)
+        if action:
+            context["action"] = action
         from .clinic_playbook import CONCEPTS
         from .delta_playbook import OFFENSE
         if any(p["package_id"] in CONCEPTS or p["package_id"] in OFFENSE for p in tactics["packages"]):
@@ -4661,14 +4672,33 @@ class ViperballEngine:
             context["clinic_archetypes"] = tuple(
                 p.archetype for p in skill if p.position in ("Zeroback", "Viper"))
             context["clinic_defense_school"] = self._current_defense_name()
-            context["clinic_bonus_pending"] = st.bonus_possession_team == st.possession
-        picked, eligible, live = choose_offensive_package(
-            tactics, context, self._offensive_package_rng[st.possession])
+            context["clinic_bonus_pending"] = context["pending_bonus"]
+        pairs = tactics.get("installation", {}).get("same_look_pairs", []) if (
+            not action and V2_ENGINE_CONFIG.get("paired_drive_plans_enabled", True)) else []
+        probe = self._current_drive_probe() if pairs else None
+        reason = self._drive_plan_interruption() if pairs else None
+        followup = probe["target"] if probe and probe["crowded"] and not reason else None
+        rng = self._offensive_package_rng[st.possession]
+        if followup:
+            picked, eligible, live = choose_offensive_package(tactics, context, rng, followup=followup)
+        else:
+            picked, eligible, live = choose_offensive_package(tactics, context, rng)
+        if probe:
+            if reason:
+                status = reason
+            elif not followup:
+                status = "held_width"
+            elif followup not in eligible:
+                status = "package_ineligible"
+            else:
+                status = "counter" if picked else "ordinary_call"
+            self._drive_plan_trace = {**probe, "status": status, "eligible": eligible}
         if not eligible:
             return
         self._active_offensive_plan = picked
         self._offensive_plan_event = {
             "offense_side": st.possession,
+            "play_caller_id": tactics.get("coach_id"),
             "eligible": eligible,
             "package_id": picked["package_id"] if picked else None,
             "situations": live,
@@ -4679,6 +4709,172 @@ class ViperballEngine:
             self._offensive_plan_event["delta_cost"] = context.get("delta_cost")
         if picked:
             self._offensive_plan_event["familiarity"] = picked.get("familiarity", 0.0)
+            self._prepare_offensive_concept(picked)
+            if pairs and not reason and not followup:
+                from .coach_drive import pair_for
+
+                pair = pair_for(pairs, picked["package_id"])
+                if pair:
+                    formation, target = pair
+                    self._drive_plan_trace = {"status": "probe", "formation": formation,
+                                              "target": target, "eligible": eligible}
+
+    def _current_drive_probe(self, side=None):
+        probe = getattr(self, "_drive_probe", None)
+        if (probe and probe["side"] == (side or self.state.possession)
+                and self._possession_snap_count <= probe["deadline"]):
+            return probe
+        return None
+
+    def _drive_plan_interruption(self):
+        from .coach_drive import interrupt_reason
+
+        st = self.state
+        return interrupt_reason(st.down, st.yards_to_go, st.quarter, st.time_remaining,
+                                self._get_score_diff(), st.kick_mode)
+
+    def _live_paired_call(self):
+        trace = getattr(self, "_drive_plan_trace", None)
+        if trace and trace["status"] in ("probe", "counter"):
+            return trace
+        return None
+
+    def _paired_action(self, category, weights):
+        from .coach_drive import paired_options
+
+        trace = self._live_paired_call()
+        if not trace or self._current_formation != trace["formation"]:
+            return None
+        previous = trace.get("action") if trace["status"] == "counter" else None
+        options = paired_options(self._active_offensive_plan, category, weights, previous)
+        trace[f"available_{category}"] = list(options)
+        if options:
+            return random.choices(list(options), weights=list(options.values()), k=1)[0]
+        return None
+
+    def _paired_pace(self, family, subtype=None):
+        """Choose pace from the prepared call and the completed probe."""
+        trace = self._live_paired_call()
+        if not trace or trace["status"] != "counter":
+            return
+        package = self._active_offensive_plan
+        if (self._current_formation != trace["formation"] or (family.value, subtype) == trace["action"]
+                or family.value not in package["play_family_tags"]
+                or (subtype and subtype not in package["kick_pass_tags"])):
+            return
+        tactics = self._current_oc_tactics()
+        reason = "caller_pace"
+        if (self._game_clock_stopped or not trace["gained"]
+                or self._possession_snap_count != trace["snap"] + 1):
+            reason = "previous_result"
+        elif self.state.down >= 4:
+            reason = "down_and_distance"
+        else:
+            team = self.get_offensive_team()
+            unavailable = self._unavailable_in_game(team)
+            ready = any(p.position == "Zeroback" and p.name not in unavailable and p.game_energy >= 55
+                        for p in self._on_field(team, unavailable, "offense"))
+            if not ready:
+                reason = "personnel_readiness"
+        quick = reason == "caller_pace" and tactics.get("tempo_preference", 0.5) >= 0.60
+        trace["pace"] = {"choice": "quick" if quick else "normal", "reason": reason}
+
+    def _finish_drive_plan(self, play):
+        from .coach_drive import FOCUS_FRONTS, FOLLOWUP_WINDOW, POLICY_VERSION
+
+        trace = self._drive_plan_trace
+        probe = self._current_drive_probe(play.snap_possession)
+        if trace is None:
+            if not probe:
+                return
+            reason = "penalty" if play.play_type == "penalty" else self._drive_plan_priority or "game_action"
+            trace = {**probe, "status": reason, "eligible": []}
+        event = getattr(play, "offensive_call", None)
+        if event is None:
+            event = {"offense_side": play.snap_possession, "package_id": None, "choices": {},
+                     "eligible": [], "situations": []}
+            play.offensive_call = event
+        tactics = self.home_oc_tactics if play.snap_possession == "home" else self.away_oc_tactics
+        event["play_caller_id"] = tactics.get("coach_id")
+        trace["policy_version"] = POLICY_VERSION
+        trace["book_revision"] = tactics.get("installation", {}).get("book_revision")
+        event["sequence"] = trace
+
+        if play.penalty and (play.play_type == "penalty" or play.penalty.nullified):
+            if probe:
+                probe["deadline"] += 1  # An erased down does not use up the window.
+            trace["status"] = "penalty"
+            return
+        if trace["status"] not in ("probe", "counter"):
+            return
+        choices = event["choices"]
+        action = (choices.get("family"), choices.get("kick_pass"))
+        matched = (event.get("family_matched") and all(event.get("matches", {}).values())
+                   and choices.get("formation") == trace["formation"] and action != trace.get("action"))
+        if not matched:
+            trace["status"] = "action_unavailable"
+            return
+        if trace["status"] == "counter":
+            self._drive_probe = None
+            return
+        front = (self._active_defensive_call or {}).get("alignment")
+        trace["front"] = front
+        if front and play.snap_possession == self.state.possession and play.result not in (
+                "touchdown", "turnover_on_downs", "safety"):
+            self._drive_probe = {
+                "side": play.snap_possession, "snap": self._possession_snap_count,
+                "deadline": self._possession_snap_count + FOLLOWUP_WINDOW,
+                "target": trace["target"], "formation": trace["formation"],
+                "front": front, "crowded": front in FOCUS_FRONTS, "action": action,
+                "gained": play.result == "first_down" or play.yards_gained >= 5,
+            }
+
+    def _prepare_offensive_concept(self, package):
+        from .offensive_concepts import KICK_AND_FOLLOW, PROTECT_BONUS, SEQUENCES, sequence_call
+
+        pid = package["package_id"]
+        if pid in SEQUENCES:
+            design = sequence_call(pid, self._offensive_setup.get(pid, ()))
+        elif pid == KICK_AND_FOLLOW:
+            design = {"family": "kick_pass", "kick_pass": "kick_lateral"}
+        elif pid == PROTECT_BONUS:
+            if self.state.yards_to_go <= 4:
+                design = {"family": "power"}
+            elif self.state.down in (2, 3) and self.state.yards_to_go >= 12:
+                design = {"family": "kick_pass", "kick_pass": "quick_kick"}
+            else:
+                design = {"family": "dive_option"}
+        else:
+            return
+        design["formation"] = package["formation_tags"][0]
+        self._offensive_plan_event["design"] = design
+
+    def _planned_choice(self, category):
+        return (getattr(self, "_offensive_plan_event", None) or {}).get("design", {}).get(category)
+
+    def _record_offensive_setup(self, play):
+        from .offensive_concepts import SEQUENCES
+
+        event = self._offensive_plan_event or {}
+        pid = event.get("package_id")
+        if pid not in SEQUENCES or play.play_type not in ("run", "kick_pass"):
+            return
+        if (play.penalty and play.penalty.nullified) or play.snap_possession != self.state.possession:
+            return
+        design = event["design"]
+        if any(event["choices"].get(key) != design[key]
+               for key in ("formation", "family", "kick_pass") if key in design):
+            return
+        if design["phase"] != "setup":
+            self._offensive_setup.pop(pid, None)
+            return
+        call = self._active_defensive_call or {}
+        alignment = call.get("alignment") or self._determine_defense_alignment()
+        pressed = alignment in ("aggressive", "stacked") or bool(call.get("blitz"))
+        history = self._offensive_setup.setdefault(pid, [])
+        history.append({"lane": design["lane"], "pressed": pressed})
+        del history[:-2]
+        event["setup_response"] = "pressed" if pressed else "held_width"
 
     def _oc_bias(self, key: str) -> Dict:
         """Use the same optional plan throughout this snap's three choices."""
@@ -4721,6 +4917,13 @@ class ViperballEngine:
                 complete = usage.setdefault("packages_all_matched", {})
                 complete[pid] = complete.get(pid, 0) + 1
         play.offensive_call = event
+        design = event.get("design", {})
+        if (getattr(play, "special_teams_event", None) or {}).get("placement") == "corner":
+            play.description = f"PINDOWN CHASE · {play.description}"
+        if event.get("family_matched") and design.get("lane") and play.play_type in ("run", "kick_pass"):
+            lane = design["lane"]
+            phase = design["phase"]
+            play.description = f"{phase.upper()} {lane.upper()} · {play.description}"
 
     def _package_context(self, score_diff):
         st = self.state
@@ -4752,7 +4955,10 @@ class ViperballEngine:
                 "field_position": st.field_position, "quarter": st.quarter,
                 "time_remaining": st.time_remaining, "score_diff": score_diff,
                 "drive_play_index": self._possession_snap_count,
-                "drive_start": self._drive_origin, "defense_energy": energy}
+                "drive_start": self._drive_origin, "defense_energy": energy,
+                "pending_bonus": (not getattr(self, "_is_bonus_drive", False)
+                                  and self._bonus_recipient == st.possession
+                                  and self._bonus_drives_remaining > 0)}
 
     def _record_oc_choice(self, category: str, value: str):
         """Track choices by offensive side, independent of resulting turnovers."""
@@ -4834,7 +5040,8 @@ class ViperballEngine:
             blitz_chance = max(0.02, min(0.65, blitz_chance +
                 package["blitz_shift"] * package["strength"]))
         blitz = rng.random() < blitz_chance
-        call = {"defending_side": def_side, "alignment": alignment, "blitz": blitz,
+        call = {"defending_side": def_side, "play_caller_id": tactics.get("coach_id"),
+                "formation_seen": formation, "alignment": alignment, "blitz": blitz,
                 "situations": sorted(situations)}
         if hasattr(self, "_defensive_commitment_rng"):
             from .defensive_commitments import rush_commitment
@@ -6661,7 +6868,8 @@ class ViperballEngine:
                 f"(temp: {new_gp.get('game_temperature', 'neutral')})"
             )
 
-    def _check_rouge_pindown(self, receiving_team_obj, kicking_possession: str) -> bool:
+    def _check_rouge_pindown(self, receiving_team_obj, kicking_possession: str,
+                             coverage_runner=None) -> bool:
         return_speed = receiving_team_obj.avg_speed
         pindown_bonus = self._current_style().get("pindown_bonus", 0.0)
         receiving_defense = self.away_defense if kicking_possession == "home" else self.home_defense
@@ -6669,6 +6877,10 @@ class ViperballEngine:
         return_chance = (scale_rating(return_speed, "rescale_speed") / 90) * (1.0 - pindown_bonus * 0.3) / pindown_defense_factor
         kicking_st = self.home_st if kicking_possession == "home" else self.away_st
         return_chance /= kicking_st["coverage_modifier"] ** 0.25
+        if coverage_runner is not None:
+            speed = coverage_runner.speed * self.player_fatigue_modifier(coverage_runner)
+            chase = scale_rating(speed, "rescale_speed") - scale_rating(return_speed, "rescale_speed")
+            return_chance -= max(-0.05, min(0.05, chase / 250))
         return_chance = max(0.75, min(0.98, return_chance))
         can_return_out = random.random() < return_chance
         return not can_return_out
@@ -6747,6 +6959,8 @@ class ViperballEngine:
             self._delta_retained_miss = False
         if origin is not None:
             self._drive_origin = origin
+            self._offensive_setup.clear()
+            self._drive_probe = None
             self._possession_snap_count = 0
             self._analytics_possession_id = getattr(self,"_analytics_possession_id",-1)+1
         self._next_drive_origin = None
@@ -6994,6 +7208,9 @@ class ViperballEngine:
             # If computed base_time exceeds the play clock limit, the coach
             # must snap in time or face a delay-of-game penalty (5 yards,
             # replay the down).  Better clock managers almost always avoid it.
+            pace = ((getattr(play, "offensive_call", None) or {}).get("sequence") or {}).get("pace")
+            if pace and pace["choice"] == "quick":
+                base_time = max(8, base_time - 4)
             play_clock_limit = V2_ENGINE_CONFIG.get("play_clock_limit", 40)
             final_time = max(8, int(base_time * tempo_mult))
             if final_time > play_clock_limit and play.result != "penalty":
@@ -7097,6 +7314,8 @@ class ViperballEngine:
 
             prev_time = self.state.time_remaining
             self.state.time_remaining = max(0, self.state.time_remaining - time_elapsed)
+            if pace:
+                pace["setup_seconds"] = final_time
 
             # ── 3-minute warning auto-stop ──
             # Clock freezes at 180s once per half (Q2 and Q4).
@@ -7106,6 +7325,8 @@ class ViperballEngine:
                     and prev_time > 180 >= self.state.time_remaining):
                 self.state.time_remaining = 180
                 self.state.three_min_warning_triggered = True
+            if pace:
+                pace["clock_seconds"] = prev_time - self.state.time_remaining
 
             # Coaching AI considers calling a timeout after this play
             if self.call_timeout():
@@ -7730,6 +7951,29 @@ class ViperballEngine:
         from engine.epa import calculate_ep
         return calculate_ep(fp, 1)
 
+    def _package_snap_kick_shift(self, kicker, score_diff):
+        if self.state.down not in (4, 5) or not V2_ENGINE_CONFIG.get("offensive_packages_enabled", True):
+            return 0.0
+        from .clinic_playbook import snap_kick_threshold_shift
+        from .delta_playbook import OFFENSE, finish_shift
+
+        tactics = self._current_oc_tactics()
+        launch_installed = any(p.get("package_id") == "clinic_launch_option"
+                               for p in tactics.get("packages", ()))
+        selected = getattr(self, "_active_offensive_plan", None) or {}
+        delta_selected = selected.get("package_id") in OFFENSE
+        if not launch_installed and not delta_selected:
+            return 0.0
+        context = self._package_context(score_diff)
+        shift = 0.0
+        if launch_installed:
+            context["clinic_defense_school"] = self._current_defense_name()
+            shift = snap_kick_threshold_shift(tactics, context, kicker.archetype)
+        if delta_selected:
+            shift += finish_shift(selected["package_id"], selected.get("familiarity", 0),
+                                  tactics.get("authority", 1), context, kicker.archetype)
+        return max(-2.0, min(2.0, shift))
+
     def select_kick_decision(self) -> PlayType:
         """Coaching decision chart — drive-first philosophy.
 
@@ -7792,27 +8036,7 @@ class ViperballEngine:
         quarter = self.state.quarter
         time_left = self.state.time_remaining
 
-        clinic_kick_shift = 0.0
-        tactics = self._current_oc_tactics()
-        if (down in (4, 5) and V2_ENGINE_CONFIG.get("offensive_packages_enabled", True)
-                and any(p.get("package_id") == "clinic_launch_option"
-                        for p in tactics.get("packages", ()))):
-            from .clinic_playbook import snap_kick_threshold_shift
-            context = self._package_context(score_diff)
-            context["clinic_defense_school"] = self._current_defense_name()
-            clinic_kick_shift = snap_kick_threshold_shift(
-                tactics, context, kicker.archetype)
-
-        from .delta_playbook import OFFENSE, finish_shift
-        if (down in (4, 5) and V2_ENGINE_CONFIG.get("offensive_packages_enabled", True)
-                and any(p["package_id"] in OFFENSE for p in tactics.get("packages", ()))):
-            context = self._package_context(score_diff)
-            p = getattr(self, "_active_offensive_plan", None) or {}
-            shifts = [finish_shift(p["package_id"], p.get("familiarity", 0),
-                      tactics.get("authority", 1), context, kicker.archetype)] if p.get("package_id") in OFFENSE else []
-            # Do not stack multiple practiced alternatives.
-            if shifts:
-                clinic_kick_shift = max(-2.0, min(2.0, clinic_kick_shift + max(shifts, key=abs)))
+        clinic_kick_shift = self._package_snap_kick_shift(kicker, score_diff)
 
         # "Clock pressure" — situations where taking points now is smart:
         #   - End of 2nd quarter (before the half), limited time left
@@ -8018,7 +8242,13 @@ class ViperballEngine:
                 go_ytg += max(0.0, td_lean) * 6
             if ytg <= go_ytg:
                 return None
-            # Any kick available? Take it — always prefer points.
+            # A practiced corner punt can compete with a low value scoring
+            # attempt. Trailing and short conversion decisions stay above it.
+            if best_kick_ev <= 1.8 and self._offensive_plan_event is None:
+                self._begin_offensive_plan(action="punt")
+                if (self._active_offensive_plan or {}).get("package_id") == CORNER_CHASE:
+                    return PlayType.PUNT
+
             if best_kick:
                 return best_kick
             # No kick available — punt to avoid TOD (field position). Field
@@ -9317,6 +9547,7 @@ class ViperballEngine:
         self._snap_lineup = None
         self._active_offensive_plan = None
         self._offensive_plan_event = None
+        self._drive_plan_trace = None
         self._active_defensive_call = None
         self._rush_event = None
         self._rush_plan = None
@@ -9341,6 +9572,7 @@ class ViperballEngine:
         self._play_defenders = []
         self._pre_play_scores = (self.state.home_score, self.state.away_score)
         self._pre_play_kick_mode = self.state.kick_mode
+        self._drive_plan_priority = self._drive_plan_interruption() if self._current_drive_probe() else None
         self._pre_play_bonus_team = self.state.bonus_possession_team
         self._live_foul_rolled = False
         self._pending_live_foul = None
@@ -9379,6 +9611,10 @@ class ViperballEngine:
 
         # ── Referee: spot error on plays that end with a spot ──
         self._apply_spot_error(play)
+        self._record_offensive_setup(play)
+        self._finish_drive_plan(play)
+        if play.snap_possession != self.state.possession:
+            self._drive_probe = None
         self._credit_uncredited_run(play, rush_before)
 
         # Stamp pre-play state on the Play so the play-by-play always
@@ -9507,6 +9743,8 @@ class ViperballEngine:
             if kick_decision is not None:
                 if kick_decision == PlayType.PUNT:
                     family = PlayFamily.PUNT
+                    if self._offensive_plan_event is None:
+                        self._begin_offensive_plan(action="punt")
                 elif kick_decision == PlayType.DROP_KICK:
                     family = PlayFamily.SNAP_KICK
                 elif kick_decision == PlayType.PLACE_KICK:
@@ -9527,6 +9765,8 @@ class ViperballEngine:
         self._current_formation = self.select_formation()
         self._begin_defensive_call(self._current_formation)
         play_family = self.select_play_family(formation=self._current_formation)
+        if play_family != PlayFamily.KICK_PASS:
+            self._paired_pace(play_family)
         play_type = PLAY_FAMILY_TO_TYPE.get(play_family, PlayType.RUN)
 
         # Track who started with possession for ERA attribution
@@ -9554,6 +9794,8 @@ class ViperballEngine:
         elif play_type == PlayType.TRICK_PLAY:
             return self.simulate_trick_play(play_family)
         elif play_type == PlayType.PUNT:
+            if (self._active_offensive_plan or {}).get("package_id") == CORNER_CHASE:
+                return self.simulate_punt(play_family, corner=True)
             return self.simulate_punt(play_family)
         elif play_type == PlayType.DROP_KICK:
             return self.simulate_drop_kick(play_family)
@@ -9676,7 +9918,9 @@ class ViperballEngine:
 
         shells = list(norm.keys())
         weights = [norm[s] for s in shells]
-        formation = random.choices(shells, weights=weights, k=1)[0]
+        paired = self._live_paired_call()
+        planned = paired["formation"] if paired else self._planned_choice("formation")
+        formation = planned if base.get(planned, 0) > 0 else random.choices(shells, weights=weights, k=1)[0]
         self._record_oc_choice("formation", formation)
         return formation
 
@@ -10175,7 +10419,14 @@ class ViperballEngine:
                 w.append(0.0)
             else:
                 w.append(max(0.001, weights.get(f.value, 0.0)))
-        family = random.choices(families, weights=w)[0]
+        planned = self._planned_choice("family")
+        if not planned and self._live_paired_call():
+            planned = self._paired_action("family", {f.value: weights.get(f.value, 0)
+                                                     for f in families if f not in hard_zero})
+        if planned and weights.get(planned, 0) > 0 and PlayFamily(planned) not in hard_zero:
+            family = PlayFamily(planned)
+        else:
+            family = random.choices(families, weights=w)[0]
         self._record_oc_choice("family", family.value)
         return family
 
@@ -10490,8 +10741,13 @@ class ViperballEngine:
             KickPassSubFamily.KICK_LATERAL,
         ]
         weights = [max(0.01, base[sf.value]) for sf in subfamilies]
-        chosen = random.choices(subfamilies, weights=weights, k=1)[0]
+        planned = self._planned_choice("kick_pass")
+        if not planned:
+            planned = self._paired_action("kick_pass", base)
+        chosen = (KickPassSubFamily(planned) if base.get(planned, 0) > 0
+                  else random.choices(subfamilies, weights=weights, k=1)[0])
         self._record_oc_choice("kick_pass", chosen.value)
+        self._paired_pace(PlayFamily.KICK_PASS, chosen.value)
         return chosen
 
     def _apply_style_situational(self, weights: Dict, style_name: str, down: int, ytg: int, fp: int, score_diff: int, quarter: int, time_left: int):
@@ -11352,6 +11608,14 @@ class ViperballEngine:
             blended = {k: v / total for k, v in blended.items()}
 
         weights = [self._personnel_weighted_score(p, blended) for p in eligible]
+        lane = self._planned_choice("lane")
+        if lane and subfamily.value == self._planned_choice("kick_pass"):
+            # Use each group's current on-field order to assign coverage
+            # sides. Offside defenders can still reach the catch.
+            near = {id(player) for group in (groups["keeper"], groups["db"])
+                    for player in group[0 if lane == "left" else 1::2]}
+            weights = [weight * (1.8 if id(player) in near else 1)
+                       for player, weight in zip(eligible, weights)]
 
         # ── Instincts-driven tightening for coverage ──
         dc_mods = self._def_coaching_mods()
@@ -12181,7 +12445,7 @@ class ViperballEngine:
 
     def _calculate_viper_advantage(self, viper_alignment, play_direction):
         dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
-        mapped_dir = dir_map.get(play_direction, 'center')
+        mapped_dir = dir_map.get(play_direction, play_direction if play_direction in ("left", "right") else "center")
         bonus = VIPER_ALIGNMENT_BONUS.get((viper_alignment, mapped_dir), 0.0)
         bonus += random.uniform(-0.02, 0.02)
         return bonus
@@ -12287,6 +12551,8 @@ class ViperballEngine:
 
         viper_align = self._determine_viper_alignment()
         play_dir = PLAY_DIRECTION.get(family.value, "center")
+        if family.value == self._planned_choice("family"):
+            play_dir = self._planned_choice("lane") or play_dir
         viper_bonus = self._calculate_viper_advantage(viper_align, play_dir)
 
         def_align = self._determine_defense_alignment()
@@ -12349,6 +12615,9 @@ class ViperballEngine:
                 self.drain_player_energy(assist_tackler, "tackler")
 
         yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
+        if self._planned_choice("lane") and family.value == self._planned_choice("family"):
+            # Existing Viper leverage is now available on either scripted edge.
+            yards_gained = round(yards_gained * (1 + viper_bonus)) if yards_gained > 0 else yards_gained
         yards_gained = max(-5, yards_gained)
 
         # ── V2: Defensive keying penalty ──
@@ -13262,6 +13531,17 @@ class ViperballEngine:
         # ── Sub-family selection ──
         subfamily = self._select_kick_pass_subfamily(kicker)
         sf_label = subfamily.value.replace("_", " ")
+        from .offensive_concepts import KICK_AND_FOLLOW, follow_read
+
+        plan = self._offensive_plan_event or {}
+        follow = plan.get("package_id") == KICK_AND_FOLLOW and subfamily == KickPassSubFamily.KICK_LATERAL
+        support = None
+        if follow:
+            support = max(
+                (p for p in skill if p is not receiver and p is not kicker),
+                key=lambda p: (p.speed + p.hands) * (0.5 + p.game_energy / 200),
+                default=None,
+            )
 
         # ── Player-driven kick distance (per sub-family) ──
         kp_power = getattr(kicker, 'kick_power', 70)
@@ -13306,6 +13586,9 @@ class ViperballEngine:
             distance_penalty = max(0.0, (kick_distance - 14) * 0.015)
         else:
             distance_penalty = max(0.0, (kick_distance - 8) * 0.02)
+        if plan.get("design", {}).get("phase") == "switch" and subfamily == KickPassSubFamily.TERRITORY:
+            # Extra flight across the field gives coverage time to recover.
+            distance_penalty += 0.025
         completion_prob = max(0.08, min(0.92, contest_prob - distance_penalty))
 
         # ── Formation shell modifier on completion ──
@@ -13489,8 +13772,16 @@ class ViperballEngine:
             if _sf_c_attr:
                 setattr(kicker, _sf_c_attr, getattr(kicker, _sf_c_attr, 0) + 1)
 
-            # ── KICK_LATERAL: chain resolution replaces normal YAC ──
-            if subfamily == KickPassSubFamily.KICK_LATERAL:
+            give = follow and follow_read(receiver, support, matched_defender)
+            if follow:
+                plan["read"] = "lateral" if give else "keep"
+                if support is not None:
+                    plan["support_runner"] = player_label(support)
+                if not give:
+                    sf_label = "Viper Trail (keep)"
+            # A keep uses normal YAC. A called lateral uses the existing
+            # loose ball and interception rules with one support runner.
+            if subfamily == KickPassSubFamily.KICK_LATERAL and (not follow or give):
                 catch_spot = min(99, self.state.field_position + kick_distance)
                 # Lateral chain entry quality: receiver's lateral_skill gates it
                 recv_lat_skill = _old(getattr(receiver, 'lateral_skill', 35))
@@ -13506,8 +13797,16 @@ class ViperballEngine:
                 chain_players = [p for p in skill_pool if p != receiver]
                 if not chain_players:
                     chain_players = list(skill_pool)
-                chain_length = random.randint(2, 4)
-                chain_length = min(chain_length, len(chain_players))
+                if give:
+                    chain_players = [support]
+                    chain_length = 1
+                    receiver.game_laterals_thrown += 1
+                    self.drain_player_energy(support, "carrier")
+                else:
+                    chain_length = min(random.randint(2, 4), len(chain_players))
+                participants = [kicker_lbl, receiver_lbl]
+                if give:
+                    participants.append(player_label(support))
 
                 chain_tags = [player_tag(receiver)]
                 chain_yards = 0
@@ -13555,7 +13854,7 @@ class ViperballEngine:
                                 time=self.state.time_remaining, possession=self.state.possession,
                                 field_position=self.state.field_position, down=1, yards_to_go=20,
                                 play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
-                                players_involved=[kicker_lbl, receiver_lbl],
+                                players_involved=participants, laterals=1 if give else 0,
                                 yards_gained=kick_distance + chain_yards,
                                 result=PlayResult.FUMBLE.value,
                                 description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} → FUMBLE! Defense recovers — BELL (+½)",
@@ -13602,7 +13901,7 @@ class ViperballEngine:
                                 time=self.state.time_remaining, possession=throwing_team_int,
                                 field_position=self.state.field_position, down=1, yards_to_go=20,
                                 play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
-                                players_involved=[kicker_lbl, receiver_lbl],
+                                players_involved=participants, laterals=1 if give else 0,
                                 yards_gained=0, result=PlayResult.INT_RETURN_TD.value,
                                 description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} — LATERAL INTERCEPTED! Returned for TOUCHDOWN!",
                                 fatigue=round(stamina, 1),
@@ -13618,11 +13917,14 @@ class ViperballEngine:
                                 time=self.state.time_remaining, possession=throwing_team_int,
                                 field_position=self.state.field_position, down=1, yards_to_go=20,
                                 play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
-                                players_involved=[kicker_lbl, receiver_lbl],
+                                players_involved=participants, laterals=1 if give else 0,
                                 yards_gained=0, result=PlayResult.LATERAL_INTERCEPTED.value,
                                 description=f"{kicker_tag} kick lateral: {' → '.join(chain_tags)} — LATERAL INTERCEPTED! Returned {int_return} yards",
                                 fatigue=round(stamina, 1),
                             )
+
+                    if give:
+                        support.game_lateral_receptions += 1
 
                     # Yards gained on this lateral
                     lat_yards = random.randint(2, 8) + int(max(0, (scale_rating(lat_player.speed, "rescale_yac") - 60) / 40.0) * random.randint(1, 6))
@@ -13633,17 +13935,22 @@ class ViperballEngine:
 
                 # Chain completed without turnover — resolve as a completion
                 total_yards = kick_distance + chain_yards
+                if give and chain_fumbled:
+                    total_yards = min(total_yards, catch_spot - self.state.field_position)
                 # V2.9: Late-down defensive intensity clamp
                 total_yards = self._late_down_defensive_clamp(total_yards)
                 new_position = min(100, self.state.field_position + total_yards)
-                chain_desc = f"{kicker_tag} kick lateral: {' → '.join(chain_tags)}"
+                action_label = "Viper Trail" if give else "kick lateral"
+                chain_desc = f"{kicker_tag} {action_label}: {' → '.join(chain_tags)}"
 
-                is_td = new_position >= 100 or self._red_zone_td_check(new_position, total_yards, team)
+                is_td = (not (give and chain_fumbled)
+                         and (new_position >= 100 or self._red_zone_td_check(new_position, total_yards, team)))
                 if is_td:
                     result = PlayResult.TOUCHDOWN
                     total_yards = 100 - self.state.field_position
                     self.add_score(9)
-                    receiver.game_tds += 1
+                    scorer = support if give and not chain_fumbled else receiver
+                    scorer.game_tds += 1
                     kicker.game_kick_pass_tds += 1
                     receiver.game_kick_pass_tds = getattr(receiver, 'game_kick_pass_tds', 0) + 1
                     description = f"{chain_desc} → {total_yards} — TOUCHDOWN!"
@@ -13667,8 +13974,14 @@ class ViperballEngine:
                         description += " — TURNOVER ON DOWNS"
 
                 kicker.game_kick_pass_yards += total_yards
-                receiver.game_kick_pass_yards += total_yards
-                receiver.game_yards += total_yards
+                caught_yards = min(kick_distance, total_yards) if give else total_yards
+                receiver.game_kick_pass_yards += caught_yards
+                receiver.game_yards += caught_yards
+                if give:
+                    support.game_kick_pass_yards += total_yards - caught_yards
+                    support.game_yards += total_yards - caught_yards
+                    if chain_fumbled:
+                        description += " — FUMBLE recovered by offense"
 
                 self.apply_stamina_drain(5)
                 stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
@@ -13678,9 +13991,9 @@ class ViperballEngine:
                     field_position=self.state.field_position,
                     down=self.state.down, yards_to_go=self.state.yards_to_go,
                     play_type="kick_pass", play_family=family.value, kick_pass_subfamily=subfamily.value,
-                    players_involved=[kicker_lbl, receiver_lbl],
+                    players_involved=participants, laterals=1 if give else 0,
                     yards_gained=total_yards, result=result.value,
-                    description=description, fatigue=round(stamina, 1),
+                    description=description, fatigue=round(stamina, 1), fumble=give and chain_fumbled,
                 )
 
             # ── Sub-family YAC model ──
@@ -14068,11 +14381,15 @@ class ViperballEngine:
             fatigue=round(stamina, 1),
         )
 
-    def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK) -> Play:
+    def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK, *, corner: bool = False) -> Play:
         team = self.get_offensive_team()
         punter = max(self._kicker_candidates(team), key=lambda p: p.kicking)
         ptag = player_tag(punter)
         self._begin_st_event("punt", punter)
+        if corner:
+            self._record_oc_choice("family", "punt")
+            self._st_event["placement"] = "corner"
+
 
         # ── Fake Punt Check ──────────────────────────────────────────
         # ST scheme determines fake tendency. Chaos Unit fakes 12% of punts.
@@ -14084,7 +14401,7 @@ class ViperballEngine:
         if self.state.field_position < 35:
             fake_rate *= 0.6
         # Don't fake from your own end zone — too risky
-        if self.state.field_position > 15 and random.random() < fake_rate:
+        if not corner and self.state.field_position > 15 and random.random() < fake_rate:
             # Fake punt — runner or passer from punt formation
             self._st_count(self.state.possession, "fake_calls")
             self._st_event["fake"] = True
@@ -14331,6 +14648,17 @@ class ViperballEngine:
             bounce_extra = random.choice([-15, -10, 10, 15, 20, 25])
             distance = max(10, min(distance + bounce_extra, 80))
 
+        coverage_runner = None
+        if corner:
+            # Placement trades some distance for control. Strong accuracy
+            # and a good roll can get the punt to the end zone corner.
+            accuracy = self._kick_skill(punter.kick_accuracy)
+            distance = max(5, distance + round(max(-7, min(5, (accuracy - 75) / 2)) + random.uniform(-4, 4)))
+            coverage_runner = self._pick_coverage_tackler(team)
+            if coverage_runner is not None:
+                self._st_event["coverage_runner"] = player_label(coverage_runner)
+                coverage_runner.game_coverage_snaps += 1
+                self.drain_player_energy(coverage_runner, "coverage")
         landing_position = self.state.field_position + distance
 
         if landing_position >= 100:
@@ -14338,7 +14666,7 @@ class ViperballEngine:
             kicking_team = self.state.possession
             receiving = "away" if kicking_team == "home" else "home"
 
-            is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
+            is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team, coverage_runner)
 
             if not is_pindown:
                 self.change_possession()
@@ -14491,7 +14819,7 @@ class ViperballEngine:
                 kicking_team = self.state.possession
                 receiving = "away" if kicking_team == "home" else "home"
 
-                is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team)
+                is_pindown = self._check_rouge_pindown(receiving_team_obj, kicking_team, coverage_runner)
 
                 if not is_pindown:
                     self.change_possession()
@@ -14553,11 +14881,12 @@ class ViperballEngine:
             final_position = max(1, landing_spot)
 
         # Coverage unit tackles the returner
-        tackler = self._pick_coverage_tackler(punt_coverage_team)
+        tackler = coverage_runner or self._pick_coverage_tackler(punt_coverage_team)
         if tackler and return_yards > 0:
             self._st_event["coverage_tackler"] = player_label(tackler)
             tackler.game_st_tackles += 1
-            tackler.game_coverage_snaps += 1
+            if coverage_runner is None:
+                tackler.game_coverage_snaps += 1
         # Additional coverage snap for another unit member
         punt_cov_eligible = [p for p in punt_coverage_team.players
                              if p.position in ("Keeper", "Defensive Line") and p != tackler

@@ -34,12 +34,18 @@ METRICS = ("points", "points_allowed", "margin", "yards", "touchdowns",
 
 class ControlEngine(ViperballEngine):
     """Keep eligibility instrumentation and package RNG; suppress only plan bias."""
-    def _begin_offensive_plan(self):
-        super()._begin_offensive_plan()
+    def _begin_offensive_plan(self, action=None):
+        super()._begin_offensive_plan(action)
         if self.state.possession == "home" and self._offensive_plan_event:
             self._active_offensive_plan = None
+            self._drive_plan_trace = None
             self._offensive_plan_event["package_id"] = None
             self._offensive_plan_event.pop("familiarity", None)
+
+    def _package_snap_kick_shift(self, kicker, score_diff):
+        if self.state.possession == "home":
+            return 0.0
+        return super()._package_snap_kick_shift(kicker, score_diff)
 
 def divide(a, b):
     return round(a / b, 4) if b else None

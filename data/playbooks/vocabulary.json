@@ -97,6 +97,18 @@
         ]
       }
     },
+    "drive_building": {
+      "plain": "downs 1 to 4 between the two 20 yard lines",
+      "rule": {"down_max": 4, "field_position_min": 20, "field_position_max": 80}
+    },
+    "pending_bonus": {
+      "plain": "downs 1 to 4 while your team has a pending bonus possession",
+      "rule": {"down_max": 4, "field_position_max": 72, "pending_bonus": true}
+    },
+    "corner_punt": {
+      "plain": "sixth down near midfield when tied or leading by at most five points",
+      "rule": {"down_min": 6, "down_max": 6, "field_position_min": 35, "field_position_max": 72, "score_diff_min": 0, "score_diff_max": 5, "action": "punt"}
+    },
     "after_score_restart": {
       "plain": "a possession that started from the restart after the other team scored",
       "rule": {
