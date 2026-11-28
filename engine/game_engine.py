@@ -70,6 +70,7 @@ V2_ENGINE_CONFIG = {
     # Defenses shade toward the side an offense keeps attacking (field_width.py).
     "side_learning_enabled": True,
     "opening_scripts_enabled": True,
+    "midgame_calls_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -361,6 +362,10 @@ class PlayType(Enum):
     DROP_KICK = "drop_kick"
     PLACE_KICK = "place_kick"
     KNEEL = "kneel"
+
+
+def _coach_name(card):
+    return f"{getattr(card, 'first_name', '')} {getattr(card, 'last_name', '')}".strip()
 
 
 class PlayFamily(Enum):
@@ -4868,9 +4873,109 @@ class ViperballEngine:
         design = (getattr(self, "_offensive_plan_event", None) or {}).get("design")
         if design:
             return design.get(category)
-        # An opening script call steers the same selectors when no package
-        # design is active for this snap.
-        return (getattr(self, "_script_call", None) or {}).get(category)
+        # An opening script call, or a staff suggestion the caller took,
+        # steers the same selectors when no package design is active.
+        call = getattr(self, "_script_call", None) or getattr(self, "_suggested_call", None) or {}
+        return call.get(category)
+
+    # ── Mid-game caller changes and suggestions (casebook case 10) ──
+    def _midgame(self):
+        return self.__dict__.setdefault("_midgame_log", {
+            "home": {"caller_changes": [], "suggestions": []},
+            "away": {"caller_changes": [], "suggestions": []},
+            "pending": {}})
+
+    def _halftime_caller_change(self):
+        if not (V2_ENGINE_CONFIG.get("midgame_calls_enabled", True)
+                and V2_ENGINE_CONFIG.get("coach_tactics_enabled", True)):
+            return
+        from .coach_handoff import halftime_change, tactics_for
+        log = self._midgame()
+        for side in ("home", "away"):
+            staff = self._home_coaching_staff if side == "home" else self._away_coaching_staff
+            own = self.state.home_score if side == "home" else self.state.away_score
+            opp = self.state.away_score if side == "home" else self.state.home_score
+            rng = random.Random(f"midgame:{self.seed}:{side}")
+            change = halftime_change(staff, own, opp, rng)
+            if not change:
+                continue
+            tactics = tactics_for(staff, change["to"])
+            if V2_ENGINE_CONFIG.get("team_installation_enabled", True):
+                from .team_installation import apply_installation_to_offense
+                team = self.home_team if side == "home" else self.away_team
+                tactics = apply_installation_to_offense(tactics, getattr(team, "installation", None))
+            if side == "home":
+                self.home_oc_tactics = tactics
+            else:
+                self.away_oc_tactics = tactics
+            log[side]["caller_changes"].append({
+                "quarter": 3, "from_id": change["from"].coach_id, "to_id": change["to"].coach_id,
+                "from_name": _coach_name(change["from"]), "to_name": _coach_name(change["to"]),
+                "direction": change["direction"], "reason": change["reason"],
+                "score": [own, opp]})
+
+    def _between_series(self):
+        if not V2_ENGINE_CONFIG.get("midgame_calls_enabled", True) or not self.drive_log:
+            return
+        drive = self.drive_log[-1]
+        side = drive.get("team")
+        if side not in ("home", "away") or drive.get("result") in ("touchdown", "successful_kick"):
+            return
+        staff = (self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}
+        tactics = self.home_oc_tactics if side == "home" else self.away_oc_tactics
+        hc, oc = staff.get("head_coach"), staff.get("oc")
+        if hc is None or oc is None or not tactics:
+            return
+        calling = hc if tactics.get("coach_id") == hc.coach_id else oc
+        adviser = oc if calling is hc else hc
+        from .coach_handoff import accepts, suggestion
+        plays = [(p.play_family, p.yards_gained) for p in self.play_log
+                 if getattr(p, "snap_possession", p.possession) == side
+                 and p.play_type in ("run", "kick_pass", "lateral_chain")
+                 and not (p.penalty and getattr(p.penalty, "nullified", False))]
+        idea = suggestion(plays)
+        if not idea:
+            return
+        log = self._midgame()
+        rng = random.Random(f"suggest:{self.seed}:{side}:{len(self.drive_log)}")
+        taken = accepts(calling, rng)
+        entry = {"quarter": self.state.quarter, "by_id": adviser.coach_id,
+                 "by_name": _coach_name(adviser), "caller_id": calling.coach_id,
+                 **idea, "accepted": taken, "used": False, "yards": None}
+        log[side]["suggestions"].append(entry)
+        if taken:
+            log["pending"][side] = entry
+
+    def _next_suggested_call(self):
+        side = self.state.possession
+        entry = self._midgame()["pending"].get(side)
+        if not entry or self._possession_snap_count != 1:
+            return None
+        from .coach_script import interrupt_reason
+        st = self.state
+        if interrupt_reason(st.down, st.yards_to_go, st.quarter, st.time_remaining,
+                            self._get_score_diff(), st.kick_mode, st.field_position):
+            return None
+        return {"family": entry["family"], "entry": entry}
+
+    def _finish_suggested_call(self, play):
+        call = getattr(self, "_suggested_call", None)
+        if not call:
+            return
+        if play.penalty and (play.play_type == "penalty" or play.penalty.nullified):
+            return
+        entry = call["entry"]
+        self._midgame()["pending"].pop(play.snap_possession, None)
+        if play.play_family == entry["family"]:
+            entry["used"], entry["yards"] = True, play.yards_gained
+            play.suggested_call = {k: entry[k] for k in ("by_name", "family", "yards")}
+
+    def _midgame_summary(self):
+        from .coach_handoff import POLICY_VERSION
+        log = self.__dict__.get("_midgame_log")
+        if not log:
+            return {}
+        return {side: {"policy_version": POLICY_VERSION, **log[side]} for side in ("home", "away")}
 
     # ── Opening scripts (casebook case 3) ──
     def _opening_script(self, side):
@@ -6645,6 +6750,7 @@ class ViperballEngine:
                 self._roll_half_form(0 if quarter == 1 else 1)
 
             if quarter == 3:
+                self._halftime_caller_change()
                 self._apply_halftime_coaching_adjustments()
                 self.recover_energy_halftime()
                 # Clear halftime benches — performance-benched players get second chance
@@ -6705,6 +6811,7 @@ class ViperballEngine:
                 _is_bonus = getattr(self, '_next_drive_is_bonus', False)
                 self._next_drive_is_bonus = False
                 self.simulate_drive(is_bonus_drive=_is_bonus)
+                self._between_series()
                 if self.state.time_remaining <= 0:
                     break
 
@@ -9720,6 +9827,7 @@ class ViperballEngine:
         self._pre_play_kick_mode = self.state.kick_mode
         self._drive_plan_priority = self._drive_plan_interruption() if self._current_drive_probe() else None
         self._script_call = self._next_script_call()
+        self._suggested_call = None if self._script_call else self._next_suggested_call()
         self._pre_play_bonus_team = self.state.bonus_possession_team
         self._live_foul_rolled = False
         self._pending_live_foul = None
@@ -9764,6 +9872,7 @@ class ViperballEngine:
         self._record_offensive_setup(play)
         self._finish_drive_plan(play)
         self._finish_script(play)
+        self._finish_suggested_call(play)
         if play.snap_possession != self.state.possession:
             self._drive_probe = None
         self._credit_uncredited_run(play, rush_before)
@@ -17801,6 +17910,7 @@ class ViperballEngine:
             "game_plans": self.game_plans,
             "opening_scripts": self._script_summary(),
             "field_width": {"unset_plays": getattr(self, "_width_unset", 0)},
+            "midgame_calls": self._midgame_summary(),
             "program_objectives": getattr(self,"_program_objectives",{}),
             "program_objective_counts": getattr(self,"_program_objective_counts",{}),
             "seed": self.seed,

@@ -182,6 +182,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 
 44. **Cape Cod** (November 28). An offensive hook package for the lateral offenses and a
     defensive trap package for the pursuit defenses. → `aar_2026-11-28_cape_cod.md`
+45. **Play calling during a game** (November 28). Halftime caller changes for struggling
+    offenses and between-series suggestions from the coach not calling the offense.
+    → `aar_2026-11-28_midgame_play_calling.md`
 
 45. **Field width** (November 28). The engine tracks the ball across the field: snaps spot on
     or between the hashes, each play attacks a side, and the defense splits into short side,
