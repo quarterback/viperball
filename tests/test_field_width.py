@@ -73,3 +73,59 @@ def test_games_track_the_ball_across_the_field():
         assert 0 <= w["end_x"] <= FW.FIELD_WIDTH
         assert w["side"] in ("left", "right", "middle")
     assert {p["width"]["hash"] for p in live} >= {"left_hash", "right_hash"}
+
+
+def test_stats_site_shows_field_width(tmp_path, monkeypatch):
+    monkeypatch.setenv("VIPERBALL_DB_PATH", str(tmp_path / "data.db"))
+    from urllib.parse import quote
+    from fastapi.testclient import TestClient
+    import api.main as api
+    client = TestClient(api.app)
+    sid = client.post("/sessions", json={}).json()["session_id"]
+    client.post(f"/sessions/{sid}/season", json={}).raise_for_status()
+    client.post(f"/sessions/{sid}/season/simulate-week", json={}).raise_for_status()
+    base = f"/stats/data/college/{sid}"
+    games = client.get(base + "/games.json").json()
+    plays = client.get(base + "/plays.json", params={"team": games[0]["home"]}).json()
+    assert any(p["side_label"] in ("field", "boundary") for p in plays)
+    assert all(p["hash"] in ("left_hash", "middle", "right_hash", None) for p in plays)
+
+    game = client.get(f"/stats/college/{sid}/game/{games[0]['week']}/0")
+    assert game.status_code == 200
+    assert "Field width" in game.text and "Wide side" in game.text and "Left hash" in game.text
+    team = client.get(f"/stats/college/{sid}/team/{quote(games[0]['home'])}")
+    assert team.status_code == 200
+    assert "Defense, by where opponents attacked" in team.text
+
+
+def test_kicks_from_a_hash_see_a_narrower_target():
+    assert FW.kick_angle_factor(FW.MIDDLE, 20) == 1.0
+    assert FW.kick_angle_factor(FW.LEFT_HASH, 20) < FW.kick_angle_factor(FW.LEFT_HASH, 45) < 1.0
+    home = load_team_from_json("data/teams/alabama.json")
+    away = load_team_from_json("data/teams/duke.json")
+    eng = ViperballEngine(home, away, seed=1)
+    eng.state.ball_x = FW.MIDDLE
+    middle = eng._place_kick_success(25, 80)
+    eng.state.ball_x = FW.LEFT_HASH
+    assert eng._place_kick_success(25, 80) < middle
+
+
+def test_the_sideline_closes_off_returns():
+    near = FW.return_plan(4.0, 1.0)
+    open_field = FW.return_plan(FW.MIDDLE, 1.0)
+    assert near["mod"] < open_field["mod"]
+    assert near["dir"] == 1  # runs back toward the open field
+    assert FW.return_plan(FW.MIDDLE, 1.3)["mod"] < open_field["mod"]
+    end = FW.return_end(4.0, near, 20, random.Random(1))
+    assert 4.0 < end <= FW.FIELD_WIDTH
+
+
+def test_a_defense_that_has_seen_the_offense_shifts_a_player():
+    players = lineup()
+    rng = random.Random(5)
+    base = FW.assign_channels(players, FW.LEFT_HASH, "balanced", 1.0, random.Random(5))
+    shifted = FW.assign_channels(players, FW.LEFT_HASH, "balanced", 1.0, rng, lean=1.0)
+    assert shifted["lean"] == 1
+    assert shifted["counts"]["right"] == base["counts"]["right"] + 1
+    toward_short = FW.assign_channels(players, FW.LEFT_HASH, "balanced", 1.0, random.Random(5), lean=-1.0)
+    assert toward_short["counts"]["left"] == base["counts"]["left"] + 1

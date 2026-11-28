@@ -67,6 +67,8 @@ V2_ENGINE_CONFIG = {
     "team_installation_enabled": True,
     "offensive_packages_enabled": True,
     "paired_drive_plans_enabled": True,
+    # Defenses shade toward the side an offense keeps attacking (field_width.py).
+    "side_learning_enabled": True,
     "opening_scripts_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
@@ -4844,7 +4846,7 @@ class ViperballEngine:
             from .offensive_concepts import CAPE_COD
             x = FW.snap_spot(getattr(self.state, "ball_x", FW.MIDDLE))
             left, right = FW.room(x, "left"), FW.room(x, "right")
-            short = "left" if left < right else ("right" if right < left else None)
+            short = "left" if left < right else ("right" if right < left else random.choice(("left", "right")))
             wide = {"left": "right", "right": "left"}.get(short)
             design = sequence_call(pid, self._offensive_setup.get(pid, ()),
                                    default_lane=wide if pid == CAPE_COD else short)
@@ -7979,7 +7981,16 @@ class ViperballEngine:
         help_ = 0.002 * max(0.0, tail - 5)
         return (help_ - hurt * self._weather_scale()) * depth
 
+    def _kick_angle(self, distance) -> float:
+        """Kicks from a hash see a narrower target (field_width.py)."""
+        x = FW.snap_spot(getattr(getattr(self, "state", None), "ball_x", FW.MIDDLE))
+        return FW.kick_angle_factor(x, distance)
+
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
+        """Field goal accuracy, including the angle from the snap spot."""
+        return self._place_kick_success_base(distance, kicker_skill) * self._kick_angle(distance)
+
+    def _place_kick_success_base(self, distance: int, kicker_skill: int = 75) -> float:
         """Field goal accuracy.
 
         A placed ball carries farther than a drop kick (README, The Field
@@ -8006,7 +8017,7 @@ class ViperballEngine:
         """Snap kick success against the defense on the field. A kick rush
         defense (Keeper Hunt above all) hurries the kicker; coaches read
         this too, so taking the five is less automatic against it (DEF-12)."""
-        p = self._drop_kick_success_base(distance, kicker_skill)
+        p = self._drop_kick_success_base(distance, kicker_skill) * self._kick_angle(distance)
         rush = self._def_sig("kick_rush") if hasattr(self, "state") else 1.0
         if rush > 1.0:
             # A missed snap kick on downs 1 to 5 keeps the ball, so the rush
@@ -11552,9 +11563,11 @@ class ViperballEngine:
             eligible = [p for p in team.players if p.name not in self._unavailable_in_game(team)]
         return random.choice(eligible) if eligible else None
 
-    def _calculate_punt_return_yards(self, returner, returning_team, punting_team) -> int:
+    def _calculate_punt_return_yards(self, returner, returning_team, punting_team,
+                                     landing_x=None) -> int:
         """Skill-based punt return yardage. Returner attributes, keeper archetype,
-        and both teams' ST schemes all factor in."""
+        and both teams' ST schemes all factor in, and so does where the ball
+        came down across the field (field_width.py)."""
         base_return = max(0, int(random.gauss(12, 8)))
 
         # Returner skill factor (speed + agility)
@@ -11576,7 +11589,21 @@ class ViperballEngine:
         punt_st = ST_SCHEMES.get(punting_team.st_scheme, ST_SCHEMES["aces"])
         returner_modifier /= punt_st["coverage_modifier"]
 
-        return max(0, int(base_return * returner_modifier))
+        # Field width: the sideline closes off returns caught near it.
+        event = self._st_event if isinstance(getattr(self, "_st_event", None), dict) else None
+        if landing_x is None:
+            x0 = getattr(self, "_width_x0", FW.MIDDLE)
+            corner = bool(event and event.get("placement") == "corner")
+            landing_x = FW.punt_landing(x0, corner)
+        plan = FW.return_plan(landing_x, punt_st["coverage_modifier"])
+        returner_modifier *= 1 + plan["mod"]
+        yards = max(0, int(base_return * returner_modifier))
+        if event is not None:
+            event["landing_x"] = round(landing_x, 2)
+            event["return_x"] = round(FW.return_end(landing_x, plan, yards), 2)
+            event["return_side"] = "right" if plan["dir"] > 0 else "left"
+            event["sideline_room"] = plan["squeeze"]
+        return yards
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
         injured = self._unavailable_in_game(def_team)
@@ -12603,9 +12630,11 @@ class ViperballEngine:
                           + [(p, "Keeper") for p in groups["keeper"]]
                           + [(p, "Midfield") for p in groups["db"]])
             dc_q = self._def_coaching_mods().get("instincts_factor", 0.5)
+            # A sharper coordinator acts on what this offense has shown.
+            lean = self._side_lean() * (0.3 + 0.7 * dc_q)
             self._width_channels = FW.assign_channels(
                 lineup, getattr(self, "_width_x0", FW.MIDDLE),
-                self._determine_defense_alignment(), dc_q)
+                self._determine_defense_alignment(), dc_q, lean=lean)
         return self._width_channels
 
     def _width_attack(self, family_value, planned=None):
@@ -12620,6 +12649,7 @@ class ViperballEngine:
                                   counter=family_value == "counter", x=x0)
         self._width_ctx = {
             "side": side, "x0": round(x0, 2), "hash": FW.hash_label(x0),
+            "lean": channels.get("lean"),
             "label": FW.side_label(x0, side), "room": round(FW.room(x0, side), 1),
             "value": FW.side_value(channels, side),
             "defenders": dict(channels["counts"]),
@@ -12644,6 +12674,44 @@ class ViperballEngine:
                 out.append(w * FW.SIDE_WEIGHT_FAR)
         return out
 
+    def _side_lean(self):
+        """What the defense expects from this offense's side calls so far.
+
+        Positive means it expects the wide side, negative the short side.
+        It moves with how often the offense has gone wide and how much more
+        it has gained there, and grows with the number of plays seen.
+        """
+        if not V2_ENGINE_CONFIG.get("side_learning_enabled", True):
+            return 0.0
+        seen = getattr(self, "_side_log", {}).get(self.state.possession)
+        if not seen:
+            return 0.0
+        n = seen["wide"] + seen["short"]
+        if n < 4:
+            return 0.0
+        # Offenses go to the wide side about 65 percent of the time; the
+        # defense reacts to an offense that is clearly above or below that.
+        wide_rate = seen["wide"] / n
+        share = max(-1.0, min(1.0, (wide_rate - 0.65) / 0.35))
+        gap = 0.0
+        if seen["wide"] and seen["short"]:
+            gap = seen["wide_yds"] / seen["wide"] - seen["short_yds"] / seen["short"]
+        gap = max(-1.0, min(1.0, gap / 5.0))
+        return max(-1.0, min(1.0, 0.6 * share + 0.4 * gap)) * n / (n + 10)
+
+    def _learn_side(self, play, ctx):
+        """Log the side this offense attacked and what it gained."""
+        if not ctx or ctx.get("label") not in ("field", "boundary"):
+            return
+        if play.penalty is not None and getattr(play.penalty, "nullified", False):
+            return
+        log = self.__dict__.setdefault("_side_log", {})
+        seen = log.setdefault(play.snap_possession,
+                              {"wide": 0, "short": 0, "wide_yds": 0, "short_yds": 0})
+        key = "wide" if ctx["label"] == "field" else "short"
+        seen[key] += 1
+        seen[key + "_yds"] += max(-5, min(30, play.yards_gained or 0))
+
     def _finish_width(self, play):
         """Set where the ball ends across the field and stamp it on the play."""
         x0 = getattr(self, "_width_x0", FW.MIDDLE)
@@ -12661,17 +12729,25 @@ class ViperballEngine:
             self.state.ball_x = x_end
         play.out_of_bounds = out
         label = (ctx or {}).get("label")
-        if play.description and play.play_type in ("run", "kick_pass", "lateral_chain", "trick_play"):
-            tags = []
+        st = getattr(play, "special_teams_event", None) or {}
+        tags = []
+        if play.play_type in ("run", "kick_pass", "lateral_chain", "trick_play"):
             if label in ("field", "boundary"):
                 tags.append("wide side" if label == "field" else "short side")
             if out:
                 tags.append("out of bounds")
-            if tags:
-                head, sep, tail = play.description.partition(" | ")
-                play.description = f"{head} [{', '.join(tags)}]{sep}{tail}"
+        elif play.play_type in ("drop_kick", "place_kick") and FW.hash_label(x0) != "middle":
+            tags.append("from the " + FW.hash_label(x0).replace("_", " "))
+        if st.get("sideline_room") is not None and st["sideline_room"] <= 8:
+            tags.append("caught near the sideline")
+        if tags and play.description:
+            head, sep, tail = play.description.partition(" | ")
+            play.description = f"{head} [{', '.join(tags)}]{sep}{tail}"
+        self._learn_side(play, ctx)
         play.width = {
             "snap_x": round(x0, 2), "hash": FW.hash_label(x0),
+            "defense_lean": (ctx or {}).get("lean"),
+            "return_side": st.get("return_side"), "sideline_room": st.get("sideline_room"),
             "side": (ctx or {}).get("side"), "side_label": (ctx or {}).get("label"),
             "room": (ctx or {}).get("room"), "defenders": (ctx or {}).get("defenders"),
             "value": (ctx or {}).get("value"),
@@ -15510,7 +15586,11 @@ class ViperballEngine:
                             fatigue=round(stamina, 1),
                         )
 
-                    return_yards = self._calculate_punt_return_yards(returner, def_team, self.get_offensive_team())
+                    # A missed snap kick comes down near the posts, in the
+                    # middle of the field (field_width.py).
+                    return_yards = self._calculate_punt_return_yards(
+                        returner, def_team, self.get_offensive_team(),
+                        landing_x=FW.MIDDLE + random.uniform(-9, 9))
                     returner.game_kick_returns += 1
                     returner.game_kick_return_yards += return_yards
                     new_fp = max(1, min(99, catch_spot_returner + return_yards))

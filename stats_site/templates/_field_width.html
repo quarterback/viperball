@@ -1,0 +1,30 @@
+{# Field width: which side each team attacked and where kicks came from.
+   Needs `fw` from stats_site/width_report.py and `fw_names` {"home": name, "away": name}.
+   `fw_order` sets which keys show and in what order. #}
+{% if fw %}
+<h2>Field width</h2>
+<div class="fw-grid">
+{% for side in fw_order|default(('away', 'home')) %}{% set r = fw.get(side) %}{% if r %}
+<div>
+  <h3>{{ fw_names.get(side, side) }}</h3>
+  <table>
+    <thead><tr><th>Attacked</th><th class="num">Plays</th><th class="num">Share</th><th class="num">Yds/play</th><th class="num">Success</th></tr></thead>
+    <tbody>
+    {% for s in r.sides %}<tr><td>{{ s.label }}</td><td class="num">{{ s.plays }}</td><td class="num">{{ s.share }}%</td><td class="num">{{ s.ypp }}</td><td class="num">{{ s.success }}%</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Snapped from</th><th class="num">Snaps</th><th class="num">Share</th><th class="num">Kicks</th><th class="num">Made</th></tr></thead>
+    <tbody>
+    {% for h in r.hashes %}<tr><td>{{ h.label }}</td><td class="num">{{ h.snaps }}</td><td class="num">{{ h.share }}%</td><td class="num">{{ h.kicks }}</td><td class="num">{% if h.pct is not none %}{{ h.made }} ({{ h.pct }}%){% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% if r.out_of_bounds or r.lean_wide or r.lean_short %}
+  <p class="hint">{% if r.out_of_bounds %}Pushed out of bounds {{ r.out_of_bounds }} time{{ '' if r.out_of_bounds == 1 else 's' }}.{% endif %}
+  {% if r.lean_wide or r.lean_short %}The defense shifted a player to the side this offense favored on {{ r.lean_wide + r.lean_short }} snap{{ '' if (r.lean_wide + r.lean_short) == 1 else 's' }}{% if r.lean_wide and r.lean_short %} ({{ r.lean_wide }} wide, {{ r.lean_short }} short){% elif r.lean_wide %}, all to the wide side{% else %}, all to the short side{% endif %}.{% endif %}</p>
+  {% endif %}
+</div>
+{% endif %}{% endfor %}
+</div>
+<style>.fw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }</style>
+{% endif %}

@@ -99,11 +99,14 @@ def _box_size(alignment: str, linemen: int) -> int:
 
 
 def assign_channels(lineup: Iterable[Tuple[object, str]], x: float, alignment: str,
-                    dc_quality: float, rng=random) -> Dict:
+                    dc_quality: float, rng=random, lean: float = 0.0) -> Dict:
     """Place each defender in a channel for this snap.
 
     lineup: (player, role) pairs for the defense on the field.
     dc_quality: 0 to 1, the defensive coordinator's read.
+    lean: -1 to 1, what the coordinator expects from this offense in this
+        game; positive moves a player toward the wide side, negative toward
+        the short side, with a chance equal to its size.
     Returns {"by_id": {id(player): channel}, "counts": {...}, "perimeter": n,
              "fair": {"left": f, "right": f}}.
     """
@@ -141,12 +144,25 @@ def assign_channels(lineup: Iterable[Tuple[object, str]], x: float, alignment: s
         return vl, vr
 
     # The best split leaves the offense the least to gain on either side.
-    options = range(len(perimeter) + 1)
-    best = min(options, key=lambda k: (max(values(k)), abs(k - len(perimeter) * share_left)))
+    options = list(range(len(perimeter) + 1))
+    score = lambda k: (round(max(values(k)), 6), round(abs(k - len(perimeter) * share_left), 6))
+    low = min(score(k) for k in options)
+    # Ties (an odd number of players with the ball dead center) go either way.
+    best = rng.choice([k for k in options if score(k) == low])
     # A weaker read misses by a player one way or the other.
     miss = max(0.0, 1.0 - dc_quality) * 0.55
     if perimeter and rng.random() < miss:
         best = max(0, min(len(perimeter), best + rng.choice((-1, 1))))
+    wide_is_right = room(x, "right") >= room(x, "left")
+    applied = 0
+    if perimeter and lean and abs(room(x, "left") - room(x, "right")) >= 1.0 \
+            and rng.random() < abs(lean):
+        # best counts players on the left. Toward the wide side on the right
+        # means fewer on the left.
+        toward_left = (lean > 0) != wide_is_right
+        new = max(0, min(len(perimeter), best + (1 if toward_left else -1)))
+        applied = 1 if lean > 0 else -1
+        best = new
 
     # Fastest perimeter defenders go to the wide side.
     perimeter.sort(key=lambda p: -getattr(p, "speed", 70))
@@ -163,7 +179,7 @@ def assign_channels(lineup: Iterable[Tuple[object, str]], x: float, alignment: s
     for ch in by_id.values():
         counts[ch] += 1
     vl, vr = values(best)
-    return {"by_id": by_id, "counts": counts, "fair": fair,
+    return {"by_id": by_id, "counts": counts, "fair": fair, "lean": applied or None,
             "value": {"left": round(vl, 4), "right": round(vr, 4)}}
 
 
@@ -205,6 +221,64 @@ def pressed(channels: Dict, side: str) -> bool:
     return channels["counts"][side] > channels["fair"][side] + 0.5
 
 
+# ── Kicks ─────────────────────────────────────────────────────────────
+
+def kick_angle_factor(x: float, distance: float) -> float:
+    """Share of the uprights a kicker sees from the snap spot.
+
+    The posts sit on the middle of the field. From a hash the kicker is
+    about 6 2/3 yards off center, so the opening narrows by the cosine of
+    the angle. That costs about 5 percent on a 20 yard kick and about 1
+    percent on a 45 yard kick; from the middle it costs nothing.
+    """
+    import math
+    offset = abs(x - MIDDLE)
+    if offset < 0.01 or distance <= 0:
+        return 1.0
+    return math.cos(math.atan2(offset, max(1.0, distance)))
+
+
+# ── Returns ───────────────────────────────────────────────────────────
+
+def punt_landing(x0: float, corner: bool, rng=random) -> float:
+    """Where a punt comes down across the field, from the kicking side's view.
+
+    A corner punt is aimed at a sideline: the short side when there is one.
+    Other punts drift up to about 14 yards either way from the snap spot.
+    """
+    if corner:
+        left_is_short = room(x0, "left") < room(x0, "right") or (
+            room(x0, "left") == room(x0, "right") and rng.random() < 0.5)
+        near = rng.uniform(3, 9)
+        return near if left_is_short else FIELD_WIDTH - near
+    return max(4.0, min(FIELD_WIDTH - 4.0, x0 + rng.uniform(-14, 14)))
+
+
+def return_plan(landing_x: float, coverage: float, rng=random) -> Dict:
+    """How the field shapes a return.
+
+    The returner works toward the side with more room. A ball caught near
+    a sideline has the sideline as an extra tackler, so the return shrinks;
+    one caught in the middle of the field has room both ways. Better
+    coverage (coverage above 1.0) keeps its lanes and pins the returner
+    closer to the side he caught it on.
+    Returns {"dir": -1 or 1, "mod": yards multiplier change, "squeeze": yards}.
+    """
+    left, right = room(landing_x, "left"), room(landing_x, "right")
+    squeeze = min(left, right)
+    mod = (squeeze - 16.0) / MIDDLE * 0.30
+    mod -= max(0.0, coverage - 1.0) * 0.10
+    direction = 1 if right > left else -1 if left > right else rng.choice((-1, 1))
+    return {"dir": direction, "mod": round(max(-0.35, min(0.15, mod)), 4),
+            "squeeze": round(squeeze, 1)}
+
+
+def return_end(landing_x: float, plan: Dict, return_yards: int, rng=random) -> float:
+    space = room(landing_x, "right" if plan["dir"] > 0 else "left")
+    drift = min(max(0.0, space - 1.0), max(0, return_yards) * rng.uniform(0.2, 0.6))
+    return max(0.0, min(FIELD_WIDTH, landing_x + plan["dir"] * drift))
+
+
 # ── Where the play ends ───────────────────────────────────────────────
 
 SCORE_RESULTS = ("touchdown", "successful_kick", "safety", "pindown", "punt_return_td",
@@ -230,11 +304,13 @@ def end_spot(x0: float, ctx: Optional[Dict], play, rng=random) -> Tuple[float, b
 
     if ptype == "fake_punt":
         return _land(x0 + rng.uniform(-10, 10), ctx, play, rng)
+    st = getattr(play, "special_teams_event", None) or {}
+    if st.get("return_x") is not None:
+        return float(st["return_x"]), False
+    if st.get("landing_x") is not None:
+        return float(st["landing_x"]), False
     if ptype == "punt" or family == "punt":
-        st = getattr(play, "special_teams_event", None) or {}
-        if st.get("placement") == "corner":
-            return (rng.uniform(3, 9) if rng.random() < 0.5 else FIELD_WIDTH - rng.uniform(3, 9)), False
-        return rng.uniform(12, FIELD_WIDTH - 12), False
+        return punt_landing(x0, st.get("placement") == "corner", rng), False
     if ptype in ("drop_kick", "place_kick"):
         return rng.uniform(15, FIELD_WIDTH - 15), False
     if ptype == "kick_pass":

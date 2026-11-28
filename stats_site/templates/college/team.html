@@ -541,6 +541,12 @@
 {% if st.calls_detail %}{{ call_detail(st.calls_detail) }}{% endif %}
 {% endif %}
 
+{% if field_width %}
+{% set fw = field_width %}{% set fw_order = ('offense', 'defense') %}
+{% set fw_names = {"offense": "Offense", "defense": "Defense, by where opponents attacked"} %}
+{% include "_field_width.html" %}
+{% endif %}
+
 {# ── Academic Profile ── #}
 {% if academics and academics.median_gpa %}
 <div>
