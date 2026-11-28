@@ -56,7 +56,7 @@ Attempts by down: 4th down 2.64 at 36 percent, 5th down 1.37 at 34 percent, 6th 
 
 ## Open
 
-Scoring fell about 11 points a game and field goals now outnumber snap kicks. About 190 field
+Scoring fell about 11 points a game and field goals now outnumber snap kicks. About 220 field
 goals from 60 yards or more were tried in 270 games; coaches choose them on 6th down over a
 long snap kick or a punt. Not tuned further, at Ron's request to see it first.
 
