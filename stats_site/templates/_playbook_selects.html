@@ -1,11 +1,18 @@
 {% macro playbook_selects(playbooks, prefix='', default_label='Staff default', name_fmt='{prefix}{side}_book', current={}) %}
   {% for side in ('offense', 'defense') %}
     {% set options = playbooks|selectattr('side', 'equalto', side)|list %}
+    {% set saved = options|rejectattr('house')|list %}
     {% set cur = current.get(side) %}
     <select name="{{ name_fmt.format(prefix=prefix, side=side) }}" aria-label="{{ side|capitalize }} playbook">
       <option value="">{{ side|capitalize }} book · {{ default_label }}</option>
-      {% for book in options %}<option value="{{ book.id }}" {% if cur and cur.get('revision') and cur.get('revision') == book.get('revision') %}selected{% endif %}>{{ book.name }}</option>{% endfor %}
-      {% if not options %}<option value="" disabled>No saved {{ side }} playbooks yet</option>{% endif %}
+      {% if saved %}<optgroup label="Your playbooks">
+        {% for book in saved %}<option value="{{ book.id }}" {% if cur and cur.get('revision') and cur.get('revision') == book.get('revision') %}selected{% endif %}>{{ book.name }}</option>{% endfor %}
+      </optgroup>{% endif %}
+      {% for school, books in options|selectattr('house')|groupby('school_label') %}
+      <optgroup label="{{ school }}">
+        {% for book in books %}<option value="{{ book.id }}" {% if cur and cur.get('revision') and cur.get('revision') == book.get('revision') %}selected{% endif %}>{{ book.group_label }}</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
     </select>
   {% endfor %}
 {% endmacro %}

@@ -1156,7 +1156,7 @@ def _book_choices(form, prefix=""):
 def _setup_data():
     """Defaults every setup form needs: conference alignment, styles, archetypes."""
     from api.main import conference_defaults, list_styles, program_archetypes
-    from engine.custom_playbooks import list_books
+    from engine.custom_playbooks import choice_books
     confs = conference_defaults()["conferences"]
     teams = sorted({t for members in confs.values() for t in members})
     return {
@@ -1164,7 +1164,7 @@ def _setup_data():
         "teams": teams,
         "styles": list_styles(),
         "archetypes": program_archetypes()["archetypes"],
-        "playbooks": list_books(),
+        "playbooks": choice_books(),
     }
 
 
@@ -1459,8 +1459,8 @@ async def dynasty_hub(request: Request, session_id: str):
     from api.main import list_styles, program_archetypes
     ctx["styles"] = list_styles()
     ctx["archetypes"] = program_archetypes()["archetypes"]
-    from engine.custom_playbooks import list_books
-    ctx["books"] = list_books()
+    from engine.custom_playbooks import choice_books
+    ctx["books"] = choice_books()
     _dyn = sess.get("dynasty")
     _coach_team = getattr(getattr(_dyn, "coach", None), "team_name", None)
     ctx["current_books"] = (getattr(_dyn, "playbook_assignments", {}) or {}).get(_coach_team, {}) if _dyn else {}

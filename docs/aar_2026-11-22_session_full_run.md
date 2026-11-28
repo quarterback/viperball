@@ -243,12 +243,16 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 58. **Cape Cod and cross code concepts get their own groups** (November 28). The Playbooks
     page listed them under Base packages. → `aar_2026-11-28_cookbook_concept_groups.md`
 
-59. **The rest of the cross code books** (November 28). Fifteen offensive calls from Free
+59. **Ready made playbooks for every school** (November 28). Dynasty and season playbook lists
+    now offer base and concept books for every school, and computer teams spread across them
+    so every package is in use. → `aar_2026-11-28_ready_made_playbooks.md`
+
+60. **The rest of the cross code books** (November 28). Fifteen offensive calls from Free
     Motion, Phase Attack, Relay and Crossfire and the eight defensive answers, each read from
     the defense's look and actual player contests; on the Playbooks page and the game page.
     → `aar_2026-11-28_cross_code_books.md`
 
-60. **Previews for the cross code calls** (November 28). Each new call and answer has its own
+61. **Previews for the cross code calls** (November 28). Each new call and answer has its own
     drawing on the Playbooks page, with a choice for each branch of the read.
     → `aar_2026-11-28_cross_code_previews.md`
 

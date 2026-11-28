@@ -26,6 +26,14 @@ were the generic drawing for each play family, not one for each new call.
 passes the cross code defensive postures to the page, so each answer's drawing starts from
 its own front.
 
+## Ready made books
+
+Main gained ready made books for every school (#418) while this was open. They group
+packages the way the Playbooks page does, so the new calls had fallen into each school's base
+book. `engine/custom_playbooks.py` now gives Free Motion, Phase Attack, Relay, Crossfire and
+the cross code answers their own concept books, and the README lists them. The ready made
+books number 156 and hold all 84 packages.
+
 ## Checks
 
 All 39 drawings, every branch included, rendered in Chrome with no script errors. A new test

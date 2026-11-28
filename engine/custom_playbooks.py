@@ -76,8 +76,100 @@ def validate_book(data):
     return book
 
 
+HOUSE_PREFIX = "house:"
+CROSS_CODE = ("gaelic_kick_and_follow", "afl_boundary_switch", "rugby_carry_release",
+              "ball_protect_bonus", "cfl_corner_chase")
+# The cross code books (engine/cross_code.py) by the prefix of their ids.
+BOOK_GROUPS = {"fm": "free", "ph": "phase", "rl": "relay", "cf": "crossfire", "dx": "crossdefense"}
+GROUP_ORDER = ("base", "cape", "cross", "free", "phase", "relay", "crossfire", "crossdefense",
+               "clinic", "delta")
+
+
+def package_group(package_id):
+    """The set a package belongs to, as the Playbooks page groups them."""
+    if package_id.startswith("cape_cod_"):
+        return "cape"
+    if package_id in CROSS_CODE:
+        return "cross"
+    if package_id.split("_")[0] in BOOK_GROUPS:
+        return BOOK_GROUPS[package_id.split("_")[0]]
+    if package_id.startswith("clinic_"):
+        return "clinic"
+    if package_id.split("_")[0] in ("pp", "pko", "pk"):
+        return "delta"
+    return "base"
+
+
+def _group_label(group, side):
+    return {"base": "Base", "cape": "Cape Cod", "cross": "Cross code concepts",
+            "free": "Free Motion", "phase": "Phase Attack", "relay": "Relay",
+            "crossfire": "Crossfire", "crossdefense": "Cross code answers",
+            "clinic": "Clinic concepts",
+            "delta": "Delta penalty kill" if side == "defense" else "Delta power play"}[group]
+
+
+def _house_books_for(side, school, group):
+    """One book per four packages of a set, so every package is in a book.
+    Concept books lead with their set and fill with the school's base
+    packages."""
+    family = catalog.get_scheme_family(side, school)
+    ids = family["packages"]
+
+    def native_first(pids):
+        return sorted(pids, key=lambda pid: (catalog.get_package(pid)["origin_family"] != school, pid))
+
+    members = native_first([pid for pid in ids if package_group(pid) == group])
+    base = native_first([pid for pid in ids if package_group(pid) == "base"])
+    label = family.get("label", school)
+    out = []
+    for n, start in enumerate(range(0, len(members), MAX_PACKAGES), 1):
+        lead = members[start:start + MAX_PACKAGES]
+        packages = (lead + [pid for pid in base if pid not in lead])[:MAX_PACKAGES]
+        title = _group_label(group, side) + (f" {n}" if n > 1 else "")
+        book = validate_book({
+            "version": VERSION, "side": side, "school": school, "packages": packages,
+            "name": f"{label} {title.lower()}" if group == "base" else f"{label} with {title}",
+            "preferred": None if group == "base" else lead[0],
+        })
+        book.update(id=f"{HOUSE_PREFIX}{side}:{school}:{group}:{n}", house=True,
+                    school_label=label, group_label=title)
+        out.append(book)
+    return out
+
+
+_HOUSE = None
+
+
+def house_books():
+    """Ready made books: for every base school, its base book and one book for
+    each concept set it carries (Cape Cod, cross code, clinic, Delta). Each
+    concept book leads with that set and fills the rest with the school's
+    own base packages."""
+    global _HOUSE
+    if _HOUSE is None:
+        from .game_engine import DEFENSE_STYLES, OFFENSE_STYLES
+        out = []
+        for side, styles in (("offense", OFFENSE_STYLES), ("defense", DEFENSE_STYLES)):
+            for school in styles:
+                for group in GROUP_ORDER:
+                    out.extend(_house_books_for(side, school, group))
+        _HOUSE = out
+    return [dict(book) for book in _HOUSE]
+
+
+def choice_books():
+    """Every book a program can pick: the ready made ones, then saved ones."""
+    return house_books() + list_books()
+
+
 def get_book(key):
     from .db import load_blob
+
+    if key.startswith(HOUSE_PREFIX):
+        for book in house_books():
+            if book["id"] == key:
+                return validate_book(book)
+        raise ValueError("That playbook could not be found.")
 
     data = load_blob(SAVE_TYPE, key)
     if data is None:
@@ -132,8 +224,10 @@ def apply_schools(style_configs, assignments):
 
 
 def library_snapshot():
-    """Copy the current library without local database IDs."""
-    return [{key: value for key, value in book.items() if key != "id"} for book in list_books()]
+    """Copy the ready made books and the current library without IDs."""
+    return [{key: value for key, value in book.items()
+             if key not in ("id", "house", "school_label", "group_label")}
+            for book in choice_books()]
 
 
 def assign_computer_books(books, teams, styles, excluded, seed):
@@ -168,6 +262,12 @@ def assign_computer_books(books, teams, styles, excluded, seed):
             if fitting:
                 candidates.append((team, fitting))
         rng.shuffle(candidates)
+        # Spread the books: each team takes a fitting book used least so far,
+        # so every book in the school gets a program before any repeats.
+        used = defaultdict(int)
         for team, fitting in candidates[: (len(candidates) + 1) // 2]:
-            picked.setdefault(team, {})[side] = rng.choice(fitting)
+            least = min(used[book["name"]] for book in fitting)
+            book = rng.choice([b for b in fitting if used[b["name"]] == least])
+            used[book["name"]] += 1
+            picked.setdefault(team, {})[side] = book
     return picked
