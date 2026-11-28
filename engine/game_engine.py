@@ -6051,7 +6051,13 @@ class ViperballEngine:
         sk = self._side_key(team)
         if sk not in cache:
             from engine.presnap import seagull_policy
-            staff = getattr(self, "_home_coaching_staff" if sk == "home" else "_away_coaching_staff", None)
+            staff = dict(getattr(self, "_home_coaching_staff" if sk == "home" else "_away_coaching_staff", None) or {})
+            # A coordinator's preference counts only while his tactics are on,
+            # so switching coordinator tactics off still replays a seeded game.
+            if not V2_ENGINE_CONFIG.get("coach_tactics_enabled", True):
+                staff.pop("oc", None)
+            if not V2_ENGINE_CONFIG.get("defensive_coach_tactics_enabled", True):
+                staff.pop("dc", None)
             cache[sk] = seagull_policy(staff)
         return cache[sk]
 
