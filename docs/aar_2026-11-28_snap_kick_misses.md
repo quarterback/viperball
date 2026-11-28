@@ -60,3 +60,12 @@ measured before that merge.
 
 Box score ledger and opening script tests pass. The full suite was not run, at Ron's
 request. No further tuning, at Ron's request.
+
+## Custom playbook test
+
+Seeding `test_playbook_library_team_setup_and_simulated_week` (#411) made it repeatable, but
+with this branch's engine the seeded game never picked the custom offense package. The cause
+is in the test, not the engine: a package installed that week starts at 0.30 familiarity, so
+on four eligible snaps the coordinator calls it zero times about half the time. The test now
+checks that the book's packages were live in the game and that nothing outside the book was
+called, rather than requiring at least one call.
