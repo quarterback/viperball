@@ -1067,7 +1067,7 @@ def _playbook_editor(request, book=None, key="", error=None, status=200,
                     package["alignment"], _, package["focus"] = posture
                 packages[pid] = package
     return templates.TemplateResponse("playbooks.html", _ctx(
-        request, section="playbooks", books=list_books() if load_library else [],
+        request, section="tools", books=list_books() if load_library else [],
         book=book or {}, book_id=key,
         schools=schools, packages=packages, vocabulary=vocabulary(),
         book_version=VERSION, same_look_options=same_look_options({

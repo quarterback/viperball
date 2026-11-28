@@ -1,5 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Playbook Cookbook · Viperball Stats{% endblock %}
+{% block title %}Playbooks — Viperball Stats{% endblock %}
+{% block breadcrumb %}
+<div class="breadcrumb"><div class="container wide">
+  <a href="/stats/">Home</a><span class="sep">/</span>Playbooks
+</div></div>
+{% endblock %}
+
 {% block content %}
 <style>
   .book-layout { display:grid; align-items:start; gap:24px; grid-template-columns:minmax(270px, .85fr) minmax(330px, 1.3fr) }
@@ -18,8 +24,15 @@
   @media(max-width:800px) { .book-layout { grid-template-columns:minmax(0, 1fr) } }
 </style>
 <div class="page-header">
-  <h1>Playbook Cookbook</h1>
-  <p>Build an offense or defense from existing packages. Choose your saved book when setting up a season or dynasty.</p>
+  <h1>Playbooks</h1>
+  <div class="subtitle">Build an offense or defense from existing packages, then choose it when you set up a season or dynasty.</div>
+{% set tool = "playbooks" %}
+<div class="tabs">
+  <a href="/stats/game-sim">Game Sim</a>
+  <a href="/stats/compare">Compare Runs</a>
+  <a href="/stats/export">Export</a>
+  <a href="/stats/playbooks" class="active">Playbooks</a>
+</div>
 </div>
 <nav class="book-library" aria-label="Saved playbooks">
   <a href="/stats/playbooks">New playbook</a>
@@ -34,7 +47,7 @@
     <input type="hidden" name="book_id" value="{{ book_id }}">
     <div>
       <label for="book-name">Book name</label>
-      <input id="book-name" name="name" maxlength="80" value="{{ book.get('name', '') }}" required>
+      <input type="text" id="book-name" name="name" maxlength="80" value="{{ book.get('name', '') }}" required>
     </div>
     <div class="row">
       <div>

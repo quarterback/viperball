@@ -165,6 +165,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     and itemize drive points; quarter split drives are joined; adjusted yards and defensive
     WPA fixed. → `aar_2026-11-27_portal_model_and_bowl_box_scores.md`
 
+39. **Header and Playbooks page after the playbook merges** (November 28). Playbooks moved
+    from the main nav into the Tools tabs, the header is one row again, and the Playbooks
+    page matches the site. → `aar_2026-11-28_header_and_playbooks_page.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
