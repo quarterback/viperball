@@ -60,6 +60,26 @@ Scoring fell about 11 points a game and field goals now outnumber snap kicks. Ab
 goals from 60 yards or more were tried in 270 games; coaches choose them on 6th down over a
 long snap kick or a punt. Not tuned further, at Ron's request to see it first.
 
+## Merged after punting, the turnover study and snap kick misses
+
+This branch merged after #411, #412 and #413. Two things came along. The coaches' snap kick
+bars on 4th and 5th down now add the turnover study's margin on top of
+`snap_kick_bar_scale`; the margin is zero while the study rule is off. The live snap kick
+roll now also takes the angle from the hash, which the coaches' expected value already used.
+
+A quick check of 80 exhibition games between random teams (same seeds on both builds):
+
+| Per game | This branch alone | After the merges |
+|---|---|---|
+| Snap kick attempts | 4.41 | 5.09 |
+| Snap kick accuracy | 36.8% | 40.0% |
+| Field goal attempts | 5.05 | 3.81 |
+| Field goal accuracy | 73.3% | 77.4% |
+
+Punting (#413) now competes on 6th down, so fewer long field goals are tried and the kicks
+that remain are shorter. Eighty games is a small sample, about 2.5 points either way on snap
+kick accuracy. Not tuned.
+
 ## Checks
 
 `tests/test_kick_accuracy.py` (new), field width, Delta and Clinic playbooks, offensive

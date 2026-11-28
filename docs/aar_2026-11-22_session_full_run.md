@@ -214,10 +214,19 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     Seagull snaps and from opponents' Seagulls, bounded and carried with the coach.
     → `aar_2026-11-28_seagull_learning.md`
 
-52. **Snap kick misses** (November 28). Execution, weather and pressure each can miss a
-    snap kick; accuracy fell from 87 to 79 percent. → `aar_2026-11-28_snap_kick_misses.md`
+52. **Punting** (November 28). A punting skill for every player, spiral, drop punt, rugby
+    and quick kick types, and head coach philosophies from never punts to field position
+    first; punts come only on 6th down or as quick kicks. → `aar_2026-11-28_punting.md`
 
-53. **Snap kicks as three pointers, field goals at college rates, Gaelic posts** (November 28).
+53. **Study: turnover on every missed snap kick** (November 28). Off by default. Three week
+    runs show almost no change, because misses on downs 1 to 5 are rare.
+    → `aar_2026-11-28_snap_kick_turnover_study.md`
+
+54. **Snap kick misses** (November 28). Execution, weather and pressure each can miss a
+    snap kick; accuracy fell from 87 to 79 percent. Merged on top of field width, so the
+    angle from a hash now narrows the strike as well. → `aar_2026-11-28_snap_kick_misses.md`
+
+55. **Snap kicks as three pointers, field goals at college rates, Gaelic posts** (November 28).
     Snap kicks now go in about 36 percent of the time, field goals follow college rates by
     distance, and the goal posts are Gaelic H posts. → `aar_2026-11-28_kick_accuracy_and_goal_posts.md`
 

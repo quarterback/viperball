@@ -2082,7 +2082,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         "kick_pass_yards": "kick_pass_yards", "kp_tds": "kick_pass_tds",
         "kp_pct": "kp_pct", "kp_ints": "kick_pass_interceptions",
         "kp_rec": "kick_pass_receptions",
-        "kick_pct": "kick_pct",
+        "kick_pct": "kick_pct", "punting": "punting",
         "tackles": "tackles", "tfl": "tfl", "sacks": "sacks",
         "hurries": "hurries", "def_ints": "kick_pass_ints",
         "kr_yds": "kick_return_yards", "pr_yds": "punt_return_yards",
@@ -2492,6 +2492,7 @@ def college_coach(request: Request, session_id: str, team_name: str, coach_role:
     return templates.TemplateResponse("college/coach.html", _ctx(
         request, section="college", session_id=session_id,
         coach=card, team_name=team_name, role=coach_role, role_label=role_label,
+        punt_philosophy=(_punt_label(card) if coach_role == "head_coach" else None),
         career_history=career_history, coaching_tree=coaching_tree,
         career_evidence=list(reversed(career.get("history",[]))),
         career_reputation=round(career["reputation"]), role_years=career.get("role_years",{}),
@@ -2875,6 +2876,11 @@ def _game_tactics(season, fr, home, away):
                      "players": rushers[:8]},
         })
     return out
+
+
+def _punt_label(card):
+    from engine.punting import philosophy_for_coach, philosophy_label
+    return philosophy_label(philosophy_for_coach(card))
 
 
 def _team_field_width(season, team_name):

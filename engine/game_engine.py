@@ -16,6 +16,7 @@ from enum import Enum
 from copy import deepcopy
 from engine.offensive_concepts import CORNER_CHASE
 from engine import field_width as FW
+from engine import punting as PUNT
 from engine.rating_scale import current_to_legacy as _old
 from engine.weather import GameWeather
 # _old(rating): a current scale rating as its 60 to 100 equivalent, for
@@ -82,6 +83,13 @@ V2_ENGINE_CONFIG = {
     "snap_kick_bar_scale": 0.40,
     "snap_kick_base_pressure": 0.03,
     "snap_kick_pressured_live": 0.30,
+    # Rule study: a missed snap kick on any down turns the ball over, as it
+    # does on 6th down today. Off by default; the current rule keeps the
+    # ball on downs 1 through 5.
+    "missed_snap_kick_turnover": False,
+    # When the turnover rule is on, coaches price the miss in: 4th and 5th
+    # down snap kicks need a surer kick.
+    "missed_snap_kick_turnover_coaches_adapt": True,
     "midgame_calls_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
@@ -4899,6 +4907,14 @@ class ViperballEngine:
         design["formation"] = package["formation_tags"][0]
         self._offensive_plan_event["design"] = design
 
+    def _miss_turnover_margin(self):
+        """Extra kick success a coach wants on 4th and 5th down when a miss
+        would give the ball away (rule study only)."""
+        if (V2_ENGINE_CONFIG.get("missed_snap_kick_turnover", False)
+                and V2_ENGINE_CONFIG.get("missed_snap_kick_turnover_coaches_adapt", True)):
+            return 0.15
+        return 0.0
+
     def _planned_choice(self, category):
         design = (getattr(self, "_offensive_plan_event", None) or {}).get("design")
         if design:
@@ -6765,6 +6781,20 @@ class ViperballEngine:
         fallback = [p for p in team.players if p.name not in unavailable]
         return fallback[:5] if fallback else [p for p in team.players if p.name not in self._ejected_names(team)][:5]
 
+    def _punter(self, team):
+        """The best punter available on this roster and his profile."""
+        unavailable = self._unavailable_in_game(team)
+        players = [p for p in team.players if p.name not in unavailable] or list(team.players)
+        return PUNT.best_punter(players)
+
+    def _punt_philosophy(self) -> float:
+        """The offense's head coach on punting, -1 never to +1 field position first."""
+        team = self.get_offensive_team()
+        bias = self._st_preferences(team).get("field_position_bias", 0.0)
+        return PUNT.philosophy(self._coaching_mods(),
+                               self._style_knob("punt_aggression", 1.0),
+                               self._style_knob("field_position_priority", 0.5) + 0.5 * bias)
+
     def _kicker_candidates(self, team):
         """Return best kicker candidates: ZBs first, then VPs, then SBs."""
         unavailable = self._unavailable_in_game(team)
@@ -8281,50 +8311,55 @@ class ViperballEngine:
                 final_play = self.simulate_drop_kick(PlayFamily.SNAP_KICK)
             elif pk_ok:
                 final_play = self.simulate_place_kick(PlayFamily.FIELD_GOAL)
-            elif stall_deficit == 0:
-                # Leading or tied — punt for field position
+            elif stall_deficit == 0 and fp >= 35 and self._punt_philosophy() > -0.95:
+                # Out of kick range but within reach of the end zone: a last
+                # punt for a pindown, the way a CFL team plays for a single.
+                # Field position no longer matters once the half ends.
+                self._quick_kick_reason = "pindown_try"
                 final_play = self.simulate_punt(PlayFamily.PUNT)
             else:
-                # Trailing and no kick can close the gap — punt
-                # (no Hail Mary mechanism yet, but at least we're
-                # not wasting the play on a futile field goal)
-                final_play = self.simulate_punt(PlayFamily.PUNT)
+                # No kick can help and a punt can't reach the end zone: the
+                # half just ends.
+                final_play = None
 
-            final_play.snap_possession = final_snap_side
-            final_play.analytics_before = analytics_before
-            final_play.analytics_resolution = self._analytics_state()
-            final_play.analytics_terminal_kick = True
-            self._finish_st_event(final_play)
-            final_play.home_score_after = self.state.home_score
-            final_play.away_score_after = self.state.away_score
-            self.play_log.append(final_play)
-            drive_plays += 1
-            if final_play.yards_gained > 0:
-                drive_yards += final_play.yards_gained
-            self.state.time_remaining = 0
+            if final_play is not None:
+                final_play.snap_possession = final_snap_side
+                final_play.analytics_before = analytics_before
+                final_play.analytics_resolution = self._analytics_state()
+                final_play.analytics_terminal_kick = True
+                self._finish_st_event(final_play)
+                final_play.home_score_after = self.state.home_score
+                final_play.away_score_after = self.state.away_score
+                self.play_log.append(final_play)
+                drive_plays += 1
+                if final_play.yards_gained > 0:
+                    drive_yards += final_play.yards_gained
+                self.state.time_remaining = 0
 
-            if final_play.result in ("successful_kick", "touchdown", "punt",
-                                      "pindown", "punt_return_td", "fumble",
-                                      "missed_kick", "missed_dk_returned",
-                                      "missed_dk_return_td"):
-                drive_result = final_play.result
+                if final_play.result in ("successful_kick", "touchdown", "punt",
+                                          "pindown", "punt_return_td", "fumble",
+                                          "missed_kick", "missed_dk_returned",
+                                          "missed_dk_return_td"):
+                    drive_result = final_play.result
 
-                if final_play.result in ("touchdown", "successful_kick", "punt_return_td", "missed_dk_return_td"):
-                    scoring_team = self.state.possession
-                    receiving = "away" if scoring_team == "home" else "home"
-                    self.kickoff(receiving)
-                elif final_play.result in ("punt", "pindown", "missed_kick", "missed_dk_returned"):
-                    # Possession changes — opponent gets the ball
-                    self.state.possession = "away" if drive_team == "home" else "home"
-                    if final_play.result == "pindown":
-                        # Per RULES.md, the receiving side restarts at 25.
-                        self.state.field_position = 25
-                    else:
-                        self.state.field_position = max(1, 100 - fp)
-                    self.state.down = 1
-                    self.state.yards_to_go = 20
-                    self._next_drive_origin = "other_restart"
+                    if final_play.result in ("touchdown", "successful_kick", "punt_return_td", "missed_dk_return_td"):
+                        scoring_team = self.state.possession
+                        receiving = "away" if scoring_team == "home" else "home"
+                        self.kickoff(receiving)
+                    elif final_play.result in ("punt", "pindown", "missed_kick", "missed_dk_returned"):
+                        # Possession changes — opponent gets the ball
+                        self.state.possession = "away" if drive_team == "home" else "home"
+                        if final_play.result == "pindown":
+                            # Per RULES.md, the receiving side restarts at 25.
+                            self.state.field_position = 25
+                        else:
+                            self.state.field_position = max(1, 100 - fp)
+                        self.state.down = 1
+                        self.state.yards_to_go = 20
+                        self._next_drive_origin = "other_restart"
 
+            else:
+                self.state.time_remaining = 0
         # Track compelled efficiency: did a delta-penalized drive end in a score?
         is_score = drive_result in ("touchdown", "successful_kick", "punt_return_td", "int_return_td", "missed_dk_return_td")
         if drive_delta and is_score:
@@ -8871,7 +8906,7 @@ class ViperballEngine:
                 stall_ytg = max(1, stall_ytg - 3)
             stall_ytg = max(1, stall_ytg - clinic_kick_shift)
             if (not dk_futile and ytg >= stall_ytg
-                    and fg_distance <= dk_comfort and dk_success >= bar(0.70)):
+                    and fg_distance <= dk_comfort and dk_success >= bar(0.70) + self._miss_turnover_margin()):
                 return PlayType.DROP_KICK
 
             # Badly stalled and out of snap kick range: take the field goal.
@@ -8910,6 +8945,14 @@ class ViperballEngine:
             territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
             is_bonus = getattr(self, '_is_bonus_drive', False)
 
+            # The rare punt before 6th down: a quick kick (punting.py).
+            wind_turns = quarter in (1, 3)
+            quick = PUNT.quick_kick_spot(down, fp, ytg, quarter, time_left, score_diff,
+                                         self._tailwind(), wind_turns, self._punt_philosophy())
+            if quick:
+                self._quick_kick_reason = quick
+                return PlayType.PUNT
+
             # Bonus possessions: more liberal — cash in points.
             # Still prefer going for it on short yardage.
             if is_bonus and ytg >= 8 and best_kick and not dk_futile:
@@ -8941,7 +8984,7 @@ class ViperballEngine:
             # A touchdown first offense needs a longer 5th down and a surer
             # kick before it gives up on the drive; a kick first one takes
             # the shot sooner.
-            if (not dk_futile and dk_success >= bar(0.55 + td_lean * 0.3)
+            if (not dk_futile and dk_success >= bar(0.55 + td_lean * 0.3) + self._miss_turnover_margin()
                     and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)
                                    + 4 * territory_bias + td_lean * 12 - clinic_kick_shift)):
                 return PlayType.DROP_KICK
@@ -8955,49 +8998,68 @@ class ViperballEngine:
             # Otherwise advance and decide on 6th.
             return None
 
-        # ── Down 6: LAST CHANCE — kick > punt > go for it ──
+        # ── Down 6: kick, punt or go for it (punting.py) ──
         if down == 6:
-            # NEVER punt when trailing.  Punting while losing is giving up.
-            # Go for the TD, go for the kick, do ANYTHING but punt.
-            if score_diff < 0:
+            # Trailing in the fourth quarter, or by more than a touchdown in
+            # the third, a punt gives the game away: kick or go.
+            if score_diff < 0 and (quarter == 4 or (quarter == 3 and score_diff < -9)):
                 if best_kick:
                     return best_kick
-                return None  # Go for it — punting surrenders the game
-
-            # Go for it on very short ytg (elite kickers lower this). A
-            # go-for-it offense goes on longer yardage, and a touchdown
-            # first one goes for it more inside the 25.
-            go_ytg = max(1, 3 - (kicker_skill - 75) // 10) + go_lean * 6
-            if fp >= 75:
-                go_ytg += max(0.0, td_lean) * 6
-            if ytg <= go_ytg:
                 return None
             # A practiced corner punt can compete with a low value scoring
-            # attempt. Trailing and short conversion decisions stay above it.
-            if best_kick_ev <= 1.8 and self._offensive_plan_event is None:
+            # attempt, unless the head coach never punts.
+            if (best_kick_ev <= 1.8 and self._offensive_plan_event is None
+                    and self._punt_philosophy() > -0.95):
                 self._begin_offensive_plan(action="punt")
                 if (self._active_offensive_plan or {}).get("package_id") == CORNER_CHASE:
                     return PlayType.PUNT
-
-            if best_kick:
-                return best_kick
-            # No kick available — punt to avoid TOD (field position). Field
-            # position offenses punt from farther up the field.
-            territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
-            delta_exit = getattr(self, "_active_offensive_plan", None) or {}
-            exit_shift = (4 * max(0.0, min(1.0, delta_exit.get("familiarity", 0)))
-                          if delta_exit.get("package_id") == "pko_territory_exit" else 0)
-            punt_line = (65 + exit_shift + 10 * territory_bias
-                         + 20 * (self._style_knob("punt_aggression", 1.0) - 1.0)
-                         + 10 * (self._style_knob("field_position_priority", 0.5) - 0.5))
-            if fp < punt_line:
-                return PlayType.PUNT
-            # Deep in opponent territory but no kick — go for it
-            if ytg <= 5:
-                return None
-            return PlayType.PUNT
+            return self._sixth_down_value_choice(fp, ytg, best_kick, pk_success, dk_success,
+                                                 kicker_skill, score_diff, go_lean)
 
         return None
+
+    def _sixth_down_value_choice(self, fp, ytg, best_kick, pk_success, dk_success,
+                                 kicker_skill, score_diff, go_lean):
+        """Weigh a 6th down punt against going for it and kicking.
+
+        Values are points for this offense from this exchange, using what a
+        drive is worth from each spot (punting.DRIVE_VALUE). The head coach's
+        punting philosophy then adds to the punt. Returns a PlayType, or None
+        to go for it.
+        """
+        phil = self._punt_philosophy()
+        team = self.get_offensive_team()
+        baseline = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
+
+        def restart_after(points):
+            # Delta restarts: the team that falls further behind starts
+            # further up the field.
+            return max(1, min(80, baseline + score_diff + points))
+
+        p_go = PUNT.sixth_down_conversion(ytg)
+        p_go = max(0.03, min(0.95, p_go * (1 + 0.6 * go_lean)))
+        go_value = (p_go * PUNT.drive_value(min(95, fp + ytg + 3))
+                    - (1 - p_go) * PUNT.drive_value(100 - fp))
+        values = {None: go_value}
+        if best_kick is not None:
+            pts, p = (5.0, dk_success) if best_kick == PlayType.DROP_KICK else (3.0, pk_success)
+            values[best_kick] = (p * (pts - PUNT.drive_value(restart_after(pts)))
+                                 - (1 - p) * PUNT.drive_value(20))
+        if phil > -0.95:
+            punter, prof = self._punter(team)
+            kind = PUNT.choose_type(fp, prof, self._tailwind(), self._def_sig("kick_rush"))
+            spot, pin = PUNT.expected_opponent_spot(fp, prof, kind)
+            values[PlayType.PUNT] = (-PUNT.drive_value(spot) + pin
+                                     + PUNT.punt_bias(phil))
+        # A coach reads the spot by feel: a little noise on every value.
+        scored = {k: v + random.gauss(0, 0.25) for k, v in values.items()}
+        choice = max(scored, key=scored.get)
+        if getattr(self, "_offensive_plan_event", None) is not None:
+            self._offensive_plan_event.setdefault("sixth_down", {
+                "values": {("go" if k is None else k.value): round(v, 2) for k, v in values.items()},
+                "philosophy": round(phil, 2),
+            })
+        return choice
 
     # ── V2.9: Late-Down Defensive Intensity Ramp ──
     # On downs 4-6, the defense gets dice-roll chances to squelch the
@@ -10365,12 +10427,12 @@ class ViperballEngine:
         self._record_offensive_setup(play)
         self._finish_drive_plan(play)
         self._finish_script(play)
-        self._finish_suggested_call(play)
         causes = getattr(self, "_snap_kick_miss_causes", None)
         if causes and play.play_type == "drop_kick" and play.result != "successful_kick":
             play.kick_miss = list(causes)
             words = {"execution": "off the boot", "weather": "the weather", "pressure": "the rush"}
             play.description += " [missed: " + ", ".join(words[c] for c in causes) + "]"
+        self._finish_suggested_call(play)
         if play.snap_possession != self.state.possession:
             self._drive_probe = None
         self._credit_uncredited_run(play, rush_before)
@@ -10888,7 +10950,11 @@ class ViperballEngine:
         if down <= 5 and not desperation_clock:
             weights["field_goal"] = 0.0
             weights["snap_kick"] = 0.0
-            weights["punt"] = 0.0
+        # Punts come only from the kick decision (select_kick_decision):
+        # on 6th down by the coach's choice, or as a quick kick
+        # (punting.quick_kick_spot). Play calling never picks one.
+        weights["punt"] = 0.0
+        weights["territory_kick"] = 0.0
 
         # ── "2nd & Short" aggression ──
         if down == 2 and ytg < 5:
@@ -11162,8 +11228,8 @@ class ViperballEngine:
         if down <= 5 and not desperation_clock:
             weights["snap_kick"] = 0.0
             weights["field_goal"] = 0.0
-            weights["punt"] = 0.0
-            weights["territory_kick"] = 0.0  # deprecated family, resolves to a punt
+        weights["punt"] = 0.0
+        weights["territory_kick"] = 0.0  # deprecated family, resolves to a punt
 
         # OC preference is a bounded change in choices only. Apply AFTER
         # all down, field position and range gates; a zero stays zero.
@@ -12208,6 +12274,8 @@ class ViperballEngine:
             landing_x = FW.punt_landing(x0, corner)
         plan = FW.return_plan(landing_x, punt_st["coverage_modifier"])
         returner_modifier *= 1 + plan["mod"]
+        # Drop punts, rugby punts and quick kicks are hard to return (punting.py).
+        returner_modifier *= PUNT.RETURN_MULT.get((event or {}).get("punt_type", "spiral"), 1.0)
         yards = max(0, int(base_return * returner_modifier))
         if event is not None:
             event["landing_x"] = round(landing_x, 2)
@@ -13363,6 +13431,10 @@ class ViperballEngine:
                 tags.append("out of bounds")
         elif play.play_type in ("drop_kick", "place_kick") and FW.hash_label(x0) != "middle":
             tags.append("from the " + FW.hash_label(x0).replace("_", " "))
+        elif play.play_type == "punt" and st.get("punt_type") in PUNT.TYPE_LABELS:
+            tags.append(PUNT.TYPE_LABELS[st["punt_type"]])
+            if st.get("checked_up"):
+                tags.append("checked up short of the goal line")
         if st.get("sideline_room") is not None and st["sideline_room"] <= 8:
             tags.append("caught near the sideline")
         if tags and play.description:
@@ -15474,12 +15546,27 @@ class ViperballEngine:
 
     def simulate_punt(self, family: PlayFamily = PlayFamily.TERRITORY_KICK, *, corner: bool = False) -> Play:
         team = self.get_offensive_team()
-        punter = max(self._kicker_candidates(team), key=lambda p: p.kicking)
+        # The best punter on the roster punts, whatever his position
+        # (punting.py). Viperball rosters have punters all over them.
+        punter, punt_profile = self._punter(team)
         ptag = player_tag(punter)
         self._begin_st_event("punt", punter)
+        quick = getattr(self, "_quick_kick_reason", None)
+        self._quick_kick_reason = None
         if corner:
             self._record_oc_choice("family", "punt")
             self._st_event["placement"] = "corner"
+            punt_kind = "corner"
+        elif quick == "pindown_try":
+            punt_kind = "rouge"
+        elif quick:
+            punt_kind = "quick"
+            self._st_event["quick_kick"] = quick
+        else:
+            punt_kind = PUNT.choose_type(self.state.field_position, punt_profile,
+                                         self._tailwind(), self._def_sig("kick_rush"))
+        self._st_event["punt_type"] = punt_kind
+        self._st_event["punter_rating"] = punt_profile.rating
 
 
         # ── Fake Punt Check ──────────────────────────────────────────
@@ -15586,7 +15673,7 @@ class ViperballEngine:
 
         # SPECIAL TEAMS CHAOS: Check for blocked punt FIRST
         receiving_team = self.get_defensive_team()
-        block_prob = self.calculate_block_probability(kick_type="punt")
+        block_prob = self.calculate_block_probability(kick_type="punt") * PUNT.BLOCK_MULT[punt_kind]
         if random.random() < block_prob:
             st_blocker = self._st_blocker(receiving_team)
             kicking_team = self.state.possession
@@ -15688,12 +15775,18 @@ class ViperballEngine:
             base_distance = random.gauss(ideal_punt, 6) * punt_weather_mod
         else:
             base_distance = random.gauss(ideal_punt, 8) * punt_weather_mod
-        kicking_factor = _old(punter.kicking) / 80  # old scale (SCALE-01)
+        kicking_factor = _old(punt_profile.distance) / 80  # old scale (SCALE-01)
 
         defense = self._current_defense()
         kick_suppression = defense.get("kick_suppression", 1.0)
 
         distance = int(base_distance * kicking_factor * kick_suppression)
+        if punt_kind != "corner":
+            # Spiral, drop, rugby and quick kicks (punting.py).
+            sampled = PUNT.sample_punt(fp, punt_profile, punt_kind, punt_weather_mod)
+            distance = int(sampled["distance"] * kick_suppression)
+            if sampled["stopped"]:
+                self._st_event["checked_up"] = True
         distance = max(5, distance)
 
         if random.random() < 0.04:
@@ -15735,7 +15828,7 @@ class ViperballEngine:
                 fatigue=round(stamina, 1),
             )
 
-        if random.random() < 0.07:
+        if punt_kind == "spiral" and random.random() < 0.07:
             bounce_extra = random.choice([-15, -10, 10, 15, 20, 25])
             distance = max(10, min(distance + bounce_extra, 80))
 
@@ -15743,7 +15836,7 @@ class ViperballEngine:
         if corner:
             # Placement trades some distance for control. Strong accuracy
             # and a good roll can get the punt to the end zone corner.
-            accuracy = self._kick_skill(punter.kick_accuracy)
+            accuracy = self._kick_skill(punt_profile.placement)
             distance = max(5, distance + round(max(-7, min(5, (accuracy - 75) / 2)) + random.uniform(-4, 4)))
             coverage_runner = self._pick_coverage_tackler(team)
             if coverage_runner is not None:
@@ -15795,7 +15888,7 @@ class ViperballEngine:
         # SPECIAL TEAMS CHAOS: Check for muffed punt return
         returner = self._pick_returner(receiving_team)
         self._st_event["returner"] = player_label(returner) if returner else None
-        muff_prob = self.calculate_muff_probability(returner)
+        muff_prob = self.calculate_muff_probability(returner) * PUNT.MUFF_MULT[punt_kind]
         if returner and random.random() < muff_prob:
             # MUFFED PUNT!
             kicking_team = self.state.possession
@@ -16140,7 +16233,9 @@ class ViperballEngine:
         # ── Three ways to miss, rolled separately ──
         # The kicker's strike (range, skill, style and archetype), the
         # weather (rain, crosswind, a headwind) and the defense's pressure.
-        execution = self._drop_kick_success_base(distance, self._kick_skill(kicker.kicking))
+        # The angle from a hash narrows the target (field width).
+        execution = (self._drop_kick_success_base(distance, self._kick_skill(kicker.kicking))
+                     * self._kick_angle(distance))
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
@@ -16284,7 +16379,7 @@ class ViperballEngine:
             # ── Finnish baseball rule: missed kick on downs 1-5 retains possession ──
             # If the live ball check didn't trigger, the ball is dead.
             # The kicking team keeps the ball and advances to the next down.
-            if self.state.down <= 5:
+            if self.state.down <= 5 and not V2_ENGINE_CONFIG.get("missed_snap_kick_turnover", False):
                 original_ytg = self.state.yards_to_go
                 if ball_landing >= 100:
                     landing_spot = self.state.field_position
