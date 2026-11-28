@@ -230,6 +230,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     Snap kicks now go in about 36 percent of the time, field goals follow college rates by
     distance, and the goal posts are Gaelic H posts. → `aar_2026-11-28_kick_accuracy_and_goal_posts.md`
 
+56. **Report: a counterweight to offense** (November 28). Before and after 200 games: points
+    from 106 to 85, kicks from 42 to 23 percent of scoring, made field goals now outnumber
+    made snap kicks. → `report_2026_11_28_kicking_counterweight.md`,
+    `aar_2026-11-28_kicking_counterweight_report.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
