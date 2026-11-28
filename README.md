@@ -201,6 +201,8 @@ There are three legal methods of advancing the ball in Viperball:
 
 The ball carrier may run in any direction. Standard running plays include dives, power runs, sweeps, counters, draws, and option plays. The Zeroback (see [Positions](#positions)) is the primary ball handler, but any player may carry the ball.
 
+Option plays are read live. On a dive option the Zeroback reads one defender: if that defender takes her, she gives to the diving back; if the defender takes the back, she keeps. On a speed or sweep option she keeps or pitches the same way. A Zeroback with more awareness than the defender reads it right more often, and some offenses train the read more than others. Kicking and distributing Zerobacks do not read; they hand off or pitch on the call.
+
 ### 2. Lateral Passing
 
 A player may throw, toss, or hand the ball to a teammate who is **beside or behind** them. There is no limit to the number of lateral passes on a single play. A lateral that travels forward, even slightly, is an **Illegal Forward Lateral** (5 yards, loss of down).

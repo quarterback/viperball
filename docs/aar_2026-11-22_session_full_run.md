@@ -176,6 +176,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     at setup, and the dynasty Start season form can assign saved books each season.
     → `aar_2026-11-28_dynasty_playbook_choice.md`
 
+42. **Live option read** (November 28). Option calls by running Zerobacks now read a real
+    defender and give, keep or pitch on that read. → `aar_2026-11-28_option_read.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

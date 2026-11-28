@@ -9786,7 +9786,16 @@ class ViperballEngine:
 
     def _dispatch_play(self, play_type: PlayType, play_family: PlayFamily) -> Play:
         if play_type == PlayType.RUN:
-            return self.simulate_run(play_family)
+            self._last_option_read = None
+            play = self.simulate_run(play_family)
+            if self._last_option_read:
+                play.option_read = self._last_option_read
+                if play.description:
+                    r = self._last_option_read
+                    play.description += (f" [option read: {r['read_defender']} took the "
+                                         f"{'Zeroback' if r['defender_took'] == 'zeroback' else 'runner'}, "
+                                         f"{r['branch']} {'right' if r['correct'] else 'wrong'} read]")
+            return play
         elif play_type == PlayType.LATERAL_CHAIN:
             return self.simulate_lateral_chain(play_family)
         elif play_type == PlayType.KICK_PASS:
@@ -12450,6 +12459,69 @@ class ViperballEngine:
         bonus += random.uniform(-0.02, 0.02)
         return bonus
 
+    _OPTION_BRANCHES = {
+        # family: (branch when the read defender takes the Zeroback,
+        #          branch when the read defender takes the other runner,
+        #          positions for the other runner)
+        PlayFamily.DIVE_OPTION: ("give", "keep", ("HB", "SB")),
+        PlayFamily.SPEED_OPTION: ("pitch", "keep", ("WB", "SB", "HB")),
+        PlayFamily.SWEEP_OPTION: ("pitch", "keep", ("WB", "HB", "SB")),
+    }
+
+    def _resolve_option_read(self, family, skill_pool, eligible, weights):
+        """Read one defender on an option call (casebook case 7).
+
+        The defense commits a real defender to either the Zeroback or the
+        other runner. How often depends on its pre-snap alignment. The
+        Zeroback sees that commitment correctly more often with more
+        awareness than the defender and with the style's option read
+        setting. The branch decides who carries; the contest that follows is
+        the normal one. Returns None when there is no read to make: no
+        Zeroback on the field, a Zeroback who does not run, or no other runner.
+        """
+        branches = self._OPTION_BRANCHES.get(family)
+        if not branches:
+            return None
+        zb = next((p for p in skill_pool if "Zeroback" in getattr(p, "position", "")), None)
+        # Only a Zeroback who runs reads the play live. Kicking and
+        # distributing Zerobacks hand off or pitch on the call as before.
+        if zb is None or getattr(zb, "game_zb_style", "") not in ("run_dominant", "dual_threat"):
+            return None
+        others = [(p, w) for p, w in zip(eligible, weights)
+                  if p is not zb and any(pos in player_tag(p) for pos in branches[2])]
+        if not others:
+            return None
+        def_team = self.get_defensive_team()
+        read_defender, _ = self.select_run_tackler(def_team, play_family=family)
+        align = self._determine_defense_alignment()
+        # Most defenses assign the read defender to the Zeroback; a stacked
+        # or aggressive front crashes the other runner more often.
+        takes_zb = random.random() < {"stacked": 0.60, "aggressive": 0.65,
+                                       "balanced": 0.70, "spread": 0.80}.get(align, 0.70)
+        zb_aw = _old(getattr(zb, "awareness", 35))
+        def_aw = _old(getattr(read_defender, "awareness", 35))
+        p_correct = 0.78 + (zb_aw - def_aw) / 120.0 + self._style_knob("option_read_bonus", 0.0)
+        p_correct = max(0.50, min(0.95, p_correct))
+        correct = random.random() < p_correct
+        right, wrong = (branches[0], branches[1]) if takes_zb else (branches[1], branches[0])
+        branch = right if correct else wrong
+        if branch == "keep":
+            carrier = zb
+        else:
+            people, w = zip(*others)
+            carrier = random.choices(people, weights=w, k=1)[0]
+        info = {
+            "carrier": carrier, "read_defender": read_defender, "correct": correct,
+            "branch": branch, "defender_took": "zeroback" if takes_zb else "runner",
+            "alignment": align, "p_correct": round(p_correct, 3),
+        }
+        self._last_option_read = {
+            "zeroback": player_label(zb), "read_defender": player_label(read_defender),
+            "defender_took": info["defender_took"], "branch": branch,
+            "correct": correct, "carrier": player_label(carrier), "alignment": align,
+        }
+        return info
+
     def simulate_run(self, family: PlayFamily = PlayFamily.DIVE_OPTION) -> Play:
         team = self.get_offensive_team()
         config = RUN_PLAY_CONFIG.get(family, RUN_PLAY_CONFIG[PlayFamily.DIVE_OPTION])
@@ -12541,6 +12613,11 @@ class ViperballEngine:
             weights = apply_featured_position_bias(
                 eligible, weights, tactics["featured_position"], tactics["authority"])
         player = random.choices(eligible, weights=weights, k=1)[0]
+        # Option families: the Zeroback reads one defender and gives, keeps
+        # or pitches based on what that defender commits to.
+        option_read = self._resolve_option_read(family, skill_pool, eligible, weights)
+        if option_read:
+            player = option_read["carrier"]
         if tactics and player.position == tactics["featured_position"]:
             self._coach_tactics_usage[self.state.possession]["featured_rushes"] += 1
         plabel = player_label(player)
@@ -12599,7 +12676,19 @@ class ViperballEngine:
         # Carrier vs Tackler — their attributes COMPETE, dice decide
         # V4: Style-aware personnel selection replaces generic tackler pick
         def_team_for_tackle = self.get_defensive_team()
-        tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
+        if option_read:
+            # A correct read leaves the read defender out of the play and the
+            # carrier meets the next defender in pursuit. A wrong read sends
+            # the ball at the defender who was read.
+            tackler, run_pool_label = option_read["read_defender"], "option_read"
+            if option_read["correct"]:
+                for _ in range(4):
+                    pursuit, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
+                    if pursuit is not option_read["read_defender"]:
+                        tackler = pursuit
+                        break
+        else:
+            tackler, run_pool_label = self.select_run_tackler(def_team_for_tackle, play_family=family)
         tackler.game_tackles += 1
         self._credit_defender(tackler)
         if tackler.position == "Keeper":
@@ -17722,6 +17811,7 @@ class ViperballEngine:
             "special_teams_event": getattr(play, "special_teams_event", None),
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
+            "option_read": getattr(play, "option_read", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
             "analytics_before": getattr(play,"analytics_before",None),
