@@ -1273,7 +1273,7 @@ class Dynasty:
         tactical_learning = []
         mentorship_events = []
         career_events = []
-        from engine.coach_learning import adapt, learn_from_mentor
+        from engine.coach_learning import adapt, learn_from_mentor, learn_from_coordinator
         from engine.coach_career import record_season, season_evidence, grow, caller
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
@@ -1345,6 +1345,11 @@ class Dynasty:
                     lesson = learn_from_mentor(staff[role], hc_card, role, team_name, prev_year)
                     if lesson is not None:
                         mentorship_events.append(lesson)
+                    if caller(staff,role) is staff[role]:
+                        upward = learn_from_coordinator(hc_card, staff[role], role,
+                            team_name, prev_year, self.seasons.get(prev_year))
+                        if upward is not None:
+                            mentorship_events.append(upward)
 
         # Build team records for portal population
         team_records_for_portal: Dict[str, tuple] = {}
@@ -1403,7 +1408,10 @@ class Dynasty:
         school_plan = plan_schools(previous, active_staffs, previous_hc_ids,
                                    human_team, OFFENSE_STYLES, DEFENSE_STYLES)
         new_positions = ensure_position_staff(self._coaching_staffs,self.team_prestige,year,active_staffs)
+        from engine.program_policy import program_report
         self.coaching_history[year] = {
+            "program_policies": {team:program_report(staff,player_cards.get(team,[]))
+                                 for team,staff in active_staffs.items()},
             "changes": coaching_changes,
             "portal_summary": coaching_portal.get_summary(),
             "portal_hires": coaching_portal.hires,
@@ -1676,7 +1684,8 @@ class Dynasty:
             roster = player_cards.get(team_name, [])
             pos_counts: Dict[str, int] = {}
             for c in roster:
-                pos_counts[c.position] = pos_counts.get(c.position, 0) + 1
+                if c.year != "Graduate":
+                    pos_counts[c.position] = pos_counts.get(c.position, 0) + 1
             needs = [
                 pos for pos, target in _TARGET_POS_COUNTS.items()
                 if pos_counts.get(pos, 0) < target
@@ -1693,6 +1702,9 @@ class Dynasty:
                 nil_budget=portal_budget,
                 max_targets=4,
                 rng=rng,
+                coaching_staff=self._coaching_staffs.get(team_name),
+                style_config=self.coaching_history.get(year, {}).get("planned_schools", {}).get(team_name, season.style_configs.get(team_name, {})),
+                current_roster=roster,
             )
 
         # Human portal picks (instant commit)
@@ -1770,7 +1782,8 @@ class Dynasty:
             # Roster: use player_cards if available
             if player_cards and tn in player_cards:
                 _team_rosters_for_recruit[tn] = [
-                    {"position": getattr(c, "position", "")} for c in player_cards[tn]
+                    {"position": getattr(c, "position", ""), "year": getattr(c, "year", "")}
+                    for c in player_cards[tn] if getattr(c, "year", "") != "Graduate"
                 ]
 
         # Compute portal losses/gains per team for walk-on assignment
