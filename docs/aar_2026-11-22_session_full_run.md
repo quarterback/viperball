@@ -183,6 +183,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 44. **Cape Cod** (November 28). An offensive hook package for the lateral offenses and a
     defensive trap package for the pursuit defenses. → `aar_2026-11-28_cape_cod.md`
 
+47. **Study: turnover on every missed snap kick** (November 28). Off by default. Three week
+    runs show almost no change, because misses on downs 1 to 5 are rare.
+    → `aar_2026-11-28_snap_kick_turnover_study.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

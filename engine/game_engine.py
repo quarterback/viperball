@@ -67,6 +67,13 @@ V2_ENGINE_CONFIG = {
     "offensive_packages_enabled": True,
     "paired_drive_plans_enabled": True,
     "opening_scripts_enabled": True,
+    # Rule study: a missed snap kick on any down turns the ball over, as it
+    # does on 6th down today. Off by default; the current rule keeps the
+    # ball on downs 1 through 5.
+    "missed_snap_kick_turnover": False,
+    # When the turnover rule is on, coaches price the miss in: 4th and 5th
+    # down snap kicks need a surer kick.
+    "missed_snap_kick_turnover_coaches_adapt": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -4850,6 +4857,14 @@ class ViperballEngine:
         design["formation"] = package["formation_tags"][0]
         self._offensive_plan_event["design"] = design
 
+    def _miss_turnover_margin(self):
+        """Extra kick success a coach wants on 4th and 5th down when a miss
+        would give the ball away (rule study only)."""
+        if (V2_ENGINE_CONFIG.get("missed_snap_kick_turnover", False)
+                and V2_ENGINE_CONFIG.get("missed_snap_kick_turnover_coaches_adapt", True)):
+            return 0.15
+        return 0.0
+
     def _planned_choice(self, category):
         design = (getattr(self, "_offensive_plan_event", None) or {}).get("design")
         if design:
@@ -8254,7 +8269,7 @@ class ViperballEngine:
                 stall_ytg = max(1, stall_ytg - 3)
             stall_ytg = max(1, stall_ytg - clinic_kick_shift)
             if (not dk_futile and ytg >= stall_ytg
-                    and fg_distance <= dk_comfort and dk_success >= 0.70):
+                    and fg_distance <= dk_comfort and dk_success >= 0.70 + self._miss_turnover_margin()):
                 return PlayType.DROP_KICK
 
             # Badly stalled and out of snap kick range: take the field goal.
@@ -8324,7 +8339,7 @@ class ViperballEngine:
             # A touchdown first offense needs a longer 5th down and a surer
             # kick before it gives up on the drive; a kick first one takes
             # the shot sooner.
-            if (not dk_futile and dk_success >= 0.55 + td_lean * 0.3
+            if (not dk_futile and dk_success >= 0.55 + td_lean * 0.3 + self._miss_turnover_margin()
                     and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)
                                    + 4 * territory_bias + td_lean * 12 - clinic_kick_shift)):
                 return PlayType.DROP_KICK
@@ -15391,7 +15406,7 @@ class ViperballEngine:
             # ── Finnish baseball rule: missed kick on downs 1-5 retains possession ──
             # If the live ball check didn't trigger, the ball is dead.
             # The kicking team keeps the ball and advances to the next down.
-            if self.state.down <= 5:
+            if self.state.down <= 5 and not V2_ENGINE_CONFIG.get("missed_snap_kick_turnover", False):
                 original_ytg = self.state.yards_to_go
                 if ball_landing >= 100:
                     landing_spot = self.state.field_position
