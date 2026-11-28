@@ -163,6 +163,10 @@
         <div style="display:flex;flex-wrap:wrap;gap:8px">{{ playbook_selects(books, '', 'Use the school above', 'playbooks.{side}', current_books) }}</div>
         <div class="hint">A playbook sets its own base school and packages. <a href="/stats/playbooks">Create or import a playbook</a>.</div>
       </div>
+      <div>
+        <label style="text-transform:none"><input type="checkbox" name="computer_playbooks:bool" value="1" checked> Let computer teams use playbooks</label>
+        <div class="hint">Computer programs without a playbook take a ready made or saved one that fits their roster. Programs that already have one keep it.</div>
+      </div>
       <div style="max-width:240px"><label for="seed">AI seed</label><input type="number" id="seed" name="ai_seed:int" value="" min="1" placeholder="Random"></div>
       <div><button class="btn-run" type="submit">{{ icon("flag") }}Start season</button></div>
     </form>

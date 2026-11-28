@@ -356,6 +356,8 @@ class CreateSeasonRequest(BaseModel):
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     team_archetypes: Optional[Dict[str, str]] = None  # team_name -> archetype key
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+    # Give computer teams without a playbook a ready made or saved one.
+    computer_playbooks: bool = False
 
 
 class CreateDynastyRequest(BaseModel):
@@ -2965,10 +2967,15 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
 
     computer_books = {}
     pending_books = dynasty.pending_computer_books
+    if not pending_books and req.computer_playbooks:
+        from engine.custom_playbooks import library_snapshot
+        pending_books = library_snapshot()
     if pending_books:
         from engine.custom_playbooks import assign_computer_books
 
-        excluded = {dynasty.coach.team_name} | set(dynasty.retired_programs)
+        # Programs that already run a book keep it.
+        excluded = ({dynasty.coach.team_name} | set(dynasty.retired_programs)
+                    | {t for t, books in dynasty.playbook_assignments.items() if books})
         computer_books = assign_computer_books(
             pending_books, teams, style_configs, excluded, seed,
         )

@@ -124,7 +124,8 @@ def test_playbook_library_team_setup_and_simulated_week(tmp_path, monkeypatch):
     assert week.status_code == 200, week.text
     assert any(
         "offense" in result.get("custom_playbooks", {}).get(side, {})
-        and counts.get("selected", {}).get("packages", {}).get("rugby_first_phase_strike", 0)
+        and any(counts.get("selected", {}).get("packages", {}).get(pid, 0)
+                for pid in result["custom_playbooks"][side]["offense"].get("ready", ()))
         for game in ai_season.schedule if (result := game.full_result)
         for side, counts in result["coach_tactics"].items()
     )
