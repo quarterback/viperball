@@ -104,6 +104,18 @@
           "score_restart"
         ]
       }
+    },
+    "delta_power_play": {
+      "plain": "opponent or own offensive possession began with Delta advantage",
+      "rule": {
+        "delta_bucket": "power_play"
+      }
+    },
+    "delta_penalty_kill": {
+      "plain": "offensive possession began with Delta disadvantage",
+      "rule": {
+        "delta_bucket": "penalty_kill"
+      }
     }
   },
   "personnel": {
