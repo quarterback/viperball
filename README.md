@@ -120,6 +120,7 @@ The playing surface is a standard 100-yard gridiron:
   - Crossbar 2.5 meters (8 feet 2 inches) above the ground. College football's is 10 feet.
   - Uprights at least 7 meters (23 feet) tall.
   - A kick scores when the whole ball passes between the uprights and over the crossbar. Above the top of the uprights, the posts count as running straight up. There is no net and nothing scores under the crossbar.
+  - Wider uprights catch kicks that would slide past college posts, and the lower crossbar catches some that would come up short. The gain grows with distance, because long kicks spread wider and fall lower.
 
 Apart from the goal posts, the field is identical to a standard American college football field. No additional markings are required.
 
@@ -371,11 +372,11 @@ Snap kicks can be attempted from anywhere on the field. A snap kick is Viperball
 
 | Distance | Typical starter | Elite kicker |
 |---|---|---|
-| 15 yards | 42% | 51% |
-| 25 yards | 35% | 50% |
-| 35 yards | 26% | 43% |
-| 45 yards | 15% | 34% |
-| 55 yards | 2% | 23% |
+| 15 yards | 42% | 52% |
+| 25 yards | 35% | 52% |
+| 35 yards | 25% | 44% |
+| 45 yards | 13% | 35% |
+| 55 yards | 3% | 24% |
 
 A kick can miss for three reasons, alone or together: the kicker's own strike, the weather (rain, snow, crosswind and headwind) and pressure from the rush. A kick from a hash sees a narrower opening than one from the middle of the field.
 
@@ -393,7 +394,7 @@ On **6th down**, a missed snap kick of any distance is a turnover — the defens
 
 The place kick is a set-piece scoring kick worth 3 points. The ball is held on the ground by a teammate while the kicker drives it through the uprights. Place kicks are more accurate at distance than snap kicks but require the offense to line up in a kicking formation, giving the defense time to set up a block attempt.
 
-Field goal accuracy follows college football rates by distance. A typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Better kickers play every kick as if it were a few yards shorter.
+Field goal accuracy starts from college football rates by distance, then gets the lift of the wider Gaelic posts. Through college posts a typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Through Viperball posts the same kicker makes about 97, 92, 79, 58 and 32 percent. Better kickers play every kick as if it were a few yards shorter.
 
 ### Punt
 

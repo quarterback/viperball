@@ -73,11 +73,13 @@ V2_ENGINE_CONFIG = {
     "opening_scripts_enabled": True,
     # Snap kick misses (execution, weather, pressure)
     # Snap kicks are three pointers: about one in three on average.
-    "snap_kick_point_blank": 0.42,
+    "snap_kick_point_blank": 0.36,
     # Kick skill of a typical starting kicker; the kick curves are set for her.
     "kick_reference_skill": 80,
+    # Gaelic H posts (wider uprights, lower crossbar) change kick accuracy.
+    "gaelic_posts": True,
     "snap_kick_drop_near": 0.006,
-    "snap_kick_drop_far": 0.014,
+    "snap_kick_drop_far": 0.0128,
     # Coaches' snap kick bars, as a share of the bars they used when a snap
     # kick went in about 85% of the time.
     "snap_kick_bar_scale": 0.40,
@@ -8573,8 +8575,9 @@ class ViperballEngine:
     PLACE_KICK_CURVE = ((20, 0.97), (30, 0.92), (40, 0.82), (50, 0.63),
                         (60, 0.36), (70, 0.13), (80, 0.03))
 
-    def _place_kick_success_base(self, distance: int, kicker_skill: int = 75) -> float:
-        """Field goal accuracy, before the angle from the snap spot.
+    def _place_kick_college(self, distance: int, kicker_skill: int = 75) -> float:
+        """Field goal accuracy through college football posts, before the
+        angle from the snap spot.
 
         Follows college rates by distance (PLACE_KICK_CURVE). A better
         kicker plays the kick as if it were shorter: 0.4 yards per point of
@@ -8594,6 +8597,15 @@ class ViperballEngine:
             if d <= d1:
                 return p0 + (p1 - p0) * (d - d0) / (d1 - d0)
         return max(0.02, curve[-1][1] - (d - curve[-1][0]) * 0.01)
+
+    def _place_kick_success_base(self, distance: int, kicker_skill: int = 75) -> float:
+        """Field goal accuracy through Viperball's Gaelic posts: the college
+        rate (_place_kick_college) lifted by the wider uprights and the lower
+        crossbar (field_width.goal_post_factor)."""
+        p = self._place_kick_college(distance, kicker_skill)
+        if p <= 0.0 or not V2_ENGINE_CONFIG.get("gaelic_posts", True):
+            return p
+        return FW.goal_post_factor(p, distance, "place")
 
     def _drop_kick_success(self, distance, kicker_skill=75):
         """Snap kick success against the defense on the field. A kick rush
@@ -8640,20 +8652,22 @@ class ViperballEngine:
 
         A snap kick is the three pointer of Viperball: about one in three
         attempts goes in. Inside 15 yards a typical starting kicker
-        (kick_reference_skill) makes snap_kick_point_blank, 42%. Each 5 yards
-        farther costs 3 points of accuracy at first, rising to 7 points at
-        long range (snap_kick_drop_near and snap_kick_drop_far, per yard):
+        (kick_reference_skill) makes about 42% through Viperball's posts.
+        Each 5 yards farther costs about 3.5 points of accuracy at first,
+        rising to about 7 at long range (snap_kick_point_blank,
+        snap_kick_drop_near and snap_kick_drop_far set the curve through
+        college posts; field_width.goal_post_factor adds the Gaelic posts):
 
-            15 yd 42%   25 yd 35%   35 yd 26%   45 yd 15%   55 yd 2%
+            15 yd 42%   25 yd 35%   35 yd 25%   45 yd 13%   55 yd 3%
 
         A better kicker plays the kick as if it were shorter (0.6 yards per
         point of skill) and is surer close in (0.6 points per point of
-        skill): a 95 kicker makes about 43% from 35 yards and 34% from 45.
+        skill): a 95 kicker makes about 44% from 35 yards and 35% from 45.
         """
-        top = (V2_ENGINE_CONFIG.get("snap_kick_point_blank", 0.42)
+        top = (V2_ENGINE_CONFIG.get("snap_kick_point_blank", 0.36)
                + (kicker_skill - self._kick_reference()) * 0.006)
         near = V2_ENGINE_CONFIG.get("snap_kick_drop_near", 0.006)
-        far = V2_ENGINE_CONFIG.get("snap_kick_drop_far", 0.014)
+        far = V2_ENGINE_CONFIG.get("snap_kick_drop_far", 0.0128)
         d = distance - self._kick_range_shift() - (kicker_skill - self._kick_reference()) * 0.6
         x = max(0.0, d - 15)
         ramp = 40.0  # yards from the near rate to the far rate
@@ -8661,7 +8675,10 @@ class ViperballEngine:
             drop = near * x + (far - near) * x * x / (2 * ramp)
         else:
             drop = near * ramp + (far - near) * ramp / 2 + far * (x - ramp)
-        return max(0.02, min(0.80, top - drop))
+        p = max(0.02, min(0.80, top - drop))
+        if V2_ENGINE_CONFIG.get("gaelic_posts", True):
+            p = FW.goal_post_factor(p, distance, "snap")
+        return p
 
     @staticmethod
     def _kick_reference() -> float:

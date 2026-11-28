@@ -85,3 +85,36 @@ kick accuracy. Not tuned.
 `tests/test_kick_accuracy.py` (new), field width, Delta and Clinic playbooks, offensive
 concepts, box score ledger and rules doc tests pass. The full suite was not run, at Ron's
 request.
+
+## Follow up: the posts change accuracy (November 28)
+
+Ron asked for the wider posts to change accuracy in the engine.
+
+1. `field_width.goal_post_factor` turns a kick's chance through college posts into its
+   chance through Viperball's posts. A miss is either wide or short. The wide part comes
+   from a sideways spread that grows with distance, and the 21 foot 4 inch uprights catch
+   more of it than college's 18 foot 6 inch ones. The short part falls with the 8 foot 2
+   inch crossbar against college's 10 feet. Place kicks are rarely short inside 35 yards
+   and often short past 60. Snap kicks fly lower off the bounce, so more of their misses
+   are short.
+2. Field goals: the college curve is now `_place_kick_college`, and
+   `_place_kick_success_base` adds the posts. A typical starter goes from 87 to 92 percent
+   at 35 yards and from 49 to 58 at 55.
+3. Snap kicks: the posts add about 6 points, so `snap_kick_point_blank` went from 0.42 to
+   0.36 and `snap_kick_drop_far` from 0.014 to 0.0128. Through Viperball's posts a typical
+   starter still makes about 42 percent inside 15 yards, losing 3.5 to 7 points per 5 yards.
+4. `gaelic_posts` (default true) turns the posts off for comparison.
+5. Report on why the kicking changed: `report_2026-11-28_kicking_counterweight.md`.
+
+Three weeks, main against this change (about 270 games each):
+
+| Per game | Main | Gaelic posts |
+|---|---|---|
+| Points | 87.6 | 86.7 to 87.6 |
+| Snap kick attempts | 5.19 | 4.81 to 5.03 |
+| Snap kick accuracy | 36.6% | 37.4% to 39.2% |
+| Field goal attempts | 4.20 | 5.05 to 5.17 |
+| Field goal accuracy | 68.3% | 70.7% to 71.2% |
+
+Checks: `tests/test_kick_accuracy.py` (a new posts test), field width and rules doc tests
+pass. The full suite was not run.
