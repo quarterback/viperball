@@ -33,3 +33,12 @@ the old design was back. He asked me to rebase to main, find what broke, and fix
 Rendered the home, season, game and Playbooks pages at 1280, 1024 and 390 pixels. The
 playbook tests, the UI tests and the NiceGUI freeze test pass. The NiceGUI app was not
 touched by the merges.
+
+## Follow up: new packages in the Playbooks list
+
+Ron said he could not see the new clinic and Delta packages in the playbook builder. All 59
+catalog packages were already listed, including the 7 clinic concepts and 20 Delta packages,
+but each school only shows the packages compatible with it, and they sat in one unlabeled
+list mixed in with the base packages. The list now groups them under "Base packages",
+"Clinic concepts" and "Delta power play and penalty kill exits" (or "Delta penalty kill" on
+defense). Each clinic or Delta package appears in three or four schools.

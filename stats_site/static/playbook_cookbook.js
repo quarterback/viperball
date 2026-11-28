@@ -98,7 +98,24 @@
       row.append(checkbox, name, button, summary);
       return row;
     });
-    list.replaceChildren(...rows);
+    // Group the list so the clinic and Delta packages read as their own sets.
+    const groupOf = (id) => id.startsWith("clinic_") ? "clinic"
+      : /^(pp|pko|pk)_/.test(id) ? "delta" : "base";
+    const groupNames = {
+      base: "Base packages",
+      clinic: "Clinic concepts",
+      delta: side.value === "defense" ? "Delta penalty kill" : "Delta power play and penalty kill exits",
+    };
+    const grouped = [];
+    for (const group of ["base", "clinic", "delta"]) {
+      const members = rows.filter((row, i) => groupOf(ids[i]) === group);
+      if (!members.length) continue;
+      const heading = document.createElement("h4");
+      heading.className = "book-group";
+      heading.textContent = groupNames[group];
+      grouped.push(heading, ...members);
+    }
+    list.replaceChildren(...grouped);
     if (!ids.includes(packageId)) {
       preview(ids.find((id) => checked.has(id)) || ids[0]);
     }
