@@ -79,3 +79,88 @@ def portal_preference(entry, policy, horizon, preferences):
 
 def program_report(staff, roster):
     return {"policy":program_policy(staff),"roster_horizon":roster_horizon(roster)}
+
+
+def game_objective(staff, own_style, opponent_style):
+    """One shared pregame objective; all units retain their own caller.
+    Based only on known school and HC preferences, no hidden opponent calls.
+    """
+    hc = (staff or {}).get("head_coach")
+    m = active_management(hc)
+    if not m:
+        return {}
+    policy = program_policy(staff)
+    explosive = opponent_style in {"shock_and_awe","quick_strike","stampede","chain_gang"}
+    own_territory = own_style in {"ironclad","ball_control","boot_raid","six_shooter"}
+    own_tempo = own_style in {"stampede","shock_and_awe","quick_strike"}
+    patience = (policy["continuity"] + (1-slider(hc,"risk_tolerance")))/2
+    if (explosive or own_territory) and patience >= .45:
+        goal = "territory_control"
+    elif own_tempo and slider(hc,"tempo_preference") >= .55:
+        goal = "transition_attack"
+    else:
+        goal = "balanced"
+    return {"objective":goal,"hc_id":hc.coach_id,"own_school":own_style,
+            "opponent_school":opponent_style,
+            "strength":round(.5*m.get("game_management",.5),4),
+            "delegation":m.get("delegation",.6)}
+
+
+def live_objective(plan, score_diff, quarter, seconds):
+    """Clock and score override pregame goals. No rule or score changes."""
+    if not plan or plan.get("objective") == "balanced":
+        return {}
+    goal = plan["objective"]
+    if quarter == 4 and seconds <= 180:
+        if score_diff < 0:
+            goal = "urgent_score"
+        elif score_diff > 0:
+            goal = "protect_lead"
+    return {**plan,"active_objective":goal}
+
+
+def objective_bias(plan, unit):
+    """Small relative choice preferences, not execution bonuses."""
+    if not plan:
+        return {}
+    goal = plan["active_objective"]
+    strength = plan["strength"]
+    tables = {
+        "territory_control": {
+            "offense":{"power":.12,"dive_option":.10,"kick_pass":-.05,"lateral_spread":-.10},
+            "defense":{"spread":.12,"aggressive":-.10},
+            "st":{"field_position_bias":.10,"return_aggression":-.08}},
+        "transition_attack":{
+            "offense":{"speed_option":.12,"viper_jet":.10,"kick_pass":.08,"power":-.08},
+            "defense":{"aggressive":.10,"stacked":-.05},
+            "st":{"return_aggression":.10,"field_position_bias":-.06}},
+        "urgent_score":{
+            "offense":{"kick_pass":.12,"speed_option":.10,"power":-.12},
+            "defense":{"aggressive":.12,"spread":-.05},
+            "st":{"return_aggression":.12,"field_position_bias":-.08}},
+        "protect_lead":{
+            "offense":{"power":.12,"dive_option":.10,"lateral_spread":-.12,"kick_pass":-.08},
+            "defense":{"spread":.12,"aggressive":-.10},
+            "st":{"field_position_bias":.10,"return_aggression":-.10}},
+    }
+    return {k:v*strength for k,v in tables.get(goal,{}).get(unit,{}).items()}
+
+
+def curriculum(staff, position, style_config=None):
+    """Existing school/caller recruiting priorities also guide technical teaching.
+
+    Return relative curriculum weights only for the existing technical
+    instruction attributes. No additional development allowance.
+    """
+    from .coach_roles import position_role, TECHNICAL
+    from .coach_recruiting_fit import recruiting_preferences
+    role = position_role(position)
+    if role not in TECHNICAL or not program_policy(staff):
+        return {}
+    prefs = recruiting_preferences(staff, style_config).get(position, ())
+    priorities = {a:0. for a in TECHNICAL[role]}
+    for attrs, weight in prefs:
+        for attr in priorities:
+            if attr in attrs:
+                priorities[attr] += weight
+    return priorities
