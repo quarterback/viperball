@@ -34,16 +34,25 @@ def test_upward_learning_requires_attribution_and_is_bounded(monkeypatch):
         ensure(c)["history"]=[{"year":2026,"team":"A"}]
         return c
     hc,oc=coach("hc","head_coach"),coach("oc","oc")
+    dc = coach("dc", "dc")
     h=ensure_coach_tactical_profile(hc)
     o=ensure_coach_tactical_profile(oc)
     h["offense"]["family_bias"]["kick_pass"]=-.1
     o["offense"]["family_bias"]["kick_pass"]=.1
     assert cl.learn_from_coordinator(hc,oc,"oc","A",2026,None) is None
-    monkeypatch.setattr(cl,"observe",lambda *a:{"games":8,"high":40,"low":40,"contrast":.5})
+    monkeypatch.setattr(cl, "observe", lambda season, team, card, role: {
+        "games": 8, "high": 40, "low": 40, "contrast": 0.5 if role == "oc" else -0.5,
+    })
     ev=cl.learn_from_coordinator(hc,oc,"oc","A",2026,object())
     assert ev and 0<ev["after"]<=cl.MENTOR_STEP
     assert h["offense"]["family_bias"]["kick_pass"]==-.1
     assert cl.learn_from_coordinator(hc,oc,"oc","A",2026,object()) is None
+    h["defense"]["pressure_bias"] = -0.1
+    ensure_coach_tactical_profile(dc)["defense"]["pressure_bias"] = 0.1
+    defense = cl.learn_from_coordinator(hc, dc, "dc", "A", 2026, object())
+    assert defense["key"] == "pressure" and 0 < defense["after"] <= cl.MENTOR_STEP
+    assert h["learning"]["mentorship"]["kick_mix"] == ev["after"]
+    assert cl.learn_from_coordinator(hc, dc, "dc", "A", 2026, object()) is None
 
 
 def test_joint_objective_is_shared_and_clock_sensitive():

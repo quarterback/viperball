@@ -528,8 +528,10 @@ def run(seasons, nteams, seed, out, *, national=False, longitudinal=False, analy
                         raise RuntimeError(f"Unbounded coaching-tree inheritance: {cid}/{key}")
             mentorship = dyn.coaching_history[year+1].get("mentorship", [])
             school_plan = planned_schools(dyn, year+1)
-            if len({e["coach_id"] for e in mentorship}) != len(mentorship):
-                raise RuntimeError("Duplicate mentorship season credit")
+            # A head coach can learn distinct offensive and defensive
+            # tendencies in the same year. Credit each tendency once.
+            if len({(event["coach_id"], event["key"]) for event in mentorship}) != len(mentorship):
+                raise RuntimeError("Duplicate mentorship credit for a coach and tendency")
             if set(school_plan) != active - {human}:
                 raise RuntimeError("Missing CPU school continuity plans")
             career_events = dyn.coaching_history[year+1].get("career_development", [])
