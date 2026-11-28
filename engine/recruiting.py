@@ -2092,6 +2092,9 @@ def auto_recruit_team(
     from engine.coach_recruiting_fit import recruiting_preferences, recruiting_fit
     preferences = recruiting_preferences(coaching_staff, style_config)
     from engine.position_staff import recruiting_multiplier
+    from engine.program_policy import program_policy, roster_horizon, recruit_preference
+    policy = program_policy(coaching_staff)
+    horizon = roster_horizon(current_roster)
     # Score each recruit for this team
     scored: List[Tuple[float, Recruit]] = []
     for recruit in available:
@@ -2122,7 +2125,8 @@ def auto_recruit_team(
         base = recruit.stars * 20 + recruit.true_overall * 0.3
         fit = recruiting_fit(recruit, preferences)
         score = (base * star_match * geo * need_mult * (1 + fit)
-                 * recruiting_multiplier(position_staff, recruit) + rng.uniform(-5, 5))
+                 * recruiting_multiplier(position_staff, recruit)
+                 * recruit_preference(recruit, policy, horizon) + rng.uniform(-5, 5))
         scored.append((score, recruit))
 
     scored.sort(key=lambda x: x[0], reverse=True)
