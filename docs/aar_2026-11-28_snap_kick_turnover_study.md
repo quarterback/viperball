@@ -53,3 +53,14 @@ Three weeks of a full season each, same league seed.
 
 Default behavior is unchanged: both settings are off. Engine import checked. The full
 suite was not run, at Ron's request.
+
+## Two test fixes made while merging
+
+1. `test_corner_chase_dispatches_through_the_sixth_down_decision` broke when punting (#413)
+   merged. Punting changed the rule: trailing teams are forced to go for it only in the
+   fourth quarter, or in the third when down by more than 9. The test trailed by one in the
+   first quarter, so it now sets the fourth quarter.
+2. `test_playbook_library_team_setup_and_simulated_week` failed about one run in three. The
+   season setup drew from an unseeded global random, so the schedule and opponent changed
+   between runs, and against some opponents the custom package was eligible but never picked.
+   The test now seeds the setup and sorts the team list, so it plays the same game every run.

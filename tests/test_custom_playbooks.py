@@ -51,8 +51,13 @@ def test_playbook_library_team_setup_and_simulated_week(tmp_path, monkeypatch):
         assert offense in page.text and defense in page.text
         assert 'name="computer_playbooks"' in page.text
 
+    # The season setup draws from the global random module, so seed it here
+    # too. Unseeded, the schedule changed from run to run and some opponents
+    # left the custom package unused (the test failed about one run in three).
+    setup_rng_state = random.getstate()
+    random.seed(1)
     sid = client.post("/sessions").json()["session_id"]
-    teams = list(main.load_teams_from_directory(str(team_dir)))
+    teams = sorted(main.load_teams_from_directory(str(team_dir)))
     controlled = teams[0]
     setup = client.post(f"/sessions/{sid}/season", json={
         "games_per_team": 2, "human_teams": [controlled],
@@ -66,6 +71,7 @@ def test_playbook_library_team_setup_and_simulated_week(tmp_path, monkeypatch):
     assert season.style_configs[controlled]["defense_style"] == "fortress"
     save_book({**get_book(offense), "name": "Later revision"}, offense)
     assert client.post(f"/sessions/{sid}/season/portal/skip").status_code == 200
+    random.setstate(setup_rng_state)
     rng_state = random.getstate()
     try:
         random.seed(104)
