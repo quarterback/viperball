@@ -1089,6 +1089,9 @@ def auto_portal_offers(
     nil_budget: float = 200_000.0,
     max_targets: int = 5,
     rng: Optional[random.Random] = None,
+    coaching_staff=None,
+    style_config=None,
+    current_roster=None,
 ) -> Dict[str, float]:
     """
     Auto-make portal offers for a CPU team.
@@ -1111,6 +1114,11 @@ def auto_portal_offers(
     available = portal.get_available()
     nil_offers: Dict[str, float] = {}
 
+    from engine.program_policy import program_policy, roster_horizon, portal_preference
+    from engine.coach_recruiting_fit import recruiting_preferences
+    policy = program_policy(coaching_staff)
+    horizon = roster_horizon(current_roster)
+    preferences = recruiting_preferences(coaching_staff, style_config) if policy else {}
     # Score players by fit
     scored: List[Tuple[float, PortalEntry]] = []
     for entry in available:
@@ -1134,6 +1142,7 @@ def auto_portal_offers(
             ovr_match = 8.0
 
         score = entry.overall + need_bonus + ovr_match + rng.uniform(-5, 5)
+        score += portal_preference(entry, policy, horizon, preferences)
         scored.append((score, entry))
 
     scored.sort(key=lambda x: x[0], reverse=True)

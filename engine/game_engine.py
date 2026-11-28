@@ -4445,6 +4445,12 @@ class ViperballEngine:
         # Store raw coaching staffs for halftime DC re-roll
         self._home_coaching_staff = home_coaching
         self._away_coaching_staff = away_coaching
+        from .program_policy import game_objective
+        self._program_objectives = {
+            "home": game_objective(home_coaching, self.home_team.offense_style, self.away_team.offense_style),
+            "away": game_objective(away_coaching, self.away_team.offense_style, self.home_team.offense_style),
+        }
+        self._program_objective_counts = {"home": {}, "away": {}}
         # DC gameplan: per-game defensive suppression roll (empty = no effect)
         self.home_dc_gameplan: Dict[str, float] = {}
         self.away_dc_gameplan: Dict[str, float] = {}
@@ -4610,6 +4616,24 @@ class ViperballEngine:
             self._apply_rivalry_boost()
 
         self._apply_dq_boosts()
+
+    def _program_objective(self, side):
+        from .program_policy import live_objective
+        diff = self.state.home_score-self.state.away_score
+        return live_objective(getattr(self,"_program_objectives",{}).get(side,{}),
+                              diff if side=="home" else -diff,
+                              self.state.quarter,self.state.time_remaining)
+
+    def _program_choice_bias(self, side, unit, weights=None):
+        from .program_policy import objective_bias
+        plan = self._program_objective(side)
+        bias = objective_bias(plan,unit)
+        if bias and weights is not None:
+            counts = self._program_objective_counts[side]
+            key = unit + ":" + plan["active_objective"]
+            counts[key] = counts.get(key,0)+1
+            return {k:v*(1+bias.get(k,0)) if v>0 else v for k,v in weights.items()}
+        return bias if weights is None else weights
 
     def _current_oc_tactics(self) -> Dict:
         """Only the attacking coordinator's saved signature shapes this call."""
@@ -4801,6 +4825,7 @@ class ViperballEngine:
             total = sum(weights.values())
             weights = {a: w * (1.0 - 0.85 * strength) for a, w in weights.items()}
             weights[target] += total * 0.85 * strength
+        weights = self._program_choice_bias(def_side, "defense", weights)
         alignment = rng.choices(list(weights), weights=list(weights.values()), k=1)[0]
         blitz_chance = defensive_blitz_probability(
             STYLE_BLITZ_CHANCE.get(self._current_defense_name(), 0.10),
@@ -10131,6 +10156,7 @@ class ViperballEngine:
             weights = apply_weight_bias(
                 weights, self._oc_bias("family_bias"), tactics["authority"])
 
+        weights = self._program_choice_bias(self.state.possession, "offense", weights)
         families = list(PlayFamily)
         hard_zero = set()
         # Kick families the gates above zeroed stay at zero. The 0.001 floor
@@ -10818,7 +10844,14 @@ class ViperballEngine:
         return "home" if team is self.home_team else "away"
 
     def _st_preferences(self, team):
-        return self._st_tactics[self._st_side(team)]
+        side = self._st_side(team)
+        base = self._st_tactics[side]
+        if not base:
+            return base
+        bias = self._program_choice_bias(side,"st")
+        if not bias:
+            return base
+        return {**base, **{k:max(-.5,min(.5,base.get(k,0)+v)) for k,v in bias.items()}}
 
     def _st_count(self, side, key):
         counts = self._st_calls[side]
@@ -16996,6 +17029,8 @@ class ViperballEngine:
             "weather_description": self._weather_story(),
             "weather_detail": self.game_weather.summary(),
             "game_plans": self.game_plans,
+            "program_objectives": getattr(self,"_program_objectives",{}),
+            "program_objective_counts": getattr(self,"_program_objective_counts",{}),
             "seed": self.seed,
             "stats": {
                 "home": home_stats,

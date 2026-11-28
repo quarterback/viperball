@@ -240,8 +240,15 @@ def staffing_preference(hc,candidate,role,team):
     teaching=(candidate.development-60)/35
     recruiting=(candidate.recruiting-60)/35
     complementary=(1-m.get("development",.5))*teaching+(1-m.get("recruiting",.5))*recruiting
+    # An adaptive leader can hire an outside specialist rather than another
+    # version of herself. Match role expertise and actual career experience.
+    from .program_policy import program_policy
+    innovation = program_policy({"head_coach":hc}).get("staff_innovation",0.)
+    specialist = 0.
+    if role in ("oc","dc") and not fit:
+        specialist = innovation * min(1., experience(candidate,role,ensure(candidate))/5.) * 2
     return clip(continuity*(2*int(familiar)+1.5*int(mentor)+fit)+
-                leadership*2*complementary,-3,5)
+                leadership*2*complementary+specialist,-3,5)
 
 def continuity_carryover(staff,unit,familiarity):
     """Preserve a limited amount of practiced knowledge on succession."""

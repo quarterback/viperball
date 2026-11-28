@@ -63,7 +63,7 @@ def coverage(staff):
     return result
 
 
-def instruction(staff, position):
+def instruction(staff, position, style_config=None):
     """Focus an existing position-development allowance on technical skills.
 
     The dedicated teacher reallocates an existing allowance; never creates
@@ -83,6 +83,14 @@ def instruction(staff, position):
         shares.append(focus)
         for attr in TECHNICAL[key]:
             weights[attr] = weights.get(attr, 0.) + focus / len(TECHNICAL[key])
+    from .program_policy import curriculum
+    priorities = curriculum(staff, position, style_config)
+    # Redistribute the same instructional weight across technical skills.
+    total = sum(weights.values())
+    adjusted = {a: w * (1 + .5 * priorities.get(a,0)) for a,w in weights.items()}
+    norm = sum(adjusted.values())
+    if norm > 0:
+        weights = {a:w*total/norm for a,w in adjusted.items()}
     return {"focus": sum(shares)/len(shares), "weights": weights}
 
 

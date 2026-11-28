@@ -156,3 +156,48 @@ def learn_from_mentor(card, mentor, role, team, year):
     lineage.update({key: after, "last_year": year,
                     "history": list(lineage.get("history", []))[-19:] + [event]})
     return event
+
+
+def learn_from_coordinator(hc, coordinator, role, team, year, season):
+    """Upward learning after attributable, completed shared work.
+
+    Only the relevant tactical tendency travels. Independent per-role
+    annual guard; shares the existing mentorship lifetime bound.
+    """
+    from .coach_career import slider, active_management
+    from .coach_tactics import ensure_coach_tactical_profile
+    if hc is None or coordinator is None or hc is coordinator or role not in ("oc","dc"):
+        return None
+    if not active_management(hc):
+        return None
+    for card in (hc,coordinator):
+        history = getattr(card,"career_development",{}).get("history",[])
+        if not any(row.get("team")==team and row.get("year")==year for row in history):
+            return None
+    data = observe(season,team,coordinator,role)
+    if data["games"] < MIN_GAMES or min(data["high"],data["low"]) < MIN_ARM:
+        return None
+    signal = data["contrast"] * (1 if role=="oc" else -1)
+    if signal <= 0:
+        return None
+    profile = ensure_coach_tactical_profile(hc)
+    source = ensure_coach_tactical_profile(coordinator)
+    state = profile.setdefault("learning",{}).setdefault("mentorship",{})
+    years = state.setdefault("upward_years",{})
+    if years.get(role,-1)>=year:
+        return None
+    key = "kick_mix" if role=="oc" else "pressure"
+    before = mentor_bias(profile,key)
+    own = (profile["offense"]["family_bias"].get("kick_pass",0) if role=="oc" else profile["defense"].get("pressure_bias",0))
+    target = (source["offense"]["family_bias"].get("kick_pass",0) if role=="oc" else source["defense"].get("pressure_bias",0))
+    # Positive contrast supports the high arm only, not a reduction of it.
+    receptive = slider(hc,"adaptability")*(1-slider(hc,"stubbornness"))
+    change = clamp(max(0.,target-own-before)*receptive*min(1.,signal)*.10, MENTOR_STEP)
+    after = round(clamp(before+change,MENTOR_LIMIT),5)
+    event = {"year":year,"team":team,"role":role,"coach_id":hc.coach_id,
+             "mentor_id":coordinator.coach_id,"direction":"upward","key":key,
+             "before":before,"after":after,**data}
+    years[role]=year
+    state[key]=after
+    state["history"]=list(state.get("history",[]))[-19:]+[event]
+    return event
