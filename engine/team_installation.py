@@ -615,7 +615,7 @@ def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) 
     return out
 
 
-_EVALUABLE_RULE_KEYS = {"yards_per_down_min", "yards_to_go_max", "yards_to_go_min",
+_EVALUABLE_RULE_KEYS = {"delta_bucket","yards_per_down_min", "yards_to_go_max", "yards_to_go_min",
                         "field_position_min", "field_position_max", "down_min", "down_max",
                         "lead_min_q4", "lead_min_second_half", "deficit_min_second_half",
                         "deficit_min_last_300s", "quarters", "time_remaining_max",
@@ -674,6 +674,8 @@ def active_situations(context: Dict[str, Any]) -> set:
             energy = context.get("defense_energy")
             if energy is None or energy >= rule["defense_energy_max"]:
                 ok = False
+        if "delta_bucket" in rule and context.get("delta_bucket") != rule["delta_bucket"]:
+            ok = False
         if ok:
             out.add(tag)
     return out
@@ -708,7 +710,8 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
         familiarity = _clamp(pkg.get("familiarity", 0.0))
         if familiarity > 0 and offensive_package_eligible(pkg, live):
             from .clinic_playbook import concept_weight
-            preference = concept_weight(pkg["package_id"], context)
+            from .delta_playbook import weight as delta_weight
+            preference = concept_weight(pkg["package_id"], context) * delta_weight(pkg["package_id"], context)
             if preference > 0:
                 candidates.append((pkg, familiarity, preference))
     eligible = [pkg["package_id"] for pkg, _, _ in candidates]
