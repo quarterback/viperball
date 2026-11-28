@@ -593,6 +593,11 @@
     <td>Drop Kicks (Made/Att)</td>
     <td class="num {% if hs.get('drop_kicks_made', 0) > 0 %}stat-good{% endif %}">{{ hs.get('drop_kicks_made', 0) }}/{{ hs.get('drop_kicks_attempted', 0) }}</td>
   </tr>
+  {% for key, label in (('snap_kick_misses_execution', 'Misses off the boot'), ('snap_kick_misses_weather', 'Misses from the weather'), ('snap_kick_misses_pressure', 'Misses from the rush')) %}
+  {% if as_.get(key) or hs.get(key) %}
+  <tr><td class="num">{{ as_.get(key, 0) }}</td><td style="padding-left:1em;">{{ label }}</td><td class="num">{{ hs.get(key, 0) }}</td></tr>
+  {% endif %}
+  {% endfor %}
   {% endif %}
   {% if as_.get('place_kicks_attempted') or hs.get('place_kicks_attempted') %}
   <tr>
