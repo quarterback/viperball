@@ -214,7 +214,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     Seagull snaps and from opponents' Seagulls, bounded and carried with the coach.
     → `aar_2026-11-28_seagull_learning.md`
 
-52. **Study: turnover on every missed snap kick** (November 28). Off by default. Three week
+52. **Punting** (November 28). A punting skill for every player, spiral, drop punt, rugby
+    and quick kick types, and head coach philosophies from never punts to field position
+    first; punts come only on 6th down or as quick kicks. → `aar_2026-11-28_punting.md`
+
+53. **Study: turnover on every missed snap kick** (November 28). Off by default. Three week
     runs show almost no change, because misses on downs 1 to 5 are rare.
     → `aar_2026-11-28_snap_kick_turnover_study.md`
 

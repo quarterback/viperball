@@ -73,7 +73,9 @@
     ('Speed', player.speed), ('Power', player.power), ('Agility', player.agility),
     ('Hands', player.hands), ('Awareness', player.awareness), ('Stamina', player.stamina),
     ('Kicking', player.kicking), ('Kick Power', player.kick_power),
-    ('Kick Accuracy', player.kick_accuracy), ('Lateral Skill', player.lateral_skill),
+    ('Kick Accuracy', player.kick_accuracy),
+    ('Punting', player.punting), ('Punt Distance', player.punt_distance),
+    ('Punt Placement', player.punt_placement), ('Lateral Skill', player.lateral_skill),
     ('Tackling', player.tackling),
   ] %}
   {% for name, val in attrs %}
@@ -89,6 +91,7 @@
   {% endfor %}
   </tbody>
 </table>
+{% if player.punt_style %}<p class="hint">Punting style: {{ {'aussie': 'Aussie, the drop punt and the rugby roll out', 'continental': 'continental, the spiral', 'both': 'both the Aussie drop punt and the spiral'}[player.punt_style] }}.</p>{% endif %}
 
 {# Team Chemistry — stable attrs + drift indicators + permanent flags #}
 {% set chem = player.get('chemistry', {}) %}
