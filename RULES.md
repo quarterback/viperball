@@ -306,11 +306,12 @@ four best tacklers play defensive back. See [Substitution and Rotations](#13-sub
 
 ### Seagull
 
-A Seagull is a player listed on the game sheet as able to play in more than one position
-group. Any rostered player may be listed. There is no qualifying standard, and the listing
-holds for that game only.
+A Seagull (SG) is a player listed on the game sheet as able to play in more than one
+position group. Seagulls are a college rule; high school and professional teams do not
+list them. Any rostered player may be listed. There is no qualifying standard, and the
+listing holds for that game only.
 
-- A team may list up to two Seagulls per game.
+- A college team may list up to two Seagulls per game.
 - Each Seagull is listed with two or three groups: Zeroback, Viper, flanker, offensive
   line, defensive line, Keeper or defensive back.
 - She plays at her full rating in her listed groups and at the cover rate, 90% of her
@@ -741,7 +742,7 @@ minus its lead or plus its deficit in yards.
 
 **Snap kick:** a 5 point drop kick through the uprights during live play.
 
-**Seagull:** a player listed for a game as able to play two or three position groups. She
+**Seagull (SG):** a college player listed for a game as able to play two or three position groups. She
 belongs to no midfield line, and she is the one line player allowed to move before the snap.
 
 **Seagull jersey:** the contrasting jersey a Seagull wears, distinct from the Viper jersey.
@@ -764,8 +765,8 @@ starter.
 - Any number of backfield players may be in motion at the snap, in any direction, including
   toward the line. The player taking the snap must be set.
 - One Viper jersey on each snap marks the Viper. She follows the ordinary motion rules.
-- The Seagull added: up to two per game, listed with two or three groups, outside the
-  midfield lines.
+- The Seagull (SG) added, in college only: up to two per game, listed with two or three
+  groups, outside the midfield lines.
 - Seagull reporting to the Side Judge when she takes the Viper jersey.
 - A Seagull on the line may move parallel to it before and at the snap, one per snap. She
   wears the Seagull jersey.

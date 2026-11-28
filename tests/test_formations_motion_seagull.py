@@ -7,6 +7,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from engine.game_engine import PENALTY_CATALOG, ViperballEngine  # noqa: E402
+from engine.position_fit import adaptability, fit, fits, natural_fit  # noqa: E402
 from engine.presnap import LINE_MINIMUM, MAX_SEAGULLS, presnap_foul_scale  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("bm", os.path.join(ROOT, "scripts", "benchmark_engine.py"))
@@ -52,8 +53,11 @@ def test_seagulls_listed_and_off_the_lines():
             names = {row["name"] for row in rows}
             for row in rows:
                 assert 2 <= len(row["groups"]) <= 3
-                if "Viper" in row["groups"]:
-                    assert row["position"] == "Viper"
+                assert row["tag"].startswith("SG")
+                assert any(g in ("Viper", "flanker", "Keeper", "defensive back") for g in row["groups"])
+                p = next(x for x in team.players if x.name == row["name"])
+                for g in row["groups"][1:]:
+                    assert natural_fit(p, g)
             lines = eng._midfield_lines(team, set())
             assert not names & {p.name for l in lines for p in l}
 
@@ -101,3 +105,56 @@ def test_viper_substitution_flags_need_a_seagull():
             if pen.get("name") == "Illegal Viper Substitution" and pen.get("phase") == "pre_snap":
                 m = p.get("motion") or {}
                 assert m.get("seagull_viper") or m.get("seagull_line")
+
+
+def test_seagulls_are_a_college_rule():
+    for level in ("high_school", "pro"):
+        a, b = _PAIRS[0]
+        r = ViperballEngine(_TEAMS[a], _TEAMS[b], seed=11, officiating_level=level).simulate_game()
+        assert r["seagulls"] == {"home": [], "away": []}
+        assert not r["seagull_reports"]
+
+
+def test_high_school_short_line():
+    a, b = _PAIRS[1]
+    short, lowest = 0, 99
+    for seed in (21, 22):
+        r = ViperballEngine(_TEAMS[a], _TEAMS[b], seed=seed, officiating_level="high_school",
+                            style_overrides={a: "chain_gang", b: "lateral_spread"}).simulate_game()
+        for p in r["play_by_play"]:
+            m = p.get("motion") or {}
+            if m.get("on_line"):
+                lowest = min(lowest, m["on_line"])
+            if m.get("short_line"):
+                short += 1
+                assert m["on_line"] == 5 - len(m["short_line"])
+    assert short > 0 and lowest == 3
+    for _, r in GAMES:
+        assert all(not (p.get("motion") or {}).get("short_line") for p in r["play_by_play"])
+
+
+def test_two_seagulls_on_the_line_only_one_moves():
+    seen = 0
+    for _, r in GAMES:
+        for p in r["play_by_play"]:
+            m = p.get("motion") or {}
+            both = m.get("seagull_line_all") or []
+            if len(both) > 1:
+                seen += 1
+                assert m["seagull_line"] in both
+    assert seen > 0
+
+
+def test_position_fit_uses_ratings_and_size():
+    a, _ = _PAIRS[0]
+    players = _TEAMS[a].players
+    lineman = next(p for p in players if p.position == "Offensive Line")
+    keeper = next(p for p in players if p.position == "Keeper")
+    assert natural_fit(lineman, "Offensive Line") and natural_fit(keeper, "Keeper")
+    heavy = max(players, key=lambda p: p.weight)
+    if heavy.weight > 192 and heavy.position not in ("Viper", "Halfback", "Wingback", "Slotback", "Keeper"):
+        assert not natural_fit(heavy, "flanker")
+    table = fits(keeper)
+    assert set(table) >= {"Viper", "flanker", "Offensive Line", "Defensive Line", "Keeper", "defensive back"}
+    assert 0 <= adaptability(keeper) <= 100
+    assert fit(keeper, "flanker") <= table["flanker"]["fit"] + 1e-9

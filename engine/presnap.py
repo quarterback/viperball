@@ -2,7 +2,7 @@
 
 Helpers for ViperballEngine:
 
-* listing a team's Seagulls before a game,
+* listing a team's Seagulls before a game (college only),
 * rolling backfield motion for a snap, and
 * scaling the before the snap fouls by what actually happened on that snap.
 
@@ -34,51 +34,58 @@ MOTION_SCALE = 0.30
 MOTION_LATE_DOWN = 0.40      # downs 5 and 6 and kick mode: fewer movers
 MOTION_DECOY_VIPER = 1.60    # a Decoy Viper goes in motion more often
 SEAGULL_SLIDE_RATE = 0.85    # a Seagull on the line usually slides
+SECOND_SEAGULL_RATE = 0.25   # both Seagulls on the line; only one may move
+
+# High school short line: how often an offense lines up with fewer than five
+# on the line, putting bench midfielders in for linemen, by style.
+SHORT_LINE_RATE_DEFAULT = 0.12
+SHORT_LINE_RATE = {
+    "chain_gang": 0.35, "lateral_spread": 0.32, "ghost": 0.25, "slick_n_slide": 0.25,
+    "boot_raid": 0.18, "ground_control": 0.05, "stampede": 0.05, "ball_control": 0.05,
+}
+SHORT_LINE_TWO = 0.35        # share of short line snaps with only three on the line
 
 
-def list_seagulls(lines, bench, keepers, tackle_score, max_listed=MAX_SEAGULLS):
-    """The coach lists up to two Seagulls on the game sheet.
+LISTING_GROUPS = ("Viper", "flanker", "Offensive Line", "Defensive Line", "Keeper",
+                  "defensive back")
+OPEN_FIELD = ("Viper", "flanker", "Keeper", "defensive back")
 
-    ``lines`` are the midfield lines built from the whole roster, best line
-    first. Candidates are midfield players who are not on the top line:
-    the lower lines and the bench. A Seagull plays her own group plus up to
-    two more where she is as good as the players there now:
 
-    * defensive back, if she tackles as well as the top line's fourth DB,
-    * Keeper, if she rates within 5% of the weaker starting Keeper,
-    * flanker, for a Viper who rates as well as the top line's weakest flanker.
+def list_seagulls(candidates, bars, max_listed=MAX_SEAGULLS):
+    """The coach lists up to two Seagulls on the game sheet (college only).
 
-    Only a Viper by position may be listed at Viper, so the player in the
-    Viper jersey is always a Viper. Returns ``[{"name", "groups"}]``.
+    ``candidates`` are the players off the top midfield line, other than the
+    starting Zeroback. ``bars`` holds, for each group, the fit of the player
+    a Seagull would replace there. A player is listed in another group when
+    she is a natural fit there (engine/position_fit.py) and her fit is
+    within 3% of that bar. She needs at least one group besides her own, at
+    least one open field group, and is listed in at most three. Returns
+    ``[{"name", "groups"}]``.
     """
-    if not lines:
-        return []
-    top = lines[0]
-    top_names = {p.name for p in top}
-    dbs = sorted(top, key=tackle_score, reverse=True)[:4]
-    db_bar = tackle_score(dbs[-1]) * 0.97 if dbs else None
-    flankers = [p.overall for p in top if p.position != "Viper"]
-    flank_bar = min(flankers) if flankers else None
-    keeper_bar = min(k.overall for k in keepers[:2]) * 0.95 if keepers else None
-
-    seen, picks = set(), []
-    for p in [p for line in lines[1:] for p in line] + list(bench):
-        if p.name in top_names or p.name in seen or p.position not in MIDFIELD_POSITIONS:
-            continue
-        seen.add(p.name)
-        groups = ["Viper" if p.position == "Viper" else "flanker"]
+    from engine.position_fit import adaptability, fit, natural_fit, own_group
+    picks = []
+    for p in candidates:
+        own = own_group(p)
         extras = []
-        if db_bar is not None and tackle_score(p) >= db_bar:
-            extras.append(("defensive back", tackle_score(p) / max(1.0, db_bar)))
-        if keeper_bar is not None and p.overall >= keeper_bar:
-            extras.append(("Keeper", p.overall / max(1.0, keeper_bar)))
-        if p.position == "Viper" and flank_bar is not None and p.overall >= flank_bar:
-            extras.append(("flanker", p.overall / max(1.0, flank_bar)))
+        for group in LISTING_GROUPS:
+            if group == own or group not in bars or not natural_fit(p, group):
+                continue
+            f = fit(p, group)
+            if f >= bars[group] * 0.97:
+                extras.append((group, f / max(1.0, bars[group])))
         if not extras:
             continue
         extras.sort(key=lambda e: e[1], reverse=True)
-        groups += [g for g, _ in extras[:2]]
-        picks.append((p.overall + 3 * len(groups), p.name, groups))
+        groups = [own] + [g for g, _ in extras[:2]]
+        # A Seagull is an athlete: at least one of her groups is in the open
+        # field. A lineman who can play both lines is a cover player.
+        if not any(g in OPEN_FIELD for g in groups):
+            continue
+        # Rank by fit across her groups, how many she covers and how
+        # adaptable she is.
+        value = (sum(fit(p, g) for g in groups) / len(groups) + 4 * len(groups)
+                 + 0.2 * adaptability(p))
+        picks.append((value, p.name, groups))
     picks.sort(key=lambda x: (x[0], x[1]), reverse=True)
     return [{"name": name, "groups": groups} for _, name, groups in picks[:max_listed]]
 
@@ -101,7 +108,10 @@ def presnap_foul_scale(name, ctx):
     slide = bool(ctx.get("seagull_slide"))
     jersey = bool(ctx.get("jersey_report"))
     if name == "Illegal Motion":
-        return 0.35 + 0.65 * movers + (0.5 if slide else 0.0)
+        two = len(ctx.get("seagull_line_all") or ()) > 1
+        return 0.35 + 0.65 * movers + (0.5 if slide else 0.0) + (0.4 if two else 0.0)
+    if name == "Illegal Formation":
+        return 1.5 if ctx.get("short_line") else 1.0
     if name == "Illegal Shift":
         return 0.45 + 0.55 * movers
     if name == "False Start":

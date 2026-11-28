@@ -1,22 +1,23 @@
-{# Seagulls: listed players outside the midfield lines, their snaps by role and Viper jersey reports. #}
+{# Seagulls (college only): listed players, their groups and fit, snaps by role and Viper jersey reports. #}
 {% set sg = fr.get('seagulls') %}
 {% if sg and (sg.get('away') or sg.get('home')) %}
 <section aria-labelledby="seagulls-heading">
 <h2 id="seagulls-heading">Seagulls</h2>
 <div style="overflow-x:auto">
 <table>
-<thead><tr><th>Team</th><th>Player</th><th>Listed at</th><th class="num">Viper jersey</th><th class="num">On the line</th><th class="num">Defensive back</th><th class="num">Keeper</th></tr></thead>
+<thead><tr><th>Team</th><th>Player</th><th>Listed at</th><th class="num">Viper jersey</th><th class="num">On the line</th><th class="num">Defensive back</th><th class="num">Keeper</th><th class="num">Defensive line</th></tr></thead>
 <tbody>
 {% for side, team_name in [('away', game.away_team), ('home', game.home_team)] %}
 {% for s in sg.get(side, []) %}
 <tr>
 <td>{{ team_name }}</td>
 <td>{{ s.tag }} {% if oneoff %}{{ s.name }}{% else %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ s.name }}">{{ s.name }}</a>{% endif %}</td>
-<td>{{ s.groups|join(', ') }}</td>
+<td>{% for g in s.groups %}{{ g }}{% if s.fits and g in s.fits %} ({{ s.fits[g]|round|int }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
 <td class="num">{{ s.snaps.get('viper', 0) }}</td>
 <td class="num">{{ s.snaps.get('line', 0) }}</td>
 <td class="num">{{ s.snaps.get('defensive_back', 0) }}</td>
 <td class="num">{{ s.snaps.get('keeper', 0) }}</td>
+<td class="num">{{ s.snaps.get('defensive_line', 0) }}</td>
 </tr>
 {% endfor %}
 {% endfor %}

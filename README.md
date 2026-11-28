@@ -337,11 +337,15 @@ The Viper and the flankers play both ways as midfield lines: the line on the fie
 
 ### Seagull
 
-A Seagull is a player listed on the game sheet as able to play more than one position group. A team may list up to two per game, and any rostered player may be listed. Each is listed with two or three groups and plays at her full rating in them, and at the cover rate, 90% of her rating, anywhere else. A Seagull belongs to no midfield line: she enters and leaves as an individual substitute, and her coach decides how much she plays. She wears the Seagull jersey.
+A Seagull (SG) is a player listed on the game sheet as able to play more than one position group. Seagulls are a college rule, the way the ATH label is a college recruiting idea: high school and professional teams do not list them. A college team may list up to two per game, and any rostered player may be listed. Each is listed with two or three groups and plays at her full rating in them, and at the cover rate, 90% of her rating, anywhere else. A Seagull belongs to no midfield line: she enters and leaves as an individual substitute, and her coach decides how much she plays. She wears the Seagull jersey.
 
 A Seagull listed at Viper may take the Viper jersey from the line's Viper. Before the snap she reports to the Side Judge, who signals the defense, and the line's Viper comes off. She keeps the jersey until she leaves the field, either team calls a timeout or possession changes; then it returns to the line's Viper unless she reports again. The jersey changes players only at a dead ball. A Seagull playing any other group does not report. A Seagull in the Viper jersey without reporting, an unlisted player taking the jersey, or the jersey changing during live play is **Illegal Viper Substitution** (5 yards).
 
-In the engine, coaches list Seagulls from the midfield players off the top line who are as good as the players already in another group: defensive back, Keeper, or flanker for a Viper. Only a Viper is listed at Viper. On defense a Seagull comes on at defensive back or Keeper while she is fresh; on offense she takes the Viper jersey when she is better than the line's Viper, or plays on the line in place of a lineman. Lateral and misdirection offenses put her on the line most, power offenses least. The box score lists each team's Seagulls, their snaps by role, and every Viper jersey report.
+In the engine, coaches list Seagulls by position fit. Every group asks for its own mix of skills, and a player's fit in a group is the weighted average of the ratings that group uses. Each group also has bare minimums on the two skills it cannot do without, and the line groups need size (188 pounds or more) while the open field groups cannot carry too much of it (190 or 192 pounds at most). A player who meets them is a natural fit for the group. Adaptability, worked out from agility, awareness and how even a player's skills are, softens the cost of playing outside her own group. A coach can still play anyone anywhere; fit only decides who he trusts there.
+
+A player is listed in another group when she is a natural fit and her fit is within 3% of the player she would replace: the second midfield line's Viper, weakest flanker or fourth best tackler, the weaker starting Keeper, or the weakest starting lineman. At least one of her groups must be in the open field (Viper, flanker, Keeper or defensive back); a lineman who can play both lines is a cover player. The coach ranks candidates by fit, by how many groups they cover and by adaptability, and lists the top two. The starting Zeroback and the top midfield line are not listed.
+
+On defense a Seagull comes on at defensive back, Keeper or on the defensive line while she is fresh; on offense she takes the Viper jersey when she would play the Viper better than the line's Viper, or plays on the line in place of a lineman. A Seagull listed on the offensive line stays in to block; any other releases. Sometimes both Seagulls play on the line, and only one of them slides. Lateral and misdirection offenses put Seagulls on the line most, power offenses least. In the play by play a Seagull shows as SG, or as VP while she wears the Viper jersey. The box score lists each team's Seagulls, their groups and fit, their snaps by role, and every Viper jersey report.
 
 ---
 
@@ -479,6 +483,10 @@ Exactly one offensive player wears the Viper jersey on each snap. It contrasts c
 One player per snap may move while she is on the line: a Seagull in the Seagull jersey (see [Seagull](#seagull)). She counts toward the minimum on the line, may slide parallel to it before and at the snap but never toward it, and may block or release into the play at the snap. If both of a team's Seagulls are on the line, only one may move, and the offense does not say which. A Seagull moving toward the line is a **False Start**.
 
 When a Seagull takes a lineman's place, the offense has one fewer real blocker: kick passes are protected by four linemen, inside runs lose a little, and the defense cannot tell before the snap whether she will block or release.
+
+### The High School Short Line
+
+High school offenses may line up with three or four on the line. When they do, one or two linemen come off and bench midfielders take their places in the backfield. That gives a lateral chain more handlers and more speed, at the cost of protection and a little on every inside run for each lineman missing. Lateral offenses use the short line most, on about a third of their early down snaps, and power offenses rarely.
 
 ### Positional Freedom After the Snap
 
@@ -760,7 +768,7 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Rouge Hunt** — A defense-first offensive scheme that punts early, pins deep, and scores through pindowns, bells, and safeties.
 
-**Seagull** — A player listed for a game as able to play two or three position groups. She belongs to no midfield line and is the one line player allowed to move before the snap.
+**Seagull (SG)** — A college player listed for a game as able to play two or three position groups. She belongs to no midfield line and is the one line player allowed to move before the snap.
 
 **Snap Kick** — A 5-point drop kick through the uprights during live play. Viperball's signature scoring play.
 

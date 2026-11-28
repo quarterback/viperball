@@ -125,6 +125,11 @@ request.
 
 ## Left for later
 
+Updated after the second run (`aar_2026-11-28_position_fit_short_line_seagull_college.md`):
+items 1, 2, 3 and 5 are done or settled. The short line is built, position fit replaces the
+midfield only listing, two Seagulls can play on the line, and Seagulls are college only, so
+no other game pages need the section. The Fulcrum is still open.
+
 1. The high school line minimum of 3 is in the rules and the engine, but the engine still
    fields five linemen on every snap, so no offense yet uses a short line.
 2. The engine lists Seagulls only from midfield players. The rules allow Zeroback, line and
