@@ -2587,6 +2587,940 @@
       "benefits": "Each pitch toward the sideline gets riskier, and the inside cutback is clogged.",
       "cost": "One defender stays deep on the far side, so straight inside runs and a quick kick across before the trap closes gain more.",
       "counter": "Run straight inside or kick across early."
+    },
+    {
+      "version": 1,
+      "package_id": "fm_switchback",
+      "side": "offense",
+      "name": "Switchback",
+      "summary": "The Wingback and Slotback cross; attack the lane a defender leaves when he follows the wrong man.",
+      "origin_family": "ghost",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "slick_n_slide",
+        "lateral_spread"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "speed_option",
+        "kick_pass",
+        "dive_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "dx_exchange",
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "timing_risk"
+      ],
+      "inspiration": "Canadian backfield crossers and the role swaps of A eleven offenses.",
+      "scenario": "Early downs from a spread look against a defense that plays man on the flankers.",
+      "benefits": "When the two defenders on the cross fail to switch, one trails and the Slotback gets the vacated lane by lateral or a quick kick.",
+      "cost": "A clean switch leaves both men covered and the call becomes an ordinary Zeroback keep or outlet kick.",
+      "counter": "Switch on the cross and keep a man deep behind it."
+    },
+    {
+      "version": 1,
+      "package_id": "fm_twin_trigger",
+      "side": "offense",
+      "name": "Twin Trigger",
+      "summary": "Snap to the Halfback instead of the Zeroback; he carries to the soft side or kicks.",
+      "origin_family": "mismatch",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "slick_n_slide",
+        "lateral_spread"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "sweep_option",
+        "kick_pass",
+        "dive_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "swarm",
+        "dx_edge_anchor"
+      ],
+      "tradeoffs": [
+        "bad_snap",
+        "weaker_kicker"
+      ],
+      "inspiration": "A eleven style doubt about who the distributor is, inside Viperball's legal snap.",
+      "scenario": "Early downs when the Halfback is fresh and the defense keys the Zeroback.",
+      "benefits": "The defense has to account for a second distributor. A soft weak side gets the Halfback on a sweep; a covered one gets his kick.",
+      "cost": "A snap to anyone but the Zeroback goes wrong more often, and the Halfback usually kicks worse than the Zeroback.",
+      "counter": "Contain both backs without spending an extra defender."
+    },
+    {
+      "version": 1,
+      "package_id": "fm_false_lead",
+      "side": "offense",
+      "name": "False Lead",
+      "summary": "The Viper threatens one edge; if the defense overplays it, counter the other way, otherwise kick to the Wingback's seam.",
+      "origin_family": "ghost",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "slick_n_slide",
+        "lateral_spread"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "counter",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "drift",
+        "dx_exchange"
+      ],
+      "tradeoffs": [
+        "wasted_decoy"
+      ],
+      "inspiration": "Australian football dummy leads and Canadian motion that drags a defense to one side.",
+      "scenario": "Early downs against a defense that chases the Viper.",
+      "benefits": "A defense that loads the Viper's side or sends pressure gets the counter on the side it left.",
+      "cost": "A disciplined defense ignores the decoy, and the play becomes a short kick.",
+      "counter": "Hold the backside and let the Viper go."
+    },
+    {
+      "version": 1,
+      "package_id": "fm_anchor_release",
+      "side": "offense",
+      "name": "Anchor Release",
+      "summary": "Under pressure, a lineman releases after his block and takes a lateral; otherwise run behind the line.",
+      "origin_family": "stampede",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "slick_n_slide",
+        "lateral_spread"
+      ],
+      "formation_tags": [
+        "tight"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "power"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "short_yardage",
+        "drive_building"
+      ],
+      "countered_by": [
+        "blitz_pack",
+        "dx_stagger"
+      ],
+      "tradeoffs": [
+        "low_handling"
+      ],
+      "inspiration": "Rugby forwards who carry and the eligible lineman tricks of Canadian football.",
+      "scenario": "Short yardage and drive building against a defense that blitzes.",
+      "benefits": "A blitz leaves the lineman's lane empty, so the Zeroback laterals to him behind the rush.",
+      "cost": "A lineman's hands make the lateral riskier, and against no pressure it is a plain inside run.",
+      "counter": "Rush the lane the lineman vacates and tackle him on the catch."
+    },
+    {
+      "version": 1,
+      "package_id": "fm_mirror_flood",
+      "side": "offense",
+      "name": "Mirror Flood",
+      "summary": "Put three receivers on one side and kick to one; if the defense loads that side, go to the Halfback alone on the other.",
+      "origin_family": "lateral_spread",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "slick_n_slide",
+        "lateral_spread"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "sweep_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "long_yardage"
+      ],
+      "countered_by": [
+        "lockdown",
+        "dx_slide_replace"
+      ],
+      "tradeoffs": [
+        "weak_side_isolation"
+      ],
+      "inspiration": "Soccer overloads that switch play once the defense shifts across.",
+      "scenario": "Drive building and long yardage downs with three fast receivers.",
+      "benefits": "The flood stretches one side. A defense that overloads it leaves the Halfback one on one on the other side, and the next flood mirrors to the side it left.",
+      "cost": "Only one kick pass is allowed, and pressure on the Zeroback hurts a three receiver look.",
+      "counter": "Play balanced coverage deep and under on both sides."
+    },
+    {
+      "version": 1,
+      "package_id": "ph_pullback",
+      "side": "offense",
+      "name": "Pullback",
+      "summary": "The Halfback threatens the middle and pulls the ball back to the Slotback behind him, or the Zeroback kicks over a packed box.",
+      "origin_family": "ground_control",
+      "compatible_families": [
+        "ground_control",
+        "slick_n_slide",
+        "lateral_spread",
+        "mousetrap",
+        "six_shooter"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "kick_pass",
+        "dive_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "fortress",
+        "dx_stagger"
+      ],
+      "tradeoffs": [
+        "extra_transfer"
+      ],
+      "inspiration": "Rugby league lead runners with a pull back to a second receiver.",
+      "scenario": "Early downs against a defense crowding the middle.",
+      "benefits": "A stacked box sees the ball leave the middle; a balanced front gets a quick kick, and pressure gets a safe Halfback carry.",
+      "cost": "The pull back is an extra transfer that can be dropped or picked off.",
+      "counter": "Hold the middle and the edge depth, and pressure the receiver of the pull back."
+    },
+    {
+      "version": 1,
+      "package_id": "ph_short_side_strike",
+      "side": "offense",
+      "name": "Short Side Strike",
+      "summary": "With the ball on a hash, attack the short side when the defense leaves it light.",
+      "origin_family": "slick_n_slide",
+      "compatible_families": [
+        "ground_control",
+        "slick_n_slide",
+        "lateral_spread",
+        "mousetrap",
+        "six_shooter"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "speed_option",
+        "sweep_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "swarm",
+        "dx_channel_press"
+      ],
+      "tradeoffs": [
+        "sideline_risk"
+      ],
+      "inspiration": "Rugby league short side raids off a ruck near the touchline.",
+      "scenario": "Any early down that starts on a hash.",
+      "benefits": "Defenses shade to the wide side. When the short side has fewer defenders than its share, a lateral to the Viper or a sweep gets there first.",
+      "cost": "Less room to run before the sideline. In the middle of the field, or with the short side covered, it hands the call back.",
+      "counter": "Keep boundary contain on every snap from a hash."
+    },
+    {
+      "version": 1,
+      "package_id": "rl_wall_return",
+      "side": "offense",
+      "name": "Wall Return",
+      "summary": "Lateral to the Halfback and take it back if his defender jumps him.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "lateral_spread",
+        "mismatch",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "drift",
+        "dx_stagger"
+      ],
+      "tradeoffs": [
+        "double_handling"
+      ],
+      "inspiration": "The soccer wall pass and Gaelic give and go.",
+      "scenario": "Early downs with a Zeroback who can run.",
+      "benefits": "A defender who commits to the Halfback leaves the Zeroback free on the return.",
+      "cost": "Two transfers in one play double the handling risk; a patient defender makes the Halfback keep it.",
+      "counter": "Stagger the coverage so someone waits for the return."
+    },
+    {
+      "version": 1,
+      "package_id": "rl_up_back_across",
+      "side": "offense",
+      "name": "Up Back Across",
+      "summary": "Kick to the Wingback, back to the Slotback and on to the Halfback if the lane closes.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "lateral_spread",
+        "mismatch",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "dx_stagger",
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "lateral_turnover"
+      ],
+      "inspiration": "The soccer third player run: up, back and across.",
+      "scenario": "Drive building between the twenties.",
+      "benefits": "Moves the ball across the defense after the catch. The Wingback holds it when tackled at once, so the lateral only goes with time.",
+      "cost": "Each lateral after the catch can be picked off or dropped, and only one kick pass is allowed.",
+      "counter": "Cover the second layer behind the catch."
+    },
+    {
+      "version": 1,
+      "package_id": "rl_safe_outlet",
+      "side": "offense",
+      "name": "Safe Outlet",
+      "summary": "Against pressure, take the lower risk outlet: a quick kick or a short lateral to a back.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "lateral_spread",
+        "mismatch",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "speed_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "pending_bonus",
+        "drive_building"
+      ],
+      "countered_by": [
+        "blitz_pack",
+        "dx_channel_press"
+      ],
+      "tradeoffs": [
+        "low_gain"
+      ],
+      "inspiration": "Soccer outlet passes that beat a press.",
+      "scenario": "Drive building or a pending bonus possession against pressure.",
+      "benefits": "Picks the outlet with the lower turnover risk from the Zeroback's kicking and the back's hands. Without pressure it hands the call back.",
+      "cost": "Short gains; a defense that covers the shallow lane takes the outlet away.",
+      "counter": "Cover the shallow lane and press with control."
+    },
+    {
+      "version": 1,
+      "package_id": "cf_slip_cross",
+      "side": "offense",
+      "name": "Slip Cross",
+      "summary": "The Viper and Slotback cross at different depths; kick to the Slotback if his defender fails to switch.",
+      "origin_family": "mousetrap",
+      "compatible_families": [
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "dive_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "dx_exchange",
+        "shadow"
+      ],
+      "tradeoffs": [
+        "timing_risk"
+      ],
+      "inspiration": "Lacrosse two man games and handball crossings, with no screens or picks.",
+      "scenario": "Early downs against man coverage.",
+      "benefits": "A missed switch leaves the Slotback's defender trailing, and the quick kick goes to him.",
+      "cost": "A defense that switches cleanly gets an ordinary inside run.",
+      "counter": "Talk through the cross: switch or stay."
+    },
+    {
+      "version": 1,
+      "package_id": "cf_pivot_turn",
+      "side": "offense",
+      "name": "Pivot Turn",
+      "summary": "The Zeroback attacks the edge with the Halfback trailing; pitch to the Halfback if the edge defender steps to the Zeroback.",
+      "origin_family": "ghost",
+      "compatible_families": [
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "dx_edge_anchor",
+        "swarm"
+      ],
+      "tradeoffs": [
+        "slow_play"
+      ],
+      "inspiration": "The handball pivot who turns and feeds a teammate behind.",
+      "scenario": "Early downs with a Zeroback the defense has to respect as a runner.",
+      "benefits": "The edge defender has to choose. Step toward the Zeroback and the Halfback gets the pitch; stay home and the Zeroback keeps.",
+      "cost": "Slow to develop, and a help defender held inside takes both away.",
+      "counter": "Keep a help defender inside and play the pitch."
+    },
+    {
+      "version": 1,
+      "package_id": "cf_double_clear",
+      "side": "offense",
+      "name": "Double Clear",
+      "summary": "Two decoys run opposite ways; the Viper goes through the seam they open or catches a quick kick.",
+      "origin_family": "mismatch",
+      "compatible_families": [
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "viper_jet",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "dx_stagger",
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "light_protection"
+      ],
+      "inspiration": "Lacrosse clears that pull defenders out of the middle.",
+      "scenario": "Early downs with a fast Viper.",
+      "benefits": "A defender who follows a decoy leaves his side short, and the Viper runs at that side.",
+      "cost": "Two decoys are not blocking. Layered zone coverage that does not chase gives the Viper only a short kick.",
+      "counter": "Play zone with layered cover and let decoys go."
+    },
+    {
+      "version": 1,
+      "package_id": "cf_handoff_punish",
+      "side": "offense",
+      "name": "Handoff Punish",
+      "summary": "After a switch puts a slower defender on a faster receiver, kick to that receiver against him.",
+      "origin_family": "mousetrap",
+      "compatible_families": [
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "late_downs"
+      ],
+      "countered_by": [
+        "dx_set_breaker",
+        "shadow"
+      ],
+      "tradeoffs": [
+        "noisy_scouting"
+      ],
+      "inspiration": "Lacrosse and handball attacks that hunt the mismatch a switch creates.",
+      "scenario": "Any down once the defense has switched on a cross earlier in the game.",
+      "benefits": "Uses what the defense showed: the receiver who drew a slower defender on an earlier switch gets the ball against that same defender.",
+      "cost": "Needs earlier switches to scout; without that evidence it hands the call back.",
+      "counter": "Reassign after a switch and bring help to the mismatch."
+    },
+    {
+      "version": 1,
+      "package_id": "cf_same_look_reverse",
+      "side": "offense",
+      "name": "Same Look Reverse",
+      "summary": "Show the Pivot Turn look, then run the counter back the other way from the same look.",
+      "origin_family": "ghost",
+      "compatible_families": [
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "speed_option",
+        "counter"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "dx_set_breaker",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "uses_downs"
+      ],
+      "inspiration": "Pairing one look with two answers, a staple of every code.",
+      "scenario": "Early downs on a drive where the first look has been run.",
+      "benefits": "The defense that flows to the first look's side meets the counter on the next snap.",
+      "cost": "The first snap is an ordinary edge run, and a defense that stays home on the backside takes the counter away.",
+      "counter": "Keep the backside home and read the counter."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_exchange",
+      "side": "defense",
+      "name": "Exchange",
+      "summary": "Two defenders trade men when receivers cross, and stay when they do not.",
+      "origin_family": "lockdown",
+      "compatible_families": [
+        "lockdown",
+        "chaos",
+        "shadow"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "fm_false_lead",
+        "cf_same_look_reverse"
+      ],
+      "tradeoffs": [
+        "fake_cross_risk",
+        "lighter_box"
+      ],
+      "inspiration": "Lacrosse and handball switching on two man actions.",
+      "scenario": "Against an offense that has crossed its receivers this game.",
+      "benefits": "A practiced switch covers both crossers, so Switchback and Slip Cross lose the trailing defender.",
+      "cost": "The switch can trade onto a decoy, so fakes like False Lead and Same Look Reverse find a man short, and a quick run up the middle gains more.",
+      "counter": "Fake the cross or run straight inside."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_stagger",
+      "side": "defense",
+      "name": "Stagger",
+      "summary": "Keep defenders at three depths so the second runner behind a catch or a lateral is covered.",
+      "origin_family": "drift",
+      "compatible_families": [
+        "drift",
+        "lockdown"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "drive_building",
+        "late_downs"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "ph_pullback"
+      ],
+      "tradeoffs": [
+        "light_box"
+      ],
+      "inspiration": "Soccer counterpress cover: stagger depth and secure behind.",
+      "scenario": "Against an offense that uses a runner behind the catch or a long lateral chain.",
+      "benefits": "Laterals after the first and the lateral after a kick catch are picked off more often.",
+      "cost": "Three depths leave the box light, so inside runs gain more.",
+      "counter": "Run inside before the layers matter."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_edge_anchor",
+      "side": "defense",
+      "name": "Edge Anchor",
+      "summary": "Hold one box defender on the weak edge while the rest tackle inside.",
+      "origin_family": "swarm",
+      "compatible_families": [
+        "swarm",
+        "fortress"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "counter",
+        "sweep_option",
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "fm_twin_trigger"
+      ],
+      "tradeoffs": [
+        "thinner_inside_wall"
+      ],
+      "inspiration": "Rugby defenses that keep a winger home on the short side.",
+      "scenario": "Early downs against offenses that cut back or switch to the weak side.",
+      "benefits": "A real defender waits on the weak edge, so counters and hooks back to that side run into him.",
+      "cost": "The box is a man lighter, so power and dive runs gain more.",
+      "counter": "Run straight at the thinner middle."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_slide_replace",
+      "side": "defense",
+      "name": "Slide and Replace",
+      "summary": "When a runner beats the first defender, the next one slides over to take the ball path.",
+      "origin_family": "shadow",
+      "compatible_families": [
+        "shadow",
+        "rotation"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "speed_option",
+        "sweep_option",
+        "viper_jet"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "deep_conditioning"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "fm_mirror_flood",
+        "shock_and_awe"
+      ],
+      "tradeoffs": [
+        "far_channel_open",
+        "fatigue"
+      ],
+      "inspiration": "Lacrosse help rotations that replace a beaten defender.",
+      "scenario": "Against an offense that has broken long runs this game.",
+      "benefits": "A run past the first defender meets a help defender, who can cut the gain short and gets the tackle if he does.",
+      "cost": "Every slide tires the helper and leaves the far channel thinner, so long kicks across the field gain.",
+      "counter": "Kick to the far side the slide leaves open."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_channel_press",
+      "side": "defense",
+      "name": "Channel Press",
+      "summary": "Press the distributor toward the boundary and deny the near outlet.",
+      "origin_family": "blitz_pack",
+      "compatible_families": [
+        "blitz_pack",
+        "keeper_hunt"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "long_yardage"
+      ],
+      "countered_by": [
+        "afl_boundary_switch",
+        "rl_safe_outlet"
+      ],
+      "tradeoffs": [
+        "far_side_switch",
+        "interior_run"
+      ],
+      "inspiration": "The soccer and field hockey press that channels play toward the touchline.",
+      "scenario": "Against a spread offense that kicks often.",
+      "benefits": "More rushers on the distributor and an extra defender on the wide side make the quick kick and the short lateral harder.",
+      "cost": "A defender leaves the box, so interior runs gain more, and a kick across to the far side beats the press.",
+      "counter": "Switch the ball across or run inside."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_transition_net",
+      "side": "defense",
+      "name": "Transition Net",
+      "summary": "When the ball is turned over live, the nearest players tackle and the rest recover their depth.",
+      "origin_family": "rotation",
+      "compatible_families": [
+        "rotation",
+        "drift"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "deep_conditioning"
+      ],
+      "situation_tags": [
+        "after_takeaway"
+      ],
+      "countered_by": [
+        "lax_fast_break",
+        "ec_quick_kick_chain"
+      ],
+      "tradeoffs": [
+        "fewer_return_blockers"
+      ],
+      "inspiration": "Soccer counterpressing in the moments after losing the ball.",
+      "scenario": "A standing assignment for every live turnover, not a snap call.",
+      "benefits": "Interception returns against this team are shorter, and its line changes during a live turnover are caught out less often.",
+      "cost": "Players trained to recover depth block less on this team's own interception returns.",
+      "counter": "Turn it over dead, or break the return before the net sets."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_cross_rush",
+      "side": "defense",
+      "name": "Cross Rush",
+      "summary": "Two rushers trade lanes at the snap; a missed pass off lets one through untouched.",
+      "origin_family": "blitz_pack",
+      "compatible_families": [
+        "blitz_pack",
+        "chaos"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "late_downs",
+        "long_yardage"
+      ],
+      "countered_by": [
+        "rl_safe_outlet",
+        "ground_control"
+      ],
+      "tradeoffs": [
+        "delayed_rush",
+        "draw_lane"
+      ],
+      "inspiration": "Canadian football twists and stunts.",
+      "scenario": "Later downs against a kicking offense.",
+      "benefits": "When the two blockers fail to pass off the crossing rushers, the rush comes free and pressures the kick.",
+      "cost": "A clean pass off makes the rush late, and the draw lane opens.",
+      "counter": "Pass off the twist and run the draw."
+    },
+    {
+      "version": 1,
+      "package_id": "dx_set_breaker",
+      "side": "defense",
+      "name": "Set Breaker",
+      "summary": "Commit on later downs to what this offense has run after its last call, to break its script.",
+      "origin_family": "fortress",
+      "compatible_families": [
+        "fortress",
+        "swarm",
+        "chaos"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "strong_defense"
+      ],
+      "situation_tags": [
+        "late_downs"
+      ],
+      "countered_by": [
+        "cf_same_look_reverse",
+        "mismatch"
+      ],
+      "tradeoffs": [
+        "guess_exposure"
+      ],
+      "inspiration": "Opponent planning that reads a sequence and takes the payoff away.",
+      "scenario": "Later downs once the offense has shown a pattern this game.",
+      "benefits": "When the guess is right the predicted family meets a defense built for it.",
+      "cost": "It only sees the pattern, never the call. When the offense breaks pattern, everything else gains a little more.",
+      "counter": "Break your own pattern."
     }
   ]
 }

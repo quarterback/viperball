@@ -101,19 +101,27 @@
     // Group the list so each set of concepts reads on its own.
     const crossCode = new Set(["gaelic_kick_and_follow", "afl_boundary_switch",
       "rugby_carry_release", "ball_protect_bonus", "cfl_corner_chase"]);
+    // The clinic's cross code books each get their own group (engine/cross_code.py).
+    const books = { fm: "free", ph: "phase", rl: "relay", cf: "crossfire", dx: "crossdefense" };
     const groupOf = (id) => id.startsWith("cape_cod_") ? "cape"
       : crossCode.has(id) ? "cross"
-      : id.startsWith("clinic_") ? "clinic"
-      : /^(pp|pko|pk)_/.test(id) ? "delta" : "base";
+      : books[id.split("_")[0]] || (id.startsWith("clinic_") ? "clinic"
+      : /^(pp|pko|pk)_/.test(id) ? "delta" : "base");
     const groupNames = {
       base: "Base packages",
       cape: "Cape Cod",
       cross: "Cross code concepts",
+      free: "Free Motion",
+      phase: "Phase Attack",
+      relay: "Relay",
+      crossfire: "Crossfire",
+      crossdefense: "Cross code answers",
       clinic: "Clinic concepts",
       delta: side.value === "defense" ? "Delta penalty kill" : "Delta power play and penalty kill exits",
     };
     const grouped = [];
-    for (const group of ["cape", "cross", "base", "clinic", "delta"]) {
+    for (const group of ["cape", "cross", "free", "phase", "relay", "crossfire", "crossdefense",
+                         "base", "clinic", "delta"]) {
       const members = rows.filter((row, i) => groupOf(ids[i]) === group);
       if (!members.length) continue;
       const heading = document.createElement("h4");

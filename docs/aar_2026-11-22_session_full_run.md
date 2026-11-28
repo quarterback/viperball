@@ -243,6 +243,11 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 58. **Cape Cod and cross code concepts get their own groups** (November 28). The Playbooks
     page listed them under Base packages. → `aar_2026-11-28_cookbook_concept_groups.md`
 
+59. **The rest of the cross code books** (November 28). Fifteen offensive calls from Free
+    Motion, Phase Attack, Relay and Crossfire and the eight defensive answers, each read from
+    the defense's look and actual player contests; on the Playbooks page and the game page.
+    → `aar_2026-11-28_cross_code_books.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
