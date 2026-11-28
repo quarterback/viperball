@@ -999,7 +999,8 @@ class Dynasty:
                 from engine.position_staff import instruction
                 report = apply_team_development(cards, rng=dev_rng, dev_boost=team_dev_boost,
                     position_boosts={p.position:position_boost(unit_staff,p.position) for p in cards},
-                    position_instructions={p.position:instruction(unit_staff,p.position) for p in cards})
+                    position_instructions={p.position:instruction(unit_staff,p.position,
+                        getattr(season,"style_configs",{}).get(team_name,{})) for p in cards})
                 for ev in report.notable_events:
                     dev_events.append({
                         "team": team_name,
