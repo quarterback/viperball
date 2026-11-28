@@ -98,7 +98,9 @@ def test_corner_chase_dispatches_through_the_sixth_down_decision(monkeypatch):
     assert play.special_teams_event["placement"] == "corner"
     assert play.special_teams_event["coverage_runner"]
 
+    # Trailing in the fourth quarter a punt gives the game away (punting.py).
     game.state.possession = "home"
+    game.state.quarter = 4
     game.state.away_score = game.state.home_score + 1
     game.state.down = 6
     game.state.yards_to_go = 12
