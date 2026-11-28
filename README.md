@@ -335,6 +335,14 @@ Keeper archetypes:
 
 The Viper and the flankers play both ways as midfield lines: the line on the field plays offense, and its four best tacklers play defensive back when the other team has the ball (see [Rotations](#rotations)). Flankers also frequently serve as kick coverage specialists.
 
+### Seagull
+
+A Seagull is a player listed on the game sheet as able to play more than one position group. A team may list up to two per game, and any rostered player may be listed. Each is listed with two or three groups and plays at her full rating in them, and at the cover rate, 90% of her rating, anywhere else. A Seagull belongs to no midfield line: she enters and leaves as an individual substitute, and her coach decides how much she plays. She wears the Seagull jersey.
+
+A Seagull listed at Viper may take the Viper jersey from the line's Viper. Before the snap she reports to the Side Judge, who signals the defense, and the line's Viper comes off. She keeps the jersey until she leaves the field, either team calls a timeout or possession changes; then it returns to the line's Viper unless she reports again. The jersey changes players only at a dead ball. A Seagull playing any other group does not report. A Seagull in the Viper jersey without reporting, an unlisted player taking the jersey, or the jersey changing during live play is **Illegal Viper Substitution** (5 yards).
+
+In the engine, coaches list Seagulls from the midfield players off the top line who are as good as the players already in another group: defensive back, Keeper, or flanker for a Viper. Only a Viper is listed at Viper. On defense a Seagull comes on at defensive back or Keeper while she is fresh; on offense she takes the Viper jersey when she is better than the line's Viper, or plays on the line in place of a lineman. Lateral and misdirection offenses put her on the line most, power offenses least. The box score lists each team's Seagulls, their snaps by role, and every Viper jersey report.
+
 ---
 
 ## Kicking
@@ -444,17 +452,33 @@ A lateral or kick pass that goes out of bounds is dead at the sideline. If a lat
 
 ## Formations and Motion
 
-### Pre-Snap Requirements
+### The Line
 
-The offense must have at least **five players on the line of scrimmage** at the time of the snap. The remaining six players may be positioned anywhere behind the line.
+At the snap the offense must have a minimum number of players on the line: **three in high school and five in college and professional play**. Any players may fill the line. Line players must be set for one full second before the snap and must not move at the snap, except the Seagull (below). Fewer than the minimum on the line is **Illegal Formation** (5 yards).
 
-### The Viper Alignment
+Every other offensive player lines up at least one yard behind the line and is a backfield player.
 
-The Viper is permitted to line up in any position on the offensive side of the ball — on the line, in the backfield, on either edge, or in motion. However, the Viper must be **set for one full second** before the snap unless they are the single player in legal pre-snap motion. An **Illegal Viper Alignment** penalty (5 yards) is called when the Viper is not properly set or when multiple players are in motion at the snap.
+### Motion
 
-### Pre-Snap Motion
+Viperball uses Canadian style motion:
 
-One player may be in motion at the time of the snap, provided they are moving **parallel to or away from** the line of scrimmage (not toward it). The Viper is the most common motion player, but any eligible player may go in motion.
+- Any number of backfield players may be in motion at the snap, in any direction, including toward the line, as long as each is behind the line when the ball is snapped.
+- The player taking the snap must be set for one full second.
+- A player may move between the line and the backfield before the snap but must settle at least one full second before it.
+
+**Illegal Motion** (5 yards): a line player other than the Seagull moves after she is set, two Seagulls on the line move on one snap, a moving player is on or past the line at the snap, or the player taking the snap is moving. **Illegal Shift** (5 yards): a player moves between the line and the backfield within one second of the snap.
+
+A player in motion at the snap gets a running start. On runs she gains a little more ground when she carries, most on perimeter plays, and on kick passes she is a little easier to hit. A Viper in motion finishes on the side that suits the call, unless the defense bumps or rotates with her; coordinators with better instincts adjust more often. Motion fouls happen more often the more players move.
+
+### The Viper Jersey
+
+Exactly one offensive player wears the Viper jersey on each snap. It contrasts clearly with the rest of the team's uniforms, and whoever wears it is the Viper for that snap. The Viper may line up anywhere. In the backfield she may be in motion like any backfield player; on the line she counts as a line player and must be still. No Viper jersey on the field at the snap, or more than one, is **Missing Viper Jersey** (5 yards).
+
+### The Seagull on the Line
+
+One player per snap may move while she is on the line: a Seagull in the Seagull jersey (see [Seagull](#seagull)). She counts toward the minimum on the line, may slide parallel to it before and at the snap but never toward it, and may block or release into the play at the snap. If both of a team's Seagulls are on the line, only one may move, and the offense does not say which. A Seagull moving toward the line is a **False Start**.
+
+When a Seagull takes a lineman's place, the offense has one fewer real blocker: kick passes are protected by four linemen, inside runs lose a little, and the defense cannot tell before the snap whether she will block or release.
 
 ### Positional Freedom After the Snap
 
@@ -539,13 +563,13 @@ Targeting, fighting and throwing a punch require ejection. A second qualifying u
 A standard CVL officiating crew consists of:
 
 - **Referee** — Final authority on all calls
-- **Umpire** — Watches the line of scrimmage
+- **Umpire** — Watches the line of scrimmage, including a Seagull moving along it
 - **Head Linesman** — Manages the down markers and sideline
 - **Line Judge** — Opposite sideline, watches for out-of-bounds
 - **Back Judge** — Deep field, rules on kicks through the uprights and deep plays
-- **Side Judge** — Watches the Viper position for alignment violations and illegal contact
+- **Side Judge** — Watches the Viper jersey, takes Seagull reports and signals them to the defense, watches backfield motion at the snap, and watches contact on the Viper
 
-The sixth official (Side Judge) is unique to Viperball and exists because the Viper position's pre-snap freedom creates officiating challenges not found in other gridiron sports.
+The sixth official (Side Judge) is unique to Viperball and exists because the Viper's pre snap freedom and the Seagull need their own official. The Umpire judges whether a sliding Seagull moved parallel to the line or toward it, and like every official can miss what she does not see.
 
 Officials do not flag every foul. A foul that happens can be called, let go because it did not affect the play (holding away from the ball, a word after the whistle instead of a flag), or missed. Fouls in plain view, such as false starts and forward laterals, are almost always flagged; holding and coverage contact are flagged mostly when they affect the play. Crews differ in how tightly they call a game, a crew that leans toward the home side misses a few more home fouls on close calls, and late in a close fourth quarter officials let more judgment calls go. Crews also throw the occasional flag for a foul that did not happen. College crews are less accurate on average than pro crews and spread much further apart, in accuracy, in how tightly they call a game and in home lean, because there are far more of them with less training and review; high school crews spread further still. The box score shows each game's flags, fouls let go, missed calls and bad flags.
 
@@ -609,6 +633,7 @@ Substitution is unlimited and allowed at any time, including during live play, s
 - **Anchors.** The Zeroback and the two Keepers stay on almost all game.
 - **The offensive line** is a set five that rarely changes.
 - **The defensive line** rotates heavily, one player at a time.
+- **Seagulls.** A listed Seagull plays outside the lines: at defensive back or Keeper on defense while she is fresh, and in the Viper jersey or on the line on offense (see [Seagull](#seagull)).
 - **Cover.** When a team runs out of fresh defensive linemen, a spare offensive lineman fills in; a bench midfielder can fill in at Keeper. A player covering another group plays at 90% of her rating.
 
 A tired player or line comes off only if a fresh replacement would play about as well as the tired one can right now, so deep teams rotate more and thin teams ride their starters. Coaches ride starters longer in a close fourth quarter, and every mark depends on the players' work rate, so the whole team never changes at once.
@@ -735,11 +760,15 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Rouge Hunt** — A defense-first offensive scheme that punts early, pins deep, and scores through pindowns, bells, and safeties.
 
+**Seagull** — A player listed for a game as able to play two or three position groups. She belongs to no midfield line and is the one line player allowed to move before the snap.
+
 **Snap Kick** — A 5-point drop kick through the uprights during live play. Viperball's signature scoring play.
 
 **Triple Threat** — An offensive scheme using single-wing misdirection with direct snaps to multiple players.
 
 **Viper** — A versatile skill player who lines up in various positions and moves before the snap. Unique to Viperball.
+
+**Viper jersey** — The contrasting jersey that marks the one Viper on each snap.
 
 **YAC** — Yards after catch. Distance gained by a receiver after catching a kick pass.
 

@@ -2072,7 +2072,6 @@ PENALTY_CATALOG = {
         {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
         {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
         {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.002},
-        {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.003},
         {"name": "Illegal Motion", "yards": 5, "on": "offense", "prob": 0.003},
         {"name": "Illegal Snap", "yards": 5, "on": "offense", "prob": 0.001},
         {"name": "Illegal Defensive Formation", "yards": 5, "on": "defense", "prob": 0.002},
@@ -2081,8 +2080,6 @@ PENALTY_CATALOG = {
         {"name": "Disconcerting Signals", "yards": 5, "on": "defense", "prob": 0.002},
         {"name": "Player Out of Bounds at Snap", "yards": 5, "on": "either", "prob": 0.001},
         {"name": "Illegal Viper Substitution", "yards": 5, "on": "offense", "prob": 0.001},
-        {"name": "Illegal Numbering", "yards": 5, "on": "offense", "prob": 0.001},
-        {"name": "Illegal Formation (Numbering Exception)", "yards": 5, "on": "offense", "prob": 0.001},
     ],
     # ── DURING PLAY: RUN ─────────────────────────────────────────────
     "during_play_run": [
@@ -4162,6 +4159,19 @@ class ViperballEngine:
         # (engine/officiating.py LEVELS).
         from engine.officiating import apply_level as _apply_officiating_level
         _apply_officiating_level(self.referee_crew, officiating_level)
+        # Rulebook v2.1: line minimum by level, backfield motion, the Viper
+        # jersey and the Seagull (engine/presnap.py).
+        from engine.presnap import LINE_MINIMUM as _LINE_MINIMUM
+        self.officiating_level = officiating_level
+        self.line_minimum = _LINE_MINIMUM.get(officiating_level, 5)
+        self._seagulls = {}            # side -> {name: groups}, listed pregame
+        self._seagull_roles = {"home": {"offense": None, "defense": None},
+                               "away": {"offense": None, "defense": None}}
+        self._seagull_snaps = {"home": {}, "away": {}}
+        self._seagull_jersey_key = {"home": None, "away": None}
+        self._presnap_ctx = None
+        self._last_snap_offense = None
+        self.seagull_log = []
         self.seed = seed
         # Credit assignment does not consume the physical contest RNG.
         self._rush_credit_rng = random.Random(
@@ -5867,7 +5877,8 @@ class ViperballEngine:
         if cache is None:
             cache = self._lineup_cache = {}
         unavail = set(unavail) | self._ejected_names(team)
-        key = (id(team), side, frozenset(unavail))
+        sg_role = (getattr(self, "_seagull_roles", None) or {}).get(self._side_key(team), {}).get(side)
+        key = (id(team), side, frozenset(unavail), sg_role)
         if key in cache:
             return cache[key]
         profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
@@ -5911,6 +5922,8 @@ class ViperballEngine:
             for p in pool[:missing]:
                 on.append((p,group))
                 taken.add(p.name)
+        if sg_role:
+            on = self._apply_seagull(team, on, side, sg_role, unavail)
         cache[key] = on
         return on
 
@@ -5948,10 +5961,264 @@ class ViperballEngine:
         if key in cache:
             return cache[key]
         n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
-        lines = build_midfield_lines([p for p in team.players if p.name not in hard],
+        # A Seagull belongs to no midfield line.
+        seagulls = self._seagull_listing(team)
+        lines = build_midfield_lines([p for p in team.players if p.name not in hard
+                                      and p.name not in seagulls],
                                      self._depth_score, n_lines)
         cache[key] = lines
         return lines
+
+    # ── Seagull (rulebook v2.1, sections 11 and 13) ──────────────────
+
+    def _seagull_listing(self, team) -> dict:
+        """The team's listed Seagulls for this game: {name: [groups]}.
+        The coach lists them the first time the lineup is built."""
+        if not V2_ENGINE_CONFIG.get("seagull_enabled", True):
+            return {}
+        listed = getattr(self, "_seagulls", None)
+        if listed is None:
+            listed = self._seagulls = {}
+        sk = self._side_key(team)
+        if sk in listed:
+            return listed[sk]
+        from engine.presnap import list_seagulls
+        out = self._hard_out(team) | self._ejected_names(team)
+        avail = [p for p in team.players if p.name not in out]
+        n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+        lines = build_midfield_lines(avail, self._depth_score, n_lines)
+        on_lines = {p.name for l in lines for p in l}
+        bench = [p for p in avail if p.position in ("Viper", "Halfback", "Wingback", "Slotback")
+                 and p.name not in on_lines]
+        keepers = sorted((p for p in avail if p.position == "Keeper"),
+                         key=lambda p: self._depth_score(p, "Keeper"), reverse=True)
+        picks = list_seagulls(lines, bench, keepers, _tackle_score)
+        listed[sk] = {s["name"]: s["groups"] for s in picks}
+        self._seagull_snaps.setdefault(sk, {})
+        for s in picks:
+            self._seagull_snaps[sk][s["name"]] = {"viper": 0, "line": 0, "defensive_back": 0, "keeper": 0}
+        return listed[sk]
+
+    def _seagull_player(self, team, name):
+        return next((p for p in team.players if p.name == name), None)
+
+    def _apply_seagull(self, team, on, side, role, unavail):
+        """Put the Seagull into the slot her role takes for this snap."""
+        name, kind = role
+        sg = self._seagull_player(team, name)
+        if sg is None or name in unavail or any(p.name == name for p, _ in on):
+            return on
+        on = list(on)
+        idx = None
+        if side == "offense" and kind == "viper":
+            idx = next((i for i, (p, g) in enumerate(on) if g == "Midfield" and p.position == "Viper"), None)
+            new_role = "Midfield"
+        elif side == "offense" and kind == "line":
+            ol = [(i, p) for i, (p, g) in enumerate(on) if g == "Offensive Line"]
+            if ol:
+                idx = min(ol, key=lambda x: x[1].power * 0.5 + x[1].awareness * 0.3 + x[1].agility * 0.2)[0]
+            new_role = "Seagull"
+        elif side == "defense" and kind == "defensive_back":
+            dbs = [(i, p) for i, (p, g) in enumerate(on) if g == "Midfield"]
+            if dbs:
+                idx = min(dbs, key=lambda x: _tackle_score(x[1]))[0]
+            new_role = "Midfield"
+        elif side == "defense" and kind == "keeper":
+            ks = [(i, p) for i, (p, g) in enumerate(on) if g == "Keeper"]
+            if ks:
+                idx = min(ks, key=lambda x: x[1].game_energy)[0]
+            new_role = "Keeper"
+        if idx is None:
+            return on
+        on[idx] = (sg, new_role)
+        return on
+
+    def _set_seagull_roles(self, off_team, def_team):
+        """Coach decisions for this snap: whether a Seagull takes the Viper
+        jersey or a line spot on offense, or a DB or Keeper spot on defense.
+        Returns (jersey_report, seagull on the line or None)."""
+        if not V2_ENGINE_CONFIG.get("seagull_enabled", True):
+            return False, None
+        off_sk, def_sk = self._side_key(off_team), self._side_key(def_team)
+        roles = self._seagull_roles
+        fat = self.player_fatigue_modifier
+        jersey_report, line_sg = False, None
+
+        # ── Offense ──
+        listed = self._seagull_listing(off_team)
+        unavail = self._unavailable_in_game(off_team)
+        avail = [p for p in (self._seagull_player(off_team, n) for n in listed)
+                 if p is not None and p.name not in unavail]
+        cur = roles[off_sk]["offense"]
+        # The jersey returns to the line's Viper at a change of possession
+        # or a timeout; a Seagull who wants it back reports again.
+        jersey_key = (self.state.home_timeouts, self.state.away_timeouts)
+        if self._last_snap_offense != off_sk or self._seagull_jersey_key[off_sk] != jersey_key:
+            if cur and cur[1] == "viper":
+                cur = None
+        roles[off_sk]["offense"] = None
+        self._lineup_cache = {}
+        base = self._lineup(off_team, unavail, "offense")
+        line_viper = next((p for p, g in base if g == "Midfield" and p.position == "Viper"), None)
+        new = None
+        for sg in avail:
+            if "Viper" not in listed[sg.name] or line_viper is None:
+                continue
+            mine = scale_rating(sg.overall) * fat(sg)
+            theirs = scale_rating(line_viper.overall) * fat(line_viper)
+            holding = cur == (sg.name, "viper")
+            if (holding and sg.game_energy >= 50 and mine >= theirs * 0.98) or \
+               (sg.game_energy >= 65 and mine >= theirs * 1.03):
+                new = (sg.name, "viper")
+                jersey_report = not holding
+                break
+        late = self.state.down >= 5 or self.state.kick_mode
+        if new is None and avail and not late:
+            from engine.presnap import SEAGULL_LINE_RATE, SEAGULL_LINE_RATE_DEFAULT
+            style = self._current_style_name()
+            rate = self._style_knob("seagull_line_rate",
+                                    SEAGULL_LINE_RATE.get(style, SEAGULL_LINE_RATE_DEFAULT))
+            fresh = [p for p in avail if p.game_energy >= 55]
+            if fresh and random.random() < rate:
+                sg = max(fresh, key=lambda p: (p.speed, p.name))
+                new = (sg.name, "line")
+                line_sg = sg
+        roles[off_sk]["offense"] = new
+        self._seagull_jersey_key[off_sk] = jersey_key
+
+        # ── Defense ──
+        listed_d = self._seagull_listing(def_team)
+        d_unavail = self._unavailable_in_game(def_team)
+        d_avail = [p for p in (self._seagull_player(def_team, n) for n in listed_d)
+                   if p is not None and p.name not in d_unavail]
+        d_cur = roles[def_sk]["defense"]
+        roles[def_sk]["defense"] = None
+        self._lineup_cache = {}
+        d_base = self._lineup(def_team, d_unavail, "defense")
+        keepers = [p for p, g in d_base if g == "Keeper"]
+        dbs = [p for p, g in d_base if g == "Midfield"]
+        d_new = None
+        for sg in d_avail:
+            groups = listed_d[sg.name]
+            if d_cur and d_cur[0] == sg.name and sg.game_energy >= 50:
+                d_new = d_cur
+                break
+            if "Keeper" in groups and keepers and sg.game_energy >= 70 \
+                    and min(k.game_energy for k in keepers) < 62:
+                d_new = (sg.name, "keeper")
+                break
+            if "defensive back" in groups and dbs and sg.game_energy >= 70:
+                weakest = min(dbs, key=lambda p: _tackle_score(p) * fat(p))
+                if _tackle_score(sg) * fat(sg) >= _tackle_score(weakest) * fat(weakest) * 1.05:
+                    d_new = (sg.name, "defensive_back")
+                    break
+        roles[def_sk]["defense"] = d_new
+        self._lineup_cache = {}
+
+        # Snap counts by role, for the box score.
+        for sk, role in ((off_sk, new), (def_sk, d_new)):
+            if role:
+                row = self._seagull_snaps.get(sk, {}).get(role[0])
+                if row is not None:
+                    row[role[1]] = row.get(role[1], 0) + 1
+        if jersey_report:
+            sg = self._seagull_player(off_team, new[0])
+            self.seagull_log.append({
+                "team": off_team.name, "side": off_sk, "player": sg.name,
+                "player_id": sg.player_id, "tag": player_tag(sg),
+                "replaced": player_label(line_viper) if line_viper else None,
+                "quarter": self.state.quarter, "time_remaining": self.state.time_remaining,
+                "play_number": self.state.play_number})
+        return jersey_report, line_sg
+
+    def _set_pre_snap(self):
+        """Seagull roles and backfield motion for this snap (rulebook v2.1,
+        section 12). Sets self._presnap_ctx for play resolution and the
+        before the snap fouls."""
+        off_team, def_team = self.get_offensive_team(), self.get_defensive_team()
+        off_sk = self._side_key(off_team)
+        jersey_report, line_sg = self._set_seagull_roles(off_team, def_team)
+        self._last_snap_offense = off_sk
+        ctx = {"movers": 0, "mover_names": [], "viper_motion": False,
+               "viper_align": random.choice(["left", "right", "center"]),
+               "seagull_line": line_sg.name if line_sg else None,
+               "seagull_slide": False, "jersey_report": jersey_report,
+               "seagull_viper": None, "seagull_on_offense": False, "offenders": {}}
+        role = self._seagull_roles[off_sk]["offense"]
+        if role:
+            ctx["seagull_on_offense"] = True
+            if role[1] == "viper":
+                ctx["seagull_viper"] = role[0]
+        if V2_ENGINE_CONFIG.get("backfield_motion_enabled", True):
+            from engine.presnap import (motion_chance, MOTION_DEFAULT_PREF,
+                                        MOTION_DECOY_VIPER, SEAGULL_SLIDE_RATE)
+            lineup = self._lineup(off_team, self._unavailable_in_game(off_team), "offense")
+            pool = [p for p, g in lineup if g == "Midfield" and p.position != "Zeroback"]
+            late = self.state.down >= 5 or self.state.kick_mode
+            chance = motion_chance(self._style_knob("pre_snap_motion", MOTION_DEFAULT_PREF), late)
+            movers = []
+            for p in pool:
+                c = chance
+                if p.position == "Viper" and getattr(p, "archetype", "") == "decoy_viper":
+                    c = min(0.9, c * MOTION_DECOY_VIPER)
+                if random.random() < c:
+                    movers.append(p)
+            ctx["movers"] = len(movers)
+            ctx["mover_names"] = [p.name for p in movers]
+            ctx["viper_motion"] = any(p.position == "Viper" for p in movers)
+            if movers:
+                ctx["offenders"]["Illegal Motion"] = random.choice(movers)
+                ctx["offenders"]["Illegal Shift"] = random.choice(movers)
+            if line_sg is not None and random.random() < SEAGULL_SLIDE_RATE:
+                ctx["seagull_slide"] = True
+                ctx["offenders"]["False Start"] = line_sg
+                ctx["offenders"].setdefault("Illegal Motion", line_sg)
+        if jersey_report or role:
+            sg = self._seagull_player(off_team, role[0]) if role else None
+            if sg is not None:
+                ctx["offenders"]["Illegal Viper Substitution"] = sg
+                if role[1] == "viper":
+                    ctx["offenders"]["Missing Viper Jersey"] = sg
+        self._presnap_ctx = ctx
+        return ctx
+
+    def _seagull_summary(self):
+        out = {}
+        for sk, team in (("home", self.home_team), ("away", self.away_team)):
+            rows = []
+            for name, groups in (getattr(self, "_seagulls", {}) or {}).get(sk, {}).items():
+                p = self._seagull_player(team, name)
+                if p is None:
+                    continue
+                rows.append({"name": name, "player_id": p.player_id, "tag": player_tag(p),
+                             "position": p.position, "groups": list(groups),
+                             "snaps": dict(self._seagull_snaps.get(sk, {}).get(name, {}))})
+            out[sk] = rows
+        return out
+
+    def _motion_summary(self):
+        ctx = getattr(self, "_presnap_ctx", None)
+        if not ctx:
+            return None
+        return {"movers": ctx["movers"], "in_motion": list(ctx["mover_names"]),
+                "viper_motion": ctx["viper_motion"], "viper_align": ctx["viper_align"],
+                "seagull_line": ctx["seagull_line"], "seagull_slide": ctx["seagull_slide"],
+                "seagull_viper": ctx["seagull_viper"], "jersey_report": ctx["jersey_report"],
+                "defense_adjusted": bool(ctx.get("defense_adjusted"))}
+
+    def _running_start(self, carrier, family, yards):
+        """A carrier who was in motion at the snap hits the line at speed."""
+        ctx = getattr(self, "_presnap_ctx", None)
+        if not ctx or yards <= 0 or carrier is None:
+            return yards
+        moving = carrier.name in ctx["mover_names"] or (
+            ctx["seagull_slide"] and carrier.name == ctx["seagull_line"])
+        if not moving:
+            return yards
+        edge = family.value in ("sweep_option", "speed_option", "viper_jet", "counter",
+                                "lateral_spread", "trick_play")
+        bonus = V2_ENGINE_CONFIG.get("motion_running_start", 0.06) * (1.0 if edge else 0.5)
+        return int(round(yards * (1.0 + bonus)))
 
     def _midfield_on(self, team, unavail, side: str):
         lines = self._midfield_lines(team, unavail)
@@ -8737,9 +9004,13 @@ class ViperballEngine:
         rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1) - 1.0) * heat
 
         from engine.discipline import misconduct_kind, occurrence_multiplier
+        from engine.presnap import presnap_foul_scale
+        presnap_ctx = getattr(self, "_presnap_ctx", None) if phase == "pre_snap" else None
         for pen_def in penalties:
             kind = misconduct_kind(pen_def["name"])
             prob = pen_def["prob"] * rate_scale * occurrence_multiplier(kind)
+            if presnap_ctx is not None:
+                prob *= presnap_foul_scale(pen_def["name"], presnap_ctx)
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
             if kind:
@@ -8781,6 +9052,9 @@ class ViperballEngine:
                     player = random.choices(pen_pool, weights=[offender_weight(p) for p in pen_pool], k=1)[0]
                 else:
                     player = random.choice(pen_pool)
+                hinted = (presnap_ctx or {}).get("offenders", {}).get(pen_def["name"])
+                if hinted is not None and on_side == "offense" and hinted in pen_pool:
+                    player = hinted
                 ptag = player_tag(player)
 
                 # ── Officials: call, no call or missed call ──
@@ -9701,6 +9975,13 @@ class ViperballEngine:
         play.snap_possession = self._snap_possession
         play.defenders_involved = list(self._play_defenders)
         play.snap_lineup = self._snap_lineup
+        play.motion = self._motion_summary()
+        if play.motion and play.motion.get("jersey_report") and play.description:
+            play.description = (f"{play.motion['seagull_viper']} reports as the Viper. "
+                                + play.description)
+        if play.motion and play.motion.get("seagull_line") and play.description:
+            slide = " sliding" if play.motion.get("seagull_slide") else ""
+            play.description += f" [Seagull {play.motion['seagull_line']} on the line{slide}]"
         self._check_exposure_injuries(play)
         self._record_discipline(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
@@ -9750,6 +10031,7 @@ class ViperballEngine:
         return play
 
     def _simulate_play_core(self) -> Play:
+        self._presnap_ctx = None
         # Run out the clock: if time remaining < play clock and offense is
         # leading and defense has no timeouts, the game ends without a snap.
         # The play clock expires before the game clock — no kneel needed.
@@ -9812,6 +10094,9 @@ class ViperballEngine:
                 name="Delay of Game", yards=5, on_team=delay["team"],
                 player="", declined=False, phase="pre_snap"))
 
+        # Seagull roles and backfield motion are set before the before the
+        # snap fouls, which depend on them (rulebook v2.1, section 12).
+        self._set_pre_snap()
         pre_snap_pen = self._check_penalties("pre_snap")
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
@@ -11935,7 +12220,17 @@ class ViperballEngine:
             return 'offense', False
 
     def _determine_viper_alignment(self):
+        ctx = getattr(self, "_presnap_ctx", None)
+        if ctx:
+            return ctx["viper_align"]
         return random.choice(['left', 'right', 'center'])
+
+    def _motion_viper_alignment(self, play_dir):
+        """A Viper in motion finishes on the side that suits the call."""
+        dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
+        mapped = dir_map.get(play_dir, play_dir if play_dir in ("left", "right") else "center")
+        return max(("left", "right", "center"),
+                   key=lambda a: VIPER_ALIGNMENT_BONUS.get((a, mapped), 0.0))
 
     def _determine_defense_alignment(self):
         call = self._active_dc_call()
@@ -12746,6 +13041,17 @@ class ViperballEngine:
         play_dir = PLAY_DIRECTION.get(family.value, "center")
         if family.value == self._planned_choice("family"):
             play_dir = self._planned_choice("lane") or play_dir
+        ctx = getattr(self, "_presnap_ctx", None)
+        viper_motion = bool(ctx and ctx.get("viper_motion"))
+        if viper_motion:
+            viper_align = ctx["viper_align"] = self._motion_viper_alignment(play_dir)
+            # The defense can bump or rotate with her. A DC with better
+            # instincts adjusts more often, and then the motion buys nothing.
+            instincts = self._def_coaching_mods().get("instincts_factor", 0.0)
+            adjust = V2_ENGINE_CONFIG.get("motion_defense_adjust", 0.40) + 0.20 * max(0.0, min(1.0, instincts))
+            if random.random() < adjust:
+                viper_motion = False
+                ctx["defense_adjusted"] = True
         viper_bonus = self._calculate_viper_advantage(viper_align, play_dir)
 
         def_align = self._determine_defense_alignment()
@@ -12823,6 +13129,14 @@ class ViperballEngine:
         if self._planned_choice("lane") and family.value == self._planned_choice("family"):
             # Existing Viper leverage is now available on either scripted edge.
             yards_gained = round(yards_gained * (1 + viper_bonus)) if yards_gained > 0 else yards_gained
+        elif viper_motion and yards_gained > 0:
+            # Motion puts the Viper where the call wants her (v2.1).
+            lev = V2_ENGINE_CONFIG.get("motion_viper_leverage", 0.6)
+            yards_gained = round(yards_gained * (1 + viper_bonus * lev))
+        yards_gained = self._running_start(player, family, yards_gained)
+        if ctx and ctx.get("seagull_line") and yards_gained > 0 and family.value in ("dive_option", "power", "draw"):
+            # One fewer real lineman for an inside run.
+            yards_gained = round(yards_gained * V2_ENGINE_CONFIG.get("seagull_line_inside_run", 0.95))
         yards_gained = max(-5, yards_gained)
 
         # ── V2: Defensive keying penalty ──
@@ -13838,6 +14152,11 @@ class ViperballEngine:
         coverage_cost = COVERAGE_DELTA[len(rush_plan["rushers"])]
         package_delta = self._called_kick_delta(subfamily)
         completion_prob = max(0.08, min(0.92, completion_prob + coverage_cost + package_delta))
+        # A receiver in motion at the snap gets a running start on her route.
+        _ctx = getattr(self, "_presnap_ctx", None)
+        if _ctx and (receiver.name in _ctx["mover_names"]
+                     or (_ctx["seagull_slide"] and receiver.name == _ctx["seagull_line"])):
+            completion_prob = min(0.92, completion_prob + V2_ENGINE_CONFIG.get("motion_route_start", 0.03))
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
@@ -17603,6 +17922,11 @@ class ViperballEngine:
             ],
             "coaching_substitutions": self._substitution_log,
             "ejections": list(self.ejection_log),
+            # Rulebook v2.1: listed Seagulls, their snaps by role and their
+            # Viper jersey reports; the line minimum for this level.
+            "seagulls": self._seagull_summary(),
+            "seagull_reports": list(getattr(self, "seagull_log", [])),
+            "line_minimum": getattr(self, "line_minimum", 5),
             "player_discipline": {side: list(rows.values()) for side, rows in self._discipline.items()},
             # ── V2: Engine metadata ──
             "v2_engine": {
@@ -17937,6 +18261,7 @@ class ViperballEngine:
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "option_read": getattr(play, "option_read", None),
+            "motion": getattr(play, "motion", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
             "analytics_before": getattr(play,"analytics_before",None),

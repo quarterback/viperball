@@ -1,0 +1,40 @@
+{# Seagulls: listed players outside the midfield lines, their snaps by role and Viper jersey reports. #}
+{% set sg = fr.get('seagulls') %}
+{% if sg and (sg.get('away') or sg.get('home')) %}
+<section aria-labelledby="seagulls-heading">
+<h2 id="seagulls-heading">Seagulls</h2>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Team</th><th>Player</th><th>Listed at</th><th class="num">Viper jersey</th><th class="num">On the line</th><th class="num">Defensive back</th><th class="num">Keeper</th></tr></thead>
+<tbody>
+{% for side, team_name in [('away', game.away_team), ('home', game.home_team)] %}
+{% for s in sg.get(side, []) %}
+<tr>
+<td>{{ team_name }}</td>
+<td>{{ s.tag }} {% if oneoff %}{{ s.name }}{% else %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ s.name }}">{{ s.name }}</a>{% endif %}</td>
+<td>{{ s.groups|join(', ') }}</td>
+<td class="num">{{ s.snaps.get('viper', 0) }}</td>
+<td class="num">{{ s.snaps.get('line', 0) }}</td>
+<td class="num">{{ s.snaps.get('defensive_back', 0) }}</td>
+<td class="num">{{ s.snaps.get('keeper', 0) }}</td>
+</tr>
+{% endfor %}
+{% endfor %}
+</tbody></table>
+</div>
+{% set reports = fr.get('seagull_reports') or [] %}
+{% if reports %}
+<details><summary>Viper jersey reports</summary>
+<table><thead><tr><th>Period / time</th><th>Team</th><th>Reported as the Viper</th><th>Line Viper off</th></tr></thead><tbody>
+{% for r in reports %}
+<tr>
+<td>{% if r.quarter > 4 %}OT{{ r.quarter - 4 }}{% else %}Q{{ r.quarter }}{% endif %} {{ '%d:%02d'|format(r.time_remaining // 60, r.time_remaining % 60) }}</td>
+<td>{{ game.away_team if r.side == 'away' else game.home_team }}</td>
+<td>{{ r.tag }} {{ r.player }}</td>
+<td>{{ r.replaced or 'Not recorded' }}</td>
+</tr>
+{% endfor %}
+</tbody></table></details>
+{% endif %}
+</section>
+{% endif %}
