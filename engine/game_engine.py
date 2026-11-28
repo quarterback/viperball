@@ -4650,7 +4650,7 @@ class ViperballEngine:
             "situations": live,
             "choices": {},
         }
-        if picked and picked["package_id"] in OFFENSE:
+        if context.get("delta_bucket") in ("power_play", "penalty_kill"):
             self._offensive_plan_event["delta_bucket"] = context.get("delta_bucket")
             self._offensive_plan_event["delta_cost"] = context.get("delta_cost")
         if picked:
@@ -7999,7 +7999,10 @@ class ViperballEngine:
             # No kick available — punt to avoid TOD (field position). Field
             # position offenses punt from farther up the field.
             territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
-            punt_line = (65 + 10 * territory_bias
+            delta_exit = getattr(self, "_active_offensive_plan", None) or {}
+            exit_shift = (4 * max(0.0, min(1.0, delta_exit.get("familiarity", 0)))
+                          if delta_exit.get("package_id") == "pko_territory_exit" else 0)
+            punt_line = (65 + exit_shift + 10 * territory_bias
                          + 20 * (self._style_knob("punt_aggression", 1.0) - 1.0)
                          + 10 * (self._style_knob("field_position_priority", 0.5) - 0.5))
             if fp < punt_line:
@@ -14572,7 +14575,7 @@ class ViperballEngine:
         if getattr(self, "_delta_playbook_context", {}).get("delta_bucket") == "power_play":
             from .delta_playbook import PK
             unit = (getattr(self.get_defensive_team(), "installation", None) or {}).get("defense", {})
-            if any(p.get("package_id") in PK for p in unit.get("packages", ())):
+            if not self._active_dc_call() and any(p.get("package_id") in PK for p in unit.get("packages", ())):
                 self._begin_defensive_call("tight")
 
         # ── Blocked drop kick check ──
