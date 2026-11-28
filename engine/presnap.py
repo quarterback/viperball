@@ -51,14 +51,82 @@ LISTING_GROUPS = ("Viper", "flanker", "Offensive Line", "Defensive Line", "Keepe
 OPEN_FIELD = ("Viper", "flanker", "Keeper", "defensive back")
 
 
-def list_seagulls(candidates, bars, max_listed=MAX_SEAGULLS):
+# ── Coach preference ────────────────────────────────────────────────
+
+# Interpretations that lean toward or away from Seagulls (CCH-01 profiles).
+_OFFENSE_LEAN = {"spread_motion": 0.08, "vertical_attack": 0.05,
+                 "run_to_kick": -0.08, "territory_control": -0.06}
+_DEFENSE_LEAN = {"turnover_hunt": 0.06, "pursuit_zone": 0.05, "run_wall": -0.06}
+
+
+def seagull_preference(staff, role):
+    """0 to 1: how much one coach wants Seagulls. Adaptable, chaos seeking,
+    risk tolerant coaches like them; stubborn ones do not. Read from the
+    personality sliders and, when the coach has one, the tactical profile.
+    A missing coach is neutral (0.5)."""
+    coach = (staff or {}).get(role)
+    if coach is None:
+        return 0.5
+    sliders = getattr(coach, "personality_sliders", {}) or {}
+    v = lambda k: max(0.0, min(100.0, float(sliders.get(k, 50)))) / 100.0
+    pref = (0.35 * v("adaptability") + 0.25 * v("chaos_appetite")
+            + 0.20 * v("risk_tolerance") + 0.20 * (1.0 - v("stubbornness")))
+    identity = ((getattr(coach, "tactical_profile", None) or {}).get("identity") or {})
+    pref += _OFFENSE_LEAN.get(identity.get("offense_interpretation"), 0.0) if role != "dc" else 0.0
+    pref += _DEFENSE_LEAN.get(identity.get("defense_interpretation"), 0.0) if role != "oc" else 0.0
+    return round(max(0.0, min(1.0, pref)), 3)
+
+
+def seagull_policy(staff):
+    """The program's Seagull policy for one game, decided by the head coach
+    with his coordinators' input. Returns preference (0 to 1), how many
+    Seagulls the coach will list at most, the fit a candidate needs against
+    the player she would replace, and how hard the offense and defense use
+    them."""
+    staff = staff or {}
+    if staff.get("head_coach") is not None:
+        pref = (0.6 * seagull_preference(staff, "head_coach")
+                + 0.2 * seagull_preference(staff, "oc") + 0.2 * seagull_preference(staff, "dc"))
+    elif staff.get("oc") is not None or staff.get("dc") is not None:
+        pref = 0.5 * seagull_preference(staff, "oc") + 0.5 * seagull_preference(staff, "dc")
+    else:
+        pref = 0.5
+    max_listed = 0 if pref < NO_SEAGULL_BELOW else 1 if pref < TWO_SEAGULLS_FROM else MAX_SEAGULLS
+    oc = seagull_preference(staff, "oc") if staff.get("oc") is not None else pref
+    dc = seagull_preference(staff, "dc") if staff.get("dc") is not None else pref
+    # Preferences bunch near the middle, so each is read as a lean from -1
+    # to 1 around 0.5.
+    lean = lambda x: max(-1.0, min(1.0, (x - 0.5) / PREFERENCE_SPREAD))
+    return {
+        "preference": round(pref, 3),
+        "max_listed": max_listed,
+        # A keen coach lists a player within 4% of the starter she would
+        # replace; a reluctant one wants her to be better.
+        "min_ratio": round(0.99 - 0.03 * lean(pref), 3),
+        # Offense: how often she plays on the line and how much better than
+        # the line's Viper she must be to take the jersey.
+        "line_scale": round(1.0 + 0.5 * lean(oc), 3),
+        "jersey_edge": round(1.03 - 0.03 * lean(oc), 3),
+        # Defense: how much better than the player on the field she must be.
+        "defense_edge": round(1.05 - 0.04 * lean(dc), 3),
+    }
+
+
+# Below this preference a coach lists no Seagulls; from the second mark he
+# lists two when he has them.
+NO_SEAGULL_BELOW = 0.47
+TWO_SEAGULLS_FROM = 0.535
+PREFERENCE_SPREAD = 0.08
+
+
+def list_seagulls(candidates, bars, max_listed=MAX_SEAGULLS, min_ratio=0.97):
     """The coach lists up to two Seagulls on the game sheet (college only).
 
     ``candidates`` are the players off the top midfield line, other than the
     starting Zeroback. ``bars`` holds, for each group, the fit of the player
     a Seagull would replace there. A player is listed in another group when
-    she is a natural fit there (engine/position_fit.py) and her fit is
-    within 3% of that bar. She needs at least one group besides her own, at
+    she is a natural fit there (engine/position_fit.py) and her fit is at
+    least ``min_ratio`` of that bar (the coach's policy sets it). She needs at least one group besides her own, at
     least one open field group, and is listed in at most three. Returns
     ``[{"name", "groups"}]``.
     """
@@ -71,7 +139,7 @@ def list_seagulls(candidates, bars, max_listed=MAX_SEAGULLS):
             if group == own or group not in bars or not natural_fit(p, group):
                 continue
             f = fit(p, group)
-            if f >= bars[group] * 0.97:
+            if f >= bars[group] * min_ratio:
                 extras.append((group, f / max(1.0, bars[group])))
         if not extras:
             continue
@@ -87,7 +155,7 @@ def list_seagulls(candidates, bars, max_listed=MAX_SEAGULLS):
                  + 0.2 * adaptability(p))
         picks.append((value, p.name, groups))
     picks.sort(key=lambda x: (x[0], x[1]), reverse=True)
-    return [{"name": name, "groups": groups} for _, name, groups in picks[:max_listed]]
+    return [{"name": name, "groups": groups} for _, name, groups in picks[:max(0, max_listed)]]
 
 
 def motion_chance(motion_pref, late_down):

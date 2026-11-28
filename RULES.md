@@ -311,7 +311,8 @@ position group. Seagulls are a college rule; high school and professional teams 
 list them. Any rostered player may be listed. There is no qualifying standard, and the
 listing holds for that game only.
 
-- A college team may list up to two Seagulls per game.
+- A college team may list up to two Seagulls per game. Listing is optional; a team may
+  list none.
 - Each Seagull is listed with two or three groups: Zeroback, Viper, flanker, offensive
   line, defensive line, Keeper or defensive back.
 - She plays at her full rating in her listed groups and at the cover rate, 90% of her
@@ -765,8 +766,8 @@ starter.
 - Any number of backfield players may be in motion at the snap, in any direction, including
   toward the line. The player taking the snap must be set.
 - One Viper jersey on each snap marks the Viper. She follows the ordinary motion rules.
-- The Seagull (SG) added, in college only: up to two per game, listed with two or three
-  groups, outside the midfield lines.
+- The Seagull (SG) added, in college only: optional, up to two per game, listed with two or
+  three groups, outside the midfield lines.
 - Seagull reporting to the Side Judge when she takes the Viper jersey.
 - A Seagull on the line may move parallel to it before and at the snap, one per snap. She
   wears the Seagull jersey.

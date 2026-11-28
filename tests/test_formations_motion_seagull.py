@@ -17,12 +17,25 @@ _spec.loader.exec_module(bm)
 _TEAMS, _STYLES, _PAIRS = bm.build_matchups(4, 2026)
 
 
+def _staff(**sliders):
+    import random
+    from engine.coaching import generate_coaching_staff
+    staff = generate_coaching_staff(team_name="Test", prestige=60, year=2026, rng=random.Random(7))
+    for card in staff.values():
+        card.personality_sliders = dict(card.personality_sliders or {}, **sliders)
+    return staff
+
+
+KEEN = _staff(adaptability=95, chaos_appetite=90, risk_tolerance=90, stubbornness=5)
+RELUCTANT = _staff(adaptability=5, chaos_appetite=10, risk_tolerance=10, stubbornness=95)
+
+
 def _games(level="college"):
     out = []
     for i, (a, b) in enumerate(_PAIRS):
         eng = ViperballEngine(_TEAMS[a], _TEAMS[b], seed=300 + i,
                               style_overrides=bm.overrides(_STYLES, a, b),
-                              officiating_level=level)
+                              officiating_level=level, home_coaching=KEEN, away_coaching=KEEN)
         out.append((eng, eng.simulate_game()))
     return out
 
@@ -158,3 +171,17 @@ def test_position_fit_uses_ratings_and_size():
     assert set(table) >= {"Viper", "flanker", "Offensive Line", "Defensive Line", "Keeper", "defensive back"}
     assert 0 <= adaptability(keeper) <= 100
     assert fit(keeper, "flanker") <= table["flanker"]["fit"] + 1e-9
+
+
+def test_seagulls_are_optional_by_coach():
+    from engine.presnap import seagull_policy
+    keen, reluctant, neutral = seagull_policy(KEEN), seagull_policy(RELUCTANT), seagull_policy(None)
+    assert keen["max_listed"] == 2 and reluctant["max_listed"] == 0 and neutral["max_listed"] == 1
+    assert keen["line_scale"] > neutral["line_scale"] > reluctant["line_scale"]
+    assert keen["min_ratio"] < reluctant["min_ratio"]
+    a, b = _PAIRS[0]
+    r = ViperballEngine(_TEAMS[a], _TEAMS[b], seed=5, home_coaching=RELUCTANT,
+                        away_coaching=KEEN).simulate_game()
+    assert r["seagulls"]["home"] == []
+    assert r["seagull_policy"]["home"]["max_listed"] == 0
+    assert len(r["seagulls"]["away"]) <= 2

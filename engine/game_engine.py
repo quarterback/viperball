@@ -6032,13 +6032,28 @@ class ViperballEngine:
         zeroback = starters("Zeroback", 1)
         top_names = {p.name for p in top} | {p.name for p in zeroback}
         candidates = [p for p in avail if p.name not in top_names and p.position != "Zeroback"]
-        picks = list_seagulls(candidates, bars)
+        # Seagulls are optional: the coaches decide whether to list any.
+        policy = self._seagull_policy(team)
+        picks = list_seagulls(candidates, bars, max_listed=policy["max_listed"],
+                              min_ratio=policy["min_ratio"])
         listed[sk] = {s["name"]: s["groups"] for s in picks}
         self._seagull_snaps.setdefault(sk, {})
         for s in picks:
             self._seagull_snaps[sk][s["name"]] = {"viper": 0, "line": 0, "defensive_back": 0,
                                                   "keeper": 0, "defensive_line": 0}
         return listed[sk]
+
+    def _seagull_policy(self, team) -> dict:
+        """The coaching staff's Seagull policy for this game (presnap.py)."""
+        cache = getattr(self, "_seagull_policies", None)
+        if cache is None:
+            cache = self._seagull_policies = {}
+        sk = self._side_key(team)
+        if sk not in cache:
+            from engine.presnap import seagull_policy
+            staff = getattr(self, "_home_coaching_staff" if sk == "home" else "_away_coaching_staff", None)
+            cache[sk] = seagull_policy(staff)
+        return cache[sk]
 
     def _seagull_player(self, team, name):
         return next((p for p in team.players if p.name == name), None)
@@ -6134,8 +6149,9 @@ class ViperballEngine:
             mine = fit(sg, "Viper") * fat(sg)
             theirs = fit(line_viper, "Viper") * fat(line_viper)
             holding = held is not None and held[0] == sg.name
+            edge = self._seagull_policy(off_team)["jersey_edge"]
             if (holding and sg.game_energy >= 50 and mine >= theirs * 0.98) or \
-               (sg.game_energy >= 65 and mine >= theirs * 1.03):
+               (sg.game_energy >= 65 and mine >= theirs * edge):
                 new.append((sg.name, "viper"))
                 jersey_report = not holding
                 break
@@ -6146,6 +6162,7 @@ class ViperballEngine:
             style = self._current_style_name()
             rate = self._style_knob("seagull_line_rate",
                                     SEAGULL_LINE_RATE.get(style, SEAGULL_LINE_RATE_DEFAULT))
+            rate *= self._seagull_policy(off_team)["line_scale"]
             fresh = sorted((p for p in avail if p.game_energy >= 55 and p.name not in in_jersey),
                            key=lambda p: (p.speed, p.name), reverse=True)
             if fresh and random.random() < rate:
@@ -6191,7 +6208,8 @@ class ViperballEngine:
                     if group not in groups or not there:
                         continue
                     weakest = min(there, key=lambda p: fit(p, group) * fat(p))
-                    if fit(sg, group) * fat(sg) >= fit(weakest, group) * fat(weakest) * 1.05:
+                    d_edge = self._seagull_policy(def_team)["defense_edge"]
+                    if fit(sg, group) * fat(sg) >= fit(weakest, group) * fat(weakest) * d_edge:
                         d_new = (sg.name, kind)
                         break
                 if d_new:
@@ -18063,6 +18081,8 @@ class ViperballEngine:
             # Viper jersey reports; the line minimum for this level.
             "seagulls": self._seagull_summary(),
             "seagull_reports": list(getattr(self, "seagull_log", [])),
+            "seagull_policy": ({sk: dict(v) for sk, v in getattr(self, "_seagull_policies", {}).items()}
+                               if getattr(self, "officiating_level", "college") == "college" else {}),
             "line_minimum": getattr(self, "line_minimum", 5),
             "player_discipline": {side: list(rows.values()) for side, rows in self._discipline.items()},
             # ── V2: Engine metadata ──
