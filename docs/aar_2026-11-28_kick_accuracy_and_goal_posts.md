@@ -104,7 +104,9 @@ Ron asked for the wider posts to change accuracy in the engine.
    0.36 and `snap_kick_drop_far` from 0.014 to 0.0128. Through Viperball's posts a typical
    starter still makes about 42 percent inside 15 yards, losing 3.5 to 7 points per 5 yards.
 4. `gaelic_posts` (default true) turns the posts off for comparison.
-5. Report on why the kicking changed: `report_2026-11-28_kicking_counterweight.md`.
+5. The posts results and a fresh field position measurement were added to the counterweight
+   report already on main (`report_2026_11_28_kicking_counterweight.md`, #415) rather than
+   kept as a second report.
 6. Rulebook (RULES.md) brought in line with the README: Gaelic post dimensions, snap kick
    and field goal accuracy tables, the three miss causes, pressured misses being fielded
    more often, and teams taking the field goal on 6th down. The README also gained the
