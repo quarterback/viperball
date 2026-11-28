@@ -284,8 +284,11 @@ def test_dynasty_save_round_trip(tmp_path):
     assert Dynasty.load(str(path))._team_installations == {}
 
 
-def test_engine_full_installation_matches_no_record_and_packages_show_up():
-    from engine.game_engine import ViperballEngine, load_team_from_json
+def test_engine_full_installation_matches_no_record_and_packages_show_up(monkeypatch):
+    from engine.game_engine import V2_ENGINE_CONFIG, ViperballEngine, load_team_from_json
+    # A halftime caller change hands the offense to a coach the installation
+    # record was not built for. This test is about one caller's installation.
+    monkeypatch.setitem(V2_ENGINE_CONFIG, "midgame_calls_enabled", False)
     import random
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent

@@ -182,9 +182,44 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 
 44. **Cape Cod** (November 28). An offensive hook package for the lateral offenses and a
     defensive trap package for the pursuit defenses. → `aar_2026-11-28_cape_cod.md`
+45. **Play calling during a game** (November 28). Halftime caller changes for struggling
+    offenses and between-series suggestions from the coach not calling the offense.
+    → `aar_2026-11-28_midgame_play_calling.md`
 
-48. **Snap kick misses** (November 28). Execution, weather and pressure each can miss a
+46. **Field width** (November 28). The engine tracks the ball across the field: snaps spot on
+    or between the hashes, each play attacks a side, and the defense splits into short side,
+    box and wide side channels. Room and numbers on the attacked side change the gain and
+    who makes the tackle; league totals held steady. → `aar_2026-11-28_field_width.md`
+
+47. **Field width, part 2** (November 28). Kicks from a hash see a narrower target, punt and
+    missed kick returns shrink near the sideline and run to the open side, defenses shift a
+    player toward an offense's side habit during a game, and game and team pages show side
+    and hash splits. Fixed a tie that tilted play to the left side.
+    → `aar_2026-11-28_field_width_part_2.md`
+
+48. **Formations, Canadian motion, the Viper jersey and the Seagull** (November 28). Rulebook
+    v2.1: any number of backfield players may move at the snap, one Viper jersey marks the
+    Viper, and the Seagull (SG) is listed outside the midfield lines and can slide along the
+    line. Retired the Viper alignment and numbering fouls. → `aar_2026-11-28_formations_motion_seagull.md`
+
+49. **Position fit, high school short line, Seagulls in college only** (November 28). Every
+    group asks for its own skills, minimums and size; adaptability softens playing out of one's
+    group. High school offenses can line up with three or four on the line.
+    → `aar_2026-11-28_position_fit_short_line_seagull_college.md`
+
+50. **The Seagull is optional** (November 28). Whether a team lists none, one or two depends on
+    its players and its coaches' preference. → `aar_2026-11-28_seagull_optional_by_coach.md`
+
+51. **Coaches learn from their Seagulls** (November 28). Season end learning from matched
+    Seagull snaps and from opponents' Seagulls, bounded and carried with the coach.
+    → `aar_2026-11-28_seagull_learning.md`
+
+52. **Snap kick misses** (November 28). Execution, weather and pressure each can miss a
     snap kick; accuracy fell from 87 to 79 percent. → `aar_2026-11-28_snap_kick_misses.md`
+
+53. **Snap kicks as three pointers, field goals at college rates, Gaelic posts** (November 28).
+    Snap kicks now go in about 36 percent of the time, field goals follow college rates by
+    distance, and the goal posts are Gaelic H posts. → `aar_2026-11-28_kick_accuracy_and_goal_posts.md`
 
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,

@@ -1,0 +1,45 @@
+{# Seagulls (college only): listed players, their groups and fit, snaps by role and Viper jersey reports. #}
+{% set sg = fr.get('seagulls') %}
+{% set sg_policy = fr.get('seagull_policy') or {} %}
+{% if sg and (sg.get('away') or sg.get('home') or sg_policy) %}
+<section aria-labelledby="seagulls-heading">
+<h2 id="seagulls-heading">Seagulls</h2>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Team</th><th>Player</th><th>Listed at</th><th class="num">Viper jersey</th><th class="num">On the line</th><th class="num">Defensive back</th><th class="num">Keeper</th><th class="num">Defensive line</th></tr></thead>
+<tbody>
+{% for side, team_name in [('away', game.away_team), ('home', game.home_team)] %}
+{% if not sg.get(side) %}
+<tr><td>{{ team_name }}</td><td colspan="7" style="color:var(--fg-dim)">{% if sg_policy.get(side, {}).get('max_listed', 1) == 0 %}The coaches chose not to list a Seagull.{% else %}No player qualified as a Seagull.{% endif %}</td></tr>
+{% endif %}
+{% for s in sg.get(side, []) %}
+<tr>
+<td>{{ team_name }}</td>
+<td>{{ s.tag }} {% if oneoff %}{{ s.name }}{% else %}<a href="/stats/college/{{ session_id }}/player/{{ team_name }}/{{ s.name }}">{{ s.name }}</a>{% endif %}</td>
+<td>{% for g in s.groups %}{{ g }}{% if s.fits and g in s.fits %} ({{ s.fits[g]|round|int }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td class="num">{{ s.snaps.get('viper', 0) }}</td>
+<td class="num">{{ s.snaps.get('line', 0) }}</td>
+<td class="num">{{ s.snaps.get('defensive_back', 0) }}</td>
+<td class="num">{{ s.snaps.get('keeper', 0) }}</td>
+<td class="num">{{ s.snaps.get('defensive_line', 0) }}</td>
+</tr>
+{% endfor %}
+{% endfor %}
+</tbody></table>
+</div>
+{% set reports = fr.get('seagull_reports') or [] %}
+{% if reports %}
+<details><summary>Viper jersey reports</summary>
+<table><thead><tr><th>Period / time</th><th>Team</th><th>Reported as the Viper</th><th>Line Viper off</th></tr></thead><tbody>
+{% for r in reports %}
+<tr>
+<td>{% if r.quarter > 4 %}OT{{ r.quarter - 4 }}{% else %}Q{{ r.quarter }}{% endif %} {{ '%d:%02d'|format(r.time_remaining // 60, r.time_remaining % 60) }}</td>
+<td>{{ game.away_team if r.side == 'away' else game.home_team }}</td>
+<td>{{ r.tag }} {{ r.player }}</td>
+<td>{{ r.replaced or 'Not recorded' }}</td>
+</tr>
+{% endfor %}
+</tbody></table></details>
+{% endif %}
+</section>
+{% endif %}

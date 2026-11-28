@@ -131,6 +131,7 @@ def _flag_emoji(code: str) -> str:
 
 templates.env.filters["flag"] = _flag_emoji
 from stats_site.pixel_icons import icon as _px_icon
+from stats_site import width_report
 templates.env.globals["icon"] = _px_icon
 
 
@@ -1295,7 +1296,7 @@ def game_sim_result(request: Request, game_id: str):
     except Exception:
         pass
     return templates.TemplateResponse("college/game.html", _ctx(
-        request, section="tools", session_id="", oneoff=True,
+        request, section="tools", session_id="", oneoff=True, fw=width_report.game_report(fr),
         game=game, week=0, game_idx=0, bowl_name=None, is_playoff=False,
         analysis_text=analysis_text, tactics=_game_tactics(None, fr, game["home_team"], game["away_team"]),
         stadium_url=_stadium_url_for(game["home_team"]),
@@ -2393,6 +2394,7 @@ def college_team(request: Request, session_id: str, team_name: str, sort: str = 
         team_chemistry=team_chemistry,
         installation=_installation_for(season, team_name),
         season_tactics=_team_season_tactics(season, team_name),
+        field_width=_team_field_width(season, team_name),
         phase=sess.get("phase"),
     ))
 
@@ -2730,7 +2732,7 @@ def college_game(request: Request, session_id: str, week: int, game_idx: int):
         analysis_text=analysis_text, tactics=tactics,
         stadium_url=_stadium_url_for(game_data.get("home_team", "") if isinstance(game_data, dict) else getattr(game_data, "home_team", "")),
         benchmarks=benchmarks, custom_book_report=_custom_book_report(fr),
-        drive_plan_report=_drive_plan_report(fr),
+        drive_plan_report=_drive_plan_report(fr), fw=width_report.game_report(fr),
     ))
 
 
@@ -2873,6 +2875,21 @@ def _game_tactics(season, fr, home, away):
                      "players": rushers[:8]},
         })
     return out
+
+
+def _team_field_width(season, team_name):
+    """Season field width splits for one team, offense and defense."""
+    key = f"team_field_width:{team_name}"
+    cached = _cache_get(season, key)
+    if cached is not None:
+        return cached or None
+    games = list(season.schedule) + list(season.playoff_bracket or []) + [
+        bg.game for bg in (season.bowl_games or [])]
+    report = width_report.team_report(
+        ((g.home_team, g.away_team, getattr(g, "full_result", None))
+         for g in games if g.completed), team_name)
+    _cache_set(season, key, report or {})
+    return report
 
 
 def _team_season_tactics(season, team_name):
@@ -5041,7 +5058,7 @@ def pro_game(request: Request, league: str, session_id: str, week: int, matchup:
     _home_key = box.get("home_key", "") if isinstance(box, dict) else getattr(box, "home_key", "")
     return templates.TemplateResponse("pro/game.html", _ctx(
         request, section="pro", league=league, session_id=session_id,
-        box=box, week=week, matchup=matchup,
+        box=box, week=week, matchup=matchup, fw=width_report.game_report(fr),
         league_name=season.config.league_name,
         analysis_text=analysis_text,
         stadium_url=_stadium_url_for(_home_key),
@@ -5714,7 +5731,7 @@ def intl_game(request: Request, match_id: str):
 
     return templates.TemplateResponse("international/game.html", _ctx(
         request, section="international",
-        match=match, gr=game_result,
+        match=match, gr=game_result, fw=width_report.game_report(game_result),
         home_code=home_code, away_code=away_code,
         home_name=home_name, away_name=away_name,
         stadium_url=_stadium_url_for(home_code),

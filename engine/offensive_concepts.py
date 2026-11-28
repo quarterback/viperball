@@ -12,11 +12,16 @@ SEQUENCES = {BOUNDARY_SWITCH, CARRY_RELEASE, CAPE_COD}
 CHASING_FRONTS = {"aggressive", "spread"}
 
 
-def sequence_call(package_id, setup):
-    """Choose the next leg from completed calls on the current possession."""
+def sequence_call(package_id, setup, default_lane=None):
+    """Choose the next leg from completed calls on the current possession.
+
+    default_lane is where the first setup goes when nothing has been run
+    yet; the engine passes a side of the field at the snap.
+    """
     if package_id == CAPE_COD:
-        return cape_cod_call(setup)
-    lane = setup[-1]["lane"] if setup else ("left" if package_id == BOUNDARY_SWITCH else "right")
+        return cape_cod_call(setup, default_lane)
+    lane = setup[-1]["lane"] if setup else (
+        default_lane or ("left" if package_id == BOUNDARY_SWITCH else "right"))
     # Allow a defense that preserves its width to keep the ball on that side.
     # Once the defense presses the setup, split the attack to the other side.
     if len(setup) >= 2 and setup[-1]["pressed"]:
@@ -29,7 +34,7 @@ def sequence_call(package_id, setup):
     return {"phase": "setup", "lane": lane, "family": "power"}
 
 
-def cape_cod_call(setup):
+def cape_cod_call(setup, default_lane=None):
     """Cape Cod: a lateral chain toward one sideline, then the hook.
 
     After one setup chain, a defense that chased it (an aggressive or spread
@@ -38,7 +43,7 @@ def cape_cod_call(setup):
     across the field instead. A defense that held its shape sees another
     setup.
     """
-    lane = setup[-1]["lane"] if setup else "left"
+    lane = setup[-1]["lane"] if setup else (default_lane or "left")
     if setup:
         last = setup[-1]
         other = "left" if lane == "right" else "right"

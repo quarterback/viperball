@@ -37,11 +37,11 @@ See the [quick start](QUICKSTART.md#build-a-custom-playbook) and [package catalo
 
 ## The simulation today
 
-The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
+The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The engine tracks the ball across the width of the field as well as down it. Each play attacks a side, and the defense splits its players between the short side, the box and the wide side, so room and numbers on the attacked side shape the gain and decide who makes the tackle. A defense that sees an offense keep going to one side moves a player there, and the offense reads that. Kicks from a hash see a narrower target than kicks from the middle, and a punt caught near the sideline is harder to return. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
 
 The college Analytics tab opens thirteen views including player and team leaderboards, all scoring channels, expected points, decision value, Delta and bonus context, DTW, play and drive finders, comparisons and a glossary. Group plays by school, down or field zone; inspect individual records and export CSV. State-value and decision estimates are experimental and use supported held-out observations. The existing published EPA and DTW remain separate.
 
-**Documentation status:** November 27, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
+**Documentation status:** November 28, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
 
 ---
 
@@ -114,10 +114,16 @@ The playing surface is a standard 100-yard gridiron:
 - **End zones:** 10 yards deep at each end
 - **Width:** 53⅓ yards
 - **Yard lines** marked every 5 yards, numbered every 10 from each goal line to midfield
-- **Hash marks** at standard NCAA spacing
-- **Goal posts** at the back of each end zone, standard dimensions
+- **Hash marks** at standard NCAA spacing, 20 yards in from each sideline
+- **Goal posts** on the end line at the back of each end zone, centered across the field. Viperball uses Gaelic football's H posts:
+  - Uprights 6.5 meters (21 feet 4 inches) apart, inside to inside. College football posts are 18 feet 6 inches apart.
+  - Crossbar 2.5 meters (8 feet 2 inches) above the ground. College football's is 10 feet.
+  - Uprights at least 7 meters (23 feet) tall.
+  - A kick scores when the whole ball passes between the uprights and over the crossbar. Above the top of the uprights, the posts count as running straight up. There is no net and nothing scores under the crossbar.
 
-The field is identical to a standard American college football field. No additional markings are required.
+Apart from the goal posts, the field is identical to a standard American college football field. No additional markings are required.
+
+Every snap is spotted on or between the hashes. A ball downed outside a hash is spotted on that hash. From a hash, the side of the field nearer the sideline is the short side (the boundary) and the other side is the wide side (the field side).
 
 ---
 
@@ -335,6 +341,22 @@ Keeper archetypes:
 
 The Viper and the flankers play both ways as midfield lines: the line on the field plays offense, and its four best tacklers play defensive back when the other team has the ball (see [Rotations](#rotations)). Flankers also frequently serve as kick coverage specialists.
 
+### Seagull
+
+A Seagull (SG) is a player listed on the game sheet as able to play more than one position group. Seagulls are a college rule, the way the ATH label is a college recruiting idea: high school and professional teams do not list them. A college team may list up to two per game, or none: the Seagull is optional, and whether a team uses one depends on its players and its coaches. Any rostered player may be listed. Each is listed with two or three groups and plays at her full rating in them, and at the cover rate, 90% of her rating, anywhere else. A Seagull belongs to no midfield line: she enters and leaves as an individual substitute, and her coach decides how much she plays. She wears the Seagull jersey.
+
+A Seagull listed at Viper may take the Viper jersey from the line's Viper. Before the snap she reports to the Side Judge, who signals the defense, and the line's Viper comes off. She keeps the jersey until she leaves the field, either team calls a timeout or possession changes; then it returns to the line's Viper unless she reports again. The jersey changes players only at a dead ball. A Seagull playing any other group does not report. A Seagull in the Viper jersey without reporting, an unlisted player taking the jersey, or the jersey changing during live play is **Illegal Viper Substitution** (5 yards).
+
+In the engine, coaches list Seagulls by position fit. Every group asks for its own mix of skills, and a player's fit in a group is the weighted average of the ratings that group uses. Each group also has bare minimums on the two skills it cannot do without, and the line groups need size (188 pounds or more) while the open field groups cannot carry too much of it (190 or 192 pounds at most). A player who meets them is a natural fit for the group. Adaptability, worked out from agility, awareness and how even a player's skills are, softens the cost of playing outside her own group. A coach can still play anyone anywhere; fit only decides who he trusts there.
+
+A player is listed in another group when she is a natural fit and her fit is within 3% of the player she would replace: the second midfield line's Viper, weakest flanker or fourth best tackler, the weaker starting Keeper, or the weakest starting lineman. At least one of her groups must be in the open field (Viper, flanker, Keeper or defensive back); a lineman who can play both lines is a cover player. The coach ranks candidates by fit, by how many groups they cover and by adaptability.
+
+How many he lists is his choice. Each coach has a Seagull preference drawn from his personality: adaptable, chaos seeking, risk tolerant coaches like them and stubborn ones do not, and spread and motion offenses lean toward them while run first and territory offenses lean away. The head coach decides with his coordinators' input. A reluctant staff lists none, a middling one lists one, and a keen one lists two when it has the players. Keen coaches also accept a candidate a little below the player she would replace, while reluctant ones want her to be better. On offense the coordinator's preference sets how often she plays on the line and how readily she takes the Viper jersey; on defense the coordinator's preference sets how readily she comes on. About three college teams in ten list no Seagull, four list one and three list two.
+
+Coaches learn whether Seagulls work. At the end of each season the offensive coordinator compares his plays with a Seagull on the line or in the Viper jersey against plays without one, in matching situations (down, distance and field zone), and the defensive coordinator does the same for plays with a Seagull on at defensive back, Keeper or defensive line. The head coach weighs both. Coaches also learn from opponents: when other teams' Seagulls hurt them, their preference rises, counted half as much as their own evidence, so a staff that never lists a Seagull can still be won over by losing to them. A coach needs six games and twenty plays of each kind before anything changes, and how far he moves depends on how open he is (adaptability against stubbornness). One season moves a preference at most 0.03 and a career at most 0.08, enough to move a coach from none to one or one to two, never enough to turn a traditionalist around. A coach keeps what he learned when he changes jobs. The lesson can also outlast the player who taught it. The starting Zeroback and the top midfield line are not listed.
+
+On defense a Seagull comes on at defensive back, Keeper or on the defensive line while she is fresh; on offense she takes the Viper jersey when she would play the Viper better than the line's Viper, or plays on the line in place of a lineman. A Seagull listed on the offensive line stays in to block; any other releases. Sometimes both Seagulls play on the line, and only one of them slides. Lateral and misdirection offenses put Seagulls on the line most, power offenses least. In the play by play a Seagull shows as SG, or as VP while she wears the Viper jersey. The box score lists each team's Seagulls, their groups and fit, their snaps by role, and every Viper jersey report, and says when a team's coaches chose not to list one.
+
 ---
 
 ## Kicking
@@ -345,7 +367,19 @@ Kicking is the most strategically distinctive element of Viperball. There are fo
 
 The snap kick is a live-ball scoring kick worth 5 points. The kicker drops the ball from their hands, allows it to bounce once on the ground, and kicks it through the uprights. Unlike a field goal, a snap kick does not require a holder, set piece, or stoppage — it is attempted during the flow of live play.
 
-Snap kicks can be attempted from anywhere on the field. Practical range extends to approximately 55 yards, with accuracy declining sharply beyond 40 yards.
+Snap kicks can be attempted from anywhere on the field. A snap kick is Viperball's three pointer: about one in three attempts goes in. Inside 15 yards a typical starting kicker makes about 42 percent. Each 5 yards farther costs 3 points of accuracy at first and up to 7 points at long range:
+
+| Distance | Typical starter | Elite kicker |
+|---|---|---|
+| 15 yards | 42% | 51% |
+| 25 yards | 35% | 50% |
+| 35 yards | 26% | 43% |
+| 45 yards | 15% | 34% |
+| 55 yards | 2% | 23% |
+
+A kick can miss for three reasons, alone or together: the kicker's own strike, the weather (rain, snow, crosswind and headwind) and pressure from the rush. A kick from a hash sees a narrower opening than one from the middle of the field.
+
+Because a miss on downs 1 through 5 costs a down rather than the ball, coaches take snap kicks most often on 4th and 5th down. On 6th down a miss is a turnover, so coaches usually take the surer field goal.
 
 #### Missed Snap Kicks
 
@@ -358,6 +392,8 @@ On **6th down**, a missed snap kick of any distance is a turnover — the defens
 ### Place Kick (Field Goal)
 
 The place kick is a set-piece scoring kick worth 3 points. The ball is held on the ground by a teammate while the kicker drives it through the uprights. Place kicks are more accurate at distance than snap kicks but require the offense to line up in a kicking formation, giving the defense time to set up a block attempt.
+
+Field goal accuracy follows college football rates by distance. A typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Better kickers play every kick as if it were a few yards shorter.
 
 ### Punt
 
@@ -444,17 +480,37 @@ A lateral or kick pass that goes out of bounds is dead at the sideline. If a lat
 
 ## Formations and Motion
 
-### Pre-Snap Requirements
+### The Line
 
-The offense must have at least **five players on the line of scrimmage** at the time of the snap. The remaining six players may be positioned anywhere behind the line.
+At the snap the offense must have a minimum number of players on the line: **three in high school and five in college and professional play**. Any players may fill the line. Line players must be set for one full second before the snap and must not move at the snap, except the Seagull (below). Fewer than the minimum on the line is **Illegal Formation** (5 yards).
 
-### The Viper Alignment
+Every other offensive player lines up at least one yard behind the line and is a backfield player.
 
-The Viper is permitted to line up in any position on the offensive side of the ball — on the line, in the backfield, on either edge, or in motion. However, the Viper must be **set for one full second** before the snap unless they are the single player in legal pre-snap motion. An **Illegal Viper Alignment** penalty (5 yards) is called when the Viper is not properly set or when multiple players are in motion at the snap.
+### Motion
 
-### Pre-Snap Motion
+Viperball uses Canadian style motion:
 
-One player may be in motion at the time of the snap, provided they are moving **parallel to or away from** the line of scrimmage (not toward it). The Viper is the most common motion player, but any eligible player may go in motion.
+- Any number of backfield players may be in motion at the snap, in any direction, including toward the line, as long as each is behind the line when the ball is snapped.
+- The player taking the snap must be set for one full second.
+- A player may move between the line and the backfield before the snap but must settle at least one full second before it.
+
+**Illegal Motion** (5 yards): a line player other than the Seagull moves after she is set, two Seagulls on the line move on one snap, a moving player is on or past the line at the snap, or the player taking the snap is moving. **Illegal Shift** (5 yards): a player moves between the line and the backfield within one second of the snap.
+
+A player in motion at the snap gets a running start. On runs she gains a little more ground when she carries, most on perimeter plays, and on kick passes she is a little easier to hit. A Viper in motion finishes on the side that suits the call, unless the defense bumps or rotates with her; coordinators with better instincts adjust more often. Motion fouls happen more often the more players move.
+
+### The Viper Jersey
+
+Exactly one offensive player wears the Viper jersey on each snap. It contrasts clearly with the rest of the team's uniforms, and whoever wears it is the Viper for that snap. The Viper may line up anywhere. In the backfield she may be in motion like any backfield player; on the line she counts as a line player and must be still. No Viper jersey on the field at the snap, or more than one, is **Missing Viper Jersey** (5 yards).
+
+### The Seagull on the Line
+
+One player per snap may move while she is on the line: a Seagull in the Seagull jersey (see [Seagull](#seagull)). She counts toward the minimum on the line, may slide parallel to it before and at the snap but never toward it, and may block or release into the play at the snap. If both of a team's Seagulls are on the line, only one may move, and the offense does not say which. A Seagull moving toward the line is a **False Start**.
+
+When a Seagull takes a lineman's place, the offense has one fewer real blocker: kick passes are protected by four linemen, inside runs lose a little, and the defense cannot tell before the snap whether she will block or release.
+
+### The High School Short Line
+
+High school offenses may line up with three or four on the line. When they do, one or two linemen come off and bench midfielders take their places in the backfield. That gives a lateral chain more handlers and more speed, at the cost of protection and a little on every inside run for each lineman missing. Lateral offenses use the short line most, on about a third of their early down snaps, and power offenses rarely.
 
 ### Positional Freedom After the Snap
 
@@ -539,13 +595,13 @@ Targeting, fighting and throwing a punch require ejection. A second qualifying u
 A standard CVL officiating crew consists of:
 
 - **Referee** — Final authority on all calls
-- **Umpire** — Watches the line of scrimmage
+- **Umpire** — Watches the line of scrimmage, including a Seagull moving along it
 - **Head Linesman** — Manages the down markers and sideline
 - **Line Judge** — Opposite sideline, watches for out-of-bounds
 - **Back Judge** — Deep field, rules on kicks through the uprights and deep plays
-- **Side Judge** — Watches the Viper position for alignment violations and illegal contact
+- **Side Judge** — Watches the Viper jersey, takes Seagull reports and signals them to the defense, watches backfield motion at the snap, and watches contact on the Viper
 
-The sixth official (Side Judge) is unique to Viperball and exists because the Viper position's pre-snap freedom creates officiating challenges not found in other gridiron sports.
+The sixth official (Side Judge) is unique to Viperball and exists because the Viper's pre snap freedom and the Seagull need their own official. The Umpire judges whether a sliding Seagull moved parallel to the line or toward it, and like every official can miss what she does not see.
 
 Officials do not flag every foul. A foul that happens can be called, let go because it did not affect the play (holding away from the ball, a word after the whistle instead of a flag), or missed. Fouls in plain view, such as false starts and forward laterals, are almost always flagged; holding and coverage contact are flagged mostly when they affect the play. Crews differ in how tightly they call a game, a crew that leans toward the home side misses a few more home fouls on close calls, and late in a close fourth quarter officials let more judgment calls go. Crews also throw the occasional flag for a foul that did not happen. College crews are less accurate on average than pro crews and spread much further apart, in accuracy, in how tightly they call a game and in home lean, because there are far more of them with less training and review; high school crews spread further still. The box score shows each game's flags, fouls let go, missed calls and bad flags.
 
@@ -609,6 +665,7 @@ Substitution is unlimited and allowed at any time, including during live play, s
 - **Anchors.** The Zeroback and the two Keepers stay on almost all game.
 - **The offensive line** is a set five that rarely changes.
 - **The defensive line** rotates heavily, one player at a time.
+- **Seagulls.** A listed Seagull plays outside the lines: at defensive back or Keeper on defense while she is fresh, and in the Viper jersey or on the line on offense (see [Seagull](#seagull)).
 - **Cover.** When a team runs out of fresh defensive linemen, a spare offensive lineman fills in; a bench midfielder can fill in at Keeper. A player covering another group plays at 90% of her rating.
 
 A tired player or line comes off only if a fresh replacement would play about as well as the tired one can right now, so deep teams rotate more and thin teams ride their starters. Coaches ride starters longer in a close fourth quarter, and every mark depends on the players' work rate, so the whole team never changes at once.
@@ -634,6 +691,8 @@ A program also has its own installation: what its players have actually learned.
 - **Old habits.** When a coordinator leaves, a trace of her tendencies stays with the program and fades over the next season or two.
 - **Base book.** Switching offensive or defensive books resets the team's familiarity with the book to 0.35, which trims how much of the coordinator's signature shows until it is learned.
 - **Opening scripts.** Many play callers write an ordered script of three to six opening calls before a game: an inside run, a perimeter run, a quick kick pass, Viper motion, a draw and a deep kick pass, using only calls the offense runs. The script plays out over the offense's first snaps of the first half. A call is held, not dropped, when short yardage, a late down, the red zone, a kick or the clock takes priority. The caller notes the front the defense showed on each scripted call. When the script is done, the call that gained the most against a front, at least five yards, becomes the first call of a later first half drive when the defense shows that front again. Some callers do not script.
+- **System changes.** A head coach who has led a computer program for at least four seasons can change its system on the side she does not specialize in: a defensive coach changes the offense and an offensive coach the defense. She does it only after two straight seasons in the bottom 40 percent of the league on that side (points per drive on offense, points allowed per game on defense), only to a school at least three programs ran that clearly did better across the league the season before, and only if she is adaptable rather than stubborn. The team's installation carries the cost of learning the new school.
+- **Play calling during a game.** At halftime a struggling offense, down nine or more or behind with fewer than fifteen points, can change callers. A head coach who delegated the offense can take it over if she is ready to call it and does not like to delegate; a head coach who kept the calls can hand them to her coordinator. A coordinator who has been a head coach keeps her calls. Between series, the coach who is not calling the offense suggests the play family that has gained the most this game when it stands out by a yard and a half, and an adaptable caller is more likely to take it. A taken suggestion is the first call of the next drive.
 - **Packages.** Each coordinator installs up to two packages from the playbook catalog (`data/playbooks`) that fit her preferences, the team's book and its roster, up to four per side. A package nudges play calls toward its formations and plays only in its own situations, such as Heavy Push in short yardage, and only as much as the team knows it. Packages act in eligible situations; defensive commitments and offensive package calls now execute in the engine. Rare-package effectiveness and adoption remain research questions.
 - **Defense.** Defensive installation controls eligible pre-snap commitments and roster-specific execution. Called rushers and actual rushers are tracked separately.
 
@@ -735,11 +794,15 @@ Teams maintain a **36-player active game-day roster**. All active players are el
 
 **Rouge Hunt** — A defense-first offensive scheme that punts early, pins deep, and scores through pindowns, bells, and safeties.
 
+**Seagull (SG)** — A college player listed for a game as able to play two or three position groups. She belongs to no midfield line and is the one line player allowed to move before the snap.
+
 **Snap Kick** — A 5-point drop kick through the uprights during live play. Viperball's signature scoring play.
 
 **Triple Threat** — An offensive scheme using single-wing misdirection with direct snaps to multiple players.
 
 **Viper** — A versatile skill player who lines up in various positions and moves before the snap. Unique to Viperball.
+
+**Viper jersey** — The contrasting jersey that marks the one Viper on each snap.
 
 **YAC** — Yards after catch. Distance gained by a receiver after catching a kick pass.
 

@@ -14,7 +14,7 @@ TABLES = {
     "team_games": "One row per team per game: the full team box score.",
     "player_games": "One row per player per game: the player box score.",
     "players": "One row per player: season totals.",
-    "plays": "One row per play: down, distance, field position, call, result, EPA.",
+    "plays": "One row per play: down, distance, field position, call, result, EPA, and where the ball sat across the field.",
     "drives": "One row per drive: start, length, yards, result, points.",
     "standings": "One row per team: record and efficiency ratings.",
 }
@@ -126,6 +126,8 @@ def plays_rows(season, session_id, week=None, team=None):
             if team and offense != team:
                 continue
             call = p.get("defensive_call") or {}
+            w = p.get("width") or {}
+            d = w.get("defenders") or {}
             yield {
                 "game_id": g["id"], "week": g["week"], "play_number": p.get("play_number"),
                 "offense": offense, "defense": _side_team(g, _other(side)),
@@ -139,6 +141,12 @@ def plays_rows(season, session_id, week=None, team=None):
                 "home_score": p.get("home_score"), "away_score": p.get("away_score"),
                 "ep_before": p.get("ep_before"), "epa": p.get("epa"),
                 "origin": p.get("possession_origin"),
+                "hash": w.get("hash"), "snap_x": w.get("snap_x"), "end_x": w.get("end_x"),
+                "attack_side": w.get("side"), "side_label": w.get("side_label"),
+                "side_room": w.get("room"), "side_value": w.get("value"),
+                "defenders_left": d.get("left"), "defenders_box": d.get("box"),
+                "defenders_right": d.get("right"), "defense_lean": w.get("defense_lean"),
+                "out_of_bounds": w.get("out_of_bounds"),
                 "description": p.get("description", ""),
             }
 

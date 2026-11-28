@@ -1,6 +1,6 @@
-# Viperball Official Rulebook (v2.0)
+# Viperball Official Rulebook (v2.1)
 
-**Current documentation:** November 25, 2026. The playing rules and penalty catalog remain unchanged by the analytics and box-score accounting updates. [College competition rules](COLLEGE_RULES.md) cover league format; [analytics](ANALYTICS.md) covers stat attribution and models. A statistical correction is not a playing-rule change.
+**Current documentation:** November 28, 2026. Version 2.1 changes formations and motion and adds the Seagull; see the version history. [College competition rules](COLLEGE_RULES.md) cover league format; [analytics](ANALYTICS.md) covers stat attribution and models. A statistical correction is not a playing-rule change.
 
 This is the full rulebook. The README carries the same rules in shorter form, and the two
 must agree. When the engine and this book disagree, the disagreement is a bug in one of
@@ -304,16 +304,92 @@ player may play on any down.
 The Viper and the four flankers play as one two way midfield line. On defense, the line's
 four best tacklers play defensive back. See [Substitution and Rotations](#13-substitution-and-rotations).
 
+### Seagull
+
+A Seagull (SG) is a player listed on the game sheet as able to play in more than one
+position group. Seagulls are a college rule; high school and professional teams do not
+list them. Any rostered player may be listed. There is no qualifying standard, and the
+listing holds for that game only.
+
+- A college team may list up to two Seagulls per game. Listing is optional; a team may
+  list none.
+- Each Seagull is listed with two or three groups: Zeroback, Viper, flanker, offensive
+  line, defensive line, Keeper or defensive back.
+- She plays at her full rating in her listed groups and at the cover rate, 90% of her
+  rating, in any other group.
+- She belongs to no midfield line. She enters and leaves the field as an individual
+  substitute.
+- She wears the Seagull jersey, which contrasts with both the team's uniforms and the
+  Viper jersey. When she takes the Viper jersey she wears it instead and plays under the
+  Viper rules for that snap.
+
 ---
 
 ## 12. Formations, Snap and Motion
 
-- At least five offensive players on the line at the snap. The rest may line up anywhere
-  behind it.
-- The Viper may line up anywhere on the offensive side but must be set for one full second
-  before the snap, unless she is the single player in legal motion. Breaking this is an
-  Illegal Viper Alignment (5 yards).
-- One player may be in motion at the snap, moving parallel to or away from the line.
+### The line
+
+At the snap the offense must have at least the minimum number of players on the line for
+its level. Any players may fill the line.
+
+| Level | Minimum on the line |
+|---|---|
+| High school | 3 |
+| College | 5 |
+| Professional and international | 5 |
+
+Players on the line must be set for one full second before the snap and must not move at
+the snap. The Seagull on the line is the one exception. Fewer than the minimum on the line
+is Illegal Formation (5 yards).
+
+### The Seagull on the line
+
+One player per snap may move while on the line: a Seagull in the Seagull jersey.
+
+- She counts toward the minimum on the line.
+- Before and at the snap she may move parallel to the line, in either direction. She may
+  never move toward it.
+- At the snap she may block or release into the play.
+- If both of a team's Seagulls are on the line, only one may move. The offense does not
+  say which before the snap.
+
+Moving toward the line is a False Start (5 yards).
+
+### The backfield
+
+Every other offensive player lines up at least one yard behind the line and is a backfield
+player.
+
+### Motion
+
+- Any number of backfield players may be in motion at the snap, in any direction, including
+  toward the line, as long as each is behind the line when the ball is snapped.
+- The player taking the snap must be set for one full second before the snap.
+- A player may move between the line and the backfield before the snap, but must settle on
+  the line or in the backfield at least one full second before the snap.
+
+Illegal Motion (5 yards): a line player other than the Seagull moves after she is set, two
+Seagulls on the line move on the same snap, a player in motion is on or past the line at
+the snap, or the player taking the snap is moving.
+
+Illegal Shift (5 yards): a player moves between the line and the backfield within one
+second of the snap.
+
+### The Viper jersey
+
+Exactly one offensive player wears the Viper jersey on each snap. The jersey must contrast
+clearly with the rest of the team's uniforms. The player wearing it is the Viper for that
+snap.
+
+- The Viper may line up anywhere on the offensive side.
+- In the backfield she may be in motion like any backfield player.
+- On the line she counts as a line player and must be still.
+
+Missing Viper Jersey (5 yards): no offensive player wears the Viper jersey at the snap, or
+more than one does.
+
+### The snap
+
 - Any legally positioned player may take the snap; it is usually the Zeroback.
 - Once the ball is snapped, every positional restriction is lifted. Any player may carry,
   kick, lateral or receive the ball.
@@ -337,6 +413,23 @@ her replacement enters, or it is Illegal Substitution (5 yards).
   can cover Keeper, at 90% of her rating.
 - **Changing on the fly.** A team that loses the ball during live play may change while the
   ball is live. If it is caught changing, the other side gets a fast break on the next play.
+
+### Seagull reporting
+
+- A Seagull may take the Viper jersey only if Viper is one of her listed groups.
+- Before the snap she reports to the Side Judge, who signals the defense. The stadium
+  announcer then announces the change.
+- The line's Viper gives up the jersey and plays as a flanker or leaves the field.
+- The Seagull keeps the jersey until she leaves the field, either team calls a timeout,
+  possession changes or a play is reviewed. The jersey then returns to the line's Viper
+  unless the Seagull reports again.
+- The jersey changes players only at a dead ball. A Seagull who enters during live play
+  takes the role of the player she replaced.
+- A Seagull playing any group other than Viper does not report, on offense or defense.
+
+Illegal Viper Substitution (5 yards): a Seagull wears the Viper jersey without reporting, a
+player who is not a listed Seagull takes the jersey from the line's Viper, or the jersey
+changes players during live play.
 
 ### Fatigue and work rate
 
@@ -397,7 +490,6 @@ each foul can be called. Some fouls appear in more than one phase.
 | Encroachment | 5 | Defense |  |
 | Too Many Men on Field | 5 | Either |  |
 | Illegal Substitution | 5 | Either |  |
-| Illegal Viper Alignment | 5 | Offense |  |
 | Illegal Motion | 5 | Offense |  |
 | Illegal Snap | 5 | Offense |  |
 | Illegal Defensive Formation | 5 | Defense |  |
@@ -406,8 +498,6 @@ each foul can be called. Some fouls appear in more than one phase.
 | Disconcerting Signals | 5 | Defense |  |
 | Player Out of Bounds at Snap | 5 | Either |  |
 | Illegal Viper Substitution | 5 | Offense |  |
-| Illegal Numbering | 5 | Offense |  |
-| Illegal Formation (Numbering Exception) | 5 | Offense |  |
 
 ### During a run
 
@@ -572,14 +662,16 @@ each foul can be called. Some fouls appear in more than one phase.
 | Official | Watches |
 |---|---|
 | Referee | Final authority on all calls |
-| Umpire | The line of scrimmage |
+| Umpire | The line of scrimmage, including the Seagull moving along it |
 | Head Linesman | The down markers and one sideline |
 | Line Judge | The opposite sideline |
 | Back Judge | Deep plays and kicks through the uprights |
-| Side Judge | The Viper's alignment and contact on her |
+| Side Judge | The Viper jersey, Seagull reports, backfield motion at the snap and contact on the Viper |
 
-The Side Judge is unique to Viperball because the Viper's pre snap freedom needs its own
-official. Crews differ in accuracy and consistency, and some lean slightly toward the home
+The Side Judge is unique to Viperball because the Viper's pre snap freedom and the Seagull
+need their own official. She confirms that one Viper jersey is on the field, takes Seagull
+reports and signals them to the defense, and watches the backfield for illegal motion. The
+Umpire judges whether a Seagull on the line moved parallel to it or toward it. Crews differ in accuracy and consistency, and some lean slightly toward the home
 side on close calls.
 
 ### Calls, no calls and missed calls
@@ -651,7 +743,14 @@ minus its lead or plus its deficit in yards.
 
 **Snap kick:** a 5 point drop kick through the uprights during live play.
 
+**Seagull (SG):** a college player listed for a game as able to play two or three position groups. She
+belongs to no midfield line, and she is the one line player allowed to move before the snap.
+
+**Seagull jersey:** the contrasting jersey a Seagull wears, distinct from the Viper jersey.
+
 **Viper:** the free alignment skill player unique to Viperball.
+
+**Viper jersey:** the contrasting jersey that marks the one Viper on each snap.
 
 **Zeroback (ZB):** the player who takes the snap; primary runner, kicker and lateral chain
 starter.
@@ -659,6 +758,21 @@ starter.
 ---
 
 ## 20. Version History
+
+### v2.1, November 28, 2026
+
+- Any players may fill the line. The minimum on the line is 3 in high school and 5 in
+  college and professional play.
+- Any number of backfield players may be in motion at the snap, in any direction, including
+  toward the line. The player taking the snap must be set.
+- One Viper jersey on each snap marks the Viper. She follows the ordinary motion rules.
+- The Seagull (SG) added, in college only: optional, up to two per game, listed with two or
+  three groups, outside the midfield lines.
+- Seagull reporting to the Side Judge when she takes the Viper jersey.
+- A Seagull on the line may move parallel to it before and at the snap, one per snap. She
+  wears the Seagull jersey.
+- Illegal Viper Alignment, Illegal Numbering and Illegal Formation (Numbering Exception)
+  retired.
 
 ### v2.0, November 24, 2026
 
