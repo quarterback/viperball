@@ -240,6 +240,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     again. → `aar_2026-11-28_kick_accuracy_and_goal_posts.md`,
     `report_2026_11_28_kicking_counterweight.md`
 
+58. **Cape Cod and cross code concepts get their own groups** (November 28). The Playbooks
+    page listed them under Base packages. → `aar_2026-11-28_cookbook_concept_groups.md`
+
 59. **Ready made playbooks for every school** (November 28). Dynasty and season playbook lists
     now offer base and concept books for every school, and computer teams spread across them
     so every package is in use. → `aar_2026-11-28_ready_made_playbooks.md`
