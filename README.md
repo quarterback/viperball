@@ -37,11 +37,11 @@ See the [quick start](QUICKSTART.md#build-a-custom-playbook) and [package catalo
 
 ## The simulation today
 
-The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
+The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The engine tracks the ball across the width of the field as well as down it. Each play attacks a side, and the defense splits its players between the short side, the box and the wide side, so room and numbers on the attacked side shape the gain and decide who makes the tackle. A defense that sees an offense keep going to one side moves a player there, and the offense reads that. Kicks from a hash see a narrower target than kicks from the middle, and a punt caught near the sideline is harder to return. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
 
 The college Analytics tab opens thirteen views including player and team leaderboards, all scoring channels, expected points, decision value, Delta and bonus context, DTW, play and drive finders, comparisons and a glossary. Group plays by school, down or field zone; inspect individual records and export CSV. State-value and decision estimates are experimental and use supported held-out observations. The existing published EPA and DTW remain separate.
 
-**Documentation status:** November 27, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
+**Documentation status:** November 28, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
 
 ---
 
@@ -114,10 +114,12 @@ The playing surface is a standard 100-yard gridiron:
 - **End zones:** 10 yards deep at each end
 - **Width:** 53⅓ yards
 - **Yard lines** marked every 5 yards, numbered every 10 from each goal line to midfield
-- **Hash marks** at standard NCAA spacing
+- **Hash marks** at standard NCAA spacing, 20 yards in from each sideline
 - **Goal posts** at the back of each end zone, standard dimensions
 
 The field is identical to a standard American college football field. No additional markings are required.
+
+Every snap is spotted on or between the hashes. A ball downed outside a hash is spotted on that hash. From a hash, the side of the field nearer the sideline is the short side (the boundary) and the other side is the wide side (the field side).
 
 ---
 
@@ -671,6 +673,8 @@ A program also has its own installation: what its players have actually learned.
 - **Old habits.** When a coordinator leaves, a trace of her tendencies stays with the program and fades over the next season or two.
 - **Base book.** Switching offensive or defensive books resets the team's familiarity with the book to 0.35, which trims how much of the coordinator's signature shows until it is learned.
 - **Opening scripts.** Many play callers write an ordered script of three to six opening calls before a game: an inside run, a perimeter run, a quick kick pass, Viper motion, a draw and a deep kick pass, using only calls the offense runs. The script plays out over the offense's first snaps of the first half. A call is held, not dropped, when short yardage, a late down, the red zone, a kick or the clock takes priority. The caller notes the front the defense showed on each scripted call. When the script is done, the call that gained the most against a front, at least five yards, becomes the first call of a later first half drive when the defense shows that front again. Some callers do not script.
+- **System changes.** A head coach who has led a computer program for at least four seasons can change its system on the side she does not specialize in: a defensive coach changes the offense and an offensive coach the defense. She does it only after two straight seasons in the bottom 40 percent of the league on that side (points per drive on offense, points allowed per game on defense), only to a school at least three programs ran that clearly did better across the league the season before, and only if she is adaptable rather than stubborn. The team's installation carries the cost of learning the new school.
+- **Play calling during a game.** At halftime a struggling offense, down nine or more or behind with fewer than fifteen points, can change callers. A head coach who delegated the offense can take it over if she is ready to call it and does not like to delegate; a head coach who kept the calls can hand them to her coordinator. A coordinator who has been a head coach keeps her calls. Between series, the coach who is not calling the offense suggests the play family that has gained the most this game when it stands out by a yard and a half, and an adaptable caller is more likely to take it. A taken suggestion is the first call of the next drive.
 - **Packages.** Each coordinator installs up to two packages from the playbook catalog (`data/playbooks`) that fit her preferences, the team's book and its roster, up to four per side. A package nudges play calls toward its formations and plays only in its own situations, such as Heavy Push in short yardage, and only as much as the team knows it. Packages act in eligible situations; defensive commitments and offensive package calls now execute in the engine. Rare-package effectiveness and adoption remain research questions.
 - **Defense.** Defensive installation controls eligible pre-snap commitments and roster-specific execution. Called rushers and actual rushers are tracked separately.
 

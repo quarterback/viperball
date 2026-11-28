@@ -784,6 +784,9 @@
    ══════════════════════════════════════════════════════════ #}
 {% set drives = box.get('drive_summary', []) %}
 {% if drives %}
+{% set fw_names = {"home": home, "away": away} %}
+{% include "_field_width.html" %}
+
 <h2>Drive Summary</h2>
 <table>
   <thead>

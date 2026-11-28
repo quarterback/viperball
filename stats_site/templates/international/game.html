@@ -269,6 +269,9 @@
 {% endif %}
 {% endfor %}
 
+{% set fw_names = {"home": home_name, "away": away_name} %}
+{% include "_field_width.html" %}
+
 {# ── Drive Summary ── #}
 {% set drives = gr.get('drive_summary', []) %}
 {% if drives %}

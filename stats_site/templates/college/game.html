@@ -872,6 +872,9 @@
 
 {% include "_game_seagulls.html" %}
 
+{% set fw_names = {"home": game.home_team, "away": game.away_team} %}
+{% include "_field_width.html" %}
+
 {# ══════════════════════════════════════════════════════════
    PLAYER STATS — Offense, Defense, Special Teams
    ══════════════════════════════════════════════════════════ #}
@@ -1151,6 +1154,29 @@
 {% if sc.answers %}<p class="hint">Answers after the script: {% for front, probe in sc.answers.items() %}{{ probe|replace('_', ' ') }} against a {{ front }} front{% if not loop.last %}, {% endif %}{% endfor %}. Called {{ sc.answer_uses }} time{{ '' if sc.answer_uses == 1 else 's' }}.</p>{% endif %}
 {% endif %}
 {% endfor %}
+{% endif %}
+
+{% set mg = fr.get('midgame_calls') or {} %}
+{% if mg and (mg.get('home', {}).get('caller_changes') or mg.get('away', {}).get('caller_changes') or mg.get('home', {}).get('suggestions') or mg.get('away', {}).get('suggestions')) %}
+<h2>Play calling during the game</h2>
+<table>
+  <thead><tr><th>Team</th><th>Caller change</th><th class="num">Suggestions</th><th class="num">Taken</th><th class="num">Called</th><th class="num">Yards on those calls</th></tr></thead>
+  <tbody>
+  {% for side, team_name in (('away', game.away_team), ('home', game.home_team)) %}
+  {% set d = mg.get(side) or {} %}
+  {% set used = (d.get('suggestions') or [])|selectattr('used')|list %}
+  <tr>
+    <td>{{ team_name }}</td>
+    <td style="white-space:normal">{% for ch in d.get('caller_changes') or [] %}{{ ch.to_name }} took over from {{ ch.from_name }} at halftime, down {{ (ch.score[1] - ch.score[0])|stat(1) }}{% else %}—{% endfor %}</td>
+    <td class="num">{{ (d.get('suggestions') or [])|length }}</td>
+    <td class="num">{{ (d.get('suggestions') or [])|selectattr('accepted')|list|length }}</td>
+    <td class="num">{{ used|length }}</td>
+    <td class="num">{{ used|sum(attribute='yards') if used else '—' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="hint">Between series, the coach who is not calling the offense suggests the play family that has gained the most so far. A taken suggestion is the first call of the next drive.</p>
 {% endif %}
 
 {% set pbp = fr.get('play_by_play', []) %}
