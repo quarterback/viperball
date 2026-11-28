@@ -7,14 +7,44 @@
       "side": "offense",
       "name": "Heavy Push",
       "origin_family": "ground_control",
-      "compatible_families": ["ground_control", "ironclad", "ball_control", "slick_n_slide", "six_shooter", "boot_raid", "east_coast", "stampede", "ghost", "mousetrap", "mismatch", "quick_strike", "balanced"],
-      "formation_tags": ["heavy", "tight"],
-      "play_family_tags": ["dive_option", "power"],
+      "compatible_families": [
+        "ground_control",
+        "ironclad",
+        "ball_control",
+        "slick_n_slide",
+        "six_shooter",
+        "boot_raid",
+        "east_coast",
+        "stampede",
+        "ghost",
+        "mousetrap",
+        "mismatch",
+        "quick_strike",
+        "balanced"
+      ],
+      "formation_tags": [
+        "heavy",
+        "tight"
+      ],
+      "play_family_tags": [
+        "dive_option",
+        "power"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["physical_roster"],
-      "situation_tags": ["short_yardage"],
-      "countered_by": ["fortress", "blitz_pack"],
-      "tradeoffs": ["predictable", "low_explosive_ceiling"],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "short_yardage"
+      ],
+      "countered_by": [
+        "fortress",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "predictable",
+        "low_explosive_ceiling"
+      ],
       "inspiration": "Gridiron short yardage: extra blockers, downhill runs.",
       "scenario": "Four or fewer yards to go.",
       "benefits": "A team from any book can lean on its biggest bodies to move the chains.",
@@ -27,14 +57,39 @@
       "side": "offense",
       "name": "Goal Line Jumbo",
       "origin_family": "ground_control",
-      "compatible_families": ["ground_control", "ironclad", "ball_control", "slick_n_slide", "six_shooter", "boot_raid", "east_coast", "stampede", "mousetrap", "balanced"],
-      "formation_tags": ["heavy"],
-      "play_family_tags": ["power", "dive_option"],
+      "compatible_families": [
+        "ground_control",
+        "ironclad",
+        "ball_control",
+        "slick_n_slide",
+        "six_shooter",
+        "boot_raid",
+        "east_coast",
+        "stampede",
+        "mousetrap",
+        "balanced"
+      ],
+      "formation_tags": [
+        "heavy"
+      ],
+      "play_family_tags": [
+        "power",
+        "dive_option"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["physical_roster"],
-      "situation_tags": ["goal_line"],
-      "countered_by": ["fortress", "swarm"],
-      "tradeoffs": ["stuffed_runs_cost_downs"],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "goal_line"
+      ],
+      "countered_by": [
+        "fortress",
+        "swarm"
+      ],
+      "tradeoffs": [
+        "stuffed_runs_cost_downs"
+      ],
       "inspiration": "Gridiron jumbo package at the goal line.",
       "scenario": "Inside the opponent's 12.",
       "benefits": "Punches in a touchdown instead of settling for a kick.",
@@ -47,14 +102,42 @@
       "side": "offense",
       "name": "Four Minute Grind",
       "origin_family": "ironclad",
-      "compatible_families": ["ironclad", "ground_control", "ball_control", "slick_n_slide", "six_shooter", "east_coast", "boot_raid", "mousetrap", "balanced"],
-      "formation_tags": ["tight", "heavy"],
-      "play_family_tags": ["dive_option", "power", "kick_pass"],
-      "kick_pass_tags": ["quick_kick"],
-      "personnel_tags": ["physical_roster"],
-      "situation_tags": ["protect_lead"],
-      "countered_by": ["fortress"],
-      "tradeoffs": ["low_ceiling", "three_and_out_risk"],
+      "compatible_families": [
+        "ironclad",
+        "ground_control",
+        "ball_control",
+        "slick_n_slide",
+        "six_shooter",
+        "east_coast",
+        "boot_raid",
+        "mousetrap",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "dive_option",
+        "power",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "protect_lead"
+      ],
+      "countered_by": [
+        "fortress"
+      ],
+      "tradeoffs": [
+        "low_ceiling",
+        "three_and_out_risk"
+      ],
       "inspiration": "Gridiron four minute offense: run the ball and the clock with a lead.",
       "scenario": "Leading in the fourth quarter.",
       "benefits": "Keeps the ball out of the trailing team's hands.",
@@ -67,14 +150,41 @@
       "side": "offense",
       "name": "Launch Pad Kick Set",
       "origin_family": "boot_raid",
-      "compatible_families": ["boot_raid", "six_shooter", "east_coast", "ball_control", "ironclad", "slick_n_slide", "mousetrap", "balanced"],
-      "formation_tags": ["split", "tight"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["territory", "quick_kick"],
-      "personnel_tags": ["strong_kicker"],
-      "situation_tags": ["launch_pad", "kick_range"],
-      "countered_by": ["lockdown"],
-      "tradeoffs": ["needs_reliable_kicker", "payoff_stays_home"],
+      "compatible_families": [
+        "boot_raid",
+        "six_shooter",
+        "east_coast",
+        "ball_control",
+        "ironclad",
+        "slick_n_slide",
+        "mousetrap",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory",
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "launch_pad",
+        "kick_range"
+      ],
+      "countered_by": [
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "needs_reliable_kicker",
+        "payoff_stays_home"
+      ],
       "inspiration": "AFL forward 50 entries: work the ball into the scoring zone with straight kicks.",
       "scenario": "Between the opponent's 45 and 15, or past midfield on downs 4 to 6.",
       "benefits": "Short safe kick passes that set up a snap kick.",
@@ -87,14 +197,43 @@
       "side": "offense",
       "name": "Vertical Shot",
       "origin_family": "shock_and_awe",
-      "compatible_families": ["shock_and_awe", "boot_raid", "east_coast", "quick_strike", "ghost", "mismatch", "lateral_spread", "balanced"],
-      "formation_tags": ["spread"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["bomb", "territory"],
-      "personnel_tags": ["elite_kicker", "team_speed"],
-      "situation_tags": ["long_yardage", "chasing"],
-      "countered_by": ["lockdown", "predator", "drift"],
-      "tradeoffs": ["long_release", "interception_exposure"],
+      "compatible_families": [
+        "shock_and_awe",
+        "boot_raid",
+        "east_coast",
+        "quick_strike",
+        "ghost",
+        "mismatch",
+        "lateral_spread",
+        "balanced"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "bomb",
+        "territory"
+      ],
+      "personnel_tags": [
+        "elite_kicker",
+        "team_speed"
+      ],
+      "situation_tags": [
+        "long_yardage",
+        "chasing"
+      ],
+      "countered_by": [
+        "lockdown",
+        "predator",
+        "drift"
+      ],
+      "tradeoffs": [
+        "long_release",
+        "interception_exposure"
+      ],
       "inspiration": "AFL contested marks: a long kick into traffic for a strong lead.",
       "scenario": "Long yardage (5 or more yards a down needed), or chasing the game.",
       "benefits": "Flips the field in one play.",
@@ -107,14 +246,44 @@
       "side": "offense",
       "name": "Quick Kick Chain",
       "origin_family": "east_coast",
-      "compatible_families": ["east_coast", "boot_raid", "ball_control", "six_shooter", "slick_n_slide", "ghost", "mismatch", "mousetrap", "quick_strike", "shock_and_awe", "balanced"],
-      "formation_tags": ["split", "spread"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["quick_kick", "territory"],
-      "personnel_tags": ["strong_kicker"],
-      "situation_tags": ["long_yardage"],
-      "countered_by": ["lockdown", "drift"],
-      "tradeoffs": ["short_gains", "rhythm_stays_home"],
+      "compatible_families": [
+        "east_coast",
+        "boot_raid",
+        "ball_control",
+        "six_shooter",
+        "slick_n_slide",
+        "ghost",
+        "mismatch",
+        "mousetrap",
+        "quick_strike",
+        "shock_and_awe",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "long_yardage"
+      ],
+      "countered_by": [
+        "lockdown",
+        "drift"
+      ],
+      "tradeoffs": [
+        "short_gains",
+        "rhythm_stays_home"
+      ],
       "inspiration": "Gridiron West Coast offense; AFL short kicking to leading players.",
       "scenario": "Long yardage: 5 or more yards a down needed, such as 3rd and 20.",
       "benefits": "Chips back into a manageable distance without a deep shot. Borrowed long yardage calls gained 5.35 yards against 4.94 for home calls in the PR #329 prototype.",
@@ -127,14 +296,40 @@
       "side": "offense",
       "name": "Two Minute Chain",
       "origin_family": "east_coast",
-      "compatible_families": ["east_coast", "boot_raid", "ball_control", "six_shooter", "slick_n_slide", "ghost", "mismatch", "mousetrap", "quick_strike", "shock_and_awe", "lateral_spread", "balanced"],
-      "formation_tags": ["spread"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["quick_kick", "kick_lateral"],
+      "compatible_families": [
+        "east_coast",
+        "boot_raid",
+        "ball_control",
+        "six_shooter",
+        "slick_n_slide",
+        "ghost",
+        "mismatch",
+        "mousetrap",
+        "quick_strike",
+        "shock_and_awe",
+        "lateral_spread",
+        "balanced"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "kick_lateral"
+      ],
       "personnel_tags": [],
-      "situation_tags": ["two_minute"],
-      "countered_by": ["drift"],
-      "tradeoffs": ["short_gains"],
+      "situation_tags": [
+        "two_minute"
+      ],
+      "countered_by": [
+        "drift"
+      ],
+      "tradeoffs": [
+        "short_gains"
+      ],
       "inspiration": "Gridiron two minute drill.",
       "scenario": "Last two minutes of a half.",
       "benefits": "Quick completions toward kicking range.",
@@ -147,14 +342,39 @@
       "side": "offense",
       "name": "Chase Chain",
       "origin_family": "chain_gang",
-      "compatible_families": ["chain_gang", "lateral_spread", "ghost", "mismatch", "quick_strike", "shock_and_awe", "slick_n_slide", "balanced"],
-      "formation_tags": ["spread"],
-      "play_family_tags": ["lateral_spread", "kick_pass"],
-      "kick_pass_tags": ["kick_lateral"],
-      "personnel_tags": ["lateral_hands"],
-      "situation_tags": ["chasing"],
-      "countered_by": ["swarm"],
-      "tradeoffs": ["fumble_and_bell_exposure", "weak_in_rain"],
+      "compatible_families": [
+        "chain_gang",
+        "lateral_spread",
+        "ghost",
+        "mismatch",
+        "quick_strike",
+        "shock_and_awe",
+        "slick_n_slide",
+        "balanced"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "chasing"
+      ],
+      "countered_by": [
+        "swarm"
+      ],
+      "tradeoffs": [
+        "fumble_and_bell_exposure",
+        "weak_in_rain"
+      ],
       "inspiration": "Rugby sevens: keep the ball alive through hands.",
       "scenario": "Trailing late.",
       "benefits": "Big play chances when a team needs points.",
@@ -167,14 +387,46 @@
       "side": "offense",
       "name": "Kick-In Breakout",
       "origin_family": "east_coast",
-      "compatible_families": ["east_coast", "boot_raid", "ball_control", "ironclad", "six_shooter", "slick_n_slide", "ghost", "mismatch", "mousetrap", "quick_strike", "shock_and_awe", "ground_control", "balanced"],
-      "formation_tags": ["split", "spread"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["quick_kick", "territory"],
-      "personnel_tags": ["strong_kicker"],
-      "situation_tags": ["backed_up", "first_play_of_drive"],
-      "countered_by": ["predator", "afl_kick_in_press"],
-      "tradeoffs": ["interception_in_own_end"],
+      "compatible_families": [
+        "east_coast",
+        "boot_raid",
+        "ball_control",
+        "ironclad",
+        "six_shooter",
+        "slick_n_slide",
+        "ghost",
+        "mismatch",
+        "mousetrap",
+        "quick_strike",
+        "shock_and_awe",
+        "ground_control",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "backed_up",
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "predator",
+        "afl_kick_in_press"
+      ],
+      "tradeoffs": [
+        "interception_in_own_end"
+      ],
       "inspiration": "AFL kick-ins: a planned first kick to a leading target out of the defensive goal square.",
       "scenario": "First snap of a drive that starts inside the offense's own 10.",
       "benefits": "A scripted way out of a deep start, which Delta Yards makes common for a leading team.",
@@ -187,14 +439,40 @@
       "side": "offense",
       "name": "Restart Go-To",
       "origin_family": "ghost",
-      "compatible_families": ["ghost", "mismatch", "stampede", "quick_strike", "slick_n_slide", "lateral_spread", "chain_gang", "boot_raid", "east_coast", "balanced"],
-      "formation_tags": ["split", "spread"],
-      "play_family_tags": ["viper_jet", "sweep_option"],
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "stampede",
+        "quick_strike",
+        "slick_n_slide",
+        "lateral_spread",
+        "chain_gang",
+        "boot_raid",
+        "east_coast",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "viper_jet",
+        "sweep_option"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["team_speed"],
-      "situation_tags": ["after_score_restart", "first_play_of_drive"],
-      "countered_by": ["shadow"],
-      "tradeoffs": ["scouted_after_first_use"],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "after_score_restart",
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "shadow"
+      ],
+      "tradeoffs": [
+        "scouted_after_first_use"
+      ],
       "inspiration": "AFL center bounce set plays: the go-to players know where the first ball is going.",
       "scenario": "First snap after the restart that follows the other team's score.",
       "benefits": "Gets the ball to the best athlete before the defense settles.",
@@ -207,14 +485,39 @@
       "side": "offense",
       "name": "First Phase Strike",
       "origin_family": "slick_n_slide",
-      "compatible_families": ["slick_n_slide", "ground_control", "six_shooter", "mousetrap", "ghost", "ironclad", "ball_control", "stampede", "balanced"],
-      "formation_tags": ["tight", "heavy"],
-      "play_family_tags": ["counter", "draw", "sweep_option"],
+      "compatible_families": [
+        "slick_n_slide",
+        "ground_control",
+        "six_shooter",
+        "mousetrap",
+        "ghost",
+        "ironclad",
+        "ball_control",
+        "stampede",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "counter",
+        "draw",
+        "sweep_option"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["team_speed"],
-      "situation_tags": ["first_play_of_drive"],
-      "countered_by": ["chaos"],
-      "tradeoffs": ["one_use_per_drive"],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "chaos"
+      ],
+      "tradeoffs": [
+        "one_use_per_drive"
+      ],
       "inspiration": "Rugby lineout and scrum strike moves: a planned first phase that bunches the defense and goes around it.",
       "scenario": "First snap of a drive.",
       "benefits": "A designed misdirection before the defense has read anything.",
@@ -227,14 +530,40 @@
       "side": "offense",
       "name": "Last Tackle Kick",
       "origin_family": "six_shooter",
-      "compatible_families": ["six_shooter", "boot_raid", "east_coast", "shock_and_awe", "ball_control", "ironclad", "balanced"],
-      "formation_tags": ["split", "spread"],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["bomb", "kick_lateral"],
-      "personnel_tags": ["strong_kicker"],
-      "situation_tags": ["late_downs", "launch_pad"],
-      "countered_by": ["lockdown", "drift"],
-      "tradeoffs": ["turnover_on_downs_if_it_fails"],
+      "compatible_families": [
+        "six_shooter",
+        "boot_raid",
+        "east_coast",
+        "shock_and_awe",
+        "ball_control",
+        "ironclad",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "bomb",
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "late_downs",
+        "launch_pad"
+      ],
+      "countered_by": [
+        "lockdown",
+        "drift"
+      ],
+      "tradeoffs": [
+        "turnover_on_downs_if_it_fails"
+      ],
       "inspiration": "Rugby league's attacking kick on the last tackle of a set of six.",
       "scenario": "Downs 4 to 6 between the opponent's 45 and 15.",
       "benefits": "A planned kick into the scoring zone at the end of a set.",
@@ -247,14 +576,42 @@
       "side": "offense",
       "name": "Fast Break",
       "origin_family": "quick_strike",
-      "compatible_families": ["quick_strike", "shock_and_awe", "stampede", "ghost", "mismatch", "lateral_spread", "chain_gang", "boot_raid", "east_coast", "balanced"],
-      "formation_tags": ["spread"],
-      "play_family_tags": ["speed_option", "viper_jet", "kick_pass"],
-      "kick_pass_tags": ["bomb"],
-      "personnel_tags": ["team_speed"],
-      "situation_tags": ["after_takeaway", "first_play_of_drive"],
-      "countered_by": ["drift"],
-      "tradeoffs": ["short_possession"],
+      "compatible_families": [
+        "quick_strike",
+        "shock_and_awe",
+        "stampede",
+        "ghost",
+        "mismatch",
+        "lateral_spread",
+        "chain_gang",
+        "boot_raid",
+        "east_coast",
+        "balanced"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "speed_option",
+        "viper_jet",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "bomb"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "after_takeaway",
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "drift"
+      ],
+      "tradeoffs": [
+        "short_possession"
+      ],
       "inspiration": "Lacrosse transition: push before the defense recovers from a turnover.",
       "scenario": "First snap of a drive that started from a turnover or a bonus possession.",
       "benefits": "Attacks a defense still sorting out its changes.",
@@ -267,14 +624,39 @@
       "side": "offense",
       "name": "Extra Attacker",
       "origin_family": "stampede",
-      "compatible_families": ["stampede", "ghost", "mismatch", "quick_strike", "slick_n_slide", "lateral_spread", "chain_gang", "ground_control", "balanced"],
-      "formation_tags": ["split", "spread"],
-      "play_family_tags": ["sweep_option", "speed_option"],
+      "compatible_families": [
+        "stampede",
+        "ghost",
+        "mismatch",
+        "quick_strike",
+        "slick_n_slide",
+        "lateral_spread",
+        "chain_gang",
+        "ground_control",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "sweep_option",
+        "speed_option"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["team_speed", "deep_conditioning"],
-      "situation_tags": ["tired_defense"],
-      "countered_by": ["swarm"],
-      "tradeoffs": ["needs_fresh_legs"],
+      "personnel_tags": [
+        "team_speed",
+        "deep_conditioning"
+      ],
+      "situation_tags": [
+        "tired_defense"
+      ],
+      "countered_by": [
+        "swarm"
+      ],
+      "tradeoffs": [
+        "needs_fresh_legs"
+      ],
       "inspiration": "Lacrosse extra man offense: attack while the other side is short of fresh players.",
       "scenario": "Defenders on the field average under 75 energy.",
       "benefits": "Runs at tired legs, which is what Stampede's plays are built for.",
@@ -287,14 +669,38 @@
       "side": "defense",
       "name": "Goal Line Stand",
       "origin_family": "fortress",
-      "compatible_families": ["fortress", "swarm", "blitz_pack", "chaos", "shadow", "lockdown", "drift", "predator"],
+      "compatible_families": [
+        "fortress",
+        "swarm",
+        "blitz_pack",
+        "chaos",
+        "shadow",
+        "lockdown",
+        "drift",
+        "predator"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["dive_option", "power"],
+      "play_family_tags": [
+        "dive_option",
+        "power"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["strong_defense", "physical_roster"],
-      "situation_tags": ["goal_line", "short_yardage"],
-      "countered_by": ["east_coast", "boot_raid"],
-      "tradeoffs": ["edges_open", "kick_pass_seams"],
+      "personnel_tags": [
+        "strong_defense",
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "goal_line",
+        "short_yardage"
+      ],
+      "countered_by": [
+        "east_coast",
+        "boot_raid"
+      ],
+      "tradeoffs": [
+        "edges_open",
+        "kick_pass_seams"
+      ],
       "inspiration": "Gridiron goal line defense.",
       "scenario": "The offense inside the defense's 12, or 4 or fewer to go.",
       "benefits": "Takes away the inside run.",
@@ -307,14 +713,37 @@
       "side": "defense",
       "name": "Short Yardage Wall",
       "origin_family": "fortress",
-      "compatible_families": ["fortress", "swarm", "blitz_pack", "chaos", "shadow", "lockdown", "drift", "predator"],
+      "compatible_families": [
+        "fortress",
+        "swarm",
+        "blitz_pack",
+        "chaos",
+        "shadow",
+        "lockdown",
+        "drift",
+        "predator"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["dive_option", "power", "counter"],
+      "play_family_tags": [
+        "dive_option",
+        "power",
+        "counter"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["strong_defense"],
-      "situation_tags": ["short_yardage"],
-      "countered_by": ["rugby_first_phase_strike", "lateral_spread"],
-      "tradeoffs": ["edges_open", "rating_not_yet_seen_in_yardage"],
+      "personnel_tags": [
+        "strong_defense"
+      ],
+      "situation_tags": [
+        "short_yardage"
+      ],
+      "countered_by": [
+        "rugby_first_phase_strike",
+        "lateral_spread"
+      ],
+      "tradeoffs": [
+        "edges_open",
+        "rating_not_yet_seen_in_yardage"
+      ],
       "inspiration": "Gridiron short yardage front.",
       "scenario": "Four or fewer to go.",
       "benefits": "Fortress is rated strongest in short yardage (0.70).",
@@ -327,14 +756,38 @@
       "side": "defense",
       "name": "Kick Range Shell",
       "origin_family": "lockdown",
-      "compatible_families": ["lockdown", "drift", "swarm", "shadow", "predator", "fortress", "chaos"],
+      "compatible_families": [
+        "lockdown",
+        "drift",
+        "swarm",
+        "shadow",
+        "predator",
+        "fortress",
+        "chaos"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["territory", "bomb"],
-      "personnel_tags": ["strong_defense"],
-      "situation_tags": ["kick_range", "launch_pad"],
-      "countered_by": ["gp_heavy_push", "ground_control", "ironclad"],
-      "tradeoffs": ["lighter_box"],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory",
+        "bomb"
+      ],
+      "personnel_tags": [
+        "strong_defense"
+      ],
+      "situation_tags": [
+        "kick_range",
+        "launch_pad"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "ground_control",
+        "ironclad"
+      ],
+      "tradeoffs": [
+        "lighter_box"
+      ],
       "inspiration": "AFL defensive 50 structure: protect the space in front of goal.",
       "scenario": "The offense past midfield on downs 4 to 6, or on the Launch Pad.",
       "benefits": "Lockdown suppresses kicks (kick_suppression 0.80) and denies the setup kick pass.",
@@ -347,14 +800,34 @@
       "side": "defense",
       "name": "Long Yardage Bracket",
       "origin_family": "lockdown",
-      "compatible_families": ["lockdown", "drift", "swarm", "shadow", "predator", "fortress"],
+      "compatible_families": [
+        "lockdown",
+        "drift",
+        "swarm",
+        "shadow",
+        "predator",
+        "fortress"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["territory", "bomb", "quick_kick"],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory",
+        "bomb",
+        "quick_kick"
+      ],
       "personnel_tags": [],
-      "situation_tags": ["long_yardage"],
-      "countered_by": ["stampede", "gp_heavy_push"],
-      "tradeoffs": ["run_lanes"],
+      "situation_tags": [
+        "long_yardage"
+      ],
+      "countered_by": [
+        "stampede",
+        "gp_heavy_push"
+      ],
+      "tradeoffs": [
+        "run_lanes"
+      ],
       "inspiration": "Gridiron long yardage coverage.",
       "scenario": "Long yardage: 5 or more yards a down needed.",
       "benefits": "Rated strong in long yardage (0.85).",
@@ -367,14 +840,34 @@
       "side": "defense",
       "name": "Prevent",
       "origin_family": "drift",
-      "compatible_families": ["drift", "lockdown", "swarm", "shadow", "fortress", "predator"],
+      "compatible_families": [
+        "drift",
+        "lockdown",
+        "swarm",
+        "shadow",
+        "fortress",
+        "predator"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["kick_pass", "lateral_spread"],
-      "kick_pass_tags": ["bomb"],
+      "play_family_tags": [
+        "kick_pass",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [
+        "bomb"
+      ],
       "personnel_tags": [],
-      "situation_tags": ["two_minute", "protect_lead"],
-      "countered_by": ["ec_two_minute", "ec_quick_kick_chain"],
-      "tradeoffs": ["short_gains_add_up"],
+      "situation_tags": [
+        "two_minute",
+        "protect_lead"
+      ],
+      "countered_by": [
+        "ec_two_minute",
+        "ec_quick_kick_chain"
+      ],
+      "tradeoffs": [
+        "short_gains_add_up"
+      ],
       "inspiration": "Gridiron prevent defense.",
       "scenario": "Last two minutes of a half, or protecting a lead.",
       "benefits": "Drift has the strongest explosive play suppression (0.55).",
@@ -387,14 +880,33 @@
       "side": "defense",
       "name": "Short Yardage Pressure",
       "origin_family": "blitz_pack",
-      "compatible_families": ["blitz_pack", "chaos", "predator", "swarm", "fortress"],
+      "compatible_families": [
+        "blitz_pack",
+        "chaos",
+        "predator",
+        "swarm",
+        "fortress"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["dive_option", "power", "sweep_option"],
+      "play_family_tags": [
+        "dive_option",
+        "power",
+        "sweep_option"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["team_speed"],
-      "situation_tags": ["short_yardage"],
-      "countered_by": ["rugby_first_phase_strike", "mousetrap"],
-      "tradeoffs": ["explosive_plays_allowed"],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "short_yardage"
+      ],
+      "countered_by": [
+        "rugby_first_phase_strike",
+        "mousetrap"
+      ],
+      "tradeoffs": [
+        "explosive_plays_allowed"
+      ],
       "inspiration": "Gridiron run blitz.",
       "scenario": "Four or fewer to go.",
       "benefits": "Blitz Pack is rated strong in short yardage (0.80).",
@@ -407,14 +919,35 @@
       "side": "defense",
       "name": "Kick-In Press",
       "origin_family": "predator",
-      "compatible_families": ["predator", "blitz_pack", "chaos", "swarm"],
+      "compatible_families": [
+        "predator",
+        "blitz_pack",
+        "chaos",
+        "swarm"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["kick_pass"],
-      "kick_pass_tags": ["quick_kick", "territory"],
-      "personnel_tags": ["team_speed", "deep_conditioning"],
-      "situation_tags": ["backed_up", "first_play_of_drive"],
-      "countered_by": ["afl_kick_in_breakout", "sa_vertical_shot"],
-      "tradeoffs": ["space_behind"],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "team_speed",
+        "deep_conditioning"
+      ],
+      "situation_tags": [
+        "backed_up",
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "afl_kick_in_breakout",
+        "sa_vertical_shot"
+      ],
+      "tradeoffs": [
+        "space_behind"
+      ],
       "inspiration": "AFL zone press on the kick-in: squeeze the short options and force a long kick.",
       "scenario": "The offense's first snap inside its own 10.",
       "benefits": "Jumps the short kick out of a deep start, where a pick is a short field.",
@@ -427,14 +960,35 @@
       "side": "defense",
       "name": "Ride",
       "origin_family": "chaos",
-      "compatible_families": ["chaos", "blitz_pack", "predator", "swarm"],
+      "compatible_families": [
+        "chaos",
+        "blitz_pack",
+        "predator",
+        "swarm"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["speed_option", "viper_jet", "kick_pass"],
-      "kick_pass_tags": ["bomb"],
-      "personnel_tags": ["deep_conditioning"],
-      "situation_tags": ["after_takeaway", "first_play_of_drive"],
-      "countered_by": ["lax_fast_break"],
-      "tradeoffs": ["caught_changing_risk", "space_behind"],
+      "play_family_tags": [
+        "speed_option",
+        "viper_jet",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "bomb"
+      ],
+      "personnel_tags": [
+        "deep_conditioning"
+      ],
+      "situation_tags": [
+        "after_takeaway",
+        "first_play_of_drive"
+      ],
+      "countered_by": [
+        "lax_fast_break"
+      ],
+      "tradeoffs": [
+        "caught_changing_risk",
+        "space_behind"
+      ],
       "inspiration": "Lacrosse ride: contest the clear right after losing the ball.",
       "scenario": "The first snap after the other team took the ball away.",
       "benefits": "Pressure before the new offense is organized.",
@@ -447,14 +1001,32 @@
       "side": "defense",
       "name": "Rush Line",
       "origin_family": "blitz_pack",
-      "compatible_families": ["blitz_pack", "swarm", "chaos", "predator", "fortress"],
+      "compatible_families": [
+        "blitz_pack",
+        "swarm",
+        "chaos",
+        "predator",
+        "fortress"
+      ],
       "formation_tags": [],
-      "play_family_tags": ["sweep_option", "speed_option", "lateral_spread"],
+      "play_family_tags": [
+        "sweep_option",
+        "speed_option",
+        "lateral_spread"
+      ],
       "kick_pass_tags": [],
-      "personnel_tags": ["team_speed"],
-      "situation_tags": ["early_down"],
-      "countered_by": ["ec_quick_kick_chain"],
-      "tradeoffs": ["kick_over_the_top"],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "ec_quick_kick_chain"
+      ],
+      "tradeoffs": [
+        "kick_over_the_top"
+      ],
       "inspiration": "Rugby rush defense: line speed to shut down width.",
       "scenario": "First or second down with 15 or more to go.",
       "benefits": "Squeezes sweeps and lateral chains before they get wide.",
@@ -617,6 +1189,294 @@
       "benefits": "Commits extra rushers and disrupts short releases.",
       "cost": "Costs defender energy and exposes space behind the rush.",
       "counter": "A protected long kick or fresh interior runners."
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_anchor_crease",
+      "side": "offense",
+      "name": "Anchor Crease",
+      "origin_family": "ground_control",
+      "compatible_families": [
+        "ground_control",
+        "ironclad",
+        "slick_n_slide",
+        "ball_control"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "power",
+        "dive_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "early_down",
+        "short_yardage",
+        "protect_lead"
+      ],
+      "countered_by": [
+        "fortress"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "gridiron/rugby",
+      "scenario": "inside leverage",
+      "benefits": "inside leverage",
+      "cost": "limited perimeter threat",
+      "counter": "fortress"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_pod_two",
+      "side": "offense",
+      "name": "Pod Two",
+      "origin_family": "lateral_spread",
+      "compatible_families": [
+        "lateral_spread",
+        "chain_gang",
+        "slick_n_slide",
+        "ghost"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "early_down",
+        "tired_defense",
+        "long_yardage"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "rugby/gridiron",
+      "scenario": "short support chain",
+      "benefits": "short support chain",
+      "cost": "transfer exposure",
+      "counter": "swarm, chaos"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_edge_three",
+      "side": "offense",
+      "name": "Edge Three",
+      "origin_family": "lateral_spread",
+      "compatible_families": [
+        "lateral_spread",
+        "chain_gang",
+        "stampede",
+        "mismatch"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "lateral_hands",
+        "team_speed"
+      ],
+      "situation_tags": [
+        "tired_defense",
+        "long_yardage"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "rugby/soccer",
+      "scenario": "longer perimeter chain",
+      "benefits": "longer perimeter chain",
+      "cost": "compound turnover risk",
+      "counter": "swarm, chaos"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_last_wave",
+      "side": "offense",
+      "name": "Last Wave",
+      "origin_family": "chain_gang",
+      "compatible_families": [
+        "chain_gang",
+        "lateral_spread",
+        "quick_strike"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "chasing"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos",
+        "drift"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "rugby/soccer",
+      "scenario": "desperation support chain",
+      "benefits": "desperation support chain",
+      "cost": "extreme turnover risk",
+      "counter": "swarm, chaos, drift"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_corridor_switch",
+      "side": "offense",
+      "name": "Corridor Switch",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "shock_and_awe",
+        "mismatch",
+        "ghost"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "early_down",
+        "long_yardage",
+        "backed_up"
+      ],
+      "countered_by": [
+        "lockdown",
+        "drift"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "afl/soccer",
+      "scenario": "territory delivery against compact defense",
+      "benefits": "territory delivery against compact defense",
+      "cost": "interception exposure",
+      "counter": "lockdown, drift"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_third_runner",
+      "side": "offense",
+      "name": "Third Runner",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "lateral_spread",
+        "ghost",
+        "mismatch"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "long_yardage",
+        "tired_defense"
+      ],
+      "countered_by": [
+        "lockdown",
+        "swarm"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "soccer/afl/rugby",
+      "scenario": "kick-lateral combination",
+      "benefits": "kick-lateral combination",
+      "cost": "additional handling risk",
+      "counter": "lockdown, swarm"
+    },
+    {
+      "version": 1,
+      "package_id": "clinic_launch_option",
+      "side": "offense",
+      "name": "Launch Option",
+      "origin_family": "boot_raid",
+      "compatible_families": [
+        "boot_raid",
+        "six_shooter",
+        "ironclad"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "launch_pad",
+        "kick_range",
+        "late_downs"
+      ],
+      "countered_by": [
+        "keeper_hunt",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "execution_risk"
+      ],
+      "inspiration": "gridiron/afl",
+      "scenario": "advance toward scoring range",
+      "benefits": "advance toward scoring range",
+      "cost": "kick coverage pressure",
+      "counter": "keeper_hunt, blitz_pack"
     }
   ]
 }
