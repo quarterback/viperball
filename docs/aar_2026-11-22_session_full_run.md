@@ -180,6 +180,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     hold them for urgent situations and use the call that beat a front as an answer.
     → `aar_2026-11-28_opening_scripts.md`
 
+45. **Play calling during a game** (November 28). Halftime caller changes for struggling
+    offenses and between-series suggestions from the coach not calling the offense.
+    → `aar_2026-11-28_midgame_play_calling.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
