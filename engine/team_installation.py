@@ -358,7 +358,17 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
         ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: _package_rank_key(side, card, score, pid))
         if side == "offense":
             ranked = [pid for pid in ranked if score(pid) > 0] or ranked
-        for pid in ranked[:PACKAGES_PER_COORDINATOR - already_by_coach]:
+        # Preserve the existing finite installation budget. A new caller
+        # with room for two concepts reserves one for a compatible situational
+        # module if one fits; existing practiced concepts are never evicted.
+        from .delta_playbook import ALL as delta_ids
+        slots = PACKAGES_PER_COORDINATOR - already_by_coach
+        if slots >= 2 and not (have & delta_ids):
+            specialist = next((pid for pid in ranked if pid in delta_ids), None)
+            ordinary = next((pid for pid in ranked if pid not in delta_ids), None)
+            if specialist and ordinary:
+                ranked = [ordinary, specialist] + [pid for pid in ranked if pid not in (ordinary, specialist)]
+        for pid in ranked[:slots]:
             kept.append({"package_id": pid, "familiarity": PACKAGE_START,
                          "installed_by": coach_id, "installed_year": year})
     kept.sort(key=lambda p: (-p.get("familiarity", 0.0), p["package_id"]))
