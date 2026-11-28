@@ -186,6 +186,17 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     offenses and between-series suggestions from the coach not calling the offense.
     → `aar_2026-11-28_midgame_play_calling.md`
 
+45. **Field width** (November 28). The engine tracks the ball across the field: snaps spot on
+    or between the hashes, each play attacks a side, and the defense splits into short side,
+    box and wide side channels. Room and numbers on the attacked side change the gain and
+    who makes the tackle; league totals held steady. → `aar_2026-11-28_field_width.md`
+
+46. **Field width, part 2** (November 28). Kicks from a hash see a narrower target, punt and
+    missed kick returns shrink near the sideline and run to the open side, defenses shift a
+    player toward an offense's side habit during a game, and game and team pages show side
+    and hash splits. Fixed a tie that tilted play to the left side.
+    → `aar_2026-11-28_field_width_part_2.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

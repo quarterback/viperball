@@ -37,11 +37,11 @@ See the [quick start](QUICKSTART.md#build-a-custom-playbook) and [package catalo
 
 ## The simulation today
 
-The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
+The engine resolves individual plays with actual participating players, six-down possession, legal kicks and returns, defensive commitments, line changes, injuries and officiating. Weather evolves by period and affects the field and kicking conditions. The engine tracks the ball across the width of the field as well as down it. Each play attacks a side, and the defense splits its players between the short side, the box and the wide side, so room and numbers on the attacked side shape the gain and decide who makes the tackle. A defense that sees an offense keep going to one side moves a player there, and the offense reads that. Kicks from a hash see a narrower target than kicks from the middle, and a punt caught near the sideline is harder to return. The college dynasty connects recruiting, high-school competition, transfers, development, contracts, coaching careers and installed playbooks. Professional, WVL and international games use the full engine; ordinary high-school games use a fitted quicker model, with title games on the full engine.
 
 The college Analytics tab opens thirteen views including player and team leaderboards, all scoring channels, expected points, decision value, Delta and bonus context, DTW, play and drive finders, comparisons and a glossary. Group plays by school, down or field zone; inspect individual records and export CSV. State-value and decision estimates are experimental and use supported held-out observations. The existing published EPA and DTW remain separate.
 
-**Documentation status:** November 27, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
+**Documentation status:** November 28, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
 
 ---
 
@@ -114,10 +114,12 @@ The playing surface is a standard 100-yard gridiron:
 - **End zones:** 10 yards deep at each end
 - **Width:** 53⅓ yards
 - **Yard lines** marked every 5 yards, numbered every 10 from each goal line to midfield
-- **Hash marks** at standard NCAA spacing
+- **Hash marks** at standard NCAA spacing, 20 yards in from each sideline
 - **Goal posts** at the back of each end zone, standard dimensions
 
 The field is identical to a standard American college football field. No additional markings are required.
+
+Every snap is spotted on or between the hashes. A ball downed outside a hash is spotted on that hash. From a hash, the side of the field nearer the sideline is the short side (the boundary) and the other side is the wide side (the field side).
 
 ---
 

@@ -870,6 +870,9 @@
 
 {% include "_game_discipline.html" %}
 
+{% set fw_names = {"home": game.home_team, "away": game.away_team} %}
+{% include "_field_width.html" %}
+
 {# ══════════════════════════════════════════════════════════
    PLAYER STATS — Offense, Defense, Special Teams
    ══════════════════════════════════════════════════════════ #}
