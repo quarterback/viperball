@@ -169,6 +169,9 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     from the main nav into the Tools tabs, the header is one row again, and the Playbooks
     page matches the site. → `aar_2026-11-28_header_and_playbooks_page.md`
 
+40. **The site root opens the stats site** (November 28). The live root showed the old
+    NiceGUI home page; it now redirects to /stats/. → `aar_2026-11-28_root_opens_stats_site.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

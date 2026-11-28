@@ -37,6 +37,17 @@ async def _prewarm_shared_data():
     logger.info("Shared data cache pre-warmed.")
 
 
+# The stats site is the game's interface. The NiceGUI app is deprecated, so
+# the site root opens the stats site instead of the old NiceGUI home page.
+# This route is registered before NiceGUI mounts, so it wins for "/".
+from fastapi.responses import RedirectResponse  # noqa: E402
+
+
+@fastapi_app.get("/", include_in_schema=False)
+async def _root_to_stats():
+    return RedirectResponse("/stats/", status_code=307)
+
+
 # Mount NiceGUI onto the FastAPI app (no host/port — uvicorn handles that)
 logger.info("Mounting NiceGUI onto FastAPI...")
 ui.run_with(
