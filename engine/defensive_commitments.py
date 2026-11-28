@@ -4,6 +4,9 @@ All decisions use pre-snap state and prior completed plays only.
 Primary and secondary eligibility share the same contract in game and benchmark.
 """
 def eligibility(package_id, tags, context, primary_tags):
+    from .delta_playbook import PK, weight
+    if package_id in PK:
+        return min(1.0, weight(package_id, context))
     tags = set(tags)
     fp = context.get("field_position", 0)
     down = context.get("down", 1)
@@ -49,7 +52,9 @@ def eligibility(package_id, tags, context, primary_tags):
 
 PRESS_PACKAGES = {"blitz_short_yardage_pressure", "rugby_rush_line", "afl_kick_in_press", "lax_ride", "predator_exhaustion_press"}
 COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", "drift_prevent", "shadow_robber", "swarm_containment", "chaos_lateral_trap"}
-WALL_PACKAGES = {"fortress_goal_line_stand", "fortress_short_yardage_wall"}
+WALL_PACKAGES = {"fortress_goal_line_stand", "fortress_short_yardage_wall", "pk_compact_box", "pk_goal_line_wall", "pk_range_denial"}
+PRESS_PACKAGES.update(("pk_kicker_diamond", "pk_late_down_surge"))
+COVER_PACKAGES.update(("pk_side_lock", "pk_rotating_shell", "pk_takeaway_trap"))
 
 def execution_strength(familiarity, energy, authority):
     # Scheme and individual execution already matter in the contest. A tired

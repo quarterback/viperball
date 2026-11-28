@@ -1477,6 +1477,765 @@
       "benefits": "advance toward scoring range",
       "cost": "kick coverage pressure",
       "counter": "keeper_hunt, blitz_pack"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_advantage_entry",
+      "side": "offense",
+      "name": "Advantage Entry",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "slick_n_slide",
+        "ball_control",
+        "ground_control"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "dive_option",
+        "power"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "swarm",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Entry with short outlets",
+      "benefits": "Entry with short outlets",
+      "cost": "Possession, time and execution exposure",
+      "counter": "swarm, fortress"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_umbrella",
+      "side": "offense",
+      "name": "Umbrella",
+      "origin_family": "boot_raid",
+      "compatible_families": [
+        "boot_raid",
+        "east_coast",
+        "six_shooter",
+        "mismatch"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "sweep_option"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "keeper_hunt",
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Central kick threat and wide outlets",
+      "benefits": "Central kick threat and wide outlets",
+      "cost": "Possession, time and execution exposure",
+      "counter": "keeper_hunt, lockdown"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_overload",
+      "side": "offense",
+      "name": "Overload",
+      "origin_family": "lateral_spread",
+      "compatible_families": [
+        "lateral_spread",
+        "ghost",
+        "mismatch",
+        "chain_gang"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "counter",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Concentrate threats then counter",
+      "benefits": "Concentrate threats then counter",
+      "cost": "Possession, time and execution exposure",
+      "counter": "swarm, chaos"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_double_threat",
+      "side": "offense",
+      "name": "Double Threat",
+      "origin_family": "slick_n_slide",
+      "compatible_families": [
+        "slick_n_slide",
+        "ghost",
+        "stampede"
+      ],
+      "formation_tags": [
+        "split"
+      ],
+      "play_family_tags": [
+        "speed_option",
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "shadow",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Run or kick-pass from same look",
+      "benefits": "Run or kick-pass from same look",
+      "cost": "Possession, time and execution exposure",
+      "counter": "shadow, fortress"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_five_nine",
+      "side": "offense",
+      "name": "Five-Nine",
+      "origin_family": "boot_raid",
+      "compatible_families": [
+        "boot_raid",
+        "six_shooter",
+        "ground_control"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "power",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "keeper_hunt",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Advance or take useful scoring kick",
+      "benefits": "Advance or take useful scoring kick",
+      "cost": "Possession, time and execution exposure",
+      "counter": "keeper_hunt, fortress"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_compression",
+      "side": "offense",
+      "name": "Compression",
+      "origin_family": "ground_control",
+      "compatible_families": [
+        "ground_control",
+        "ghost",
+        "mismatch",
+        "slick_n_slide"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "power",
+        "counter",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "fortress",
+        "lockdown"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Attack compressed field",
+      "benefits": "Attack compressed field",
+      "cost": "Possession, time and execution exposure",
+      "counter": "fortress, lockdown"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_rapid_finish",
+      "side": "offense",
+      "name": "Rapid Finish",
+      "origin_family": "quick_strike",
+      "compatible_families": [
+        "quick_strike",
+        "shock_and_awe",
+        "stampede"
+      ],
+      "formation_tags": [
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass",
+        "speed_option",
+        "viper_jet"
+      ],
+      "kick_pass_tags": [
+        "territory",
+        "bomb"
+      ],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "rotation",
+        "drift"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Urgent scoring advancement",
+      "benefits": "Urgent scoring advancement",
+      "cost": "Possession, time and execution exposure",
+      "counter": "rotation, drift"
+    },
+    {
+      "version": 1,
+      "package_id": "pp_second_shot",
+      "side": "offense",
+      "name": "Second Shot",
+      "origin_family": "boot_raid",
+      "compatible_families": [
+        "boot_raid",
+        "six_shooter",
+        "ball_control"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "keeper_hunt",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Re-evaluate after retained miss",
+      "benefits": "Re-evaluate after retained miss",
+      "cost": "Possession, time and execution exposure",
+      "counter": "keeper_hunt, blitz_pack"
+    },
+    {
+      "version": 1,
+      "package_id": "pko_escape",
+      "side": "offense",
+      "name": "Escape",
+      "origin_family": "ironclad",
+      "compatible_families": [
+        "ironclad",
+        "ball_control",
+        "east_coast"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_penalty_kill"
+      ],
+      "countered_by": [
+        "fortress",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Escape safety exposure",
+      "benefits": "Escape safety exposure",
+      "cost": "Possession, time and execution exposure",
+      "counter": "fortress, blitz_pack"
+    },
+    {
+      "version": 1,
+      "package_id": "pko_secure_twenty",
+      "side": "offense",
+      "name": "Secure Twenty",
+      "origin_family": "ground_control",
+      "compatible_families": [
+        "ground_control",
+        "slick_n_slide",
+        "ball_control"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_penalty_kill"
+      ],
+      "countered_by": [
+        "fortress",
+        "swarm"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Renew set safely",
+      "benefits": "Renew set safely",
+      "cost": "Possession, time and execution exposure",
+      "counter": "fortress, swarm"
+    },
+    {
+      "version": 1,
+      "package_id": "pko_territory_exit",
+      "side": "offense",
+      "name": "Territory Exit",
+      "origin_family": "ironclad",
+      "compatible_families": [
+        "ironclad",
+        "boot_raid",
+        "ball_control"
+      ],
+      "formation_tags": [
+        "tight",
+        "split"
+      ],
+      "play_family_tags": [
+        "power",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_penalty_kill"
+      ],
+      "countered_by": [
+        "keeper_hunt",
+        "shadow"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Advance or legal territorial exit",
+      "benefits": "Advance or legal territorial exit",
+      "cost": "Possession, time and execution exposure",
+      "counter": "keeper_hunt, shadow"
+    },
+    {
+      "version": 1,
+      "package_id": "pko_counterpunch",
+      "side": "offense",
+      "name": "Counterpunch",
+      "origin_family": "ghost",
+      "compatible_families": [
+        "ghost",
+        "mismatch",
+        "quick_strike"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "counter",
+        "draw",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_penalty_kill"
+      ],
+      "countered_by": [
+        "lockdown",
+        "shadow"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Attack pressure concession",
+      "benefits": "Attack pressure concession",
+      "cost": "Possession, time and execution exposure",
+      "counter": "lockdown, shadow"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_compact_box",
+      "side": "defense",
+      "name": "Compact Box",
+      "origin_family": "fortress",
+      "compatible_families": [
+        "fortress",
+        "drift"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "lateral_spread",
+        "stampede"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Interior and shallow coverage",
+      "benefits": "Interior and shallow coverage",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "lateral_spread, stampede"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_kicker_diamond",
+      "side": "defense",
+      "name": "Kicker Diamond",
+      "origin_family": "keeper_hunt",
+      "compatible_families": [
+        "keeper_hunt",
+        "blitz_pack",
+        "lockdown"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "ground_control",
+        "mousetrap"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Pressure kicker with coverage cost",
+      "benefits": "Pressure kicker with coverage cost",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "ground_control, mousetrap"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_side_lock",
+      "side": "defense",
+      "name": "Side Lock",
+      "origin_family": "swarm",
+      "compatible_families": [
+        "swarm",
+        "chaos",
+        "shadow"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "sweep_option",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "ground_control",
+        "east_coast"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Contain repeated perimeter threats",
+      "benefits": "Contain repeated perimeter threats",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "ground_control, east_coast"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_rotating_shell",
+      "side": "defense",
+      "name": "Rotating Shell",
+      "origin_family": "lockdown",
+      "compatible_families": [
+        "lockdown",
+        "rotation",
+        "drift"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "lateral_spread"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "ground_control",
+        "ball_control"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Layered cover against mobile attack",
+      "benefits": "Layered cover against mobile attack",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "ground_control, ball_control"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_range_denial",
+      "side": "defense",
+      "name": "Range Denial",
+      "origin_family": "fortress",
+      "compatible_families": [
+        "fortress",
+        "blitz_pack",
+        "shadow"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "shock_and_awe",
+        "stampede"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Prevent entry into comfortable kick range",
+      "benefits": "Prevent entry into comfortable kick range",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "shock_and_awe, stampede"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_goal_line_wall",
+      "side": "defense",
+      "name": "Goal-Line Wall",
+      "origin_family": "fortress",
+      "compatible_families": [
+        "fortress",
+        "lockdown"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "power",
+        "dive_option",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "boot_raid",
+        "lateral_spread"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Protect nine-point finish",
+      "benefits": "Protect nine-point finish",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "boot_raid, lateral_spread"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_late_down_surge",
+      "side": "defense",
+      "name": "Late-Down Surge",
+      "origin_family": "keeper_hunt",
+      "compatible_families": [
+        "keeper_hunt",
+        "blitz_pack",
+        "predator"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "kick_pass",
+        "power"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "mousetrap",
+        "east_coast"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Commit actual rushers on late downs",
+      "benefits": "Commit actual rushers on late downs",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "mousetrap, east_coast"
+    },
+    {
+      "version": 1,
+      "package_id": "pk_takeaway_trap",
+      "side": "defense",
+      "name": "Takeaway Trap",
+      "origin_family": "chaos",
+      "compatible_families": [
+        "chaos",
+        "predator",
+        "swarm"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "lateral_spread",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [],
+      "situation_tags": [
+        "delta_power_play"
+      ],
+      "countered_by": [
+        "ground_control",
+        "ironclad"
+      ],
+      "tradeoffs": [
+        "coverage_or_execution_cost"
+      ],
+      "inspiration": "Delta master coaching clinic; cross-code special situations",
+      "scenario": "Anticipate repeated distribution",
+      "benefits": "Anticipate repeated distribution",
+      "cost": "Commitment concedes alternative lanes or actions",
+      "counter": "ground_control, ironclad"
     }
   ]
 }

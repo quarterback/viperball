@@ -7,6 +7,7 @@ import pytest
 
 from engine import team_installation as ti
 from engine.coach_tactics import PROFILE_VERSION
+from engine.delta_playbook import PK
 from engine.playbook_catalog import get_package
 
 
@@ -69,8 +70,10 @@ def test_snapshot_matches_fresh_selection_and_preserves_rng():
                     for pid, r in snap["packages"].items()
                     if "preference_rank" in r)
     ti._choose_packages("defense", unit, coach, ROSTER, 2026)
-    assert {p["package_id"] for p in unit["packages"]} == {
-        pid for _, pid in ranked[:ti.PACKAGES_PER_COORDINATOR]}
+    installed = {p["package_id"] for p in unit["packages"]}
+    assert len(installed) == ti.PACKAGES_PER_COORDINATOR
+    assert installed == {next(pid for _, pid in ranked if pid not in PK),
+                         next(pid for _, pid in ranked if pid in PK)}
     assert random.getstate() == rng_before
     for p in unit["packages"]:
         row = snap["packages"][p["package_id"]]

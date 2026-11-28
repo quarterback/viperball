@@ -358,7 +358,17 @@ def _choose_packages(side: str, unit: dict, card: Any, team_stats: dict,
         ranked = sorted((pid for pid in fits if pid not in have), key=lambda pid: _package_rank_key(side, card, score, pid))
         if side == "offense":
             ranked = [pid for pid in ranked if score(pid) > 0] or ranked
-        for pid in ranked[:PACKAGES_PER_COORDINATOR - already_by_coach]:
+        # Preserve the existing finite installation budget. A new caller
+        # with room for two concepts reserves one for a compatible situational
+        # module if one fits; existing practiced concepts are never evicted.
+        from .delta_playbook import ALL as delta_ids
+        slots = PACKAGES_PER_COORDINATOR - already_by_coach
+        if slots >= 2 and not (have & delta_ids):
+            specialist = next((pid for pid in ranked if pid in delta_ids), None)
+            ordinary = next((pid for pid in ranked if pid not in delta_ids), None)
+            if specialist and ordinary:
+                ranked = [ordinary, specialist] + [pid for pid in ranked if pid not in (ordinary, specialist)]
+        for pid in ranked[:slots]:
             kept.append({"package_id": pid, "familiarity": PACKAGE_START,
                          "installed_by": coach_id, "installed_year": year})
     kept.sort(key=lambda p: (-p.get("familiarity", 0.0), p["package_id"]))
@@ -615,7 +625,7 @@ def apply_installation_to_offense(tactics: Dict[str, Any], rec: Optional[dict]) 
     return out
 
 
-_EVALUABLE_RULE_KEYS = {"yards_per_down_min", "yards_to_go_max", "yards_to_go_min",
+_EVALUABLE_RULE_KEYS = {"delta_bucket","yards_per_down_min", "yards_to_go_max", "yards_to_go_min",
                         "field_position_min", "field_position_max", "down_min", "down_max",
                         "lead_min_q4", "lead_min_second_half", "deficit_min_second_half",
                         "deficit_min_last_300s", "quarters", "time_remaining_max",
@@ -674,6 +684,8 @@ def active_situations(context: Dict[str, Any]) -> set:
             energy = context.get("defense_energy")
             if energy is None or energy >= rule["defense_energy_max"]:
                 ok = False
+        if "delta_bucket" in rule and context.get("delta_bucket") != rule["delta_bucket"]:
+            ok = False
         if ok:
             out.add(tag)
     return out
@@ -708,7 +720,8 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
         familiarity = _clamp(pkg.get("familiarity", 0.0))
         if familiarity > 0 and offensive_package_eligible(pkg, live):
             from .clinic_playbook import concept_weight
-            preference = concept_weight(pkg["package_id"], context)
+            from .delta_playbook import weight as delta_weight
+            preference = concept_weight(pkg["package_id"], context) * delta_weight(pkg["package_id"], context)
             if preference > 0:
                 candidates.append((pkg, familiarity, preference))
     eligible = [pkg["package_id"] for pkg, _, _ in candidates]
