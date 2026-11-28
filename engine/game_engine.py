@@ -4820,6 +4820,9 @@ class ViperballEngine:
             call["tactical_context"] = context
         if package:
             call["package_id"] = package["package_id"]
+            if package["package_id"].startswith("pk_"):
+                call["delta_bucket"] = context.get("delta_bucket")
+                call["delta_cost"] = context.get("delta_cost")
             call["package_strength"] = package["strength"]
             call["package_eligibility"] = package["eligibility"]
             call["package_familiarity"] = package["familiarity"]
@@ -7779,9 +7782,9 @@ class ViperballEngine:
         if (down in (4, 5) and V2_ENGINE_CONFIG.get("offensive_packages_enabled", True)
                 and any(p["package_id"] in OFFENSE for p in tactics.get("packages", ()))):
             context = self._package_context(score_diff)
+            p = getattr(self, "_active_offensive_plan", None) or {}
             shifts = [finish_shift(p["package_id"], p.get("familiarity", 0),
-                      tactics.get("authority", 1), context, kicker.archetype)
-                      for p in tactics["packages"] if p["package_id"] in OFFENSE]
+                      tactics.get("authority", 1), context, kicker.archetype)] if p.get("package_id") in OFFENSE else []
             # Do not stack multiple practiced alternatives.
             if shifts:
                 clinic_kick_shift = max(-2.0, min(2.0, clinic_kick_shift + max(shifts, key=abs)))
@@ -9330,6 +9333,9 @@ class ViperballEngine:
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
         self._finish_st_event(play)
+        if self._offensive_plan_event is not None and play.play_family in ("snap_kick", "field_goal", "punt"):
+            self._offensive_plan_event["choices"]["family"] = play.play_family
+            self._offensive_plan_event["finish_action"] = play.play_family
         self._finish_offensive_plan(play)
         from .delta_playbook import retained_miss
         self._delta_retained_miss = retained_miss(play, self._snap_possession, self.state.possession,
@@ -9430,6 +9436,13 @@ class ViperballEngine:
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
 
+        from .delta_playbook import OFFENSE
+        delta_active = getattr(self, "_delta_playbook_context", {}).get("delta_bucket") in ("power_play", "penalty_kill")
+        delta_prepared = delta_active and any(p["package_id"] in OFFENSE
+            for p in self._current_oc_tactics().get("packages", ()))
+        if delta_prepared:
+            self._begin_offensive_plan()
+
         # ── Kick mode active (downs 4-6): snap kick specialist path ──
         # When the offense elected kick mode on 4th down, all subsequent
         # downs are snap kick attempts under the pesäpallo rule.
@@ -9481,7 +9494,8 @@ class ViperballEngine:
         # Kicks belong on 6th down.  No snap kick interrupts on early downs.
 
         # ── Formation-First: select formation, then play family ──
-        self._begin_offensive_plan()
+        if not delta_prepared:
+            self._begin_offensive_plan()
         self._current_formation = self.select_formation()
         self._begin_defensive_call(self._current_formation)
         play_family = self.select_play_family(formation=self._current_formation)
@@ -14555,6 +14569,11 @@ class ViperballEngine:
         ptag = player_tag(kicker)
         kicking_team = self.state.possession
         self._begin_st_event("drop_kick", kicker)
+        if getattr(self, "_delta_playbook_context", {}).get("delta_bucket") == "power_play":
+            from .delta_playbook import PK
+            unit = (getattr(self.get_defensive_team(), "installation", None) or {}).get("defense", {})
+            if any(p.get("package_id") in PK for p in unit.get("packages", ())):
+                self._begin_defensive_call("tight")
 
         # ── Blocked drop kick check ──
         # Drop kicks have a small chance of being blocked.  Diving Wing
@@ -14589,6 +14608,12 @@ class ViperballEngine:
             dk_block_prob += 0.005
 
         dk_block_prob *= self._def_sig("kick_rush") ** 1.4
+        call = self._active_dc_call()
+        if call.get("package_id") in ("pk_kicker_diamond", "pk_late_down_surge"):
+            # More actual intended pressure means less cover; existing block resolution remains.
+            rush = max(0, call.get("intended_rushers", 2) - 2)
+            dk_block_prob *= 1 + .10 * rush * call.get("package_strength", 0.0)
+            self._st_event["delta_kick_pressure"] = call["package_id"]
         dk_block_prob = max(0.0, min(0.12, dk_block_prob))
 
         if random.random() < dk_block_prob:
