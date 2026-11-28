@@ -115,9 +115,13 @@ The playing surface is a standard 100-yard gridiron:
 - **Width:** 53⅓ yards
 - **Yard lines** marked every 5 yards, numbered every 10 from each goal line to midfield
 - **Hash marks** at standard NCAA spacing, 20 yards in from each sideline
-- **Goal posts** at the back of each end zone, standard dimensions
+- **Goal posts** on the end line at the back of each end zone, centered across the field. Viperball uses Gaelic football's H posts:
+  - Uprights 6.5 meters (21 feet 4 inches) apart, inside to inside. College football posts are 18 feet 6 inches apart.
+  - Crossbar 2.5 meters (8 feet 2 inches) above the ground. College football's is 10 feet.
+  - Uprights at least 7 meters (23 feet) tall.
+  - A kick scores when the whole ball passes between the uprights and over the crossbar. Above the top of the uprights, the posts count as running straight up. There is no net and nothing scores under the crossbar.
 
-The field is identical to a standard American college football field. No additional markings are required.
+Apart from the goal posts, the field is identical to a standard American college football field. No additional markings are required.
 
 Every snap is spotted on or between the hashes. A ball downed outside a hash is spotted on that hash. From a hash, the side of the field nearer the sideline is the short side (the boundary) and the other side is the wide side (the field side).
 
@@ -363,7 +367,19 @@ Kicking is the most strategically distinctive element of Viperball. There are fo
 
 The snap kick is a live-ball scoring kick worth 5 points. The kicker drops the ball from their hands, allows it to bounce once on the ground, and kicks it through the uprights. Unlike a field goal, a snap kick does not require a holder, set piece, or stoppage — it is attempted during the flow of live play.
 
-Snap kicks can be attempted from anywhere on the field. Practical range extends to approximately 55 yards, with accuracy declining sharply beyond 40 yards.
+Snap kicks can be attempted from anywhere on the field. A snap kick is Viperball's three pointer: about one in three attempts goes in. Inside 15 yards a typical starting kicker makes about 42 percent. Each 5 yards farther costs 3 points of accuracy at first and up to 7 points at long range:
+
+| Distance | Typical starter | Elite kicker |
+|---|---|---|
+| 15 yards | 42% | 51% |
+| 25 yards | 35% | 50% |
+| 35 yards | 26% | 43% |
+| 45 yards | 15% | 34% |
+| 55 yards | 2% | 23% |
+
+A kick can miss for three reasons, alone or together: the kicker's own strike, the weather (rain, snow, crosswind and headwind) and pressure from the rush. A kick from a hash sees a narrower opening than one from the middle of the field.
+
+Because a miss on downs 1 through 5 costs a down rather than the ball, coaches take snap kicks most often on 4th and 5th down. On 6th down a miss is a turnover, so coaches usually take the surer field goal.
 
 #### Missed Snap Kicks
 
@@ -376,6 +392,8 @@ On **6th down**, a missed snap kick of any distance is a turnover — the defens
 ### Place Kick (Field Goal)
 
 The place kick is a set-piece scoring kick worth 3 points. The ball is held on the ground by a teammate while the kicker drives it through the uprights. Place kicks are more accurate at distance than snap kicks but require the offense to line up in a kicking formation, giving the defense time to set up a block attempt.
+
+Field goal accuracy follows college football rates by distance. A typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Better kickers play every kick as if it were a few yards shorter.
 
 ### Punt
 
