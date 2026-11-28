@@ -1457,6 +1457,11 @@ async def dynasty_hub(request: Request, session_id: str):
     from api.main import list_styles, program_archetypes
     ctx["styles"] = list_styles()
     ctx["archetypes"] = program_archetypes()["archetypes"]
+    from engine.custom_playbooks import list_books
+    ctx["books"] = list_books()
+    _dyn = sess.get("dynasty")
+    _coach_team = getattr(getattr(_dyn, "coach", None), "team_name", None)
+    ctx["current_books"] = (getattr(_dyn, "playbook_assignments", {}) or {}).get(_coach_team, {}) if _dyn else {}
     ctx["view"] = request.query_params.get("view", "command")
     return templates.TemplateResponse("dynasty/hub.html", _ctx(request, section="dynasty", **ctx))
 

@@ -390,6 +390,9 @@ class DynastyStartSeasonRequest(BaseModel):
     offense_style: str = "balanced"
     defense_style: str = "swarm"
     st_scheme: str = "aces"
+    # Saved playbook IDs for the coach's program by side. None keeps the
+    # current books; an empty value for a side drops that side's book.
+    playbooks: Optional[Dict[str, str]] = None
     ai_seed: Optional[int] = None
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     program_archetype: Optional[str] = None  # archetype for human team
@@ -2811,7 +2814,16 @@ def dynasty_start_season(session_id: str, req: DynastyStartSeasonRequest):
         if tname != dynasty.coach.team_name:
             style_configs[tname].update(next_schools.get(tname, {}))
 
-    from engine.custom_playbooks import apply_schools
+    from engine.custom_playbooks import apply_schools, resolve_choices
+    if req.playbooks is not None:
+        try:
+            books = resolve_choices(req.playbooks)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if books:
+            dynasty.playbook_assignments[dynasty.coach.team_name] = books
+        else:
+            dynasty.playbook_assignments.pop(dynasty.coach.team_name, None)
     apply_schools(style_configs, dynasty.playbook_assignments)
 
     pinned = None

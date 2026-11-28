@@ -172,6 +172,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
 40. **The site root opens the stats site** (November 28). The live root showed the old
     NiceGUI home page; it now redirects to /stats/. → `aar_2026-11-28_root_opens_stats_site.md`
 
+41. **Choosing playbooks for a dynasty program** (November 28). Playbook selects always show
+    at setup, and the dynasty Start season form can assign saved books each season.
+    → `aar_2026-11-28_dynasty_playbook_choice.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

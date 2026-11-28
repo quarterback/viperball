@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "_controls.html" import style_selects, action %}
+{% from "_playbook_selects.html" import playbook_selects %}
 {% set here = '/stats/dynasty/' ~ session_id ~ '/' %}
 {% set c = status.coach %}
 {% block title %}{{ status.dynasty_name }} — Viperball Stats{% endblock %}
@@ -156,6 +157,11 @@
       <div>
         <label>{{ c.team }} style</label>
         <div style="display:flex;flex-wrap:wrap;gap:8px">{{ style_selects(styles, '') }}</div>
+      </div>
+      <div>
+        <label>{{ c.team }} playbooks</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">{{ playbook_selects(books, '', 'Use the school above', 'playbooks.{side}', current_books) }}</div>
+        <div class="hint">A playbook sets its own base school and packages. <a href="/stats/playbooks">Create or import a playbook</a>.</div>
       </div>
       <div style="max-width:240px"><label for="seed">AI seed</label><input type="number" id="seed" name="ai_seed:int" value="" min="1" placeholder="Random"></div>
       <div><button class="btn-run" type="submit">{{ icon("flag") }}Start season</button></div>
