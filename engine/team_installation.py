@@ -707,19 +707,22 @@ def choose_offensive_package(tactics: dict, context: dict, rng):
     for pkg in sorted(tactics.get("packages") or [], key=lambda p: p["package_id"]):
         familiarity = _clamp(pkg.get("familiarity", 0.0))
         if familiarity > 0 and offensive_package_eligible(pkg, live):
-            candidates.append((pkg, familiarity))
-    eligible = [pkg["package_id"] for pkg, _ in candidates]
+            from .clinic_playbook import concept_weight
+            preference = concept_weight(pkg["package_id"], context)
+            if preference > 0:
+                candidates.append((pkg, familiarity, preference))
+    eligible = [pkg["package_id"] for pkg, _, _ in candidates]
     if not candidates:
         return None, eligible, sorted(live)
     authority = _clamp(tactics.get("authority", 1.0))
-    if rng.random() >= .90 * authority * max(f for _, f in candidates):
+    if rng.random() >= .90 * authority * max(f for _, f, _ in candidates):
         return None, eligible, sorted(live)
     preferred = tactics.get("preferred_package")
-    for package, _ in candidates:
+    for package, _, _ in candidates:
         if package["package_id"] == preferred:
             return package, eligible, sorted(live)
-    picked = rng.choices([p for p, _ in candidates],
-                         weights=[f for _, f in candidates], k=1)[0]
+    picked = rng.choices([p for p, _, _ in candidates],
+                         weights=[f * preference for _, f, preference in candidates], k=1)[0]
     return picked, eligible, sorted(live)
 
 
