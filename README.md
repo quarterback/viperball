@@ -25,7 +25,13 @@ Open [http://localhost:5000/stats/](http://localhost:5000/stats/). Use College o
 
 Choose **Playbooks** in the main menu to open `/stats/playbooks`. Choose an offensive or defensive school, add one to four compatible packages, and preview their formations and intended actions on an animated 2D field. Save your book or share it as JSON. Imported books open as drafts for review before saving.
 
-Choose an offensive book, a defensive book, or both when setting up your team. The coordinator considers package fit and game situation during the normal season simulation. Enable **Let computer teams use saved playbooks** to give some computer teams compatible books, even in a college season where you manage zero teams. The box score shows which packages the coordinator could call, selected, and ran.
+Open **Practice and paired plays** to share a fixed amount of practice across eligible packages. A compact book builds familiarity faster. A broader book prepares more ways to respond. You can give one package extra practice or group two offensive packages that start in the same formation. The college team page shows how much practice each package received.
+
+During a college game, a caller can use one play in a pair to observe the defensive front and follow with a different action from the same formation. If the defense crowds the formation and the other package fits, the caller may come back to that look. See **Drive plan** in the box score for the observed front, eligible packages and what took priority on a given snap.
+
+Choose an offensive book, a defensive book, or both when setting up a standalone college season or a dynasty. The coordinator considers package fit and game situation during the normal season simulation. Enable **Let computer teams use saved playbooks** to give some computer teams compatible books, even in a college season where you manage zero teams. The box score shows which packages the coordinator could call, selected, and ran.
+
+Offensive packages include **Viper Trail**, which gives a receiver the option to lateral to a support runner after a short kick pass. **Far Side Coil** and **Third Strike** use earlier calls in the same drive to set up an attack to the other side. **Bonus Guard** favors inside runs and short outlets while an extra drive is pending. **Pindown Chase** can trade a low value sixth down scoring attempt for a directional punt when the score is tied or the team leads by at most five points.
 
 See the [quick start](QUICKSTART.md#build-a-custom-playbook) and [package catalog](docs/playbook_packages/INVENTORY.md).
 
@@ -35,7 +41,7 @@ The engine resolves individual plays with actual participating players, six-down
 
 The college Analytics tab opens thirteen views including player and team leaderboards, all scoring channels, expected points, decision value, Delta and bonus context, DTW, play and drive finders, comparisons and a glossary. Group plays by school, down or field zone; inspect individual records and export CSV. State-value and decision estimates are experimental and use supported held-out observations. The existing published EPA and DTW remain separate.
 
-**Documentation status:** November 25, 2026, after PR #386. Features described here are in the repository; this is not proof that the hosted deployment is current or that every new model passed national validation. See the development plan for remaining work.
+**Documentation status:** November 27, 2026. The [development plan](docs/DEVELOPMENT_PLAN.md) tracks deployment and national validation.
 
 ---
 

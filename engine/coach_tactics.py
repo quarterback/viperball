@@ -246,6 +246,7 @@ def resolve_offensive_tactics(staff: Dict[str, Any] | None) -> Dict[str, Any]:
         "signature": profile.get("identity", {}).get("offense_interpretation", ""),
         "featured_position": profile.get("offense", {}).get("featured_position", ""),
         "authority": round(authority, 3),
+        "tempo_preference": _slider(oc, "tempo_preference"),
         "formation_bias": dict(profile.get("offense", {}).get("formation_bias", {})),
         "family_bias": offense_bias(profile),
         "kick_pass_bias": dict(profile.get("offense", {}).get("kick_pass_bias", {})),

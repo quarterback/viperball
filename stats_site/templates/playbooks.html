@@ -7,6 +7,7 @@
   .book-package { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--border) }
   .book-package button { justify-self:end }
   .book-package-summary { grid-column:2 / -1; margin:0; color:var(--fg-dim); font-size:13px; line-height:1.4 }
+  #book-pairs label { display:block; margin:6px 0 }
   #book-field { width:100%; aspect-ratio:2/1; background:#1b4438; overflow:hidden }
   #book-field svg { display:block; width:100%; height:100% }
   .book-preview { min-width:0 }
@@ -53,6 +54,21 @@
       <select id="book-preferred" name="preferred"></select>
       <div class="hint">Gets first choice when eligible and the coordinator opts to call a package.</div>
     </div>
+    <details {% if book.get('practice_focus') or book.get('same_look_pairs') %}open{% endif %}>
+      <summary>Practice and paired plays</summary>
+      <label><input type="checkbox" id="book-practice-budget" name="practice_budget" value="1" {% if book.get('version', book_version) == book_version %}checked{% endif %}> Share practice time across packages</label>
+      <p class="hint">Smaller books give each package more practice. Formation variants of a package share familiarity.</p>
+      <fieldset id="book-practice-settings">
+        <label for="book-practice-focus">Practice focus</label>
+        <select id="book-practice-focus" name="practice_focus"></select>
+        <p class="hint">A focus gets twice the practice weight of another package. The total time stays the same.</p>
+        <div id="book-pair-control" hidden>
+          <strong>Pairs from the same formation</strong>
+          <p class="hint">Group different actions that start from the same look. The coordinator can call each package in its own situations.</p>
+          <div id="book-pairs"></div>
+        </div>
+      </fieldset>
+    </details>
     <div>
       <button class="btn-run" type="submit" id="book-save">{% if book_id %}Save changes{% else %}Save playbook{% endif %}</button>
       {% if book_id %}<a href="/stats/playbooks/{{ book_id }}/export">Download JSON</a>{% endif %}
@@ -61,11 +77,15 @@
 
   <section class="book-preview" aria-labelledby="book-preview-title">
     <h2 id="book-preview-title">Field preview</h2>
+    <div id="book-variant-control" hidden>
+      <label for="book-variant">Play option</label>
+      <select id="book-variant"></select>
+    </div>
     <div id="book-field" role="img" aria-label="Illustrated formation and intended action"></div>
     <p id="book-field-key" class="book-key">
       <span style="--mark:#f8f5cc">Run</span>
       <span style="--mark:#ffcf68">Lateral</span>
-      <span style="--mark:#a4f6df">Kick pass</span>
+      <span style="--mark:#a4f6df">Kick</span>
       <span style="--mark:#ffa98d">Defensive movement</span>
     </p>
     <p class="hint">Illustrated concept. Game results are resolved by the simulation.</p>
@@ -90,7 +110,7 @@
   </form>
 </details>
 <noscript><p>Enable JavaScript to configure and preview packages.</p></noscript>
-<script type="application/json" id="book-data">{{ {'schools': schools, 'packages': packages, 'vocabulary': vocabulary, 'draft': book, 'maxPackages': max_packages}|tojson }}</script>
+<script type="application/json" id="book-data">{{ {'schools': schools, 'packages': packages, 'vocabulary': vocabulary, 'draft': book, 'maxPackages': max_packages, 'sameLookOptions': same_look_options}|tojson }}</script>
 <script defer src="/stats/static/vendor/phaser-3.90.0.min.js"
   integrity="sha384-AvQiDMZAVLda3VtAoU5MCfBz8pzXhteb2CiUJeKBmPlWzpXj1uJ96Km11+YuFNu/"></script>
 <script defer src="/stats/static/playbook_cookbook.js"></script>

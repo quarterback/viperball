@@ -1,6 +1,6 @@
 # Playbook catalog inventory
 
-Catalog snapshot, November 25, 2026. The current source is [packages.json](../../data/playbooks/packages.json); use `python -m engine.playbook_catalog` for the runtime-derived inventory (including computed strengths and vocabulary labels). See [school reference](../OFFENSE_SCHEMAS.md) for the 16 offensive and 10 defensive schools.
+Catalog snapshot, November 27, 2026. The current source is [packages.json](../../data/playbooks/packages.json); use `python -m engine.playbook_catalog` for the runtime-derived inventory (including computed strengths and vocabulary labels). See [school reference](../OFFENSE_SCHEMAS.md) for the 16 offensive and 10 defensive schools.
 
 ## Offense packages
 
@@ -20,6 +20,11 @@ Catalog snapshot, November 25, 2026. The current source is [packages.json](../..
 | Last Tackle Kick | `league_last_tackle_kick` | six_shooter | six_shooter, boot_raid, east_coast, shock_and_awe, ball_control, ironclad, balanced | late_downs, launch_pad | strong_kicker |
 | First Phase Strike | `rugby_first_phase_strike` | slick_n_slide | slick_n_slide, ground_control, six_shooter, mousetrap, ghost, ironclad, ball_control, stampede, balanced | first_play_of_drive | team_speed |
 | Vertical Shot | `sa_vertical_shot` | shock_and_awe | shock_and_awe, boot_raid, east_coast, quick_strike, ghost, mismatch, lateral_spread, balanced | long_yardage, chasing | elite_kicker, team_speed |
+| Viper Trail | `gaelic_kick_and_follow` | east_coast | east_coast, slick_n_slide, ball_control, ghost, balanced | drive_building | lateral_hands |
+| Far Side Coil | `afl_boundary_switch` | east_coast | east_coast, ghost, mousetrap, boot_raid, balanced | drive_building | strong_kicker |
+| Third Strike | `rugby_carry_release` | slick_n_slide | slick_n_slide, mousetrap, ground_control, ghost, stampede, balanced | drive_building | physical_roster |
+| Bonus Guard | `ball_protect_bonus` | ball_control | ball_control, quick_strike, ground_control, ironclad, balanced | pending_bonus | — |
+| Pindown Chase | `cfl_corner_chase` | ironclad | ironclad, ball_control, boot_raid, six_shooter, balanced | corner_punt | strong_kicker |
 
 ## Defense packages
 
@@ -39,4 +44,4 @@ Catalog snapshot, November 25, 2026. The current source is [packages.json](../..
 | Robber Coverage | `shadow_robber` | shadow | shadow, lockdown, drift, swarm | late_downs | strong_defense |
 | Containment | `swarm_containment` | swarm | swarm, fortress, drift, shadow | early_down | strong_defense |
 
-Counts: 14 offensive and 13 defensive packages. Eligibility, benefits and concessions come from the catalog and live engine; a package's presence does not establish that it is frequently installed or called.
+Counts: 19 offensive and 13 defensive packages. Eligibility, benefits and concessions come from the catalog and live engine; a package's presence does not establish that it is frequently installed or called.

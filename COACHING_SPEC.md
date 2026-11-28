@@ -24,6 +24,18 @@ The catalog defines package compatibility, roster requirements and situational e
 
 A program retains its practiced book, familiarity and packages across seasons and saves. New staff, scheme switches and roster changes affect installation. Continuity and previous shared employment can preserve familiarity; traces of old tendencies fade. Same-HC and lineage successor retain the planned CPU school; outside specialists may switch their own side. The postseason plan is shared by recruiting and next-season setup.
 
+New installations use a shared package practice budget for each unit. An actual caller has a stable preference for one, two or three catalog packages. The team first retains compatible packages it already knows. Practice points total 60 per game and 500 per offseason for each unit. A formation variant shares the package's familiarity. An optional Cookbook focus gets twice the practice weight of each other eligible package. When the roster fails the focus package's requirements, the other eligible packages divide the budget evenly. Older installations and version 1 Cookbook books use fixed package growth.
+
+Version 2 Cookbook books save an immutable revision in each season or dynasty that selects them. A same look pair stores a common offensive formation and two catalog packages with different actions. The installation exposes the pair when both packages are ready. Each package has its own live call conditions. The team page shows the last game and offseason practice allocations.
+
+## Drive decisions
+
+Installed same look pairs feed the existing formation, family and kick pass selectors in standalone college seasons and dynasties. New computer installations can derive pairs from their compatible packages. A completed probe records the defensive front shown on that snap, which can inform a counter within the next four snaps of that possession. A stacked or aggressive front makes the alternate package a candidate. It must be eligible and pass the caller's authority and familiarity check. The selected action must differ from the probe's family or kick pass subtype. The existing down, kick and clock decisions can take priority. Erased snaps pause the plan and loss of possession clears it.
+
+A caller with a high tempo preference may shave four seconds from the base setup time on an immediate, ready counter after a gain. The clock must be running and an available Zeroback must have enough energy. Existing live action time and clock enforcement determine the actual elapsed time. A play's offensive trace records the actual caller, observed front, available packages, fallback reason and pace. The box score shows those decisions in each snap's **Drive plan** details.
+
+## Season learning
+
 Evidence-based seasonal learning uses actual attributed caller games, comparable contexts, at least six games and 30 observations per comparison arm. Drift is bounded (0.015 annual step, 0.06 lifetime); additional mentorship adjustments require documented shared seasons and are limited to 0.005/year and 0.025 lifetime. These are candidate calibration values, not evidence of universally beneficial adaptation.
 
 ## Career paths and staffing

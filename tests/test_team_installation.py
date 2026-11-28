@@ -122,6 +122,54 @@ def test_growth_and_decay_over_games_and_offseasons():
     assert rec["offense"]["familiarity"] == 1.0
 
 
+def test_finite_practice_rewards_depth_and_counts_formation_variants_once():
+    from engine.custom_playbooks import validate_book
+
+    packages = ["ec_quick_kick_chain", "gp_heavy_push", "lax_extra_attacker", "sa_vertical_shot"]
+    books = [validate_book({"version": 2, "name": "Practice", "side": "offense",
+                            "school": "ghost", "packages": packages[:size]}) for size in (1, 4)]
+    coaches = staff(card("same-caller", "oc"))
+    compact, broad = [ti.sync_installation({}, "Team", coaches, "ghost", "swarm", STATS,
+                                           books={"offense": book}) for book in books]
+    for rec in (compact, broad):
+        assert {p["familiarity"] for p in rec["offense"]["packages"]} == {ti.PACKAGE_START}
+        ti.record_game(rec)
+        ti.advance_offseason(rec, 2027)
+        practice = rec["offense"]["practice"]
+        for period, size in ti.PRACTICE_BUDGETS.items():
+            assert sum(practice[period]["allocated"].values()) == size
+            assert practice[period]["unused"] == 0
+    compact_off, broad_off = compact["offense"], broad["offense"]
+    assert compact_off["practice"]["game"]["allocated"] == {packages[0]: 60}
+    assert broad_off["practice"]["game"]["allocated"] == dict.fromkeys(packages, 15)
+    assert compact_off["packages"][0]["familiarity"] == .86
+    assert {p["familiarity"] for p in broad_off["packages"]} == {.44}
+    assert compact_off["family_familiarity"] == broad_off["family_familiarity"]
+
+
+def test_cpu_repertoire_follows_actual_caller_and_old_records_keep_fixed_growth():
+    records, compact, coaches = fresh(card("caller-0", "oc", archetype="balanced"))
+    inherited = compact["offense"]["packages"][0]["package_id"]
+    ti.record_game(compact)
+    assert len(compact["offense"]["packages"]) == 1
+    assert compact["offense"]["packages"][0]["familiarity"] == .36
+
+    coaches["oc"] = card("caller-5", "oc", archetype="balanced")
+    ti.sync_installation(records, "Team", coaches, "boot_raid", "lockdown", STATS, 2027)
+    assert compact["offense"]["practice"]["target"] == 3
+    assert len(compact["offense"]["packages"]) == 3
+    assert compact["offense"]["packages"][0]["package_id"] == inherited
+    ti.record_game(compact)
+    assert compact["offense"]["packages"][0]["familiarity"] == .38
+
+    legacy = deepcopy(compact)
+    del legacy["offense"]["practice"]
+    ti.ensure_installation(legacy)
+    ti.record_game(legacy)
+    assert "practice" not in legacy["offense"]
+    assert legacy["offense"]["packages"][0]["familiarity"] == .41
+
+
 def test_family_change_resets_book_familiarity_and_rechecks_packages():
     recs, rec, s = fresh(card("oc-a", "oc", archetype="run_to_kick"))
     ti.sync_installation(recs, "Team", s, "chain_gang", "lockdown", STATS, 2027)

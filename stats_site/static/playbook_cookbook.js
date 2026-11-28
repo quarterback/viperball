@@ -4,9 +4,21 @@
   const school = document.getElementById("book-school");
   const list = document.getElementById("book-packages");
   const preferred = document.getElementById("book-preferred");
+  const practiceBudget = document.getElementById("book-practice-budget");
+  const practiceFocus = document.getElementById("book-practice-focus");
+  const practiceSettings = document.getElementById("book-practice-settings");
+  const pairs = document.getElementById("book-pairs");
+  const pairControl = document.getElementById("book-pair-control");
   const save = document.getElementById("book-save");
   const replay = document.getElementById("book-replay");
   const field = document.getElementById("book-field");
+  const variant = document.getElementById("book-variant");
+  const variants = {
+    gaelic_kick_and_follow: [["keep", "Receiver keeps"], ["give", "Lateral to support"]],
+    afl_boundary_switch: [["setup", "Work the boundary"], ["switch", "Switch to the far side"]],
+    rugby_carry_release: [["setup", "Carry toward the setup side"], ["release", "Sweep the far edge"]],
+    ball_protect_bonus: [["carry", "Inside carry"], ["outlet", "Short outlet"]],
+  };
 
   const width = 640;
   const height = 320;
@@ -22,6 +34,8 @@
     balanced: "Balanced front",
   };
   const label = (value) => value.replaceAll("_", " ");
+  const pairKey = (pair) => [pair.formation, ...pair.packages].join("|");
+  const selectedPairs = new Set((data.draft.same_look_pairs || []).map(pairKey));
   let checked = new Set(data.draft.packages || []);
   let packageId;
   let openDescription;
@@ -113,9 +127,48 @@
     document.getElementById("book-count").textContent =
       `${checked.size} of ${data.maxPackages} packages selected`;
     save.disabled = checked.size === 0;
+    updatePractice(practiceFocus.value);
+  }
+
+  function updatePractice(focus) {
+    practiceFocus.replaceChildren(new Option("Divide time evenly", ""), ...[...checked].map((id) =>
+      new Option(data.packages[id].name, id)));
+    if (checked.has(focus)) practiceFocus.value = focus;
+    const options = data.sameLookOptions.filter((pair) => pair.packages.every((id) => checked.has(id)));
+    const validKeys = new Set(options.map(pairKey));
+    for (const key of selectedPairs) {
+      if (!validKeys.has(key)) selectedPairs.delete(key);
+    }
+    pairs.replaceChildren(...options.map((pair) => {
+      const key = pairKey(pair);
+      const row = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.name = "same_look_pairs";
+      checkbox.value = key;
+      checkbox.checked = selectedPairs.has(key);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) selectedPairs.add(key);
+        else selectedPairs.delete(key);
+      });
+      const names = pair.packages.map((id) => data.packages[id].name).join(" + ");
+      row.append(checkbox, ` ${names} (${captions[pair.formation]})`);
+      return row;
+    }));
+    pairControl.hidden = options.length === 0;
+  }
+
+  function showPracticeSettings() {
+    practiceSettings.hidden = !practiceBudget.checked;
+    practiceSettings.disabled = !practiceBudget.checked;
   }
 
   function preview(id) {
+    if (id !== packageId) {
+      const options = variants[id] || [];
+      variant.replaceChildren(...options.map(([value, title]) => new Option(title, value)));
+      document.getElementById("book-variant-control").hidden = options.length === 0;
+    }
     packageId = id;
     const item = data.packages[id];
     const origin = item && data.schools[item.side].find((entry) => entry.scheme_id === item.origin_family);
@@ -131,7 +184,8 @@
       : item ? "Roster requirements: any roster" : "";
     document.getElementById("book-package-tradeoff").textContent = item ? "Tradeoff: " + item.cost : "";
     replay.disabled = !scene || !item;
-    field.setAttribute("aria-label", item ? item.name + " schematic" : "Empty field");
+    const choice = variant.selectedOptions[0]?.text;
+    field.setAttribute("aria-label", item ? [item.name, choice].filter(Boolean).join(", ") : "Empty field");
     drawField();
   }
 
@@ -172,7 +226,30 @@
     const origin = { x: 307, y: 160 };
     const route = (from, tx, ty, tint) => ({ ...from, tx, ty, tint });
     const routes = [];
-    if (family === "kick_pass") {
+    if (item.package_id === "gaelic_kick_and_follow") {
+      const catchSpot = { x: 397, y: lanes[0] };
+      routes.push(route(origin, catchSpot.x, catchSpot.y, color.kick));
+      if (variant.value === "give") {
+        routes.push(route(catchSpot, 379, lanes[1], color.lateral));
+        routes.push(route({ x: 379, y: lanes[1] }, 467, lanes[1], color.run));
+      } else {
+        routes.push(route(catchSpot, 462, lanes[0], color.run));
+      }
+    } else if (item.package_id === "afl_boundary_switch") {
+      if (variant.value === "switch") {
+        routes.push(route(origin, 493, lanes[3], color.kick));
+      } else {
+        routes.push(route(origin, 390, lanes[0], color.kick));
+      }
+    } else if (item.package_id === "rugby_carry_release") {
+      const release = variant.value === "release";
+      routes.push(route(origin, 408, release ? lanes[0] : 213, color.run));
+      if (release) routes.push(route({ x: 408, y: lanes[0] }, 511, lanes[0], color.run));
+    } else if (item.package_id === "ball_protect_bonus" && variant.value === "outlet") {
+      routes.push(route(origin, 390, lanes[0], color.kick));
+    } else if (family === "punt") {
+      routes.push(route(origin, 616, 45, color.kick));
+    } else if (family === "kick_pass") {
       const target = { x: { bomb: 555, territory: 520 }[subtype] || 482, y: lanes[0] };
       routes.push(route(origin, target.x, target.y, color.kick));
       if (subtype === "kick_lateral") {
@@ -250,6 +327,10 @@
   side.value = data.draft.side === "defense" ? "defense" : "offense";
   updateSchools(data.draft.school);
   updateChoices(data.draft.preferred);
+  if (checked.has(data.draft.practice_focus)) practiceFocus.value = data.draft.practice_focus;
+  showPracticeSettings();
+  practiceBudget.addEventListener("change", showPracticeSettings);
+  variant.addEventListener("change", () => preview(packageId));
   side.addEventListener("change", () => updateSchools());
   school.addEventListener("change", () => {
     paintPackageList();

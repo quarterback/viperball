@@ -297,6 +297,217 @@
     },
     {
       "version": 1,
+      "package_id": "gaelic_kick_and_follow",
+      "side": "offense",
+      "name": "Viper Trail",
+      "summary": "Catch a short kick and use a trailing runner if crowded.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "slick_n_slide",
+        "ball_control",
+        "ghost",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "kick_lateral"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "swarm",
+        "chaos"
+      ],
+      "tradeoffs": [
+        "lateral_turnover"
+      ],
+      "inspiration": "Gaelic football support running after a kick pass.",
+      "scenario": "Downs 1 to 4 between your own 20 and the opponent's 20.",
+      "benefits": "The receiver can keep the ball or feed a fresher runner behind them.",
+      "cost": "The extra exchange can be intercepted or dropped.",
+      "counter": "Follow the support runner and close the lateral lane."
+    },
+    {
+      "version": 1,
+      "package_id": "afl_boundary_switch",
+      "side": "offense",
+      "name": "Far Side Coil",
+      "summary": "Work one edge with short kicks, then switch across the field.",
+      "origin_family": "east_coast",
+      "compatible_families": [
+        "east_coast",
+        "ghost",
+        "mousetrap",
+        "boot_raid",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "spread"
+      ],
+      "play_family_tags": [
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "quick_kick",
+        "territory"
+      ],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "lockdown",
+        "drift"
+      ],
+      "tradeoffs": [
+        "longer_kick"
+      ],
+      "inspiration": "Australian rules boundary play and switching the point of attack.",
+      "scenario": "Use during a drive with room on either side. The switch follows two setups and observed pressure.",
+      "benefits": "Uses short kicks to move the defense before testing the far side.",
+      "cost": "The cross field kick takes longer and the setup can use several downs.",
+      "counter": "Keep coverage wide so the far side stays protected."
+    },
+    {
+      "version": 1,
+      "package_id": "rugby_carry_release",
+      "side": "offense",
+      "name": "Third Strike",
+      "summary": "Draw pressure with repeat carries, then sweep the other edge.",
+      "origin_family": "slick_n_slide",
+      "compatible_families": [
+        "slick_n_slide",
+        "mousetrap",
+        "ground_control",
+        "ghost",
+        "stampede",
+        "balanced"
+      ],
+      "formation_tags": [
+        "split",
+        "tight"
+      ],
+      "play_family_tags": [
+        "power",
+        "sweep_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "physical_roster"
+      ],
+      "situation_tags": [
+        "drive_building"
+      ],
+      "countered_by": [
+        "swarm",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "uses_downs"
+      ],
+      "inspiration": "Rugby phase play and sevens compression before expansion.",
+      "scenario": "Use on downs 1 to 4. Release to the opposite edge when the defense presses after two setups.",
+      "benefits": "The same look can threaten both edges over a series.",
+      "cost": "The setup can stall against a strong front.",
+      "counter": "Keep edge support in place while defending the carries."
+    },
+    {
+      "version": 1,
+      "package_id": "ball_protect_bonus",
+      "side": "offense",
+      "name": "Bonus Guard",
+      "summary": "Use inside carries and short outlets while a bonus is pending.",
+      "origin_family": "ball_control",
+      "compatible_families": [
+        "ball_control",
+        "quick_strike",
+        "ground_control",
+        "ironclad",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight",
+        "heavy"
+      ],
+      "play_family_tags": [
+        "dive_option",
+        "power",
+        "kick_pass"
+      ],
+      "kick_pass_tags": ["quick_kick"],
+      "personnel_tags": [],
+      "situation_tags": [
+        "pending_bonus"
+      ],
+      "countered_by": [
+        "fortress",
+        "blitz_pack"
+      ],
+      "tradeoffs": [
+        "lower_explosive_ceiling"
+      ],
+      "inspiration": "Viperball's bonus possession creates a two drive scoring opportunity.",
+      "scenario": "Downs 1 to 4 after earning an interception bonus, outside the opponent’s 28.",
+      "benefits": "Uses inside runs in ordinary situations and a short kick pass when there is ground to make up on second or third down.",
+      "cost": "A defense waiting inside can stall the first drive.",
+      "counter": "Stack the box and make the offense spend its downs."
+    },
+    {
+      "version": 1,
+      "package_id": "cfl_corner_chase",
+      "side": "offense",
+      "name": "Pindown Chase",
+      "summary": "Aim a late punt toward the end zone with a designated chaser.",
+      "origin_family": "ironclad",
+      "compatible_families": [
+        "ironclad",
+        "ball_control",
+        "boot_raid",
+        "six_shooter",
+        "balanced"
+      ],
+      "formation_tags": [
+        "tight"
+      ],
+      "play_family_tags": [
+        "punt"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "strong_kicker"
+      ],
+      "situation_tags": [
+        "corner_punt"
+      ],
+      "countered_by": [
+        "drift",
+        "rotation"
+      ],
+      "tradeoffs": [
+        "short_punt_risk"
+      ],
+      "inspiration": "Canadian football singles and rugby kick chase.",
+      "scenario": "On sixth down near midfield when tied or leading by at most five points and a scoring kick has low expected value.",
+      "benefits": "A directional punt and an available coverage player can earn a pindown.",
+      "cost": "Inaccurate placement can hand the return team better field position.",
+      "counter": "Field the kick cleanly and beat the first coverage player."
+    },
+    {
+      "version": 1,
       "package_id": "fortress_goal_line_stand",
       "side": "defense",
       "name": "Goal Line Stand",
