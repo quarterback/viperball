@@ -34,6 +34,12 @@ book. `engine/custom_playbooks.py` now gives Free Motion, Phase Attack, Relay, C
 the cross code answers their own concept books, and the README lists them. The ready made
 books number 156 and hold all 84 packages.
 
+## Fix found on the way
+
+Main's CI tests failed after #418: the dynasty season start request had no
+`computer_playbooks` field, though the start season code and the form use it, so three
+dynasty tests raised an error. The field is added, off unless the form sends it.
+
 ## Checks
 
 All 39 drawings, every branch included, rendered in Chrome with no script errors. A new test
