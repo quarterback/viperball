@@ -4631,9 +4631,10 @@ class ViperballEngine:
         from .clinic_playbook import CONCEPTS
         if any(p["package_id"] in CONCEPTS for p in tactics["packages"]):
             offense = self.get_offensive_team()
+            skill = self._offense_skill(offense)
+            context["clinic_skill_count"] = len(skill)
             context["clinic_archetypes"] = tuple(
-                p.archetype for p in self._offense_skill(offense)
-                if p.position in ("Zeroback", "Viper"))
+                p.archetype for p in skill if p.position in ("Zeroback", "Viper"))
             context["clinic_defense_school"] = self._current_defense_name()
             context["clinic_bonus_pending"] = st.bonus_possession_team == st.possession
         picked, eligible, live = choose_offensive_package(
@@ -4654,8 +4655,16 @@ class ViperballEngine:
     def _oc_bias(self, key: str) -> Dict:
         """Use the same optional plan throughout this snap's three choices."""
         from .team_installation import offensive_plan_bias
-        return offensive_plan_bias(self._current_oc_tactics(), key,
-                                  getattr(self, "_active_offensive_plan", None))
+        package = getattr(self, "_active_offensive_plan", None)
+        bias = offensive_plan_bias(self._current_oc_tactics(), key, package)
+        if key == "family_bias" and package:
+            from .clinic_playbook import clinic_read
+            read, changes = clinic_read(package, self._active_dc_call().get("alignment"))
+            for family, delta in changes.items():
+                bias[family] = bias.get(family, 0.0) + delta
+            if read and self._offensive_plan_event is not None:
+                self._offensive_plan_event["clinic_read"] = read
+        return bias
 
     def _finish_offensive_plan(self, play):
         event = self._offensive_plan_event
@@ -7731,6 +7740,17 @@ class ViperballEngine:
         quarter = self.state.quarter
         time_left = self.state.time_remaining
 
+        clinic_kick_shift = 0.0
+        tactics = self._current_oc_tactics()
+        if (down in (4, 5) and V2_ENGINE_CONFIG.get("offensive_packages_enabled", True)
+                and any(p.get("package_id") == "clinic_launch_option"
+                        for p in tactics.get("packages", ()))):
+            from .clinic_playbook import snap_kick_threshold_shift
+            context = self._package_context(score_diff)
+            context["clinic_defense_school"] = self._current_defense_name()
+            clinic_kick_shift = snap_kick_threshold_shift(
+                tactics, context, kicker.archetype)
+
         # "Clock pressure" — situations where taking points now is smart:
         #   - End of 2nd quarter (before the half), limited time left
         #   - Late in Q4 when trailing by a small margin
@@ -7832,6 +7852,7 @@ class ViperballEngine:
             stall_ytg = stall_ytg + td_lean * (25 if td_lean > 0 else 12)
             if has_green_light:
                 stall_ytg = max(1, stall_ytg - 3)
+            stall_ytg = max(1, stall_ytg - clinic_kick_shift)
             if (not dk_futile and ytg >= stall_ytg
                     and fg_distance <= dk_comfort and dk_success >= 0.70):
                 return PlayType.DROP_KICK
@@ -7905,7 +7926,7 @@ class ViperballEngine:
             # the shot sooner.
             if (not dk_futile and dk_success >= 0.55 + td_lean * 0.3
                     and ytg >= max(1, V2_ENGINE_CONFIG.get("kick_5th_down_min_ytg", 4)
-                                   + 4 * territory_bias + td_lean * 12)):
+                                   + 4 * territory_bias + td_lean * 12 - clinic_kick_shift)):
                 return PlayType.DROP_KICK
 
             # Stalled outside snap kick range but inside field goal range:
@@ -12797,6 +12818,8 @@ class ViperballEngine:
                 int_chance *= 1 + strength * (-.30 if lat_idx == 0 else .70)
             int_chance = max(0.025, min(0.15 if trap.get("package_id") == "chaos_lateral_trap" else 0.10, int_chance))
             if random.random() < int_chance:
+                if target is not None and self._offensive_plan_event is not None:
+                    self._offensive_plan_event["clinic_intercepted_transfer"] = lat_idx + 1
                 # Lateral intercepted — turnover at the interception spot
                 int_spot = self.state.field_position + random.randint(0, 3)
                 self.change_possession()
@@ -12872,12 +12895,17 @@ class ViperballEngine:
         # ── Lateral fumble check ──
         base_lateral_fumble = 0.12
         fumble_prob = base_lateral_fumble + (chain_length - 2) * 0.05
+        if target is not None:
+            from .clinic_playbook import compound_fumble_probability
+            fumble_prob = compound_fumble_probability(chain_length, base_lateral_fumble)
         fumble_prob *= self._ball_handling("lateral_fumble_mult")
 
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
         fumble_prob *= (1 - lateral_success_bonus)
         fumble_prob *= style.get("lateral_risk", 1.0)
         fumble_prob = max(0.05, min(0.40, fumble_prob))
+        if target is not None and self._offensive_plan_event is not None:
+            self._offensive_plan_event["clinic_fumble_probability"] = round(fumble_prob, 4)
 
         if random.random() < fumble_prob:
             yards_gained = random.randint(-5, 8)
