@@ -5068,7 +5068,7 @@ class ViperballEngine:
 
         event = self._offensive_plan_event or {}
         pid = event.get("package_id")
-        if pid not in SEQUENCES or play.play_type not in ("run", "kick_pass"):
+        if pid not in SEQUENCES or play.play_type not in ("run", "kick_pass", "lateral_chain"):
             return
         if (play.penalty and play.penalty.nullified) or play.snap_possession != self.state.possession:
             return
@@ -5083,7 +5083,8 @@ class ViperballEngine:
         alignment = call.get("alignment") or self._determine_defense_alignment()
         pressed = alignment in ("aggressive", "stacked") or bool(call.get("blitz"))
         history = self._offensive_setup.setdefault(pid, [])
-        history.append({"lane": design["lane"], "pressed": pressed})
+        history.append({"lane": design["lane"], "pressed": pressed,
+                        "alignment": alignment, "blitz": bool(call.get("blitz"))})
         del history[:-2]
         event["setup_response"] = "pressed" if pressed else "held_width"
 
@@ -5289,6 +5290,7 @@ class ViperballEngine:
         "swarm_containment": ("spread", -.06, ["sweep_option", "speed_option", "viper_jet"]),
         "shadow_robber": ("spread", -.05, ["kick_pass"]),
         "chaos_lateral_trap": ("spread", -.04, ["lateral_spread"]),
+        "cape_cod_trap": ("spread", -.03, ["lateral_spread", "sweep_option", "speed_option"]),
         "predator_exhaustion_press": ("aggressive", .14, ["kick_pass", "speed_option"]),
     }
 
@@ -5375,6 +5377,10 @@ class ViperballEngine:
         "swarm_containment": {"sweep_option": -.35, "speed_option": -.30, "viper_jet": -.30, "power": .25, "dive_option": .25},
         "shadow_robber": {"power": .22, "dive_option": .20},
         "chaos_lateral_trap": {"lateral_spread": -.15, "power": .25, "dive_option": .24},
+        # Cape Cod: the sideline and the cutback lane are closed; the deep
+        # far side defender leaves the middle thinner.
+        "cape_cod_trap": {"lateral_spread": -.20, "sweep_option": -.28, "speed_option": -.26,
+                          "counter": -.22, "power": .28, "dive_option": .26, "draw": .22},
         "predator_exhaustion_press": {"speed_option": -.22, "power": .24, "dive_option": .20, "draw": .32},
     }
     _PACKAGE_KICK_DELTAS = {
@@ -5389,6 +5395,7 @@ class ViperballEngine:
         "lax_ride": {"quick_kick": -.08, "territory": -.05, "bomb": .14},
         "shadow_robber": {"territory": -.18, "quick_kick": -.05, "bomb": .16},
         "chaos_lateral_trap": {"quick_kick": .13, "kick_lateral": .06},
+        "cape_cod_trap": {"quick_kick": .12, "territory": -.08},
         "predator_exhaustion_press": {"quick_kick": -.12, "territory": -.09, "bomb": .18},
     }
     _PACKAGE_EXPLOSIVE_DELTA = {"drift_prevent": -.45, "lockdown_long_yardage_bracket": -.15,
@@ -13480,6 +13487,11 @@ class ViperballEngine:
             if trap.get("package_id") == "chaos_lateral_trap":
                 strength = trap.get("package_strength", 0.0)
                 int_chance *= 1 + strength * (-.30 if lat_idx == 0 else .70)
+            elif trap.get("package_id") == "cape_cod_trap":
+                # The chain runs into the sideline: each later pitch is closer
+                # to the converging defenders.
+                strength = trap.get("package_strength", 0.0)
+                int_chance *= 1 + strength * .35 * lat_idx
             int_chance = max(0.025, min(0.15 if trap.get("package_id") == "chaos_lateral_trap" else 0.10, int_chance))
             if random.random() < int_chance:
                 if target is not None and self._offensive_plan_event is not None:
@@ -13567,6 +13579,9 @@ class ViperballEngine:
         lateral_success_bonus = style.get("lateral_success_bonus", 0.0)
         fumble_prob *= (1 - lateral_success_bonus)
         fumble_prob *= style.get("lateral_risk", 1.0)
+        trap = self._active_dc_call()
+        if trap.get("package_id") == "cape_cod_trap":
+            fumble_prob *= 1 + trap.get("package_strength", 0.0) * .10 * max(0, chain_length - 1)
         fumble_prob = max(0.05, min(0.40, fumble_prob))
         if target is not None and self._offensive_plan_event is not None:
             self._offensive_plan_event["clinic_fumble_probability"] = round(fumble_prob, 4)

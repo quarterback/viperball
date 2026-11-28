@@ -180,6 +180,8 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     hold them for urgent situations and use the call that beat a front as an answer.
     → `aar_2026-11-28_opening_scripts.md`
 
+44. **Cape Cod** (November 28). An offensive hook package for the lateral offenses and a
+    defensive trap package for the pursuit defenses. → `aar_2026-11-28_cape_cod.md`
 45. **Play calling during a game** (November 28). Halftime caller changes for struggling
     offenses and between-series suggestions from the coach not calling the offense.
     → `aar_2026-11-28_midgame_play_calling.md`

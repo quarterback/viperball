@@ -29,6 +29,8 @@ def eligibility(package_id, tags, context, primary_tags):
         primary = "late_downs" in tags and pass_rate >= .25
     if package_id == "chaos_lateral_trap":
         primary = "early_down" in tags and lateral >= .15
+    if package_id == "cape_cod_trap":
+        primary = "early_down" in tags and lateral + perimeter >= .25
     if package_id == "predator_exhaustion_press":
         primary = "early_down" in tags and offense_energy is not None and offense_energy < 75
     if primary:
@@ -46,12 +48,13 @@ def eligibility(package_id, tags, context, primary_tags):
         "swarm_containment": "early_down" in tags or perimeter >= .25,
         "shadow_robber": down >= 4 or pass_rate >= .45,
         "chaos_lateral_trap": "early_down" in tags or lateral >= .20,
+        "cape_cod_trap": lateral + perimeter >= .20,
         "predator_exhaustion_press": offense_energy is not None and offense_energy < 82 and 1 <= snap <= 3,
     }.get(package_id, False)
     return .45 if secondary else 0.0
 
 PRESS_PACKAGES = {"blitz_short_yardage_pressure", "rugby_rush_line", "afl_kick_in_press", "lax_ride", "predator_exhaustion_press"}
-COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", "drift_prevent", "shadow_robber", "swarm_containment", "chaos_lateral_trap"}
+COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", "drift_prevent", "shadow_robber", "swarm_containment", "chaos_lateral_trap", "cape_cod_trap"}
 WALL_PACKAGES = {"fortress_goal_line_stand", "fortress_short_yardage_wall", "pk_compact_box", "pk_goal_line_wall", "pk_range_denial"}
 PRESS_PACKAGES.update(("pk_kicker_diamond", "pk_late_down_surge"))
 COVER_PACKAGES.update(("pk_side_lock", "pk_rotating_shell", "pk_takeaway_trap"))
