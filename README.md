@@ -254,7 +254,7 @@ The 9-point touchdown is Viperball's most significant departure from other gridi
 
 The snap kick (also called a **drop kick** or **DK**) is the signature scoring play of Viperball. The kicker drops the ball, lets it bounce once, and kicks it through the uprights — all during live play, without a holder or set piece. It can be attempted from anywhere on the field at any time during a possession.
 
-In practice, snap kicks are reliably accurate within 40 yards and plausible out to 55 yards. Beyond that distance, the risk of a miss increases substantially and the ball may be fielded and returned by the defense (see [Missed Snap Kicks](#missed-snap-kicks)).
+In practice, a typical starting kicker makes about 42 percent from close in and about one in four from 35 yards, and elite kickers stay dangerous out to 45 yards. Long misses may be fielded and returned by the defense (see [Missed Snap Kicks](#missed-snap-kicks)).
 
 Snap kicks are to Viperball what the three-pointer is to basketball — the premium scoring play that defines offensive philosophy. Teams with elite kickers build their entire offense around reaching snap kick range (roughly the opponent's 40-yard line), while teams without a kicking specialist may prefer to grind for touchdowns.
 
