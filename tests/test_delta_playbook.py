@@ -76,3 +76,45 @@ def test_defensive_score_and_scout_response():
     assert weight("pk_takeaway_trap",ctx(recent_kick_rate=0,recent_lateral_rate=0)) == 0
     assert RUN["pk_kicker_diamond"]["power"] > 0
     assert RUN["pk_goal_line_wall"]["power"] < 0
+
+
+def test_full_engine_boosted_and_backed_up_packages():
+    from pathlib import Path
+    from engine.game_engine import ViperballEngine, load_team_from_json
+    from engine.coaching import CoachCard
+    from engine.team_installation import new_installation
+    from copy import deepcopy
+    paths = sorted((Path(__file__).resolve().parents[1] / "data" / "teams").glob("*.json"))
+
+    def staff(side):
+        return {role: CoachCard(coach_id=side+"-"+role, first_name="Delta",
+                last_name=role, age=47, gender="female", role=role,
+                classification="scheme_master", instincts=76, leadership=72,
+                composure=70, rotations=65, development=65, recruiting=65)
+                for role in ("head_coach", "oc", "dc")}
+
+    seen = set()
+    for seed in range(20261127, 20261131):
+        a,b = [load_team_from_json(str(p), fresh=False) for p in paths[:2]]
+        hs, aws = staff("home"), staff("away")
+        for team, coaches in ((a,hs),(b,aws)):
+            team.installation = new_installation(team.name, coaches, "ground_control", "fortress", 2026)
+            team.installation["offense"].update(familiarity=1, family_familiarity=1,
+                packages=[{"package_id":pid,"familiarity":1} for pid in
+                          ("pp_advantage_entry","pko_secure_twenty","pko_escape","pp_compression")])
+            team.installation["defense"].update(familiarity=1,family_familiarity=1,
+                packages=[{"package_id":pid,"familiarity":1} for pid in
+                          ("pk_range_denial","pk_compact_box")])
+        a.defense_style = b.defense_style = "fortress"
+        game = ViperballEngine(a,b,seed=seed,home_coaching=deepcopy(hs),
+            away_coaching=deepcopy(aws),style_overrides={a.name:"ground_control",b.name:"ground_control"},
+            weather="clear",neutral_site=True).simulate_game()
+        for play in game["play_by_play"]:
+            for key in ("offensive_call","defensive_call"):
+                call = play.get(key) or {}
+                pid = call.get("package_id")
+                if pid in ALL:
+                    assert call["delta_bucket"] == ("penalty_kill" if pid in PKO else "power_play")
+                    seen.add("defense" if pid in PK else "offense")
+    assert "offense" in seen
+    assert "defense" in seen
