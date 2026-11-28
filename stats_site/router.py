@@ -1063,7 +1063,8 @@ def _playbook_editor(request, book=None, key="", error=None, status=200,
                 if pid in packages:
                     continue
                 package = get_package(pid)
-                posture = ViperballEngine._DEFENSIVE_PACKAGE_POSTURES.get(pid)
+                from engine.cross_code import POSTURES as _XC_POSTURES
+                posture = {**ViperballEngine._DEFENSIVE_PACKAGE_POSTURES, **_XC_POSTURES}.get(pid)
                 if posture:
                     package["alignment"], _, package["focus"] = posture
                 packages[pid] = package

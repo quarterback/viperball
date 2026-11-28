@@ -247,6 +247,15 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     now offer base and concept books for every school, and computer teams spread across them
     so every package is in use. → `aar_2026-11-28_ready_made_playbooks.md`
 
+60. **The rest of the cross code books** (November 28). Fifteen offensive calls from Free
+    Motion, Phase Attack, Relay and Crossfire and the eight defensive answers, each read from
+    the defense's look and actual player contests; on the Playbooks page and the game page.
+    → `aar_2026-11-28_cross_code_books.md`
+
+61. **Previews for the cross code calls** (November 28). Each new call and answer has its own
+    drawing on the Playbooks page, with a choice for each branch of the read.
+    → `aar_2026-11-28_cross_code_previews.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`

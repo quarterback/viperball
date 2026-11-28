@@ -17,6 +17,7 @@ from copy import deepcopy
 from engine.offensive_concepts import CORNER_CHASE
 from engine import field_width as FW
 from engine import punting as PUNT
+from engine import cross_code as _XC
 from engine.rating_scale import current_to_legacy as _old
 from engine.weather import GameWeather
 # _old(rating): a current scale rating as its 60 to 100 equivalent, for
@@ -4481,6 +4482,14 @@ class ViperballEngine:
         self._next_drive_origin = "opening"
         self._drive_origin = "opening"
         self._offensive_setup = {}
+        # Cross code concepts (engine/cross_code.py): what each call saw on
+        # earlier snaps this possession, switches the defense made this game,
+        # the families each offense ran after each other, and usage counts.
+        self._cross_memory = {}
+        self._exchange_log = {"home": [], "away": []}
+        self._family_transitions = {"home": {}, "away": {}}
+        self._last_family = {"home": None, "away": None}
+        self._cross_usage = {side: {"offense": {}, "defense": {}} for side in ("home", "away")}
         self._drive_probe = None
         self._drive_plan_trace = None
         self._possession_snap_count = 0
@@ -4897,6 +4906,9 @@ class ViperballEngine:
                                    default_lane=wide if pid == CAPE_COD else short)
         elif pid == KICK_AND_FOLLOW:
             design = {"family": "kick_pass", "kick_pass": "kick_lateral"}
+        elif pid in _XC.OFFENSE:
+            # The call itself is made after the defense sets (_read_cross_concept).
+            design = {"phase": "look", "cross_read": True}
         elif pid == PROTECT_BONUS:
             if self.state.yards_to_go <= 4:
                 design = {"family": "power"}
@@ -4908,6 +4920,290 @@ class ViperballEngine:
             return
         design["formation"] = package["formation_tags"][0]
         self._offensive_plan_event["design"] = design
+
+    # ── Cross code concepts (engine/cross_code.py) ──
+    def _cross_role(self, position, pool):
+        """The player on the field for a role in a call, by position."""
+        if position == "Offensive Line":
+            team = self.get_offensive_team()
+            line = [p for p, role in self._lineup(team, self._unavailable_in_game(team), "offense")
+                    if role == "Offensive Line"]
+            # The lineman with the best hands is the one who releases.
+            return max(line, key=lambda p: (getattr(p, "hands", 40), getattr(p, "agility", 50)), default=None)
+        matches = [p for p in pool if p.position == position or _plays_as(p) == position]
+        return max(matches, key=lambda p: (p.game_energy, p.name), default=None)
+
+    def _channel_defenders(self, side):
+        """Defenders the field width split put on one side this snap."""
+        team = self.get_defensive_team()
+        by_id = self._width_channels_now()["by_id"]
+        lineup = [p for p, _r in (self._lineup(team, self._unavailable_in_game(team), "defense") or [])]
+        lineup += self._get_defenders_by_group(team)["all"]
+        seen, out = set(), []
+        for p in lineup:
+            if id(p) not in seen and by_id.get(id(p)) == side:
+                seen.add(id(p))
+                out.append(p)
+        return out
+
+    def _take_out_of_play(self, defender, mult=0.3):
+        """A defender who followed the wrong man or a decoy. He is no longer
+        counted on his side, and rarely makes the play."""
+        if defender is None:
+            return
+        channels = self._width_channels_now()
+        side = channels["by_id"].get(id(defender))
+        if side in ("left", "right"):
+            x0 = getattr(self, "_width_x0", FW.MIDDLE)
+            channels["by_id"][id(defender)] = "out"
+            channels["counts"][side] -= 1
+            channels["value"][side] = round(FW.room_mod(x0, side) + FW.NUMBERS_EFFECT * (
+                channels["fair"][side] - channels["counts"][side]), 4)
+        self._snap_weight_mod[id(defender)] = mult
+        self._snap_trailing.add(id(defender))
+
+    def _cross_call(self, family_value=None):
+        """The active cross code call's extra instructions, if this snap's
+        family is the one the call designed."""
+        event = getattr(self, "_offensive_plan_event", None) or {}
+        design = event.get("design") or {}
+        cross = design.get("cross")
+        if not cross:
+            return {}
+        if family_value is not None and design.get("family") != family_value:
+            return {}
+        return cross
+
+    def _cross_count(self, side, unit, key, branch):
+        usage = self.__dict__.setdefault(
+            "_cross_usage", {s: {"offense": {}, "defense": {}} for s in ("home", "away")})
+        bucket = usage[side][unit].setdefault(key, {})
+        bucket[branch] = bucket.get(branch, 0) + 1
+
+    def _read_cross_concept(self):
+        """Make a cross code call from what the offense sees once the
+        defense has set, and resolve the post snap read it depends on."""
+        event = getattr(self, "_offensive_plan_event", None)
+        if not event:
+            return
+        design = event.get("design") or {}
+        if not design.get("cross_read"):
+            return
+        pid = event["package_id"]
+        team = self.get_offensive_team()
+        pool = self._offense_skill(team)
+        role = lambda pos: self._cross_role(pos, pool)
+        call = self._active_dc_call()
+        alignment = call.get("alignment") or self._determine_defense_alignment()
+        z = role("Zeroback")
+        x0 = getattr(self, "_width_x0", FW.MIDDLE)
+        channels = self._width_channels_now()
+        counts, fair = channels["counts"], channels["fair"]
+        left, right = FW.room(x0, "left"), FW.room(x0, "right")
+        short = "left" if left < right - 0.5 else ("right" if right < left - 0.5 else None)
+        weak = _XC.weak_side(counts, fair)
+        wide = _XC.other(short) if short else _XC.other(weak)
+        st = self.state
+        off_side = st.possession
+        diff = st.home_score - st.away_score
+        look = {
+            "alignment": alignment,
+            "blitz_seen": _XC.perceive_blitz(bool(call.get("blitz")),
+                                             _old(getattr(z, "awareness", 35)) if z else 50),
+            "down": st.down, "ytg": st.yards_to_go, "fp": st.field_position,
+            "score_diff": diff if off_side == "home" else -diff,
+            "pending_bonus": (not getattr(self, "_is_bonus_drive", False)
+                              and self._bonus_recipient == off_side and self._bonus_drives_remaining > 0),
+            "weak": weak, "short": short, "wide": wide,
+            "at_hash": FW.hash_label(x0) != "middle",
+            "counts": dict(counts), "fair": dict(fair),
+            "pressed": {s: FW.pressed(channels, s) for s in ("left", "right")},
+            "z_runs": bool(z and getattr(z, "game_zb_style", "") in ("run_dominant", "dual_threat")),
+            "has_viper": role("Viper") is not None,
+            # A lateral chain needs room before the sideline: the weak side
+            # when it has it, otherwise the wide side.
+            "lateral_lane": weak if FW.room(x0, weak) >= 18 else wide,
+            "memory": list(self.__dict__.setdefault("_cross_memory", {}).get(pid, ())),
+        }
+        exch = call.get("package_strength", 0.0) if call.get("package_id") == _XC.D_EXCHANGE else 0.0
+        trail = []
+        if pid in _XC.CROSSING:
+            a, b = (("Wingback", "Slotback") if pid == _XC.FM_SWITCHBACK else ("Viper", "Slotback"))
+            attackers = [p for p in (role(a), role(b)) if p is not None]
+            defenders = self._channel_defenders(weak)[:2]
+            ex = _XC.exchange(attackers, defenders, exch)
+            look["exchange"] = ex
+            if call.get("package_id") == _XC.D_EXCHANGE:
+                self._cross_count(call["defending_side"], "defense", _XC.D_EXCHANGE,
+                                  "switched" if ex["switched"] else "missed")
+            if ex["switched"] and len(attackers) == 2 and len(defenders) == 2:
+                # After the switch each defender has the other man. Record
+                # how much faster the man he picked up is (scouting for CF04).
+                for d, a_ in ((defenders[0], attackers[1]), (defenders[1], attackers[0])):
+                    self._exchange_log[off_side].append({
+                        "defender": d.name, "attacker_position": a_.position,
+                        "edge": round(_old(a_.speed) - _old(d.speed), 1)})
+                del self._exchange_log[off_side][:-12]
+            if ex["trailing"] is not None:
+                trail.append(ex["trailing"])
+        elif pid == _XC.FM_TWIN_TRIGGER:
+            h = role("Halfback")
+            look["h_ready"] = h is not None and z is not None
+            if look["h_ready"]:
+                look["bad_snap"] = _XC.bad_snap(h)
+        elif pid == _XC.RL_WALL_RETURN:
+            near = self._channel_defenders(look["lateral_lane"])
+            look["commit"] = _XC.commits(alignment, near[0] if near else None)
+            if look["commit"] and near:
+                # He jumped the Halfback; the return goes behind him.
+                trail.append(near[0])
+        elif pid == _XC.CF_PIVOT_TURN:
+            edge = self._channel_defenders(wide)
+            look["edge_to_z"] = _XC.edge_steps_to_zeroback(alignment, edge[0] if edge else None, z)
+            if look["edge_to_z"] and edge:
+                # He took the Zeroback; the pitch goes past him.
+                trail.append(edge[0])
+        elif pid == _XC.CF_DOUBLE_CLEAR:
+            dl, dr = self._channel_defenders("left"), self._channel_defenders("right")
+            drawn = _XC.decoys_draw([p for p in (role("Wingback"), role("Slotback")) if p is not None],
+                                    [dl[0] if dl else None, dr[0] if dr else None])
+            look["drawn"] = [d.name for d in drawn]
+            if drawn:
+                side_of = channels["by_id"].get(id(drawn[0]))
+                look["seam"] = side_of if side_of in ("left", "right") else weak
+            trail.extend(drawn)
+        elif pid == _XC.CF_HANDOFF_PUNISH:
+            on = {p.name: p for p in self._channel_defenders("left") + self._channel_defenders("right")}
+            best = max((e for e in self._exchange_log[off_side] if e["edge"] >= 6 and e["defender"] in on),
+                       key=lambda e: e["edge"], default=None)
+            if best and role(best["attacker_position"]) is not None:
+                look["mismatch"] = {"attacker_position": best["attacker_position"],
+                                    "defender": best["defender"], "edge": best["edge"]}
+        elif pid == _XC.RL_SAFE_OUTLET:
+            h = role("Halfback")
+            look["z_accuracy"] = _old(getattr(z, "kick_accuracy", 35)) if z else 50
+            look["outlet_hands"] = _old(getattr(h, "hands", 35)) if h else 40
+        out = _XC.design(pid, look)
+        for d in trail:
+            self._take_out_of_play(d)
+        lane = out.get("lane")
+        if (call.get("package_id") == _XC.D_EXCHANGE and pid in _XC.FAKES
+                and out.get("family") and lane in ("left", "right")):
+            # An exchange defense trades men on what it sees. On a fake it
+            # trades onto the decoy and leaves the real side a man short.
+            if random.random() < 0.35 + 0.40 * exch:
+                bit = self._channel_defenders(lane)
+                if bit:
+                    self._take_out_of_play(bit[0])
+                    self._cross_count(call["defending_side"], "defense", _XC.D_EXCHANGE, "bit_on_fake")
+        new = {"phase": out["branch"], "formation": design.get("formation")}
+        for key in ("family", "kick_pass", "lane"):
+            if out.get(key):
+                new[key] = out[key]
+        if out.get("family"):
+            new["cross"] = {k: v for k, v in out.items() if k not in ("family", "kick_pass", "lane")}
+            if out.get("mark"):
+                self._snap_mark = out["mark"]
+        event["design"] = new
+        event["cross"] = {
+            "book": out.get("book"), "branch": out["branch"], "lane": lane,
+            "look": {"alignment": alignment, "blitz_seen": look["blitz_seen"], "weak": weak,
+                     "short": short, "counts": look["counts"]},
+            "exchange": ({k: v for k, v in look["exchange"].items() if k != "trailing"}
+                         if "exchange" in look else None),
+            "out_of_play": [d.name for d in trail],
+            # What a call that remembers keeps: the side it attacked (the
+            # flood side for Mirror Flood) and whether the defense loaded it.
+            "memory_lane": out.get("flood", lane),
+            "pressed_lane": bool(out.get("flood", lane) in ("left", "right")
+                                 and look["pressed"].get(out.get("flood", lane))),
+        }
+        self._cross_count(off_side, "offense", pid, out["branch"])
+
+    def _slide_and_replace(self, carrier, tackler, yards, family):
+        """D04: when a run gets past the first defender, the next one slides
+        over to take the ball path. If he makes the stop he gets the tackle
+        in place of the beaten defender; either way the slide costs him."""
+        call = self._active_dc_call()
+        if call.get("package_id") != _XC.D_SLIDE_REPLACE or yards < 10:
+            return yards
+        def_team = self.get_defensive_team()
+        helper = None
+        for _ in range(4):
+            cand, _label = self.select_run_tackler(def_team, play_family=family)
+            if cand is not tackler:
+                helper = cand
+                break
+        if helper is None:
+            return yards
+        self.drain_player_energy(helper, "tackler")
+        side = call["defending_side"]
+        if _XC.help_tackle(helper, carrier, call.get("package_strength", 0.0)):
+            tackler.game_tackles = max(0, tackler.game_tackles - 1)
+            helper.game_tackles += 1
+            self._credit_defender(helper)
+            self._cross_count(side, "defense", _XC.D_SLIDE_REPLACE, "help_stop")
+            return min(yards, random.randint(6, 10))
+        self._cross_count(side, "defense", _XC.D_SLIDE_REPLACE, "help_missed")
+        return yards
+
+    def _transition_net(self, side):
+        """D06 strength for a team: its installed familiarity with Transition
+        Net, a standing assignment on live turnovers rather than a snap call."""
+        if not (V2_ENGINE_CONFIG.get("team_installation_enabled", True)
+                and V2_ENGINE_CONFIG.get("defensive_packages_enabled", True)):
+            return 0.0
+        team = self.home_team if side == "home" else self.away_team
+        unit = (getattr(team, "installation", None) or {}).get("defense", {})
+        if team.defense_style not in ("rotation", "drift"):
+            return 0.0
+        for p in unit.get("packages", ()):
+            if p.get("package_id") == _XC.D_TRANSITION_NET:
+                tactics = getattr(self, "home_dc_tactics" if side == "home" else "away_dc_tactics", {}) or {}
+                fam = max(0.0, min(1.0, float(p.get("familiarity", 0.0))))
+                return fam * tactics.get("installation_execution_factor", 1.0)
+        return 0.0
+
+    def _turnover_return(self, yards):
+        """A live interception return. The team that lost the ball tackles
+        with its nearest players when it runs Transition Net; a team that
+        runs it holds some of its own blockers back on its takeaways."""
+        returning = self.state.possession
+        losing = "away" if returning == "home" else "home"
+        lose_net, own_net = self._transition_net(losing), self._transition_net(returning)
+        if lose_net:
+            self._cross_count(losing, "defense", _XC.D_TRANSITION_NET, "live_return_covered")
+        if own_net:
+            self._cross_count(returning, "defense", _XC.D_TRANSITION_NET, "own_return_held_back")
+        if not (lose_net or own_net):
+            return yards
+        return max(0, int(round(yards * (1 - 0.30 * lose_net) * (1 - 0.10 * own_net))))
+
+    def _cross_code_names(self):
+        from .playbook_catalog import get_package
+        names = {}
+        for units in getattr(self, "_cross_usage", {}).values():
+            for rows in units.values():
+                for pid in rows:
+                    try:
+                        names[pid] = get_package(pid)["name"]
+                    except KeyError:
+                        names[pid] = pid
+        return names
+
+    def _record_cross_memory(self, play):
+        """Calls that remember a response keep this snap's branch and side."""
+        event = getattr(self, "_offensive_plan_event", None) or {}
+        pid = event.get("package_id")
+        info = event.get("cross")
+        if pid not in _XC.REMEMBERS or not info:
+            return
+        if (play.penalty and play.penalty.nullified) or play.snap_possession != self.state.possession:
+            return
+        memory = self.__dict__.setdefault("_cross_memory", {}).setdefault(pid, [])
+        memory.append({"branch": info["branch"], "lane": info.get("memory_lane"),
+                       "pressed": info.get("pressed_lane", False)})
+        del memory[:-2]
 
     def _miss_turnover_margin(self):
         """Extra kick success a coach wants on 4th and 5th down when a miss
@@ -5221,7 +5517,15 @@ class ViperballEngine:
             delta["delta_drop_success"] = self._drop_kick_success(110-st.field_position, self._kick_skill(kicker.kicking)) if kicker else 0.0
             delta["delta_retained_miss"] = getattr(self, "_delta_retained_miss", False)
             delta["delta_defense_school"] = self._current_defense_name()
+        off = st.possession
+        predicted, confidence, _samples = _XC.predict_next(
+            self.__dict__.setdefault("_family_transitions", {"home": {}, "away": {}})[off],
+            self.__dict__.setdefault("_last_family", {"home": None, "away": None})[off])
         return {**delta, "recent_kick_rate": sum(x[0] for x in recent)/n,
+                "recent_cross_rate": sum(x[5] for x in recent if len(x) > 5)/n,
+                "recent_second_runner_rate": sum(x[6] for x in recent if len(x) > 6)/n,
+                "recent_cutback_rate": sum(x[7] for x in recent if len(x) > 7)/n,
+                "set_breaker_predicted": predicted, "set_breaker_confidence": confidence,
                 "recent_deep_rate": sum(x[1] for x in recent)/n,
                 "recent_explosive_rate": sum(x[2] for x in recent)/n,
                 "recent_perimeter_rate": sum(x[3] for x in recent)/n,
@@ -5298,6 +5602,7 @@ class ViperballEngine:
             from .team_installation import active_situations
             diff = self.state.home_score - self.state.away_score
             context = self._package_context(diff if def_side == "home" else -diff)
+            context["formation_seen"] = formation
             situations = active_situations(context)
         package = self._choose_defensive_package(def_side, tactics, situations, context)
         if package:
@@ -5335,6 +5640,13 @@ class ViperballEngine:
             call["package_eligibility"] = package["eligibility"]
             call["package_familiarity"] = package["familiarity"]
             call["package_focus"] = package["focus"]
+            if package["package_id"] == _XC.D_SET_BREAKER:
+                # Commit to the family this offense has run after its last
+                # one; it does not see the call, only the pattern so far.
+                run, kick = _XC.set_breaker_deltas(package.get("predicted"))
+                call["set_breaker_predicted"] = package.get("predicted")
+                call["dynamic_run_deltas"] = run
+                call["dynamic_kick_deltas"] = kick
         self._active_defensive_call = call
         counters = self._dc_tactics_usage[def_side]
         counters["calls"] += 1
@@ -5382,7 +5694,7 @@ class ViperballEngine:
         # Existing alignments have real run-direction costs. The focus is a
         # finite read allocation, not a universal defense multiplier.
         from .delta_playbook import POSTURES, PK, weight as delta_weight
-        effects = {**self._DEFENSIVE_PACKAGE_POSTURES, **POSTURES}
+        effects = {**self._DEFENSIVE_PACKAGE_POSTURES, **POSTURES, **_XC.POSTURES}
         # Drive-specific packages have primary and lower-frequency secondary triggers.
         choices = []
         counts = self._defensive_package_usage[side]
@@ -5400,6 +5712,8 @@ class ViperballEngine:
                 continue
             counts["eligible"][pid] = counts["eligible"].get(pid, 0) + 1
             alignment, shift, focus = effects[pid]
+            if pid == _XC.D_SET_BREAKER:
+                alignment = _XC.set_breaker_alignment(context.get("set_breaker_predicted"))
             strength = execution_strength(familiarity, context.get("defense_energy"), tactics.get("authority", .65))
             pressure = tactics.get("pressure_bias", 0.0)
             preference = 1 + (3*pressure if pid in PRESS_PACKAGES else -3*pressure if pid in COVER_PACKAGES else 2*tactics.get("run_support_bias",0.0))
@@ -5407,7 +5721,8 @@ class ViperballEngine:
                 preference *= delta_weight(pid, context)
             choices.append({"package_id": pid, "familiarity": familiarity, "strength": strength,
                             "eligibility": tier, "weight": familiarity*tier*max(.5, preference),
-                            "alignment": alignment, "blitz_shift": shift, "focus": focus})
+                            "alignment": alignment, "blitz_shift": shift, "focus": focus,
+                            "predicted": context.get("set_breaker_predicted") if pid == _XC.D_SET_BREAKER else None})
         if not choices:
             return None
         rng = self._defensive_package_rng[side]
@@ -5473,7 +5788,8 @@ class ViperballEngine:
         baseline = ALIGNMENT_VS_PLAY.get((call["alignment"], family.value), 0.0)
         if call.get("package_id"):
             from .delta_playbook import RUN
-            target = {**self._PACKAGE_RUN_DELTAS, **RUN}.get(call["package_id"], {}).get(family.value, baseline)
+            table = call.get("dynamic_run_deltas") or {**self._PACKAGE_RUN_DELTAS, **RUN, **_XC.RUN}.get(call["package_id"], {})
+            target = table.get(family.value, baseline)
             strength = call.get("package_strength", call["package_familiarity"])
             delta = baseline + strength * (target - baseline)
             call["run_alignment_delta"] = baseline
@@ -5486,7 +5802,8 @@ class ViperballEngine:
         if not call or not call.get("package_id"):
             return 0.0
         from .delta_playbook import KICK
-        delta = {**self._PACKAGE_KICK_DELTAS, **KICK}.get(call["package_id"], {}).get(subfamily.value, 0.0)
+        table = call.get("dynamic_kick_deltas") or {**self._PACKAGE_KICK_DELTAS, **KICK, **_XC.KICK}.get(call["package_id"], {})
+        delta = table.get(subfamily.value, 0.0)
         delta *= call.get("package_strength", call["package_familiarity"])
         call["kick_tactical_delta"] = delta
         return delta
@@ -6565,7 +6882,12 @@ class ViperballEngine:
         """A change made while the ball is live can leave a team short."""
         if getattr(self, "_fast_break", None):
             return
-        if random.random() < V2_ENGINE_CONFIG.get("live_change_caught_rate", 0.0):
+        rate = V2_ENGINE_CONFIG.get("live_change_caught_rate", 0.0)
+        if getattr(self, "_transition_side", None) == sk:
+            # Transition Net: players who lost the ball recover depth in an
+            # order they practiced, so a live change is caught less often.
+            rate *= 1 - 0.5 * self._transition_net(sk)
+        if random.random() < rate:
             self._fast_break = "away" if sk == "home" else "home"
             state["caught"][sk] += 1
 
@@ -7666,6 +7988,8 @@ class ViperballEngine:
         if origin is not None:
             self._drive_origin = origin
             self._offensive_setup.clear()
+            self.__dict__.setdefault("_cross_memory", {}).clear()
+            self._last_family = {"home": None, "away": None}
             self._drive_probe = None
             self._possession_snap_count = 0
             self._analytics_possession_id = getattr(self,"_analytics_possession_id",-1)+1
@@ -10371,6 +10695,11 @@ class ViperballEngine:
         self._rush_plan = None
         self._snap_defense_energy = None
         self._st_event = None
+        self._snap_weight_mod = {}
+        self._snap_trailing = set()
+        self._snap_mark = None
+        self._snap_cross = None
+        self._snap_anchor = None
         self._possession_snap_count += 1
 
         # Save pre-play state.  Every Play in the log should show the
@@ -10442,6 +10771,7 @@ class ViperballEngine:
         # ── Referee: spot error on plays that end with a spot ──
         self._apply_spot_error(play)
         self._record_offensive_setup(play)
+        self._record_cross_memory(play)
         self._finish_drive_plan(play)
         self._finish_script(play)
         causes = getattr(self, "_snap_kick_miss_causes", None)
@@ -10463,12 +10793,32 @@ class ViperballEngine:
         play.yards_to_go = self._pre_play_ytg
         if dc_call and play.play_type not in ("penalty", "kneel"):
             history = self._recent_defensive_plays[dc_call["defending_side"]]
+            design = ((getattr(play, "offensive_call", None) or {}).get("design") or {})
             history.append((play.play_family == "kick_pass",
                             getattr(play, "kick_pass_subfamily", "") in ("bomb", "territory"),
                             play.yards_gained >= 20,
                             play.play_family in ("sweep_option", "speed_option", "viper_jet"),
-                            play.play_family == "lateral_spread"))
+                            play.play_family == "lateral_spread",
+                            # What a defense can see after the play: receivers
+                            # who crossed, a second runner behind the catch or
+                            # the first carrier, and a run back to the weak side.
+                            bool((design.get("cross") or {}).get("cross")),
+                            getattr(play, "kick_pass_subfamily", "") == "kick_lateral"
+                            or (play.play_family == "lateral_spread" and (getattr(play, "laterals", 0) or 0) >= 2),
+                            play.play_family == "counter" or design.get("phase") in (
+                                "hook", "release", "switch", "counter", "weak_isolation", "reverse")))
             del history[:-16]
+        if play.play_type in ("run", "kick_pass", "lateral_chain", "trick_play") and play.play_family:
+            # Set Breaker's evidence: the family this offense ran after each
+            # family, this game (engine/cross_code.py predict_next).
+            side = play.snap_possession
+            trans = self.__dict__.setdefault("_family_transitions", {"home": {}, "away": {}})[side]
+            last = self.__dict__.setdefault("_last_family", {"home": None, "away": None})
+            fam = play.play_family if isinstance(play.play_family, str) else play.play_family.value
+            if last.get(side):
+                bucket = trans.setdefault(last[side], {})
+                bucket[fam] = bucket.get(fam, 0) + 1
+            last[side] = fam
 
         return play
 
@@ -10607,6 +10957,7 @@ class ViperballEngine:
             self._begin_offensive_plan()
         self._current_formation = self.select_formation()
         self._begin_defensive_call(self._current_formation)
+        self._read_cross_concept()
         play_family = self.select_play_family(formation=self._current_formation)
         if play_family != PlayFamily.KICK_PASS:
             self._paired_pace(play_family)
@@ -12543,10 +12894,22 @@ class ViperballEngine:
             return (p.power * 0.50 + getattr(p, "awareness", 70) * 0.30
                     + getattr(p, "agility", 75) * 0.20) * self.player_fatigue_modifier(p)
         blockers.sort(key=protection, reverse=True)
+        rush_skill = sum(score(p) for p in rushers) / len(rushers) if rushers else 0.0
+        cross_rush = None
+        if call and call.get("package_id") == _XC.D_CROSS_RUSH and len(rushers) >= 2:
+            # Two rushers trade lanes at the snap. A clean pass off by the
+            # two blockers in front of them only delays the rush; a missed
+            # one lets a rusher through untouched.
+            cross_rush = _XC.pass_off(sorted(rushers, key=score, reverse=True), blockers)
+            rush_skill *= 0.92 if cross_rush["clean"] else 1.15
+            self._cross_count(call["defending_side"], "defense", _XC.D_CROSS_RUSH,
+                              "passed_off" if cross_rush["clean"] else "came_free")
         self._rush_plan = {"rushers": rushers, "coverage": cover, "blockers": blockers,
                            "blitz": actual >= 3, "base_count": base_count, "intended_count": intended,
                            "on_field": all_on,
-                           "rush_skill": sum(score(p) for p in rushers) / len(rushers) if rushers else 0.0,
+                           "rush_skill": rush_skill,
+                           "cross_rush": ({"clean": cross_rush["clean"], "p": cross_rush["p"]}
+                                          if cross_rush else None),
                            "protection_skill": sum(protection(p) for p in blockers) / len(blockers) if blockers else 30.0,
                            # Any committed rusher can win the individual
                            # contest. Stronger/fresher players are favored,
@@ -13160,6 +13523,12 @@ class ViperballEngine:
 
         # ── Pick the matched defender (V4: style-aware personnel selection) ──
         defender, _kp_pool_label = self.select_kick_pass_defender_styled(def_team, subfamily)
+        # Handoff Punish (CF04) aims at the defender it scouted on a switch.
+        mark = getattr(self, "_snap_mark", None)
+        if mark:
+            marked = next((p for p in self._get_defenders_by_group(def_team)["all"] if p.name == mark), None)
+            if marked is not None:
+                defender = marked
 
         # ── Offensive skill (sub-family-specific attribute weights) ──
         if use_halo:
@@ -13207,6 +13576,9 @@ class ViperballEngine:
         if not use_halo:
             def_skill = scale_rating(def_skill, "rescale_contest") * self._def_form()
         def_skill *= self.player_fatigue_modifier(defender) * 0.5 + 0.5
+        if id(defender) in getattr(self, "_snap_trailing", ()):
+            # He followed the wrong man on a cross and is chasing from behind.
+            def_skill *= 0.82
 
         # ── Game rhythm ──
         rhythm = self.home_game_rhythm if self.state.possession == "home" else self.away_game_rhythm
@@ -13345,7 +13717,35 @@ class ViperballEngine:
             self._width_channels = FW.assign_channels(
                 lineup, getattr(self, "_width_x0", FW.MIDDLE),
                 self._determine_defense_alignment(), dc_q, lean=lean)
+            self._package_channels(self._width_channels, [p for p, _r in lineup])
         return self._width_channels
+
+    def _package_channels(self, channels, defenders):
+        """Edge Anchor and Channel Press each move one real defender out of
+        the box (engine/cross_code.py). Edge Anchor holds him on the weak
+        edge; Channel Press puts him on the wide side to deny the near
+        outlet and funnel the ball toward the boundary. Either way the box
+        is a man lighter."""
+        call = self._active_dc_call()
+        pid = call.get("package_id")
+        if pid not in (_XC.D_EDGE_ANCHOR, _XC.D_CHANNEL_PRESS):
+            return
+        if random.random() >= call.get("package_strength", 0.0):
+            return  # a unit that has not practiced it does not hold the shape
+        box = [p for p in defenders if channels["by_id"].get(id(p)) == "box"]
+        if len(box) <= 1:
+            return
+        x0 = getattr(self, "_width_x0", FW.MIDDLE)
+        rooms = {side: FW.room_mod(x0, side) for side in ("left", "right")}
+        mover = max(box, key=lambda p: (_old(p.speed) + _old(getattr(p, "awareness", 35)), p.name))
+        if pid == _XC.D_EDGE_ANCHOR:
+            to = _XC.weak_side(channels["counts"], channels["fair"])
+            self._snap_anchor = (id(mover), to)
+        else:
+            to = "right" if FW.room(x0, "right") >= FW.room(x0, "left") else "left"
+        _XC.move_defender(channels, id(mover), to, rooms)
+        channels["package_shift"] = {"package_id": pid, "player": mover.name, "to": to}
+        self._cross_count(call["defending_side"], "defense", pid, "moved_" + ("anchor" if pid == _XC.D_EDGE_ANCHOR else "press"))
 
     def _width_attack(self, family_value, planned=None):
         """Pick the side this play attacks and record it for the snap."""
@@ -13370,18 +13770,28 @@ class ViperballEngine:
         """Defenders in the attacked channel make more of the plays."""
         ctx = getattr(self, "_width_ctx", None)
         if not ctx or ctx["side"] not in ("left", "right"):
+            mods = getattr(self, "_snap_weight_mod", None) or {}
+            if mods:
+                return [w * mods.get(id(p), 1.0) for p, w in zip(pool, weights)]
             return weights
         by_id = self._width_channels_now()["by_id"]
         side = ctx["side"]
+        mods = getattr(self, "_snap_weight_mod", None) or {}
+        anchor = getattr(self, "_snap_anchor", None)
         out = []
         for p, w in zip(pool, weights):
             ch = by_id.get(id(p))
             if ch == side:
-                out.append(w * FW.SIDE_WEIGHT_IN_CHANNEL)
+                w = w * FW.SIDE_WEIGHT_IN_CHANNEL
+                if anchor and anchor[0] == id(p) and anchor[1] == side:
+                    # Edge Anchor: the defender held on the weak edge is
+                    # the one waiting for a run back to his side.
+                    w *= 2.5
             elif ch == "box" or ch is None:
-                out.append(w * FW.SIDE_WEIGHT_BOX)
+                w = w * FW.SIDE_WEIGHT_BOX
             else:
-                out.append(w * FW.SIDE_WEIGHT_FAR)
+                w = w * FW.SIDE_WEIGHT_FAR
+            out.append(w * mods.get(id(p), 1.0))
         return out
 
     def _side_lean(self):
@@ -13634,9 +14044,15 @@ class ViperballEngine:
         planned_lane = (self._planned_choice("lane")
                         if family.value == self._planned_choice("family") else None)
         width = self._width_attack(family.value, planned=planned_lane)
+        # A cross code call names its carrier (engine/cross_code.py): the
+        # Halfback on a Pivot Turn pitch, the Zeroback keeping on a switch.
+        cross = self._cross_call(family.value)
+        forced = self._cross_role(cross["carrier"], skill_pool) if cross.get("carrier") else None
         # Option families: the Zeroback reads one defender and gives, keeps
         # or pitches based on what that defender commits to.
-        option_read = self._resolve_option_read(family, skill_pool, eligible, weights)
+        option_read = None if forced is not None else self._resolve_option_read(family, skill_pool, eligible, weights)
+        if forced is not None:
+            player = forced
         if option_read:
             player = option_read["carrier"]
         if tactics and player.position == tactics["featured_position"]:
@@ -13736,6 +14152,7 @@ class ViperballEngine:
                 self.drain_player_energy(assist_tackler, "tackler")
 
         yards_gained = int(self._contest_run_yards(player, tackler, config, play_family=family))
+        yards_gained = self._slide_and_replace(player, tackler, yards_gained, family)
         if self._planned_choice("lane") and family.value == self._planned_choice("family"):
             # Existing Viper leverage is now available on either scripted edge.
             yards_gained = round(yards_gained * (1 + viper_bonus)) if yards_gained > 0 else yards_gained
@@ -13786,7 +14203,12 @@ class ViperballEngine:
             vj_config = dict(config)
             vj_config['fumble_rate'] = config['fumble_rate'] * 1.40
 
-        if self._run_fumble_check(family, yards_gained, carrier=player):
+        if cross.get("bad_snap"):
+            # Twin Trigger snap to the Halfback goes wrong: he gathers it
+            # behind the line, and it can come loose.
+            yards_gained = min(yards_gained, random.randint(-4, 1))
+        if (self._run_fumble_check(family, yards_gained, carrier=player)
+                or (cross.get("bad_snap") and random.random() < 0.20)):
             fumble_yards = random.randint(-3, max(1, yards_gained))
             old_pos = self.state.field_position
             fumble_spot = max(1, old_pos + fumble_yards)
@@ -14282,6 +14704,19 @@ class ViperballEngine:
             idx = _remaining_pool.index(pick)
             _remaining_pool.pop(idx)
             _remaining_weights.pop(idx)
+        # A cross code call names who handles the ball and in what order:
+        # Zeroback to Halfback and back on a Wall Return, a released lineman
+        # on an Anchor Release (engine/cross_code.py).
+        cross = self._cross_call(family.value)
+        designed_chain = False
+        if cross.get("chain"):
+            designed = [self._cross_role(pos, skill_pool) for pos in cross["chain"]]
+            designed = [p for p in designed if p is not None]
+            if len(designed) >= 2 and len({id(p) for p in designed}) >= 2:
+                players_involved = designed
+                chain_length = len(designed) - 1
+                target = None
+                designed_chain = True
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
         # Field width: the chain swings toward one side of the field.
@@ -14322,6 +14757,9 @@ class ViperballEngine:
                 # to the converging defenders.
                 strength = trap.get("package_strength", 0.0)
                 int_chance *= 1 + strength * .35 * lat_idx
+            elif trap.get("package_id") == _XC.D_STAGGER and lat_idx >= 1:
+                # A defender sits at the second runner's depth.
+                int_chance *= 1 + trap.get("package_strength", 0.0) * .50
             int_chance = max(0.025, min(0.15 if trap.get("package_id") == "chaos_lateral_trap" else 0.10, int_chance))
             if random.random() < int_chance:
                 if target is not None and self._offensive_plan_event is not None:
@@ -14347,6 +14785,7 @@ class ViperballEngine:
                 int_agility = getattr(interceptor, 'agility', 75)
                 return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
                 return_yards = max(0, int(random.gauss(20 + return_talent * 18, 15)))
+                return_yards = self._turnover_return(return_yards)
                 new_fp = min(100, raw_fp + return_yards)
 
                 self.apply_stamina_drain(4)
@@ -14412,6 +14851,11 @@ class ViperballEngine:
         trap = self._active_dc_call()
         if trap.get("package_id") == "cape_cod_trap":
             fumble_prob *= 1 + trap.get("package_strength", 0.0) * .10 * max(0, chain_length - 1)
+        if designed_chain:
+            # Named handlers: the weakest pair of hands on the chain decides
+            # how often it comes loose (a lineman's hands show here).
+            worst = min(_old(getattr(p, "hands", 35)) for p in players_involved[1:])
+            fumble_prob *= 1 + max(0.0, 70 - worst) / 60.0
         fumble_prob = max(0.05, min(0.40, fumble_prob))
         if target is not None and self._offensive_plan_event is not None:
             self._offensive_plan_event["clinic_fumble_probability"] = round(fumble_prob, 4)
@@ -14663,9 +15107,26 @@ class ViperballEngine:
         kicker_pool = self._kicker_candidates(team)
         kicker = max(kicker_pool, key=lambda p: p.kick_accuracy)
         skill = self._offense_skill(team)
+        # A cross code call can move the kick to another distributor (the
+        # Halfback who took the snap on a Twin Trigger) and name the
+        # receivers it is built for (engine/cross_code.py).
+        cross = self._cross_call("kick_pass")
+        if cross.get("distributor"):
+            alt = self._cross_role(cross["distributor"], skill)
+            if alt is not None:
+                kicker = alt
         eligible_receivers = [p for p in skill if p != kicker]
         if not eligible_receivers:
             eligible_receivers = [p for p in skill]
+        if cross.get("target"):
+            named = [p for p in eligible_receivers
+                     if p.position in cross["target"] or _plays_as(p) in cross["target"]]
+            if named:
+                eligible_receivers = named
+        if cross.get("target_not"):
+            rest = [p for p in eligible_receivers if p.position not in cross["target_not"]]
+            if rest:
+                eligible_receivers = rest
         # Weighted random selection: favour hands+speed but spread targets.
         # Players who already have many receptions get a usage decay so the
         # offense doesn't force-feed a single receiver all game.
@@ -14701,8 +15162,18 @@ class ViperballEngine:
 
         plan = self._offensive_plan_event or {}
         follow = plan.get("package_id") == KICK_AND_FOLLOW and subfamily == KickPassSubFamily.KICK_LATERAL
+        # Up Back Across: kick to the Wingback, back to the Slotback, and on
+        # to the Halfback only if the Slotback's lane is closing.
+        up_back = bool(cross.get("support")) and subfamily == KickPassSubFamily.KICK_LATERAL
+        up_back_chain = []
+        if up_back:
+            up_back_chain = [p for p in (self._cross_role(pos, skill) for pos in cross["support"])
+                             if p is not None and p is not receiver and p is not kicker]
+            follow = True
         support = None
-        if follow:
+        if up_back:
+            support = up_back_chain[0] if up_back_chain else None
+        elif follow:
             support = max(
                 (p for p in skill if p is not receiver and p is not kicker),
                 key=lambda p: (p.speed + p.hands) * (0.5 + p.game_energy / 200),
@@ -14952,13 +15423,16 @@ class ViperballEngine:
             if _sf_c_attr:
                 setattr(kicker, _sf_c_attr, getattr(kicker, _sf_c_attr, 0) + 1)
 
-            give = follow and follow_read(receiver, support, matched_defender)
+            if up_back:
+                give = support is not None and not _XC.immediate_tackle(receiver, matched_defender)
+            else:
+                give = follow and follow_read(receiver, support, matched_defender)
             if follow:
                 plan["read"] = "lateral" if give else "keep"
                 if support is not None:
                     plan["support_runner"] = player_label(support)
                 if not give:
-                    sf_label = "Viper Trail (keep)"
+                    sf_label = "Up Back Across (held)" if up_back else "Viper Trail (keep)"
             # A keep uses normal YAC. A called lateral uses the existing
             # loose ball and interception rules with one support runner.
             if subfamily == KickPassSubFamily.KICK_LATERAL and (not follow or give):
@@ -14977,11 +15451,21 @@ class ViperballEngine:
                 chain_players = [p for p in skill_pool if p != receiver]
                 if not chain_players:
                     chain_players = list(skill_pool)
+                ordered_chain = False
                 if give:
                     chain_players = [support]
                     chain_length = 1
                     receiver.game_laterals_thrown += 1
                     self.drain_player_energy(support, "carrier")
+                    if up_back and len(up_back_chain) > 1:
+                        ordered_chain = True
+                        nxt, _lbl = self.select_run_tackler(self.get_defensive_team())
+                        if _XC.lane_closed(support, nxt):
+                            chain_players = up_back_chain[:2]
+                            chain_length = 2
+                            support.game_laterals_thrown += 1
+                            self.drain_player_energy(up_back_chain[1], "carrier")
+                        plan["up_back_second_lateral"] = chain_length == 2
                 else:
                     chain_length = min(random.randint(2, 4), len(chain_players))
                 participants = [kicker_lbl, receiver_lbl]
@@ -15003,7 +15487,7 @@ class ViperballEngine:
                     if not _lat_pool:
                         break
                     _lat_w = [max(1.0, (_old(p.speed) + _old(getattr(p, 'lateral_skill', 35))) / 2.0 - 40) for p in _lat_pool]
-                    lat_player = random.choices(_lat_pool, weights=_lat_w, k=1)[0]
+                    lat_player = _lat_pool[0] if ordered_chain else random.choices(_lat_pool, weights=_lat_w, k=1)[0]
                     _lat_pool.remove(lat_player)
                     chain_tags.append(player_tag(lat_player))
                     lat_player.game_touches += 1
@@ -15049,6 +15533,13 @@ class ViperballEngine:
                     # V4: Pursuit quality scales INT chance
                     int_rate *= _kl_pursuit_mod
                     int_rate *= self._def_sig("lateral_int")
+                    _kl_trap = self._active_dc_call()
+                    if _kl_trap.get("package_id") == _XC.D_STAGGER:
+                        # A defender waits at the trailing runner's depth.
+                        int_rate *= 1 + _kl_trap.get("package_strength", 0.0) * .50
+                        if lat_i == 0:
+                            self._cross_count(_kl_trap["defending_side"], "defense",
+                                              _XC.D_STAGGER, "second_runner_covered")
                     int_rate = max(0.025, min(0.10, int_rate))
                     if random.random() < int_rate:
                         chain_intercepted = True
@@ -15062,6 +15553,7 @@ class ViperballEngine:
                         self.change_possession()
                         raw_fp = max(1, 100 - int_spot)
                         int_return = max(0, int(random.gauss(35, 18)))
+                        int_return = self._turnover_return(int_return)
                         new_fp = min(100, raw_fp + int_return)
                         # This turnover comes on the lateral AFTER a
                         # completed kick pass. Do not also charge a
@@ -15466,6 +15958,7 @@ class ViperballEngine:
             int_agility = getattr(interceptor, 'agility', 75)
             return_talent = (scale_rating(int_speed * 0.6 + int_agility * 0.4, "rescale_yac") - 60) / 40
             return_yards = max(0, int(random.gauss(18 + return_talent * 15, 15)))
+            return_yards = self._turnover_return(return_yards)
             new_fp = min(100, raw_fp + return_yards)
 
             if new_fp >= 100:
@@ -18617,6 +19110,12 @@ class ViperballEngine:
             "seagull_policy": ({sk: dict(v) for sk, v in getattr(self, "_seagull_policies", {}).items()}
                                if getattr(self, "officiating_level", "college") == "college" else {}),
             "line_minimum": getattr(self, "line_minimum", 5),
+            # Cross code concepts (engine/cross_code.py): branch counts for
+            # each offensive call and what each defensive answer did.
+            "cross_code": {side: {unit: {k: dict(v) for k, v in rows.items()}
+                                  for unit, rows in units.items()}
+                           for side, units in getattr(self, "_cross_usage", {}).items()},
+            "cross_code_names": self._cross_code_names(),
             "player_discipline": {side: list(rows.values()) for side, rows in self._discipline.items()},
             # ── V2: Engine metadata ──
             "v2_engine": {

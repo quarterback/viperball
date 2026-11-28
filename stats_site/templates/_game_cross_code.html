@@ -1,0 +1,31 @@
+{# Cross code calls (engine/cross_code.py): how each call read the defense, and what each defensive answer did. #}
+{% set xc = fr.get('cross_code') or {} %}
+{% set xc_names = fr.get('cross_code_names') or {} %}
+{% set xc_rows = [] %}
+{% for side, team_name in [('away', game.away_team), ('home', game.home_team)] %}
+{% for unit in ['offense', 'defense'] %}
+{% for pid, branches in (xc.get(side, {}).get(unit, {}) or {}).items() %}
+{% set _ = xc_rows.append((team_name, unit, xc_names.get(pid, pid), branches)) %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% if xc_rows %}
+<section aria-labelledby="cross-code-heading">
+<h2 id="cross-code-heading">Cross code calls</h2>
+<p class="hint">Offense: how often each call took each branch after reading the defense. Defense: what each answer did on the snaps it was called.</p>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Team</th><th>Side</th><th>Call</th><th>Branches</th></tr></thead>
+<tbody>
+{% for team_name, unit, name, branches in xc_rows %}
+<tr>
+<td>{{ team_name }}</td>
+<td>{{ unit|capitalize }}</td>
+<td>{{ name }}</td>
+<td>{% for b, n in branches|dictsort %}{{ b|replace('_', ' ') }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+</tr>
+{% endfor %}
+</tbody></table>
+</div>
+</section>
+{% endif %}

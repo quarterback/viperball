@@ -79,7 +79,10 @@ def validate_book(data):
 HOUSE_PREFIX = "house:"
 CROSS_CODE = ("gaelic_kick_and_follow", "afl_boundary_switch", "rugby_carry_release",
               "ball_protect_bonus", "cfl_corner_chase")
-GROUP_ORDER = ("base", "cape", "cross", "clinic", "delta")
+# The cross code books (engine/cross_code.py) by the prefix of their ids.
+BOOK_GROUPS = {"fm": "free", "ph": "phase", "rl": "relay", "cf": "crossfire", "dx": "crossdefense"}
+GROUP_ORDER = ("base", "cape", "cross", "free", "phase", "relay", "crossfire", "crossdefense",
+               "clinic", "delta")
 
 
 def package_group(package_id):
@@ -88,6 +91,8 @@ def package_group(package_id):
         return "cape"
     if package_id in CROSS_CODE:
         return "cross"
+    if package_id.split("_")[0] in BOOK_GROUPS:
+        return BOOK_GROUPS[package_id.split("_")[0]]
     if package_id.startswith("clinic_"):
         return "clinic"
     if package_id.split("_")[0] in ("pp", "pko", "pk"):
@@ -97,6 +102,8 @@ def package_group(package_id):
 
 def _group_label(group, side):
     return {"base": "Base", "cape": "Cape Cod", "cross": "Cross code concepts",
+            "free": "Free Motion", "phase": "Phase Attack", "relay": "Relay",
+            "crossfire": "Crossfire", "crossdefense": "Cross code answers",
             "clinic": "Clinic concepts",
             "delta": "Delta penalty kill" if side == "defense" else "Delta power play"}[group]
 

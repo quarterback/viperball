@@ -45,3 +45,11 @@ def test_computer_teams_spread_across_books():
         ti.league_roster_profiles = orig_prof
     names = [p["offense"]["name"] for p in picked.values()]
     assert len(names) == 6 and len(set(names)) == 6
+
+
+def test_cross_code_books_get_their_own_ready_made_books():
+    books = {b["id"]: b for b in house_books()}
+    ghost = books["house:offense:ghost:free:1"]
+    assert ghost["group_label"] == "Free Motion" and ghost["preferred"].startswith("fm_")
+    assert books["house:defense:lockdown:crossdefense:1"]["preferred"].startswith("dx_")
+    assert package_group("rl_wall_return") == "relay"

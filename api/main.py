@@ -399,6 +399,8 @@ class DynastyStartSeasonRequest(BaseModel):
     pinned_matchups: Optional[List[List[str]]] = None  # [[home, away], ...]
     program_archetype: Optional[str] = None  # archetype for human team
     rivalries: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+    # The season start form's "Let computer teams use playbooks" box.
+    computer_playbooks: bool = False
 
 
 class QuickGameRequest(BaseModel):

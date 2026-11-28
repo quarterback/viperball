@@ -7,6 +7,13 @@ def eligibility(package_id, tags, context, primary_tags):
     from .delta_playbook import PK, weight
     if package_id in PK:
         return min(1.0, weight(package_id, context))
+    from . import cross_code as XC
+    if package_id in XC.DEFENSE:
+        if package_id == XC.D_TRANSITION_NET:
+            return 0.0  # a standing assignment on live turnovers, not a snap call
+        if XC.eligibility(package_id, tags, context):
+            return 1.0
+        return .45 if XC.secondary(package_id, tags, context) else 0.0
     tags = set(tags)
     fp = context.get("field_position", 0)
     down = context.get("down", 1)
@@ -58,6 +65,8 @@ COVER_PACKAGES = {"lockdown_kick_range_shell", "lockdown_long_yardage_bracket", 
 WALL_PACKAGES = {"fortress_goal_line_stand", "fortress_short_yardage_wall", "pk_compact_box", "pk_goal_line_wall", "pk_range_denial"}
 PRESS_PACKAGES.update(("pk_kicker_diamond", "pk_late_down_surge"))
 COVER_PACKAGES.update(("pk_side_lock", "pk_rotating_shell", "pk_takeaway_trap"))
+PRESS_PACKAGES.update(("dx_channel_press", "dx_cross_rush"))
+COVER_PACKAGES.update(("dx_exchange", "dx_stagger", "dx_edge_anchor"))
 
 def execution_strength(familiarity, energy, authority):
     # Scheme and individual execution already matter in the contest. A tired
