@@ -24,3 +24,11 @@ decides to remove the app.
 
 Loaded `main.fastapi_app` locally: the root returns a 307 redirect to /stats/, and /stats/
 loads the stats site.
+
+## Follow up
+
+Ron said the root used to open the stats site and the other agent missed that NiceGUI was
+deprecated. The repo history has no earlier root redirect in `main.py` or `api/main.py`,
+so whatever sent the root to the stats site before did not live in this code. To keep it
+from slipping again, `tests/test_root_opens_stats.py` now fails if the root stops
+redirecting to /stats/, and AGENTS.md and CLAUDE.md say so.

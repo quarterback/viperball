@@ -7,6 +7,7 @@
 - Do not add features, pages, tabs, panels, labels or fixes to `nicegui_app/` or `ui/`.
 - Do not wire new engine features into them, and do not "keep them in sync" with the stats site.
 - All interface work goes in the stats site: `stats_site/router.py` and `stats_site/templates/`.
+- The site root (`/`) redirects to `/stats/` from `main.py`. Keep it that way. `tests/test_root_opens_stats.py` fails if the root stops opening the stats site.
 - `tests/test_nicegui_frozen.py` fails if any file under `nicegui_app/` or `ui/` changes. Don't update its hash to make it pass. Ron decides when the NiceGUI app is removed.
 
 The React app in `web/` was retired and removed. Don't recreate it.
