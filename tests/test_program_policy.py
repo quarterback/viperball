@@ -44,3 +44,30 @@ def test_upward_learning_requires_attribution_and_is_bounded(monkeypatch):
     assert ev and 0<ev["after"]<=cl.MENTOR_STEP
     assert h["offense"]["family_bias"]["kick_pass"]==-.1
     assert cl.learn_from_coordinator(hc,oc,"oc","A",2026,object()) is None
+
+
+def test_joint_objective_is_shared_and_clock_sensitive():
+    from engine.program_policy import live_objective, objective_bias
+    p={"objective":"territory_control","strength":.5,"hc_id":"h"}
+    live=live_objective(p,4,2,300)
+    assert objective_bias(live,"offense")["power"]>0
+    assert objective_bias(live,"defense")["spread"]>0
+    assert objective_bias(live,"st")["field_position_bias"]>0
+    urgent=live_objective(p,-4,4,120)
+    assert objective_bias(urgent,"offense")["kick_pass"]>0
+    assert objective_bias(urgent,"defense")["aggressive"]>0
+    assert objective_bias(urgent,"st")["return_aggression"]>0
+    assert live_objective({},4,4,30)=={}
+
+
+def test_curriculum_conserves_instruction_weight(monkeypatch):
+    from engine.position_staff import instruction
+    from engine import program_policy
+    staff={"pos_zb":SimpleNamespace(development=75)}
+    monkeypatch.setattr(program_policy,"curriculum",lambda *a:{})
+    base=instruction(staff,"Zeroback")
+    monkeypatch.setattr(program_policy,"curriculum",lambda *a:{"kicking":1.0})
+    revised=instruction(staff,"Zeroback")
+    assert base["focus"]==revised["focus"]
+    assert abs(sum(base["weights"].values())-sum(revised["weights"].values()))<1e-9
+    assert revised["weights"]["kicking"]>base["weights"]["kicking"]
