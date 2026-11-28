@@ -830,7 +830,9 @@
         "power",
         "kick_pass"
       ],
-      "kick_pass_tags": ["quick_kick"],
+      "kick_pass_tags": [
+        "quick_kick"
+      ],
       "personnel_tags": [],
       "situation_tags": [
         "pending_bonus"
@@ -2501,6 +2503,90 @@
       "benefits": "Anticipate repeated distribution",
       "cost": "Commitment concedes alternative lanes or actions",
       "counter": "ground_control, ironclad"
+    },
+    {
+      "version": 1,
+      "package_id": "cape_cod_hook",
+      "side": "offense",
+      "name": "Cape Cod",
+      "summary": "Chase a lateral chain to one sideline, then hook back inside or kick across.",
+      "origin_family": "lateral_spread",
+      "compatible_families": [
+        "lateral_spread",
+        "chain_gang",
+        "slick_n_slide",
+        "stampede"
+      ],
+      "formation_tags": [
+        "spread",
+        "split"
+      ],
+      "play_family_tags": [
+        "lateral_spread",
+        "counter",
+        "kick_pass"
+      ],
+      "kick_pass_tags": [
+        "territory"
+      ],
+      "personnel_tags": [
+        "lateral_hands"
+      ],
+      "situation_tags": [
+        "drive_building",
+        "early_down"
+      ],
+      "countered_by": [
+        "cape_cod_trap",
+        "fortress"
+      ],
+      "tradeoffs": [
+        "uses_downs"
+      ],
+      "inspiration": "A coastal hook: the boundary pulls the chase out, and the narrow neck brings the ball back inside.",
+      "scenario": "Use on early downs with room on both sides. After a lateral chain toward one sideline, hook back inside when the defense chases, or kick across when it crowds the middle.",
+      "benefits": "Punishes defenses that chase lateral chains to the sideline.",
+      "cost": "Every pitch in the setup carries fumble risk, and a defense that holds its width makes the setup cost a down for nothing.",
+      "counter": "Hold the cutback lane and keep a defender deep on the far side."
+    },
+    {
+      "version": 1,
+      "package_id": "cape_cod_trap",
+      "side": "defense",
+      "name": "Cape Cod",
+      "summary": "Let the chain reach the sideline, close in on it and choke the cutback.",
+      "origin_family": "swarm",
+      "compatible_families": [
+        "swarm",
+        "shadow",
+        "chaos"
+      ],
+      "formation_tags": [],
+      "play_family_tags": [
+        "lateral_spread",
+        "sweep_option",
+        "speed_option"
+      ],
+      "kick_pass_tags": [],
+      "personnel_tags": [
+        "team_speed"
+      ],
+      "situation_tags": [
+        "early_down"
+      ],
+      "countered_by": [
+        "gp_heavy_push",
+        "cape_cod_hook"
+      ],
+      "tradeoffs": [
+        "lighter_box",
+        "kick_pass_seams"
+      ],
+      "inspiration": "A coastal hook: the sideline is the wall and the cutback lane is the narrow neck.",
+      "scenario": "Early downs against an offense that laterals or sweeps to the edge.",
+      "benefits": "Each pitch toward the sideline gets riskier, and the inside cutback is clogged.",
+      "cost": "One defender stays deep on the far side, so straight inside runs and a quick kick across before the trap closes gain more.",
+      "counter": "Run straight inside or kick across early."
     }
   ]
 }
