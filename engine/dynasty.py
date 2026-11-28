@@ -1274,7 +1274,7 @@ class Dynasty:
         tactical_learning = []
         mentorship_events = []
         career_events = []
-        from engine.coach_learning import adapt, learn_from_mentor, learn_from_coordinator
+        from engine.coach_learning import adapt, adapt_seagull, learn_from_mentor, learn_from_coordinator
         from engine.coach_career import record_season, season_evidence, grow, caller
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
@@ -1329,6 +1329,13 @@ class Dynasty:
                 lesson = adapt(card, calling_role, team_name, prev_year, self.seasons.get(prev_year))
                 if lesson is not None:
                     tactical_learning.append(lesson)
+                # Seagull learning: the head coach for listing, the caller of
+                # each side for how she is used.
+                seagull_role = "head_coach" if role == "head_coach" else calling_role
+                seagull_lesson = adapt_seagull(card, seagull_role, team_name, prev_year,
+                                               self.seasons.get(prev_year))
+                if seagull_lesson is not None:
+                    tactical_learning.append(seagull_lesson)
                 # All coaches develop their attributes each offseason
                 from engine.coach_roles import POSITION_DISCIPLINE
                 mentor = staff.get(POSITION_DISCIPLINE.get(role)) if role in POSITION_DISCIPLINE else None
@@ -1408,6 +1415,23 @@ class Dynasty:
         previous = getattr(self.seasons.get(prev_year), "style_configs", {}) or {}
         school_plan = plan_schools(previous, active_staffs, previous_hc_ids,
                                    human_team, OFFENSE_STYLES, DEFENSE_STYLES)
+        # A long-serving head coach can change the program's system after
+        # two bad seasons on her non-specialist side (casebook case 6).
+        from engine.coach_reinvention import consider as consider_reinvention
+        configs_by_year = {y: getattr(self.seasons.get(y), "style_configs", {}) or {}
+                           for y in (prev_year, prev_year - 1)}
+        school_changes = []
+        for team_name, config in sorted(school_plan.items()):
+            hc = active_staffs.get(team_name, {}).get("head_coach")
+            if hc is None or previous_hc_ids.get(team_name) != hc.coach_id:
+                continue
+            change = consider_reinvention(
+                team_name, hc, config, self.team_histories, configs_by_year, year,
+                {"offense": OFFENSE_STYLES, "defense": DEFENSE_STYLES},
+                random.Random(f"reinvent:{year}:{team_name}"))
+            if change:
+                config[f"{change['side']}_style"] = change["to"]
+                school_changes.append(change)
         new_positions = ensure_position_staff(self._coaching_staffs,self.team_prestige,year,active_staffs)
         from engine.program_policy import program_report
         self.coaching_history[year] = {
@@ -1420,6 +1444,7 @@ class Dynasty:
             "tactical_learning": tactical_learning,
             "mentorship": mentorship_events,
             "planned_schools": school_plan,
+            "school_changes": school_changes,
             "career_development": career_events,
             "retirements": retirements,
             "alumni_candidates": alumni,

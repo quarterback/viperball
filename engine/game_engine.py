@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from copy import deepcopy
 from engine.offensive_concepts import CORNER_CHASE
+from engine import field_width as FW
 from engine.rating_scale import current_to_legacy as _old
 from engine.weather import GameWeather
 # _old(rating): a current scale rating as its 60 to 100 equivalent, for
@@ -66,6 +67,8 @@ V2_ENGINE_CONFIG = {
     "team_installation_enabled": True,
     "offensive_packages_enabled": True,
     "paired_drive_plans_enabled": True,
+    # Defenses shade toward the side an offense keeps attacking (field_width.py).
+    "side_learning_enabled": True,
     "opening_scripts_enabled": True,
     # Rule study: a missed snap kick on any down turns the ball over, as it
     # does on 6th down today. Off by default; the current rule keeps the
@@ -74,6 +77,7 @@ V2_ENGINE_CONFIG = {
     # When the turnover rule is on, coaches price the miss in: 4th and 5th
     # down snap kicks need a surer kick.
     "missed_snap_kick_turnover_coaches_adapt": True,
+    "midgame_calls_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -365,6 +369,10 @@ class PlayType(Enum):
     DROP_KICK = "drop_kick"
     PLACE_KICK = "place_kick"
     KNEEL = "kneel"
+
+
+def _coach_name(card):
+    return f"{getattr(card, 'first_name', '')} {getattr(card, 'last_name', '')}".strip()
 
 
 class PlayFamily(Enum):
@@ -742,6 +750,7 @@ VIPER_ALIGNMENT_BONUS = {
 POSITION_TAGS = {
     "Zeroback": "ZB",
     "Viper": "VP",
+    "Seagull": "SG",
     "Halfback": "HB",
     "Wingback": "WB",
     "Slotback": "SB",
@@ -1424,8 +1433,14 @@ def get_archetype_info(archetype: str) -> dict:
     return {}
 
 
+def _plays_as(player) -> str:
+    """The position a player plays on this snap: a Seagull in the Viper
+    jersey plays as the Viper and otherwise as a Seagull (SG)."""
+    return getattr(player, "playing_as", None) or player.position
+
+
 def player_tag(player) -> str:
-    pos = player.position
+    pos = _plays_as(player)
     tag = POSITION_TAGS.get(pos, pos[:2].upper())
     return f"{tag}{player.number}"
 
@@ -1443,6 +1458,8 @@ class GameState:
     away_score: float = 0.0
     possession: str = "home"
     field_position: int = 20
+    # Yards across the field from the offense's left sideline (field_width.py).
+    ball_x: float = 80 / 3
     down: int = 1
     yards_to_go: int = 20
     play_number: int = 0
@@ -2079,7 +2096,6 @@ PENALTY_CATALOG = {
         {"name": "Encroachment", "yards": 5, "on": "defense", "prob": 0.005},
         {"name": "Too Many Men on Field", "yards": 5, "on": "either", "prob": 0.004},
         {"name": "Illegal Substitution", "yards": 5, "on": "either", "prob": 0.002},
-        {"name": "Illegal Viper Alignment", "yards": 5, "on": "offense", "prob": 0.003},
         {"name": "Illegal Motion", "yards": 5, "on": "offense", "prob": 0.003},
         {"name": "Illegal Snap", "yards": 5, "on": "offense", "prob": 0.001},
         {"name": "Illegal Defensive Formation", "yards": 5, "on": "defense", "prob": 0.002},
@@ -2088,8 +2104,6 @@ PENALTY_CATALOG = {
         {"name": "Disconcerting Signals", "yards": 5, "on": "defense", "prob": 0.002},
         {"name": "Player Out of Bounds at Snap", "yards": 5, "on": "either", "prob": 0.001},
         {"name": "Illegal Viper Substitution", "yards": 5, "on": "offense", "prob": 0.001},
-        {"name": "Illegal Numbering", "yards": 5, "on": "offense", "prob": 0.001},
-        {"name": "Illegal Formation (Numbering Exception)", "yards": 5, "on": "offense", "prob": 0.001},
     ],
     # ── DURING PLAY: RUN ─────────────────────────────────────────────
     "during_play_run": [
@@ -4169,6 +4183,20 @@ class ViperballEngine:
         # (engine/officiating.py LEVELS).
         from engine.officiating import apply_level as _apply_officiating_level
         _apply_officiating_level(self.referee_crew, officiating_level)
+        # Rulebook v2.1: line minimum by level, backfield motion, the Viper
+        # jersey and the Seagull (engine/presnap.py).
+        from engine.presnap import LINE_MINIMUM as _LINE_MINIMUM
+        self.officiating_level = officiating_level
+        self.line_minimum = _LINE_MINIMUM.get(officiating_level, 5)
+        self._seagulls = {}            # side -> {name: groups}, listed pregame
+        self._seagull_roles = {"home": {"offense": None, "defense": None},
+                               "away": {"offense": None, "defense": None}}
+        self._seagull_snaps = {"home": {}, "away": {}}
+        self._seagull_jersey_key = {"home": None, "away": None}
+        self._short_line = {"home": (), "away": ()}
+        self._presnap_ctx = None
+        self._last_snap_offense = None
+        self.seagull_log = []
         self.seed = seed
         # Credit assignment does not consume the physical contest RNG.
         self._rush_credit_rng = random.Random(
@@ -4842,7 +4870,16 @@ class ViperballEngine:
 
         pid = package["package_id"]
         if pid in SEQUENCES:
-            design = sequence_call(pid, self._offensive_setup.get(pid, ()))
+            # Boundary Switch and Carry, Carry, Release work the short side
+            # first so the switch lands on the wide side. Cape Cod runs its
+            # setup chain where it has room, toward the wide side.
+            from .offensive_concepts import CAPE_COD
+            x = FW.snap_spot(getattr(self.state, "ball_x", FW.MIDDLE))
+            left, right = FW.room(x, "left"), FW.room(x, "right")
+            short = "left" if left < right else ("right" if right < left else random.choice(("left", "right")))
+            wide = {"left": "right", "right": "left"}.get(short)
+            design = sequence_call(pid, self._offensive_setup.get(pid, ()),
+                                   default_lane=wide if pid == CAPE_COD else short)
         elif pid == KICK_AND_FOLLOW:
             design = {"family": "kick_pass", "kick_pass": "kick_lateral"}
         elif pid == PROTECT_BONUS:
@@ -4869,9 +4906,109 @@ class ViperballEngine:
         design = (getattr(self, "_offensive_plan_event", None) or {}).get("design")
         if design:
             return design.get(category)
-        # An opening script call steers the same selectors when no package
-        # design is active for this snap.
-        return (getattr(self, "_script_call", None) or {}).get(category)
+        # An opening script call, or a staff suggestion the caller took,
+        # steers the same selectors when no package design is active.
+        call = getattr(self, "_script_call", None) or getattr(self, "_suggested_call", None) or {}
+        return call.get(category)
+
+    # ── Mid-game caller changes and suggestions (casebook case 10) ──
+    def _midgame(self):
+        return self.__dict__.setdefault("_midgame_log", {
+            "home": {"caller_changes": [], "suggestions": []},
+            "away": {"caller_changes": [], "suggestions": []},
+            "pending": {}})
+
+    def _halftime_caller_change(self):
+        if not (V2_ENGINE_CONFIG.get("midgame_calls_enabled", True)
+                and V2_ENGINE_CONFIG.get("coach_tactics_enabled", True)):
+            return
+        from .coach_handoff import halftime_change, tactics_for
+        log = self._midgame()
+        for side in ("home", "away"):
+            staff = self._home_coaching_staff if side == "home" else self._away_coaching_staff
+            own = self.state.home_score if side == "home" else self.state.away_score
+            opp = self.state.away_score if side == "home" else self.state.home_score
+            rng = random.Random(f"midgame:{self.seed}:{side}")
+            change = halftime_change(staff, own, opp, rng)
+            if not change:
+                continue
+            tactics = tactics_for(staff, change["to"])
+            if V2_ENGINE_CONFIG.get("team_installation_enabled", True):
+                from .team_installation import apply_installation_to_offense
+                team = self.home_team if side == "home" else self.away_team
+                tactics = apply_installation_to_offense(tactics, getattr(team, "installation", None))
+            if side == "home":
+                self.home_oc_tactics = tactics
+            else:
+                self.away_oc_tactics = tactics
+            log[side]["caller_changes"].append({
+                "quarter": 3, "from_id": change["from"].coach_id, "to_id": change["to"].coach_id,
+                "from_name": _coach_name(change["from"]), "to_name": _coach_name(change["to"]),
+                "direction": change["direction"], "reason": change["reason"],
+                "score": [own, opp]})
+
+    def _between_series(self):
+        if not V2_ENGINE_CONFIG.get("midgame_calls_enabled", True) or not self.drive_log:
+            return
+        drive = self.drive_log[-1]
+        side = drive.get("team")
+        if side not in ("home", "away") or drive.get("result") in ("touchdown", "successful_kick"):
+            return
+        staff = (self._home_coaching_staff if side == "home" else self._away_coaching_staff) or {}
+        tactics = self.home_oc_tactics if side == "home" else self.away_oc_tactics
+        hc, oc = staff.get("head_coach"), staff.get("oc")
+        if hc is None or oc is None or not tactics:
+            return
+        calling = hc if tactics.get("coach_id") == hc.coach_id else oc
+        adviser = oc if calling is hc else hc
+        from .coach_handoff import accepts, suggestion
+        plays = [(p.play_family, p.yards_gained) for p in self.play_log
+                 if getattr(p, "snap_possession", p.possession) == side
+                 and p.play_type in ("run", "kick_pass", "lateral_chain")
+                 and not (p.penalty and getattr(p.penalty, "nullified", False))]
+        idea = suggestion(plays)
+        if not idea:
+            return
+        log = self._midgame()
+        rng = random.Random(f"suggest:{self.seed}:{side}:{len(self.drive_log)}")
+        taken = accepts(calling, rng)
+        entry = {"quarter": self.state.quarter, "by_id": adviser.coach_id,
+                 "by_name": _coach_name(adviser), "caller_id": calling.coach_id,
+                 **idea, "accepted": taken, "used": False, "yards": None}
+        log[side]["suggestions"].append(entry)
+        if taken:
+            log["pending"][side] = entry
+
+    def _next_suggested_call(self):
+        side = self.state.possession
+        entry = self._midgame()["pending"].get(side)
+        if not entry or self._possession_snap_count != 1:
+            return None
+        from .coach_script import interrupt_reason
+        st = self.state
+        if interrupt_reason(st.down, st.yards_to_go, st.quarter, st.time_remaining,
+                            self._get_score_diff(), st.kick_mode, st.field_position):
+            return None
+        return {"family": entry["family"], "entry": entry}
+
+    def _finish_suggested_call(self, play):
+        call = getattr(self, "_suggested_call", None)
+        if not call:
+            return
+        if play.penalty and (play.play_type == "penalty" or play.penalty.nullified):
+            return
+        entry = call["entry"]
+        self._midgame()["pending"].pop(play.snap_possession, None)
+        if play.play_family == entry["family"]:
+            entry["used"], entry["yards"] = True, play.yards_gained
+            play.suggested_call = {k: entry[k] for k in ("by_name", "family", "yards")}
+
+    def _midgame_summary(self):
+        from .coach_handoff import POLICY_VERSION
+        log = self.__dict__.get("_midgame_log")
+        if not log:
+            return {}
+        return {side: {"policy_version": POLICY_VERSION, **log[side]} for side in ("home", "away")}
 
     # ── Opening scripts (casebook case 3) ──
     def _opening_script(self, side):
@@ -4991,7 +5128,9 @@ class ViperballEngine:
             return
         call = self._active_defensive_call or {}
         alignment = call.get("alignment") or self._determine_defense_alignment()
-        pressed = alignment in ("aggressive", "stacked") or bool(call.get("blitz"))
+        # Pressed means the defense loaded the setup side with more than
+        # its share of players (field_width.py), or sent a blitz.
+        pressed = FW.pressed(self._width_channels_now(), design["lane"]) or bool(call.get("blitz"))
         history = self._offensive_setup.setdefault(pid, [])
         history.append({"lane": design["lane"], "pressed": pressed,
                         "alignment": alignment, "blitz": bool(call.get("blitz"))})
@@ -5882,7 +6021,10 @@ class ViperballEngine:
         if cache is None:
             cache = self._lineup_cache = {}
         unavail = set(unavail) | self._ejected_names(team)
-        key = (id(team), side, frozenset(unavail))
+        sk_ = self._side_key(team)
+        sg_role = (getattr(self, "_seagull_roles", None) or {}).get(sk_, {}).get(side)
+        short_names = (getattr(self, "_short_line", None) or {}).get(sk_, ()) if side == "offense" else ()
+        key = (id(team), side, frozenset(unavail), sg_role, short_names)
         if key in cache:
             return cache[key]
         profiles = V2_ENGINE_CONFIG.get("rotation_profiles", {})
@@ -5926,6 +6068,10 @@ class ViperballEngine:
             for p in pool[:missing]:
                 on.append((p,group))
                 taken.add(p.name)
+        if sg_role:
+            on = self._apply_seagull(team, on, side, sg_role, unavail)
+        if short_names:
+            on = self._apply_short_line(team, on, short_names, unavail)
         cache[key] = on
         return on
 
@@ -5963,10 +6109,409 @@ class ViperballEngine:
         if key in cache:
             return cache[key]
         n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
-        lines = build_midfield_lines([p for p in team.players if p.name not in hard],
+        # A Seagull belongs to no midfield line.
+        seagulls = self._seagull_listing(team)
+        lines = build_midfield_lines([p for p in team.players if p.name not in hard
+                                      and p.name not in seagulls],
                                      self._depth_score, n_lines)
         cache[key] = lines
         return lines
+
+    # ── Seagull (rulebook v2.1, sections 11 and 13) ──────────────────
+
+    def _seagull_listing(self, team) -> dict:
+        """The team's listed Seagulls for this game: {name: [groups]}.
+        Seagulls are a college rule. The coach lists them the first time
+        the lineup is built, using position fit (engine/position_fit.py)."""
+        if not V2_ENGINE_CONFIG.get("seagull_enabled", True):
+            return {}
+        if getattr(self, "officiating_level", "college") != "college":
+            return {}
+        listed = getattr(self, "_seagulls", None)
+        if listed is None:
+            listed = self._seagulls = {}
+        sk = self._side_key(team)
+        if sk in listed:
+            return listed[sk]
+        from engine.presnap import list_seagulls
+        from engine.position_fit import fit
+        out = self._hard_out(team) | self._ejected_names(team)
+        avail = [p for p in team.players if p.name not in out]
+        n_lines = V2_ENGINE_CONFIG.get("midfield_line", {}).get("lines", 3)
+        lines = build_midfield_lines(avail, self._depth_score, n_lines)
+        top = lines[0] if lines else []
+
+        def starters(position, n):
+            pool = sorted((p for p in avail if p.position == position),
+                          key=lambda p: self._depth_score(p, position), reverse=True)
+            return pool[:n]
+
+        # The bar in each group is the player a Seagull would replace there.
+        # In the midfield it is the second line, which plays about as much
+        # as the Seagull would.
+        bars = {}
+        mid = lines[1] if len(lines) > 1 else top
+        vipers = [p for p in mid if p.position == "Viper"]
+        if vipers:
+            bars["Viper"] = fit(vipers[0], "Viper")
+        flankers = [p for p in mid if p.position != "Viper"]
+        if flankers:
+            bars["flanker"] = min(fit(p, "flanker") for p in flankers)
+        if mid:
+            dbs = sorted((fit(p, "defensive back") for p in mid), reverse=True)[:4]
+            bars["defensive back"] = dbs[-1]
+        for group, position, n in (("Keeper", "Keeper", 2), ("Offensive Line", "Offensive Line", 5),
+                                   ("Defensive Line", "Defensive Line", 5)):
+            st = starters(position, n)
+            if st:
+                bars[group] = min(fit(p, group) for p in st)
+        zeroback = starters("Zeroback", 1)
+        top_names = {p.name for p in top} | {p.name for p in zeroback}
+        candidates = [p for p in avail if p.name not in top_names and p.position != "Zeroback"]
+        # Seagulls are optional: the coaches decide whether to list any.
+        policy = self._seagull_policy(team)
+        picks = list_seagulls(candidates, bars, max_listed=policy["max_listed"],
+                              min_ratio=policy["min_ratio"])
+        listed[sk] = {s["name"]: s["groups"] for s in picks}
+        self._seagull_snaps.setdefault(sk, {})
+        for s in picks:
+            self._seagull_snaps[sk][s["name"]] = {"viper": 0, "line": 0, "defensive_back": 0,
+                                                  "keeper": 0, "defensive_line": 0}
+        return listed[sk]
+
+    def _seagull_policy(self, team) -> dict:
+        """The coaching staff's Seagull policy for this game (presnap.py)."""
+        cache = getattr(self, "_seagull_policies", None)
+        if cache is None:
+            cache = self._seagull_policies = {}
+        sk = self._side_key(team)
+        if sk not in cache:
+            from engine.presnap import seagull_policy
+            staff = dict(getattr(self, "_home_coaching_staff" if sk == "home" else "_away_coaching_staff", None) or {})
+            # A coordinator's preference counts only while his tactics are on,
+            # so switching coordinator tactics off still replays a seeded game.
+            if not V2_ENGINE_CONFIG.get("coach_tactics_enabled", True):
+                staff.pop("oc", None)
+            if not V2_ENGINE_CONFIG.get("defensive_coach_tactics_enabled", True):
+                staff.pop("dc", None)
+            cache[sk] = seagull_policy(staff)
+        return cache[sk]
+
+    def _seagull_player(self, team, name):
+        return next((p for p in team.players if p.name == name), None)
+
+    def _apply_seagull(self, team, on, side, roles, unavail):
+        """Put each Seagull into the slot her role takes for this snap."""
+        on = list(on)
+        for name, kind in roles:
+            sg = self._seagull_player(team, name)
+            if sg is None or name in unavail or any(p.name == name for p, _ in on):
+                continue
+            idx, new_role = None, None
+            if side == "offense" and kind == "viper":
+                idx = next((i for i, (p, g) in enumerate(on) if g == "Midfield" and p.position == "Viper"), None)
+                new_role = "Midfield"
+            elif side == "offense" and kind == "line":
+                ol = [(i, p) for i, (p, g) in enumerate(on) if g == "Offensive Line"]
+                if ol:
+                    idx = min(ol, key=lambda x: x[1].power * 0.5 + x[1].awareness * 0.3 + x[1].agility * 0.2)[0]
+                new_role = "Seagull"
+            elif side == "defense" and kind == "defensive_back":
+                dbs = [(i, p) for i, (p, g) in enumerate(on) if g == "Midfield"]
+                if dbs:
+                    idx = min(dbs, key=lambda x: _tackle_score(x[1]))[0]
+                new_role = "Midfield"
+            elif side == "defense" and kind == "keeper":
+                ks = [(i, p) for i, (p, g) in enumerate(on) if g == "Keeper"]
+                if ks:
+                    idx = min(ks, key=lambda x: x[1].game_energy)[0]
+                new_role = "Keeper"
+            elif side == "defense" and kind == "defensive_line":
+                dl = [(i, p) for i, (p, g) in enumerate(on) if g == "Defensive Line"]
+                if dl:
+                    idx = min(dl, key=lambda x: x[1].game_energy)[0]
+                new_role = "Defensive Line"
+            if idx is not None:
+                on[idx] = (sg, new_role)
+        return on
+
+    def _apply_short_line(self, team, on, names, unavail):
+        """High school short line: bench midfielders replace linemen and line
+        up in the backfield, leaving at least the minimum on the line."""
+        on = list(on)
+        for name in names:
+            p = self._seagull_player(team, name)
+            if p is None or name in unavail or any(q.name == name for q, _ in on):
+                continue
+            ol = [(i, q) for i, (q, g) in enumerate(on) if g == "Offensive Line"]
+            if len(ol) <= getattr(self, "line_minimum", 5):
+                break
+            idx = min(ol, key=lambda x: x[1].power * 0.5 + x[1].awareness * 0.3 + x[1].agility * 0.2)[0]
+            on[idx] = (p, "Backfield")
+        return on
+
+    def _set_seagull_roles(self, off_team, def_team):
+        """Coach decisions for this snap: whether Seagulls take the Viper
+        jersey or line spots on offense, or a defensive back, Keeper or
+        defensive line spot on defense. Returns (jersey_report, Seagulls on
+        the line)."""
+        for team in (off_team, def_team):
+            for name in self._seagull_listing(team):
+                p = self._seagull_player(team, name)
+                if p is not None:
+                    p.playing_as = None
+        if not V2_ENGINE_CONFIG.get("seagull_enabled", True):
+            return False, []
+        from engine.position_fit import fit
+        off_sk, def_sk = self._side_key(off_team), self._side_key(def_team)
+        roles = self._seagull_roles
+        fat = self.player_fatigue_modifier
+        jersey_report, line_sgs = False, []
+
+        # ── Offense ──
+        listed = self._seagull_listing(off_team)
+        unavail = self._unavailable_in_game(off_team)
+        avail = [p for p in (self._seagull_player(off_team, n) for n in listed)
+                 if p is not None and p.name not in unavail]
+        cur = roles[off_sk]["offense"] or ()
+        held = next((r for r in cur if r[1] == "viper"), None)
+        # The jersey returns to the line's Viper at a change of possession
+        # or a timeout; a Seagull who wants it back reports again.
+        jersey_key = (self.state.home_timeouts, self.state.away_timeouts)
+        if self._last_snap_offense != off_sk or self._seagull_jersey_key[off_sk] != jersey_key:
+            held = None
+        roles[off_sk]["offense"] = None
+        self._lineup_cache = {}
+        base = self._lineup(off_team, unavail, "offense") if avail else []
+        line_viper = next((p for p, g in base if g == "Midfield" and p.position == "Viper"), None)
+        new = []
+        for sg in avail:
+            if "Viper" not in listed[sg.name] or line_viper is None:
+                continue
+            mine = fit(sg, "Viper") * fat(sg)
+            theirs = fit(line_viper, "Viper") * fat(line_viper)
+            holding = held is not None and held[0] == sg.name
+            edge = self._seagull_policy(off_team)["jersey_edge"]
+            if (holding and sg.game_energy >= 50 and mine >= theirs * 0.98) or \
+               (sg.game_energy >= 65 and mine >= theirs * edge):
+                new.append((sg.name, "viper"))
+                jersey_report = not holding
+                break
+        late = self.state.down >= 5 or self.state.kick_mode
+        in_jersey = {n for n, _ in new}
+        if avail and not late:
+            from engine.presnap import SEAGULL_LINE_RATE, SEAGULL_LINE_RATE_DEFAULT, SECOND_SEAGULL_RATE
+            style = self._current_style_name()
+            rate = self._style_knob("seagull_line_rate",
+                                    SEAGULL_LINE_RATE.get(style, SEAGULL_LINE_RATE_DEFAULT))
+            rate *= self._seagull_policy(off_team)["line_scale"]
+            fresh = sorted((p for p in avail if p.game_energy >= 55 and p.name not in in_jersey),
+                           key=lambda p: (p.speed, p.name), reverse=True)
+            if fresh and random.random() < rate:
+                line_sgs.append(fresh[0])
+                if len(fresh) > 1 and random.random() < SECOND_SEAGULL_RATE:
+                    line_sgs.append(fresh[1])
+                new += [(p.name, "line") for p in line_sgs]
+        roles[off_sk]["offense"] = tuple(new) or None
+        self._seagull_jersey_key[off_sk] = jersey_key
+
+        # ── Defense ──
+        listed_d = self._seagull_listing(def_team)
+        d_unavail = self._unavailable_in_game(def_team)
+        d_avail = [p for p in (self._seagull_player(def_team, n) for n in listed_d)
+                   if p is not None and p.name not in d_unavail]
+        d_cur = roles[def_sk]["defense"] or ()
+        roles[def_sk]["defense"] = None
+        self._lineup_cache = {}
+        d_new = None
+        if d_avail:
+            d_base = self._lineup(def_team, d_unavail, "defense")
+            on_names = {p.name for p, _ in d_base}
+            by_role = {g: [p for p, r in d_base if r == role]
+                       for g, role in (("Keeper", "Keeper"), ("defensive back", "Midfield"),
+                                       ("Defensive Line", "Defensive Line"))}
+            for sg in d_avail:
+                if sg.name in on_names:
+                    continue  # already on in her own group
+                groups = listed_d[sg.name]
+                kept = next((r for r in d_cur if r[0] == sg.name), None)
+                if kept and sg.game_energy >= 50:
+                    d_new = kept
+                    break
+                if sg.game_energy < 70:
+                    continue
+                keepers = by_role["Keeper"]
+                if "Keeper" in groups and keepers and min(k.game_energy for k in keepers) < 62:
+                    d_new = (sg.name, "keeper")
+                    break
+                for group, kind in (("defensive back", "defensive_back"),
+                                    ("Defensive Line", "defensive_line")):
+                    there = by_role[group]
+                    if group not in groups or not there:
+                        continue
+                    weakest = min(there, key=lambda p: fit(p, group) * fat(p))
+                    d_edge = self._seagull_policy(def_team)["defense_edge"]
+                    if fit(sg, group) * fat(sg) >= fit(weakest, group) * fat(weakest) * d_edge:
+                        d_new = (sg.name, kind)
+                        break
+                if d_new:
+                    break
+        roles[def_sk]["defense"] = (d_new,) if d_new else None
+        self._lineup_cache = {}
+
+        # What she plays as on this snap: the Viper in the jersey, otherwise SG.
+        for sk, team, rs in ((off_sk, off_team, new), (def_sk, def_team, [d_new] if d_new else [])):
+            for name, kind in rs:
+                p = self._seagull_player(team, name)
+                if p is not None:
+                    p.playing_as = "Viper" if kind == "viper" else "Seagull"
+                row = self._seagull_snaps.get(sk, {}).get(name)
+                if row is not None:
+                    row[kind] = row.get(kind, 0) + 1
+        if jersey_report:
+            sg = self._seagull_player(off_team, new[0][0])
+            self.seagull_log.append({
+                "team": off_team.name, "side": off_sk, "player": sg.name,
+                "player_id": sg.player_id, "tag": f"SG{sg.number}",
+                "replaced": player_label(line_viper) if line_viper else None,
+                "quarter": self.state.quarter, "time_remaining": self.state.time_remaining,
+                "play_number": self.state.play_number})
+        return jersey_report, line_sgs
+
+    def _set_short_line(self, off_team):
+        """High school only: whether the offense lines up short this snap,
+        and which bench midfielders replace the linemen who step off."""
+        sk = self._side_key(off_team)
+        self._short_line[sk] = ()
+        if getattr(self, "officiating_level", "college") != "high_school":
+            return ()
+        if self.state.down >= 5 or self.state.kick_mode:
+            return ()
+        from engine.presnap import SHORT_LINE_RATE, SHORT_LINE_RATE_DEFAULT, SHORT_LINE_TWO
+        style = self._current_style_name()
+        rate = self._style_knob("short_line_rate", SHORT_LINE_RATE.get(style, SHORT_LINE_RATE_DEFAULT))
+        if random.random() >= rate:
+            return ()
+        unavail = self._unavailable_in_game(off_team)
+        self._lineup_cache = {}
+        on = {p.name for p, _ in self._lineup(off_team, unavail, "offense")}
+        bench = sorted((p for p in off_team.players
+                        if p.position in ("Halfback", "Wingback", "Slotback", "Viper")
+                        and p.name not in on and p.name not in unavail and p.game_energy >= 60),
+                       key=lambda p: (p.speed + getattr(p, "lateral_skill", 35), p.name), reverse=True)
+        room = 5 - getattr(self, "line_minimum", 5)
+        n = min(room, len(bench), 2 if random.random() < SHORT_LINE_TWO else 1)
+        names = tuple(p.name for p in bench[:n])
+        self._short_line[sk] = names
+        self._lineup_cache = {}
+        return names
+
+    def _set_pre_snap(self):
+        """Seagull roles, the high school short line and backfield motion
+        for this snap (rulebook v2.1, section 12). Sets self._presnap_ctx for
+        play resolution and the before the snap fouls."""
+        off_team, def_team = self.get_offensive_team(), self.get_defensive_team()
+        off_sk = self._side_key(off_team)
+        jersey_report, line_sgs = self._set_seagull_roles(off_team, def_team)
+        short = self._set_short_line(off_team)
+        self._last_snap_offense = off_sk
+        lineup = self._lineup(off_team, self._unavailable_in_game(off_team), "offense")
+        on_line = sum(1 for _, g in lineup if g in ("Offensive Line", "Seagull"))
+        ctx = {"movers": 0, "mover_names": [], "viper_motion": False,
+               "viper_align": random.choice(["left", "right", "center"]),
+               "seagull_line": None, "seagull_line_all": [p.name for p in line_sgs],
+               "seagull_slide": False, "jersey_report": jersey_report,
+               "seagull_viper": None, "seagull_on_offense": False, "offenders": {},
+               "short_line": list(short), "on_line": on_line,
+               "defense_seagull": None}
+        d_role = self._seagull_roles[self._side_key(def_team)]["defense"] or ()
+        if d_role:
+            ctx["defense_seagull"] = {"name": d_role[0][0], "role": d_role[0][1]}
+        roles = self._seagull_roles[off_sk]["offense"] or ()
+        if roles:
+            ctx["seagull_on_offense"] = True
+            ctx["seagull_viper"] = next((n for n, k in roles if k == "viper"), None)
+        if V2_ENGINE_CONFIG.get("backfield_motion_enabled", True):
+            from engine.presnap import (motion_chance, MOTION_DEFAULT_PREF,
+                                        MOTION_DECOY_VIPER, SEAGULL_SLIDE_RATE)
+            pool = [p for p, g in lineup if g in ("Midfield", "Backfield") and p.position != "Zeroback"]
+            late = self.state.down >= 5 or self.state.kick_mode
+            chance = motion_chance(self._style_knob("pre_snap_motion", MOTION_DEFAULT_PREF), late)
+            movers = []
+            for p in pool:
+                c = chance
+                if _plays_as(p) == "Viper" and getattr(p, "archetype", "") == "decoy_viper":
+                    c = min(0.9, c * MOTION_DECOY_VIPER)
+                if random.random() < c:
+                    movers.append(p)
+            ctx["movers"] = len(movers)
+            ctx["mover_names"] = [p.name for p in movers]
+            ctx["viper_motion"] = any(_plays_as(p) == "Viper" for p in movers)
+            if movers:
+                ctx["offenders"]["Illegal Motion"] = random.choice(movers)
+                ctx["offenders"]["Illegal Shift"] = random.choice(movers)
+            if line_sgs:
+                # Only one Seagull on the line may move; the offense picks.
+                slider = random.choice(line_sgs)
+                ctx["seagull_line"] = slider.name
+                if random.random() < SEAGULL_SLIDE_RATE:
+                    ctx["seagull_slide"] = True
+                    ctx["offenders"]["False Start"] = slider
+                    ctx["offenders"].setdefault("Illegal Motion", slider)
+        elif line_sgs:
+            ctx["seagull_line"] = line_sgs[0].name
+        if roles:
+            sg = self._seagull_player(off_team, roles[0][0])
+            if sg is not None:
+                ctx["offenders"]["Illegal Viper Substitution"] = sg
+                if ctx["seagull_viper"]:
+                    ctx["offenders"]["Missing Viper Jersey"] = self._seagull_player(off_team, ctx["seagull_viper"])
+        self._presnap_ctx = ctx
+        return ctx
+
+    def _seagull_summary(self):
+        from engine.position_fit import fit
+        out = {}
+        for sk, team in (("home", self.home_team), ("away", self.away_team)):
+            rows = []
+            for name, groups in (getattr(self, "_seagulls", {}) or {}).get(sk, {}).items():
+                p = self._seagull_player(team, name)
+                if p is None:
+                    continue
+                p.playing_as = None
+                rows.append({"name": name, "player_id": p.player_id, "tag": f"SG{p.number}",
+                             "position": p.position, "groups": list(groups),
+                             "fits": {g: fit(p, g) for g in groups},
+                             "snaps": dict(self._seagull_snaps.get(sk, {}).get(name, {}))})
+            out[sk] = rows
+        return out
+
+    def _motion_summary(self):
+        ctx = getattr(self, "_presnap_ctx", None)
+        if not ctx:
+            return None
+        return {"movers": ctx["movers"], "in_motion": list(ctx["mover_names"]),
+                "viper_motion": ctx["viper_motion"], "viper_align": ctx["viper_align"],
+                "seagull_line": ctx["seagull_line"], "seagull_line_all": list(ctx.get("seagull_line_all", [])),
+                "seagull_slide": ctx["seagull_slide"],
+                "short_line": list(ctx.get("short_line", [])), "on_line": ctx.get("on_line"),
+                "defense_seagull": ctx.get("defense_seagull"),
+                "seagull_viper": ctx["seagull_viper"], "jersey_report": ctx["jersey_report"],
+                "defense_adjusted": bool(ctx.get("defense_adjusted"))}
+
+    def _running_start(self, carrier, family, yards):
+        """A carrier who was in motion at the snap hits the line at speed."""
+        ctx = getattr(self, "_presnap_ctx", None)
+        if not ctx or yards <= 0 or carrier is None:
+            return yards
+        moving = carrier.name in ctx["mover_names"] or (
+            ctx["seagull_slide"] and carrier.name == ctx["seagull_line"])
+        if not moving:
+            return yards
+        edge = family.value in ("sweep_option", "speed_option", "viper_jet", "counter",
+                                "lateral_spread", "trick_play")
+        bonus = V2_ENGINE_CONFIG.get("motion_running_start", 0.06) * (1.0 if edge else 0.5)
+        return int(round(yards * (1.0 + bonus)))
 
     def _midfield_on(self, team, unavail, side: str):
         lines = self._midfield_lines(team, unavail)
@@ -6644,6 +7189,7 @@ class ViperballEngine:
                 self._roll_half_form(0 if quarter == 1 else 1)
 
             if quarter == 3:
+                self._halftime_caller_change()
                 self._apply_halftime_coaching_adjustments()
                 self.recover_energy_halftime()
                 # Clear halftime benches — performance-benched players get second chance
@@ -6670,6 +7216,7 @@ class ViperballEngine:
                     _bonus_baseline = V2_ENGINE_CONFIG.get("starting_yard_line", 20)
                     self.state.possession = bonus_team
                     self.state.field_position = _bonus_baseline
+                    self.state.ball_x = FW.MIDDLE
                     self.state.down = 1
                     self.state.yards_to_go = 20
                     self.state.kick_mode = False
@@ -6703,6 +7250,7 @@ class ViperballEngine:
                 _is_bonus = getattr(self, '_next_drive_is_bonus', False)
                 self._next_drive_is_bonus = False
                 self.simulate_drive(is_bonus_drive=_is_bonus)
+                self._between_series()
                 if self.state.time_remaining <= 0:
                     break
 
@@ -7070,6 +7618,7 @@ class ViperballEngine:
         self._current_drive_delta_cost = delta_cost
 
         self.state.field_position = start_position
+        self.state.ball_x = FW.MIDDLE
         self.state.down = 1
         self.state.yards_to_go = 20
 
@@ -7383,7 +7932,7 @@ class ViperballEngine:
             # Game clock STOPS after:
             #   - Scoring plays (TD, kick, safety, pindown, return TD)
             #   - Penalties (dead ball foul)
-            #   - Incomplete kick passes
+            #   - Out of bounds in the last 2 minutes of a half
             #   - Timeouts (handled separately)
             #   - 3-minute warning (handled separately)
             #
@@ -7399,10 +7948,15 @@ class ViperballEngine:
                 "touchdown", "successful_kick", "safety", "pindown",
                 "punt_return_td", "int_return_td", "missed_dk_return_td",
             )
+            # Out of bounds stops the clock only in the last 2 minutes of a
+            # half (RULES.md, Running clock). Incomplete kick passes do not
+            # stop it.
             game_clock_stopped = (
                 play.result in scoring_results
                 or play.penalty is not None
-                or (play.play_type == "kick_pass" and play.result == "incomplete")
+                or (getattr(play, "out_of_bounds", False)
+                    and self.state.quarter in (2, 4)
+                    and self.state.time_remaining <= 120)
             )
 
             # Live-action play time: 3-9 seconds depending on play type.
@@ -7973,7 +8527,16 @@ class ViperballEngine:
         help_ = 0.002 * max(0.0, tail - 5)
         return (help_ - hurt * self._weather_scale()) * depth
 
+    def _kick_angle(self, distance) -> float:
+        """Kicks from a hash see a narrower target (field_width.py)."""
+        x = FW.snap_spot(getattr(getattr(self, "state", None), "ball_x", FW.MIDDLE))
+        return FW.kick_angle_factor(x, distance)
+
     def _place_kick_success(self, distance: int, kicker_skill: int = 75) -> float:
+        """Field goal accuracy, including the angle from the snap spot."""
+        return self._place_kick_success_base(distance, kicker_skill) * self._kick_angle(distance)
+
+    def _place_kick_success_base(self, distance: int, kicker_skill: int = 75) -> float:
         """Field goal accuracy.
 
         A placed ball carries farther than a drop kick (README, The Field
@@ -8000,7 +8563,7 @@ class ViperballEngine:
         """Snap kick success against the defense on the field. A kick rush
         defense (Keeper Hunt above all) hurries the kicker; coaches read
         this too, so taking the five is less automatic against it (DEF-12)."""
-        p = self._drop_kick_success_base(distance, kicker_skill)
+        p = self._drop_kick_success_base(distance, kicker_skill) * self._kick_angle(distance)
         rush = self._def_sig("kick_rush") if hasattr(self, "state") else 1.0
         if rush > 1.0:
             # A missed snap kick on downs 1 to 5 keeps the ball, so the rush
@@ -8752,9 +9315,13 @@ class ViperballEngine:
         rate_scale *= 1.0 + (V2_ENGINE_CONFIG.get("penalty_heat_scale", 1.1) - 1.0) * heat
 
         from engine.discipline import misconduct_kind, occurrence_multiplier
+        from engine.presnap import presnap_foul_scale
+        presnap_ctx = getattr(self, "_presnap_ctx", None) if phase == "pre_snap" else None
         for pen_def in penalties:
             kind = misconduct_kind(pen_def["name"])
             prob = pen_def["prob"] * rate_scale * occurrence_multiplier(kind)
+            if presnap_ctx is not None:
+                prob *= presnap_foul_scale(pen_def["name"], presnap_ctx)
             if self.state.quarter == 4 and self.state.time_remaining < 300:
                 prob *= 1.15
             if kind:
@@ -8796,6 +9363,9 @@ class ViperballEngine:
                     player = random.choices(pen_pool, weights=[offender_weight(p) for p in pen_pool], k=1)[0]
                 else:
                     player = random.choice(pen_pool)
+                hinted = (presnap_ctx or {}).get("offenders", {}).get(pen_def["name"])
+                if hinted is not None and on_side == "offense" and hinted in pen_pool:
+                    player = hinted
                 ptag = player_tag(player)
 
                 # ── Officials: call, no call or missed call ──
@@ -9703,11 +10273,15 @@ class ViperballEngine:
         self._pre_play_kick_mode = self.state.kick_mode
         self._drive_plan_priority = self._drive_plan_interruption() if self._current_drive_probe() else None
         self._script_call = self._next_script_call()
+        self._suggested_call = None if self._script_call else self._next_suggested_call()
         self._pre_play_bonus_team = self.state.bonus_possession_team
         self._live_foul_rolled = False
         self._pending_live_foul = None
         self._play_stat_snapshot = None
         self._pending_spot_error = self._roll_spot_error()
+        self._width_x0 = FW.snap_spot(getattr(self.state, "ball_x", FW.MIDDLE))
+        self._width_ctx = None
+        self._width_channels = None
         self._spot_stat_snapshot = (self._snapshot_play_stats()
                                     if self._pending_spot_error else None)
         rush_before = self._rushing_total()
@@ -9716,6 +10290,13 @@ class ViperballEngine:
         play.snap_possession = self._snap_possession
         play.defenders_involved = list(self._play_defenders)
         play.snap_lineup = self._snap_lineup
+        play.motion = self._motion_summary()
+        if play.motion and play.motion.get("jersey_report") and play.description:
+            play.description = (f"{play.motion['seagull_viper']} reports as the Viper. "
+                                + play.description)
+        if play.motion and play.motion.get("seagull_line") and play.description:
+            slide = " sliding" if play.motion.get("seagull_slide") else ""
+            play.description += f" [Seagull {play.motion['seagull_line']} on the line{slide}]"
         self._check_exposure_injuries(play)
         self._record_discipline(play)
         play.defense_energy = getattr(self, "_snap_defense_energy", None)
@@ -9744,9 +10325,12 @@ class ViperballEngine:
         self._record_offensive_setup(play)
         self._finish_drive_plan(play)
         self._finish_script(play)
+        self._finish_suggested_call(play)
         if play.snap_possession != self.state.possession:
             self._drive_probe = None
         self._credit_uncredited_run(play, rush_before)
+
+        self._finish_width(play)
 
         # Stamp pre-play state on the Play so the play-by-play always
         # shows "3rd & 5 at the 50" as the starting situation.
@@ -9765,6 +10349,7 @@ class ViperballEngine:
         return play
 
     def _simulate_play_core(self) -> Play:
+        self._presnap_ctx = None
         # Run out the clock: if time remaining < play clock and offense is
         # leading and defense has no timeouts, the game ends without a snap.
         # The play clock expires before the game clock — no kneel needed.
@@ -9827,6 +10412,9 @@ class ViperballEngine:
                 name="Delay of Game", yards=5, on_team=delay["team"],
                 player="", declined=False, phase="pre_snap"))
 
+        # Seagull roles and backfield motion are set before the before the
+        # snap fouls, which depend on them (rulebook v2.1, section 12).
+        self._set_pre_snap()
         pre_snap_pen = self._check_penalties("pre_snap")
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
@@ -11541,9 +12129,11 @@ class ViperballEngine:
             eligible = [p for p in team.players if p.name not in self._unavailable_in_game(team)]
         return random.choice(eligible) if eligible else None
 
-    def _calculate_punt_return_yards(self, returner, returning_team, punting_team) -> int:
+    def _calculate_punt_return_yards(self, returner, returning_team, punting_team,
+                                     landing_x=None) -> int:
         """Skill-based punt return yardage. Returner attributes, keeper archetype,
-        and both teams' ST schemes all factor in."""
+        and both teams' ST schemes all factor in, and so does where the ball
+        came down across the field (field_width.py)."""
         base_return = max(0, int(random.gauss(12, 8)))
 
         # Returner skill factor (speed + agility)
@@ -11565,7 +12155,21 @@ class ViperballEngine:
         punt_st = ST_SCHEMES.get(punting_team.st_scheme, ST_SCHEMES["aces"])
         returner_modifier /= punt_st["coverage_modifier"]
 
-        return max(0, int(base_return * returner_modifier))
+        # Field width: the sideline closes off returns caught near it.
+        event = self._st_event if isinstance(getattr(self, "_st_event", None), dict) else None
+        if landing_x is None:
+            x0 = getattr(self, "_width_x0", FW.MIDDLE)
+            corner = bool(event and event.get("placement") == "corner")
+            landing_x = FW.punt_landing(x0, corner)
+        plan = FW.return_plan(landing_x, punt_st["coverage_modifier"])
+        returner_modifier *= 1 + plan["mod"]
+        yards = max(0, int(base_return * returner_modifier))
+        if event is not None:
+            event["landing_x"] = round(landing_x, 2)
+            event["return_x"] = round(FW.return_end(landing_x, plan, yards), 2)
+            event["return_side"] = "right" if plan["dir"] > 0 else "left"
+            event["sideline_room"] = plan["squeeze"]
+        return yards
 
     def _pick_def_tackler(self, def_team, yards_gained: int):
         injured = self._unavailable_in_game(def_team)
@@ -11596,6 +12200,7 @@ class ViperballEngine:
             weights.append(max(1.0, w))
         # ── Spread the Love: balance tackles across defensive lineup ──
         weights = self._spread_the_love_defense(pool, weights)
+        weights = self._width_weight(pool, weights)
         return random.choices(pool, weights=weights, k=1)[0]
 
     # ── Defensive Personnel System ────────────────────────────────
@@ -11701,6 +12306,7 @@ class ViperballEngine:
             weights = [w * 2.0 if w >= cutoff else w * 0.3 for w in weights]
 
         weights = self._spread_the_love_defense(pool, weights)
+        weights = self._width_weight(pool, weights)
         tackler = random.choices(pool, weights=weights, k=1)[0]
         return tackler, pool_label
 
@@ -11748,14 +12354,9 @@ class ViperballEngine:
             blended = {k: v / total for k, v in blended.items()}
 
         weights = [self._personnel_weighted_score(p, blended) for p in eligible]
-        lane = self._planned_choice("lane")
-        if lane and subfamily.value == self._planned_choice("kick_pass"):
-            # Use each group's current on-field order to assign coverage
-            # sides. Offside defenders can still reach the catch.
-            near = {id(player) for group in (groups["keeper"], groups["db"])
-                    for player in group[0 if lane == "left" else 1::2]}
-            weights = [weight * (1.8 if id(player) in near else 1)
-                       for player, weight in zip(eligible, weights)]
+        # Coverage comes from the channel the kick is aimed at
+        # (field_width.py). Defenders on the far side can still recover.
+        weights = self._width_weight(eligible, weights)
 
         # ── Instincts-driven tightening for coverage ──
         dc_mods = self._def_coaching_mods()
@@ -11803,7 +12404,11 @@ class ViperballEngine:
             extras = sorted((p for p in all_on if p not in rushers), key=score, reverse=True)
             rushers += extras[:actual-len(rushers)]
         cover = [p for p in all_on if p not in rushers]
-        blockers = [p for p, role in attackers if role == "Offensive Line"]
+        # A Seagull on the line who is listed on the offensive line stays in
+        # to block; any other Seagull releases.
+        _sg_off = self._seagull_listing(team) if hasattr(self, "_seagulls") else {}
+        blockers = [p for p, role in attackers if role == "Offensive Line"
+                    or (role == "Seagull" and "Offensive Line" in _sg_off.get(p.name, ()))]
         def protection(p):
             return (p.power * 0.50 + getattr(p, "awareness", 70) * 0.30
                     + getattr(p, "agility", 75) * 0.20) * self.player_fatigue_modifier(p)
@@ -11950,7 +12555,17 @@ class ViperballEngine:
             return 'offense', False
 
     def _determine_viper_alignment(self):
+        ctx = getattr(self, "_presnap_ctx", None)
+        if ctx:
+            return ctx["viper_align"]
         return random.choice(['left', 'right', 'center'])
+
+    def _motion_viper_alignment(self, play_dir):
+        """A Viper in motion finishes on the side that suits the call."""
+        dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
+        mapped = dir_map.get(play_dir, play_dir if play_dir in ("left", "right") else "center")
+        return max(("left", "right", "center"),
+                   key=lambda a: VIPER_ALIGNMENT_BONUS.get((a, mapped), 0.0))
 
     def _determine_defense_alignment(self):
         call = self._active_dc_call()
@@ -12583,6 +13198,142 @@ class ViperballEngine:
         # Floor at 0 — tackling can't add yards
         return max(0.0, round(reduction, 1))
 
+    # ── Field width (engine/field_width.py) ──
+    def _width_channels_now(self):
+        """Channels for the defense on the field at this snap, built once."""
+        if getattr(self, "_width_channels", None) is None:
+            def_team = self.get_defensive_team()
+            lineup = self._lineup(def_team, self._unavailable_in_game(def_team), "defense")
+            if not lineup:
+                groups = self._get_defenders_by_group(def_team)
+                lineup = ([(p, "Defensive Line") for p in groups["dl"]]
+                          + [(p, "Keeper") for p in groups["keeper"]]
+                          + [(p, "Midfield") for p in groups["db"]])
+            dc_q = self._def_coaching_mods().get("instincts_factor", 0.5)
+            # A sharper coordinator acts on what this offense has shown.
+            lean = self._side_lean() * (0.3 + 0.7 * dc_q)
+            self._width_channels = FW.assign_channels(
+                lineup, getattr(self, "_width_x0", FW.MIDDLE),
+                self._determine_defense_alignment(), dc_q, lean=lean)
+        return self._width_channels
+
+    def _width_attack(self, family_value, planned=None):
+        """Pick the side this play attacks and record it for the snap."""
+        x0 = getattr(self, "_width_x0", FW.MIDDLE)
+        channels = self._width_channels_now()
+        if family_value in FW.INSIDE_FAMILIES:
+            side = "middle"
+        else:
+            oc_q = self._coaching_mods().get("instincts_factor", 0.5)
+            side = FW.choose_side(channels, oc_q, planned=planned,
+                                  counter=family_value == "counter", x=x0)
+        self._width_ctx = {
+            "side": side, "x0": round(x0, 2), "hash": FW.hash_label(x0),
+            "lean": channels.get("lean"),
+            "label": FW.side_label(x0, side), "room": round(FW.room(x0, side), 1),
+            "value": FW.side_value(channels, side),
+            "defenders": dict(channels["counts"]),
+        }
+        return self._width_ctx
+
+    def _width_weight(self, pool, weights):
+        """Defenders in the attacked channel make more of the plays."""
+        ctx = getattr(self, "_width_ctx", None)
+        if not ctx or ctx["side"] not in ("left", "right"):
+            return weights
+        by_id = self._width_channels_now()["by_id"]
+        side = ctx["side"]
+        out = []
+        for p, w in zip(pool, weights):
+            ch = by_id.get(id(p))
+            if ch == side:
+                out.append(w * FW.SIDE_WEIGHT_IN_CHANNEL)
+            elif ch == "box" or ch is None:
+                out.append(w * FW.SIDE_WEIGHT_BOX)
+            else:
+                out.append(w * FW.SIDE_WEIGHT_FAR)
+        return out
+
+    def _side_lean(self):
+        """What the defense expects from this offense's side calls so far.
+
+        Positive means it expects the wide side, negative the short side.
+        It moves with how often the offense has gone wide and how much more
+        it has gained there, and grows with the number of plays seen.
+        """
+        if not V2_ENGINE_CONFIG.get("side_learning_enabled", True):
+            return 0.0
+        seen = getattr(self, "_side_log", {}).get(self.state.possession)
+        if not seen:
+            return 0.0
+        n = seen["wide"] + seen["short"]
+        if n < 4:
+            return 0.0
+        # Offenses go to the wide side about 65 percent of the time; the
+        # defense reacts to an offense that is clearly above or below that.
+        wide_rate = seen["wide"] / n
+        share = max(-1.0, min(1.0, (wide_rate - 0.65) / 0.35))
+        gap = 0.0
+        if seen["wide"] and seen["short"]:
+            gap = seen["wide_yds"] / seen["wide"] - seen["short_yds"] / seen["short"]
+        gap = max(-1.0, min(1.0, gap / 5.0))
+        return max(-1.0, min(1.0, 0.6 * share + 0.4 * gap)) * n / (n + 10)
+
+    def _learn_side(self, play, ctx):
+        """Log the side this offense attacked and what it gained."""
+        if not ctx or ctx.get("label") not in ("field", "boundary"):
+            return
+        if play.penalty is not None and getattr(play.penalty, "nullified", False):
+            return
+        log = self.__dict__.setdefault("_side_log", {})
+        seen = log.setdefault(play.snap_possession,
+                              {"wide": 0, "short": 0, "wide_yds": 0, "short_yds": 0})
+        key = "wide" if ctx["label"] == "field" else "short"
+        seen[key] += 1
+        seen[key + "_yds"] += max(-5, min(30, play.yards_gained or 0))
+
+    def _finish_width(self, play):
+        """Set where the ball ends across the field and stamp it on the play."""
+        x0 = getattr(self, "_width_x0", FW.MIDDLE)
+        ctx = getattr(self, "_width_ctx", None)
+        x_end, out = FW.end_spot(x0, ctx, play)
+        if ctx is None and play.play_type in ("run", "kick_pass", "lateral_chain", "trick_play"):
+            nullified = play.penalty is not None and getattr(play.penalty, "nullified", False)
+            if not nullified:
+                self._width_unset = getattr(self, "_width_unset", 0) + 1
+        if play.result in FW.SCORE_RESULTS:
+            self.state.ball_x = FW.MIDDLE
+        elif play.snap_possession != self.state.possession:
+            self.state.ball_x = FW.mirror(x_end)
+        else:
+            self.state.ball_x = x_end
+        play.out_of_bounds = out
+        label = (ctx or {}).get("label")
+        st = getattr(play, "special_teams_event", None) or {}
+        tags = []
+        if play.play_type in ("run", "kick_pass", "lateral_chain", "trick_play"):
+            if label in ("field", "boundary"):
+                tags.append("wide side" if label == "field" else "short side")
+            if out:
+                tags.append("out of bounds")
+        elif play.play_type in ("drop_kick", "place_kick") and FW.hash_label(x0) != "middle":
+            tags.append("from the " + FW.hash_label(x0).replace("_", " "))
+        if st.get("sideline_room") is not None and st["sideline_room"] <= 8:
+            tags.append("caught near the sideline")
+        if tags and play.description:
+            head, sep, tail = play.description.partition(" | ")
+            play.description = f"{head} [{', '.join(tags)}]{sep}{tail}"
+        self._learn_side(play, ctx)
+        play.width = {
+            "snap_x": round(x0, 2), "hash": FW.hash_label(x0),
+            "defense_lean": (ctx or {}).get("lean"),
+            "return_side": st.get("return_side"), "sideline_room": st.get("sideline_room"),
+            "side": (ctx or {}).get("side"), "side_label": (ctx or {}).get("label"),
+            "room": (ctx or {}).get("room"), "defenders": (ctx or {}).get("defenders"),
+            "value": (ctx or {}).get("value"),
+            "end_x": round(x_end, 2), "out_of_bounds": out or None,
+        }
+
     def _calculate_viper_advantage(self, viper_alignment, play_direction):
         dir_map = {'edge': 'right', 'strong': 'left', 'center': 'center', 'weak': 'right'}
         mapped_dir = dir_map.get(play_direction, play_direction if play_direction in ("left", "right") else "center")
@@ -12744,6 +13495,11 @@ class ViperballEngine:
             weights = apply_featured_position_bias(
                 eligible, weights, tactics["featured_position"], tactics["authority"])
         player = random.choices(eligible, weights=weights, k=1)[0]
+        # Field width: the side this run attacks, from the ball's spot and
+        # the defense's split. A scripted lane on the planned family wins.
+        planned_lane = (self._planned_choice("lane")
+                        if family.value == self._planned_choice("family") else None)
+        width = self._width_attack(family.value, planned=planned_lane)
         # Option families: the Zeroback reads one defender and gives, keeps
         # or pitches based on what that defender commits to.
         option_read = self._resolve_option_read(family, skill_pool, eligible, weights)
@@ -12759,8 +13515,19 @@ class ViperballEngine:
 
         viper_align = self._determine_viper_alignment()
         play_dir = PLAY_DIRECTION.get(family.value, "center")
-        if family.value == self._planned_choice("family"):
-            play_dir = self._planned_choice("lane") or play_dir
+        if width["side"] in ("left", "right"):
+            play_dir = width["side"]
+        ctx = getattr(self, "_presnap_ctx", None)
+        viper_motion = bool(ctx and ctx.get("viper_motion"))
+        if viper_motion:
+            viper_align = ctx["viper_align"] = self._motion_viper_alignment(play_dir)
+            # The defense can bump or rotate with her. A DC with better
+            # instincts adjusts more often, and then the motion buys nothing.
+            instincts = self._def_coaching_mods().get("instincts_factor", 0.0)
+            adjust = V2_ENGINE_CONFIG.get("motion_defense_adjust", 0.40) + 0.20 * max(0.0, min(1.0, instincts))
+            if random.random() < adjust:
+                viper_motion = False
+                ctx["defense_adjusted"] = True
         viper_bonus = self._calculate_viper_advantage(viper_align, play_dir)
 
         def_align = self._determine_defense_alignment()
@@ -12838,6 +13605,23 @@ class ViperballEngine:
         if self._planned_choice("lane") and family.value == self._planned_choice("family"):
             # Existing Viper leverage is now available on either scripted edge.
             yards_gained = round(yards_gained * (1 + viper_bonus)) if yards_gained > 0 else yards_gained
+        elif viper_motion and yards_gained > 0:
+            # Motion puts the Viper where the call wants her (v2.1).
+            lev = V2_ENGINE_CONFIG.get("motion_viper_leverage", 0.6)
+            yards_gained = round(yards_gained * (1 + viper_bonus * lev))
+        yards_gained = self._running_start(player, family, yards_gained)
+        if ctx and yards_gained > 0 and family.value in ("dive_option", "power", "draw"):
+            # Each lineman a Seagull or a short line takes off costs an
+            # inside run a little; a Seagull listed on the line still blocks.
+            sg_listed = self._seagull_listing(team)
+            missing = len(ctx.get("short_line", ())) + sum(
+                1 for n in ctx.get("seagull_line_all", ()) if "Offensive Line" not in sg_listed.get(n, ()))
+            if missing:
+                yards_gained = round(yards_gained * V2_ENGINE_CONFIG.get("seagull_line_inside_run", 0.95) ** missing)
+        # Room and numbers on the attacked side. Inside runs are unaffected.
+        if yards_gained > 0 and width["side"] in ("left", "right"):
+            scale = 1.0 if family.value == "counter" else 1.5
+            yards_gained = max(0, round(yards_gained * (1 + scale * width["value"])))
         yards_gained = max(-5, yards_gained)
 
         # ── V2: Defensive keying penalty ──
@@ -13087,6 +13871,8 @@ class ViperballEngine:
             {"name": "statue_of_liberty", "action": "statue of liberty", "positions": ["HB", "SB", "ZB"], "fumble_rate": 0.015, "base_yards": (2.0, 4.0), "variance": 1.4},
         ]
         variant = random.choice(trick_variants)
+        # Field width: reverses come back to the side the defense left light.
+        self._width_attack("counter" if "reverse" in variant["name"] else family.value)
 
         # Select primary ball carrier from eligible positions
         skill_pool = self._offense_skill(team)
@@ -13364,6 +14150,10 @@ class ViperballEngine:
             _remaining_weights.pop(idx)
         chain_tags = " → ".join(player_tag(p) for p in players_involved)
         chain_labels = [player_label(p) for p in players_involved]
+        # Field width: the chain swings toward one side of the field.
+        planned_lane = (self._planned_choice("lane")
+                        if family.value == self._planned_choice("family") else None)
+        width = self._width_attack(family.value, planned=planned_lane)
 
         # ── Lateral interception check ──
         # Defenders can read the lateral and pick it off.
@@ -13608,6 +14398,20 @@ class ViperballEngine:
             yards_gained = max(0, int(yards_gained / _lat_pursuit_mod))
         yards_gained = max(-5, min(25, yards_gained))
 
+        # A chain needs room to work. Each lateral moves the ball across the
+        # field; a chain that runs out of room before the sideline is
+        # squeezed. One with room to spare gets the side's full value.
+        travel = chain_length * random.uniform(4.0, 7.0)
+        space = width["room"]
+        if travel > space - 1.0:
+            width["squeezed"] = True
+            travel = space
+            if yards_gained > 0:
+                yards_gained = int(yards_gained * 0.6)
+        elif yards_gained > 0:
+            yards_gained = max(0, round(yards_gained * (1 + 1.2 * width["value"])))
+        width["lateral_travel"] = round(travel, 1)
+
         lat_def_team = self.get_defensive_team()
         lat_tackler = self._pick_def_tackler(lat_def_team, yards_gained)
         lat_tackler.game_tackles += 1
@@ -13803,6 +14607,10 @@ class ViperballEngine:
 
         # ── H2H contest-based completion probability ──
         def_team = self.get_defensive_team()
+        # Field width: the side the kick is aimed at sets who covers it.
+        planned_lane = (self._planned_choice("lane")
+                        if subfamily.value == self._planned_choice("kick_pass") else None)
+        width = self._width_attack(family.value, planned=planned_lane)
         rush_plan = self._plan_kick_pass_rush(team, def_team)
         contest_prob, matched_defender = self._contest_kick_pass_prob(
             kicker, receiver, def_team, subfamily=subfamily)
@@ -13852,7 +14660,17 @@ class ViperballEngine:
         from .defensive_commitments import COVERAGE_DELTA
         coverage_cost = COVERAGE_DELTA[len(rush_plan["rushers"])]
         package_delta = self._called_kick_delta(subfamily)
-        completion_prob = max(0.08, min(0.92, completion_prob + coverage_cost + package_delta))
+        # Room and numbers on the target side matter most for short kicks.
+        width_scale = {KickPassSubFamily.QUICK_KICK: 0.5, KickPassSubFamily.KICK_LATERAL: 0.5,
+                       KickPassSubFamily.TERRITORY: 0.3}.get(subfamily, 0.15)
+        width_delta = width_scale * width["value"]
+        completion_prob = max(0.08, min(0.92, completion_prob + coverage_cost + package_delta
+                                        + width_delta))
+        # A receiver in motion at the snap gets a running start on her route.
+        _ctx = getattr(self, "_presnap_ctx", None)
+        if _ctx and (receiver.name in _ctx["mover_names"]
+                     or (_ctx["seagull_slide"] and receiver.name == _ctx["seagull_line"])):
+            completion_prob = min(0.92, completion_prob + V2_ENGINE_CONFIG.get("motion_route_start", 0.03))
 
         kicker.game_kick_passes_thrown += 1
         kicker.game_touches += 1
@@ -15377,7 +16195,11 @@ class ViperballEngine:
                             fatigue=round(stamina, 1),
                         )
 
-                    return_yards = self._calculate_punt_return_yards(returner, def_team, self.get_offensive_team())
+                    # A missed snap kick comes down near the posts, in the
+                    # middle of the field (field_width.py).
+                    return_yards = self._calculate_punt_return_yards(
+                        returner, def_team, self.get_offensive_team(),
+                        landing_x=FW.MIDDLE + random.uniform(-9, 9))
                     returner.game_kick_returns += 1
                     returner.game_kick_return_yards += return_yards
                     new_fp = max(1, min(99, catch_spot_returner + return_yards))
@@ -17587,6 +18409,8 @@ class ViperballEngine:
             "weather_detail": self.game_weather.summary(),
             "game_plans": self.game_plans,
             "opening_scripts": self._script_summary(),
+            "field_width": {"unset_plays": getattr(self, "_width_unset", 0)},
+            "midgame_calls": self._midgame_summary(),
             "program_objectives": getattr(self,"_program_objectives",{}),
             "program_objective_counts": getattr(self,"_program_objective_counts",{}),
             "seed": self.seed,
@@ -17618,6 +18442,13 @@ class ViperballEngine:
             ],
             "coaching_substitutions": self._substitution_log,
             "ejections": list(self.ejection_log),
+            # Rulebook v2.1: listed Seagulls, their snaps by role and their
+            # Viper jersey reports; the line minimum for this level.
+            "seagulls": self._seagull_summary(),
+            "seagull_reports": list(getattr(self, "seagull_log", [])),
+            "seagull_policy": ({sk: dict(v) for sk, v in getattr(self, "_seagull_policies", {}).items()}
+                               if getattr(self, "officiating_level", "college") == "college" else {}),
+            "line_minimum": getattr(self, "line_minimum", 5),
             "player_discipline": {side: list(rows.values()) for side, rows in self._discipline.items()},
             # ── V2: Engine metadata ──
             "v2_engine": {
@@ -17952,6 +18783,7 @@ class ViperballEngine:
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "option_read": getattr(play, "option_read", None),
+            "motion": getattr(play, "motion", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
             "analytics_before": getattr(play,"analytics_before",None),
@@ -17960,6 +18792,7 @@ class ViperballEngine:
             "snap_lineup": getattr(play, "snap_lineup", None),
             "spot_error": getattr(play, "spot_error", None),
             "spot_error_corrected": getattr(play, "spot_error_corrected", None),
+            "width": getattr(play, "width", None),
             "formation": getattr(play, "formation", "") or "",
             "kick_pass_subfamily": getattr(play, "kick_pass_subfamily", "") or "",
             "players": play.players_involved,
