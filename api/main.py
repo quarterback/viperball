@@ -733,6 +733,13 @@ _YEAR_ABBREV = {
 }
 
 
+def _punting_fields(player) -> dict:
+    from engine.punting import punter_profile
+    prof = punter_profile(player)
+    return {"punting": prof.rating, "punt_distance": prof.distance,
+            "punt_placement": prof.placement, "punt_style": prof.style}
+
+
 def _serialize_player(player) -> dict:
     year_full = getattr(player, "year", "")
     year_abbr = _YEAR_ABBREV.get(year_full, year_full[:2] + "." if year_full else "")
@@ -757,6 +764,7 @@ def _serialize_player(player) -> dict:
         "kicking": player.kicking,
         "kick_power": player.kick_power,
         "kick_accuracy": player.kick_accuracy,
+        **_punting_fields(player),
         "lateral_skill": player.lateral_skill,
         "tackling": player.tackling,
         "year": year_full,

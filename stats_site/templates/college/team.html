@@ -541,6 +541,12 @@
 {% if st.calls_detail %}{{ call_detail(st.calls_detail) }}{% endif %}
 {% endif %}
 
+{% if field_width %}
+{% set fw = field_width %}{% set fw_order = ('offense', 'defense') %}
+{% set fw_names = {"offense": "Offense", "defense": "Defense, by where opponents attacked"} %}
+{% include "_field_width.html" %}
+{% endif %}
+
 {# ── Academic Profile ── #}
 {% if academics and academics.median_gpa %}
 <div>
@@ -728,6 +734,7 @@
   {% for key, label in sorts %}{% if not loop.first %} &middot; {% endif %}<a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort={{ key }}" {% if sort == key %}style="color:var(--accent);font-weight:bold"{% endif %}>{{ label }}</a>{% endfor %}
   &nbsp;&nbsp;<strong style="color:var(--fg-dim)">Kicking:</strong>
   <a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort=kick_pct" {% if sort == 'kick_pct' %}style="color:var(--accent);font-weight:bold"{% endif %}>Kick%</a>
+  &middot; <a href="/stats/college/{{ session_id }}/team/{{ team_name }}?sort=punting" {% if sort == 'punting' %}style="color:var(--accent);font-weight:bold"{% endif %}>Punting</a>
 </div>
 <div style="margin-bottom:6px;font-size:12px;">
   <strong style="color:var(--fg-dim)">Defense:</strong>
@@ -765,6 +772,7 @@
       <th class="num" {% if sort == 'laterals' %}style="color:var(--accent)"{% endif %}>LAT</th>
       <th class="num" {% if sort in ('kick_pct',) %}style="color:var(--accent)"{% endif %}>K%</th>
       <th class="num" {% if sort in ('kick_pass_yards', 'kp_pct') %}style="color:var(--accent)"{% endif %}>KP</th>
+      <th class="num" {% if sort == 'punting' %}style="color:var(--accent)"{% endif %} title="Punting rating">PUN</th>
       <th class="num" {% if sort == 'tackles' %}style="color:var(--accent)"{% endif %}>TKL</th>
       <th class="num" {% if sort == 'tfl' %}style="color:var(--accent)"{% endif %}>TFL</th>
       <th class="num" {% if sort == 'sacks' %}style="color:var(--accent)"{% endif %}>SCK</th>
@@ -797,6 +805,7 @@
     <td class="num">
       {% if p.kick_passes_thrown > 0 %}{{ p.kick_passes_completed }}/{{ p.kick_passes_thrown }}{% elif p.kick_pass_receptions > 0 %}{{ p.kick_pass_receptions }}r{% else %}&mdash;{% endif %}
     </td>
+    <td class="num {% if p.punting >= 85 %}stat-elite{% elif p.punting >= 75 %}stat-good{% endif %}">{{ p.punting }}</td>
     <td class="num">{{ p.tackles }}</td>
     <td class="num">{{ p.tfl }}</td>
     <td class="num {% if p.sacks >= 5 %}stat-elite{% endif %}">{{ p.sacks }}</td>

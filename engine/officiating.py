@@ -49,10 +49,10 @@ _CLASS_BY_NAME = {}
 for _cls, _names in {
     "procedural": (
         "False Start", "Offsides", "Encroachment", "Delay of Game", "Delay of Game (Defense)",
-        "Illegal Formation", "Illegal Formation (Numbering Exception)", "Illegal Defensive Formation",
-        "Too Many Men on Field", "Illegal Substitution", "Illegal Viper Alignment",
+        "Illegal Formation", "Illegal Defensive Formation",
+        "Too Many Men on Field", "Illegal Substitution",
         "Illegal Viper Substitution", "Missing Viper Jersey", "Illegal Motion", "Illegal Shift",
-        "Illegal Snap", "Illegal Numbering", "Disconcerting Signals", "Player Out of Bounds at Snap",
+        "Illegal Snap", "Disconcerting Signals", "Player Out of Bounds at Snap",
         "Illegal Kickpass Formation", "Illegal Lateral Formation", "Illegal Free Kick Formation",
         "Offside on Kick", "Illegal Participation",
     ),

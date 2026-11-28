@@ -49,6 +49,13 @@ Misses per game in the new model: 0.70 off the boot, 0.26 from the rush, 0.09 fr
 and 0.03 with more than one cause. Weather misses are rare because most games are played in
 clear conditions. 4th down still draws 4.6 of the 6.8 attempts per game.
 
+## Merge with field width
+
+This branch merged after field width (#409). The kicker's strike is now multiplied by the
+angle from the hash (`_kick_angle`) in both the expected value the coach uses and the live
+execution roll, before the weather and pressure rolls. The three week numbers above were
+measured before that merge.
+
 ## Checks
 
 Box score ledger and opening script tests pass. The full suite was not run, at Ron's
