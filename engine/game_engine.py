@@ -4629,7 +4629,8 @@ class ViperballEngine:
         diff = st.home_score - st.away_score
         context = self._package_context(diff if st.possession == "home" else -diff)
         from .clinic_playbook import CONCEPTS
-        if any(p["package_id"] in CONCEPTS for p in tactics["packages"]):
+        from .delta_playbook import OFFENSE
+        if any(p["package_id"] in CONCEPTS or p["package_id"] in OFFENSE for p in tactics["packages"]):
             offense = self.get_offensive_team()
             skill = self._offense_skill(offense)
             context["clinic_skill_count"] = len(skill)
@@ -4649,6 +4650,9 @@ class ViperballEngine:
             "situations": live,
             "choices": {},
         }
+        if context.get("delta_bucket") in ("power_play", "penalty_kill"):
+            self._offensive_plan_event["delta_bucket"] = context.get("delta_bucket")
+            self._offensive_plan_event["delta_cost"] = context.get("delta_cost")
         if picked:
             self._offensive_plan_event["familiarity"] = picked.get("familiarity", 0.0)
 
@@ -4660,6 +4664,9 @@ class ViperballEngine:
         if key == "family_bias" and package:
             from .clinic_playbook import clinic_read
             read, changes = clinic_read(package, self._active_dc_call().get("alignment"))
+            if read is None:
+                from .delta_playbook import read as delta_read
+                read, changes = delta_read(package["package_id"], self._active_dc_call().get("alignment"))
             for family, delta in changes.items():
                 bias[family] = bias.get(family, 0.0) + delta
             if read and self._offensive_plan_event is not None:
@@ -4704,7 +4711,14 @@ class ViperballEngine:
         side = "away" if st.possession == "home" else "home"
         recent = self._recent_defensive_plays[side]
         n = max(8, len(recent))  # do not overreact to one early play
-        return {"recent_kick_rate": sum(x[0] for x in recent)/n,
+        delta = dict(getattr(self, "_delta_playbook_context", {}) or {})
+        if delta.get("delta_bucket") in ("power_play", "penalty_kill"):
+            candidates = self._kicker_candidates(offense)
+            kicker = max(candidates, key=lambda p: p.kicking) if candidates else None
+            delta["delta_drop_success"] = self._drop_kick_success(110-st.field_position, self._kick_skill(kicker.kicking)) if kicker else 0.0
+            delta["delta_retained_miss"] = getattr(self, "_delta_retained_miss", False)
+            delta["delta_defense_school"] = self._current_defense_name()
+        return {**delta, "recent_kick_rate": sum(x[0] for x in recent)/n,
                 "recent_deep_rate": sum(x[1] for x in recent)/n,
                 "recent_explosive_rate": sum(x[2] for x in recent)/n,
                 "recent_perimeter_rate": sum(x[3] for x in recent)/n,
@@ -4806,6 +4820,9 @@ class ViperballEngine:
             call["tactical_context"] = context
         if package:
             call["package_id"] = package["package_id"]
+            if package["package_id"].startswith("pk_"):
+                call["delta_bucket"] = context.get("delta_bucket")
+                call["delta_cost"] = context.get("delta_cost")
             call["package_strength"] = package["strength"]
             call["package_eligibility"] = package["eligibility"]
             call["package_familiarity"] = package["familiarity"]
@@ -4855,7 +4872,8 @@ class ViperballEngine:
         from .defensive_commitments import eligibility, execution_strength, PRESS_PACKAGES, COVER_PACKAGES
         # Existing alignments have real run-direction costs. The focus is a
         # finite read allocation, not a universal defense multiplier.
-        effects = self._DEFENSIVE_PACKAGE_POSTURES
+        from .delta_playbook import POSTURES, PK, weight as delta_weight
+        effects = {**self._DEFENSIVE_PACKAGE_POSTURES, **POSTURES}
         # Drive-specific packages have primary and lower-frequency secondary triggers.
         choices = []
         counts = self._defensive_package_usage[side]
@@ -4876,6 +4894,8 @@ class ViperballEngine:
             strength = execution_strength(familiarity, context.get("defense_energy"), tactics.get("authority", .65))
             pressure = tactics.get("pressure_bias", 0.0)
             preference = 1 + (3*pressure if pid in PRESS_PACKAGES else -3*pressure if pid in COVER_PACKAGES else 2*tactics.get("run_support_bias",0.0))
+            if pid in PK:
+                preference *= delta_weight(pid, context)
             choices.append({"package_id": pid, "familiarity": familiarity, "strength": strength,
                             "eligibility": tier, "weight": familiarity*tier*max(.5, preference),
                             "alignment": alignment, "blitz_shift": shift, "focus": focus})
@@ -4938,7 +4958,8 @@ class ViperballEngine:
             return 0.0
         baseline = ALIGNMENT_VS_PLAY.get((call["alignment"], family.value), 0.0)
         if call.get("package_id"):
-            target = self._PACKAGE_RUN_DELTAS.get(call["package_id"], {}).get(family.value, baseline)
+            from .delta_playbook import RUN
+            target = {**self._PACKAGE_RUN_DELTAS, **RUN}.get(call["package_id"], {}).get(family.value, baseline)
             strength = call.get("package_strength", call["package_familiarity"])
             delta = baseline + strength * (target - baseline)
             call["run_alignment_delta"] = baseline
@@ -4950,7 +4971,8 @@ class ViperballEngine:
         call = self._active_dc_call()
         if not call or not call.get("package_id"):
             return 0.0
-        delta = self._PACKAGE_KICK_DELTAS.get(call["package_id"], {}).get(subfamily.value, 0.0)
+        from .delta_playbook import KICK
+        delta = {**self._PACKAGE_KICK_DELTAS, **KICK}.get(call["package_id"], {}).get(subfamily.value, 0.0)
         delta *= call.get("package_strength", call["package_familiarity"])
         call["kick_tactical_delta"] = delta
         return delta
@@ -6693,6 +6715,11 @@ class ViperballEngine:
         # No new origin means the same possession carried over a quarter
         # break. The drive log joins it to the drive it continues.
         self._drive_continues = origin is None and bool(self.drive_log)
+        from .delta_playbook import possession_context
+        self._delta_playbook_context = possession_context(origin, self._current_drive_delta_cost,
+            self.state.field_position, getattr(self, "_delta_playbook_context", None))
+        if origin is not None:
+            self._delta_retained_miss = False
         if origin is not None:
             self._drive_origin = origin
             self._possession_snap_count = 0
@@ -7751,6 +7778,17 @@ class ViperballEngine:
             clinic_kick_shift = snap_kick_threshold_shift(
                 tactics, context, kicker.archetype)
 
+        from .delta_playbook import OFFENSE, finish_shift
+        if (down in (4, 5) and V2_ENGINE_CONFIG.get("offensive_packages_enabled", True)
+                and any(p["package_id"] in OFFENSE for p in tactics.get("packages", ()))):
+            context = self._package_context(score_diff)
+            p = getattr(self, "_active_offensive_plan", None) or {}
+            shifts = [finish_shift(p["package_id"], p.get("familiarity", 0),
+                      tactics.get("authority", 1), context, kicker.archetype)] if p.get("package_id") in OFFENSE else []
+            # Do not stack multiple practiced alternatives.
+            if shifts:
+                clinic_kick_shift = max(-2.0, min(2.0, clinic_kick_shift + max(shifts, key=abs)))
+
         # "Clock pressure" — situations where taking points now is smart:
         #   - End of 2nd quarter (before the half), limited time left
         #   - Late in Q4 when trailing by a small margin
@@ -7961,7 +7999,10 @@ class ViperballEngine:
             # No kick available — punt to avoid TOD (field position). Field
             # position offenses punt from farther up the field.
             territory_bias = self._st_preferences(team).get("field_position_bias", 0.0)
-            punt_line = (65 + 10 * territory_bias
+            delta_exit = getattr(self, "_active_offensive_plan", None) or {}
+            exit_shift = (4 * max(0.0, min(1.0, delta_exit.get("familiarity", 0)))
+                          if delta_exit.get("package_id") == "pko_territory_exit" else 0)
+            punt_line = (65 + exit_shift + 10 * territory_bias
                          + 20 * (self._style_knob("punt_aggression", 1.0) - 1.0)
                          + 10 * (self._style_knob("field_position_priority", 0.5) - 0.5))
             if fp < punt_line:
@@ -9295,7 +9336,13 @@ class ViperballEngine:
         play.possession_snap_index = self._possession_snap_count
         play.rush_event = self._rush_event
         self._finish_st_event(play)
+        if self._offensive_plan_event is not None and play.play_family in ("snap_kick", "field_goal", "punt"):
+            self._offensive_plan_event["choices"]["family"] = play.play_family
+            self._offensive_plan_event["finish_action"] = play.play_family
         self._finish_offensive_plan(play)
+        from .delta_playbook import retained_miss
+        self._delta_retained_miss = retained_miss(play, self._snap_possession, self.state.possession,
+                                                  self.state.down, self._pre_play_down)
         # Copy the actual pre-snap call, even when the resulting play changes
         # possession. No additional RNG or defensive ratings are involved.
         dc_call = getattr(self, "_active_defensive_call", None)
@@ -9392,6 +9439,13 @@ class ViperballEngine:
         if pre_snap_pen:
             return self._apply_pre_snap_penalty(pre_snap_pen)
 
+        from .delta_playbook import OFFENSE
+        delta_active = getattr(self, "_delta_playbook_context", {}).get("delta_bucket") in ("power_play", "penalty_kill")
+        delta_prepared = delta_active and any(p["package_id"] in OFFENSE
+            for p in self._current_oc_tactics().get("packages", ()))
+        if delta_prepared:
+            self._begin_offensive_plan()
+
         # ── Kick mode active (downs 4-6): snap kick specialist path ──
         # When the offense elected kick mode on 4th down, all subsequent
         # downs are snap kick attempts under the pesäpallo rule.
@@ -9443,7 +9497,8 @@ class ViperballEngine:
         # Kicks belong on 6th down.  No snap kick interrupts on early downs.
 
         # ── Formation-First: select formation, then play family ──
-        self._begin_offensive_plan()
+        if not delta_prepared:
+            self._begin_offensive_plan()
         self._current_formation = self.select_formation()
         self._begin_defensive_call(self._current_formation)
         play_family = self.select_play_family(formation=self._current_formation)
@@ -14517,6 +14572,11 @@ class ViperballEngine:
         ptag = player_tag(kicker)
         kicking_team = self.state.possession
         self._begin_st_event("drop_kick", kicker)
+        if getattr(self, "_delta_playbook_context", {}).get("delta_bucket") == "power_play":
+            from .delta_playbook import PK
+            unit = (getattr(self.get_defensive_team(), "installation", None) or {}).get("defense", {})
+            if not self._active_dc_call() and any(p.get("package_id") in PK for p in unit.get("packages", ())):
+                self._begin_defensive_call("tight")
 
         # ── Blocked drop kick check ──
         # Drop kicks have a small chance of being blocked.  Diving Wing
@@ -14551,6 +14611,12 @@ class ViperballEngine:
             dk_block_prob += 0.005
 
         dk_block_prob *= self._def_sig("kick_rush") ** 1.4
+        call = self._active_dc_call()
+        if call.get("package_id") in ("pk_kicker_diamond", "pk_late_down_surge"):
+            # More actual intended pressure means less cover; existing block resolution remains.
+            rush = max(0, call.get("intended_rushers", 2) - 2)
+            dk_block_prob *= 1 + .10 * rush * call.get("package_strength", 0.0)
+            self._st_event["delta_kick_pressure"] = call["package_id"]
         dk_block_prob = max(0.0, min(0.12, dk_block_prob))
 
         if random.random() < dk_block_prob:
