@@ -71,6 +71,11 @@ V2_ENGINE_CONFIG = {
     # Defenses shade toward the side an offense keeps attacking (field_width.py).
     "side_learning_enabled": True,
     "opening_scripts_enabled": True,
+    # Snap kick misses (execution, weather, pressure)
+    "snap_kick_point_blank": 0.92,
+    "snap_kick_range_edge": 0.74,
+    "snap_kick_base_pressure": 0.03,
+    "snap_kick_pressured_live": 0.30,
     # Rule study: a missed snap kick on any down turns the ball over, as it
     # does on 6th down today. Off by default; the current rule keeps the
     # ball on downs 1 through 5.
@@ -8584,13 +8589,38 @@ class ViperballEngine:
         defense (Keeper Hunt above all) hurries the kicker; coaches read
         this too, so taking the five is less automatic against it (DEF-12)."""
         p = self._drop_kick_success_base(distance, kicker_skill) * self._kick_angle(distance)
-        rush = self._def_sig("kick_rush") if hasattr(self, "state") else 1.0
-        if rush > 1.0:
-            # A missed snap kick on downs 1 to 5 keeps the ball, so the rush
-            # bites hardest on 6th down, when a miss is a turnover.
-            per = 0.12 if getattr(self.state, "down", 6) >= 6 else 0.04
-            p *= 1.0 - per * (rush - 1.0)
-        return p
+        if not hasattr(self, "state"):
+            return p
+        f = self._snap_kick_miss_factors(distance, expected=True)
+        return p * (1.0 - f["weather"]) * (1.0 - f["pressure"])
+
+    def _snap_kick_miss_factors(self, distance, expected=False):
+        """Chance that weather, or the defense's pressure, alone makes this
+        snap kick miss. The kicker's own strike is the third factor
+        (_drop_kick_success_base). Each is rolled on its own, so a kick can
+        miss for one reason or several.
+
+        `expected` is the coach's estimate before the snap: the defense's
+        tendency to rush. Without it, the actual call on this snap counts.
+        """
+        side = self.state.possession
+        reach = min(1.5, max(0.6, distance / 40.0))  # longer kicks feel it more
+        weather = (self.weather_info.get("kick_pass_wet", 0.0) * 0.6
+                   + 0.005 * max(0.0, self.weather_info.get("wind_cross", 0.0) - 5)
+                   + 0.004 * max(0.0, -self._tailwind(side) - 5)
+                   - 0.002 * max(0.0, self._tailwind(side) - 5))
+        weather = max(0.0, weather * reach * self._weather_scale(side)
+                      * self._trait_effect(side, "weather_kick_penalty_multiplier"))
+        rush = self._def_sig("kick_rush")
+        pressure = V2_ENGINE_CONFIG.get("snap_kick_base_pressure", 0.03) + 0.06 * max(0.0, rush - 1.0)
+        if not expected:
+            call = self._active_dc_call()
+            if call.get("blitz"):
+                pressure += 0.03
+            if call.get("package_id") in ("pk_kicker_diamond", "pk_late_down_surge"):
+                pressure += 0.04 * call.get("package_strength", 0.0)
+            pressure += 0.01 * max(0, call.get("intended_rushers", 2) - 2)
+        return {"weather": min(0.35, weather), "pressure": min(0.30, pressure)}
 
     def _drop_kick_success_base(self, distance: int, kicker_skill: int) -> float:
         """Drop kick accuracy — kicker-range model.
@@ -8607,14 +8637,18 @@ class ViperballEngine:
         """
         comfortable_range = 30 + (kicker_skill - 60) * 0.75 + self._kick_range_shift()
 
+        # Execution only: the kicker's own strike. Weather and defensive
+        # pressure are separate ways to miss (see _snap_kick_miss_factors).
+        top = V2_ENGINE_CONFIG.get("snap_kick_point_blank", 0.92)
+        edge = V2_ENGINE_CONFIG.get("snap_kick_range_edge", 0.74)
         if distance <= 15:
-            return 0.98  # Point-blank
+            return top  # Point-blank
         elif distance <= comfortable_range:
             frac = (distance - 15) / max(1, comfortable_range - 15)
-            return 0.96 - frac * 0.10  # 0.96 close → 0.86 at edge
+            return (top - 0.02) - frac * (top - 0.02 - edge)
         elif distance <= comfortable_range + 10:
             over = distance - comfortable_range
-            return max(0.08, 0.80 - over * 0.06)
+            return max(0.06, edge - 0.04 - over * 0.06)
         elif distance <= comfortable_range + 15:
             over = distance - comfortable_range - 10
             return max(0.05, 0.20 - over * 0.02)
@@ -10294,6 +10328,7 @@ class ViperballEngine:
         self._offensive_plan_event = None
         self._drive_plan_trace = None
         self._script_call = None
+        self._snap_kick_miss_causes = []
         self._active_defensive_call = None
         self._rush_event = None
         self._rush_plan = None
@@ -10372,6 +10407,11 @@ class ViperballEngine:
         self._record_offensive_setup(play)
         self._finish_drive_plan(play)
         self._finish_script(play)
+        causes = getattr(self, "_snap_kick_miss_causes", None)
+        if causes and play.play_type == "drop_kick" and play.result != "successful_kick":
+            play.kick_miss = list(causes)
+            words = {"execution": "off the boot", "weather": "the weather", "pressure": "the rush"}
+            play.description += " [missed: " + ", ".join(words[c] for c in causes) + "]"
         self._finish_suggested_call(play)
         if play.snap_possession != self.state.possession:
             self._drive_probe = None
@@ -16170,22 +16210,31 @@ class ViperballEngine:
 
         distance = 100 - self.state.field_position + 10
 
-        # ── Kicker-range success model ──
-        success_prob = self._drop_kick_success(distance, self._kick_skill(kicker.kicking))
-
-        # Style, archetype, and weather modifiers (secondary adjustments)
+        # ── Three ways to miss, rolled separately ──
+        # The kicker's strike (range, skill, style and archetype), the
+        # weather (rain, crosswind, a headwind) and the defense's pressure.
+        # The angle from a hash narrows the target (field width).
+        execution = (self._drop_kick_success_base(distance, self._kick_skill(kicker.kicking))
+                     * self._kick_angle(distance))
         kick_acc = self._current_style().get("kick_accuracy_bonus", 0.0)
         arch_info = get_archetype_info(kicker.archetype)
         kick_arch_bonus = arch_info.get("kick_accuracy_bonus", 0.0)
-        weather_kick_mod = self._kick_weather_accuracy()
-        success_prob *= (1.0 + kick_acc + kick_arch_bonus + weather_kick_mod)
-        success_prob = max(0.05, min(0.98, success_prob))
+        execution = max(0.04, min(0.97, execution * (1.0 + kick_acc + kick_arch_bonus)))
+        factors = self._snap_kick_miss_factors(distance)
+        miss_causes = []
+        if random.random() >= execution:
+            miss_causes.append("execution")
+        if random.random() < factors["weather"]:
+            miss_causes.append("weather")
+        if random.random() < factors["pressure"]:
+            miss_causes.append("pressure")
+        self._snap_kick_miss_causes = miss_causes
         kicker.game_kick_attempts += 1
         kicker.game_dk_attempts += 1
 
         stamina = self.state.home_stamina if self.state.possession == "home" else self.state.away_stamina
 
-        if random.random() < success_prob:
+        if not miss_causes:
             self.add_score(5)
             kicker.game_kick_makes += 1
             kicker.game_dk_makes += 1
@@ -16228,6 +16277,10 @@ class ViperballEngine:
                 live_ball_rate = 0.15
             elif distance >= 46:
                 live_ball_rate = 0.05
+            if "pressure" in miss_causes:
+                # A hurried kick comes off low and short, where the defense
+                # can field it.
+                live_ball_rate = min(0.85, live_ball_rate + V2_ENGINE_CONFIG.get("snap_kick_pressured_live", 0.30))
 
             if live_ball_rate > 0 and random.random() < live_ball_rate:
                 def_team = self.get_defensive_team()
@@ -18806,6 +18859,9 @@ class ViperballEngine:
             "turnovers_on_downs": len(turnovers_on_downs),
             "drop_kicks_made": len(drop_kicks),
             "drop_kicks_attempted": len(drop_kicks_attempted),
+            "snap_kick_misses_execution": sum(1 for p in drop_kicks_attempted if "execution" in (getattr(p, "kick_miss", None) or ())),
+            "snap_kick_misses_weather": sum(1 for p in drop_kicks_attempted if "weather" in (getattr(p, "kick_miss", None) or ())),
+            "snap_kick_misses_pressure": sum(1 for p in drop_kicks_attempted if "pressure" in (getattr(p, "kick_miss", None) or ())),
             "place_kicks_made": len(place_kicks),
             "place_kicks_attempted": len(place_kicks_attempted),
             "kick_passes_attempted": len(kick_passes),
@@ -18861,6 +18917,8 @@ class ViperballEngine:
             "defense_energy": getattr(play, "defense_energy", None),
             "possession_origin": getattr(play, "possession_origin", None),
             "option_read": getattr(play, "option_read", None),
+            "script": getattr(play, "script", None),
+            "kick_miss": getattr(play, "kick_miss", None),
             "motion": getattr(play, "motion", None),
             "possession_snap_index": getattr(play, "possession_snap_index", None),
             "snap_possession": getattr(play, "snap_possession", None),
