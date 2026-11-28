@@ -66,6 +66,7 @@ V2_ENGINE_CONFIG = {
     "team_installation_enabled": True,
     "offensive_packages_enabled": True,
     "paired_drive_plans_enabled": True,
+    "opening_scripts_enabled": True,
     # CCH-05: installed defensive package calls, independently ablatable.
     "defensive_packages_enabled": True,
     # DEL-01: counterfactual neutral-field restarts for paired calibration.
@@ -4850,7 +4851,112 @@ class ViperballEngine:
         self._offensive_plan_event["design"] = design
 
     def _planned_choice(self, category):
-        return (getattr(self, "_offensive_plan_event", None) or {}).get("design", {}).get(category)
+        design = (getattr(self, "_offensive_plan_event", None) or {}).get("design")
+        if design:
+            return design.get(category)
+        # An opening script call steers the same selectors when no package
+        # design is active for this snap.
+        return (getattr(self, "_script_call", None) or {}).get(category)
+
+    # ── Opening scripts (casebook case 3) ──
+    def _opening_script(self, side):
+        scripts = self.__dict__.setdefault("_scripts", {})
+        if side not in scripts:
+            from .coach_script import build_script
+            tactics = self.home_oc_tactics if side == "home" else self.away_oc_tactics
+            style = self.home_style if side == "home" else self.away_style
+            calls = build_script((tactics or {}).get("coach_id"), style.get("weights", {}),
+                                 style.get("formation_weights", {}))
+            scripts[side] = {"calls": calls, "next": 0, "used": [], "skipped": {},
+                             "observations": [], "answers": {}, "answer_uses": 0,
+                             "answered_drive": None}
+        return scripts[side]
+
+    def _next_script_call(self):
+        """The scripted call for this snap, an answer call, or None."""
+        from .coach_script import interrupt_reason
+        st = self.state
+        if st.quarter > 2 or not V2_ENGINE_CONFIG.get("opening_scripts_enabled", True):
+            return None
+        script = self._opening_script(st.possession)
+        if not script["calls"]:
+            return None
+        reason = interrupt_reason(st.down, st.yards_to_go, st.quarter, st.time_remaining,
+                                  self._get_score_diff(), st.kick_mode, st.field_position)
+        if script["next"] < len(script["calls"]):
+            call = dict(script["calls"][script["next"]])
+            call.update(kind="script", index=script["next"])
+            if reason:
+                script["skipped"][reason] = script["skipped"].get(reason, 0) + 1
+                self._script_trace = {**call, "status": reason}
+                return None
+            self._script_trace = {**call, "status": "scripted"}
+            return call
+        # Script done: on a drive's first snap, go to the call that beat the
+        # front this defense showed last.
+        front = self.__dict__.get("_last_front_seen", {}).get(st.possession)
+        answer = script["answers"].get(front)
+        drive_id = getattr(self, "_analytics_possession_id", None)
+        if (answer and not reason and self._possession_snap_count == 1
+                and script["answered_drive"] != drive_id):
+            script["answered_drive"] = drive_id
+            call = {**answer, "kind": "answer", "front": front}
+            self._script_trace = {**call, "status": "answer"}
+            return call
+        self._script_trace = None
+        return None
+
+    def _finish_script(self, play):
+        call = getattr(self, "_script_call", None)
+        trace = getattr(self, "_script_trace", None)
+        self._script_trace = None
+        dc = getattr(play, "defensive_call", None) or {}
+        side = play.snap_possession
+        if dc.get("alignment") and play.play_type not in ("penalty", "kneel"):
+            self.__dict__.setdefault("_last_front_seen", {})[side] = dc["alignment"]
+        if trace is None:
+            return
+        script = self._opening_script(side)
+        if call is None:
+            play.script = trace
+            return
+        if play.penalty and (play.play_type == "penalty" or play.penalty.nullified):
+            play.script = {**trace, "status": "penalty"}
+            return
+        ran = (play.play_family == call["family"]
+               and (call["family"] != "kick_pass"
+                    or getattr(play, "kick_pass_subfamily", None) in (None, call.get("kick_pass"))))
+        if not ran:
+            # The engine made a different call (a kick or an unavailable
+            # action). The scripted call stays next in line.
+            script["skipped"]["game_action"] = script["skipped"].get("game_action", 0) + 1
+            play.script = {**trace, "status": "game_action"}
+            return
+        if call["kind"] == "script":
+            obs = {**{k: call[k] for k in ("probe", "family", "formation", "kick_pass") if k in call},
+                   "front": dc.get("alignment"), "yards": play.yards_gained, "result": play.result}
+            script["observations"].append(obs)
+            script["used"].append(call["probe"])
+            script["next"] += 1
+            if script["next"] >= len(script["calls"]):
+                from .coach_script import best_answer
+                script["answers"] = best_answer(script["observations"])
+            play.script = {**trace, "front": obs["front"], "yards": play.yards_gained}
+        else:
+            script["answer_uses"] += 1
+            play.script = {**trace, "yards": play.yards_gained}
+
+    def _script_summary(self):
+        from .coach_script import POLICY_VERSION
+        out = {}
+        for side, script in (self.__dict__.get("_scripts") or {}).items():
+            out[side] = {"policy_version": POLICY_VERSION,
+                         "calls": [c["probe"] for c in script["calls"]],
+                         "used": script["used"], "skipped": script["skipped"],
+                         "observations": script["observations"],
+                         "answers": {k: v["probe"] for k, v in script["answers"].items()},
+                         "answer_uses": script["answer_uses"]}
+        return out
 
     def _record_offensive_setup(self, play):
         from .offensive_concepts import SEQUENCES
@@ -9548,6 +9654,7 @@ class ViperballEngine:
         self._active_offensive_plan = None
         self._offensive_plan_event = None
         self._drive_plan_trace = None
+        self._script_call = None
         self._active_defensive_call = None
         self._rush_event = None
         self._rush_plan = None
@@ -9573,6 +9680,7 @@ class ViperballEngine:
         self._pre_play_scores = (self.state.home_score, self.state.away_score)
         self._pre_play_kick_mode = self.state.kick_mode
         self._drive_plan_priority = self._drive_plan_interruption() if self._current_drive_probe() else None
+        self._script_call = self._next_script_call()
         self._pre_play_bonus_team = self.state.bonus_possession_team
         self._live_foul_rolled = False
         self._pending_live_foul = None
@@ -9613,6 +9721,7 @@ class ViperballEngine:
         self._apply_spot_error(play)
         self._record_offensive_setup(play)
         self._finish_drive_plan(play)
+        self._finish_script(play)
         if play.snap_possession != self.state.possession:
             self._drive_probe = None
         self._credit_uncredited_run(play, rush_before)
@@ -17358,6 +17467,7 @@ class ViperballEngine:
             "weather_description": self._weather_story(),
             "weather_detail": self.game_weather.summary(),
             "game_plans": self.game_plans,
+            "opening_scripts": self._script_summary(),
             "program_objectives": getattr(self,"_program_objectives",{}),
             "program_objective_counts": getattr(self,"_program_objective_counts",{}),
             "seed": self.seed,
