@@ -79,18 +79,62 @@ for it leads.
 Before, snap kicks ran at more than twice the top of their range and touchdowns sat below
 theirs. After, every line is inside its range, with field goals at the bottom edge.
 
+## The posts change accuracy (#416)
+
+The Gaelic posts now change accuracy in the engine. A miss is either wide or short. The
+uprights are 2 feet 10 inches wider than college posts, so they catch some wide misses, and
+the crossbar is 1 foot 10 inches lower, so it catches some short ones. Long kicks spread
+wider and fall lower, so the gain grows with distance:
+
+| Field goal, typical starter | College posts | Viperball posts |
+|---|---|---|
+| 25 yards | 95% | 97% |
+| 35 yards | 87% | 92% |
+| 45 yards | 72% | 79% |
+| 55 yards | 49% | 58% |
+| 65 yards | 24% | 32% |
+
+Snap kicks get the same treatment, with more of their misses counted as short because a
+kick off the bounce flies lower. Their curve was lowered to match, so a typical starter
+still makes about 42 percent from close in through the new posts.
+
+Three weeks of a season, about 270 games each, main against the posts:
+
+| Per game | Main | With the posts |
+|---|---|---|
+| Points | 87.6 | 86.7 to 87.6 |
+| Snap kick attempts | 5.19 | 4.81 to 5.03 |
+| Snap kick accuracy | 36.6% | 37.4% to 39.2% |
+| Field goal attempts | 4.20 | 5.05 to 5.17 |
+| Field goal accuracy | 68.3% | 70.7% to 71.2% |
+
+Field goal accuracy on attempts by distance with the posts: 93 to 94 percent in the 20s, 89
+to 90 in the 30s, 80 to 83 in the 40s, 66 to 70 in the 50s and 47 to 53 in the 60s.
+
+### Field position, measured again
+
+Points per drive by where the drive starts, with the posts, about 270 games:
+
+| Start | Own 0 to 9 | Own 10s | Own 20s | Own 30s | Own 40s | Opp 40s | Opp 30s | Opp 20s | Opp 20 and in |
+|---|---|---|---|---|---|---|---|---|---|
+| Points | 2.9 | 3.1 | 3.5 | 3.3 | 3.5 | 3.3 | 4.1 | 4.6 | 6.5 |
+
+The gap between your own goal line and midfield is still about half a point, close to the
+punting study's 2.5 to 3.5. Harder kicks have not yet made field position much more
+valuable, because offenses that stop settling for the kick now push on for touchdowns.
+
 ## Still open
 
 * Games are no closer. The average margin and the share of one score games barely moved.
 * Field goal accuracy on attempts fell to 70 percent because coaches try long ones on 6th
   down; #414 counted about 220 tries from 60 yards or more in 270 games.
 * Pindowns stay rare, about one every seven games.
-* The punting study found field position is cheap in this engine: a drive from your own 5 is
-  worth about 2.5 points and one from your own 45 about 3.5. With kicks harder, that gap
-  should widen, and it has not been measured again since.
+* Field position is still cheap: about half a point between your own goal line and
+  midfield, measured again with the posts above.
 * No tuning was done for this report. The numbers are from one 200 game sample, which carries
   about 2 to 3 points of noise on the accuracy figures.
 
-Sources: `aar_2026-11-28_snap_kick_misses.md`, `aar_2026-11-28_kick_accuracy_and_goal_posts.md`,
+Sources: `aar_2026-11-28_snap_kick_misses.md`, `aar_2026-11-28_kick_accuracy_and_goal_posts.md`
+(with its follow up on the posts),
 `aar_2026-11-28_punting.md`, and the measurement script described in
 `aar_2026-11-28_kicking_counterweight_report.md`.

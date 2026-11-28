@@ -223,6 +223,42 @@ def pressed(channels: Dict, side: str) -> bool:
 
 # ── Kicks ─────────────────────────────────────────────────────────────
 
+# Goal posts: Gaelic football H posts on the end line (README, The Field).
+POST_WIDTH_FT = 21 + 4 / 12        # 6.5 m, inside to inside
+CROSSBAR_FT = 8 + 2 / 12           # 2.5 m
+UPRIGHT_FT = 23.0                  # at least 7 m
+# College football posts, which the real world field goal rates come from.
+COLLEGE_POST_WIDTH_FT = 18.5
+COLLEGE_CROSSBAR_FT = 10.0
+
+
+def goal_post_factor(p_college: float, distance: float, kind: str = "place") -> float:
+    """Chance a kick scores through Viperball's posts, given its chance
+    through college football posts.
+
+    A miss is either wide or short (under the bar). The wide share comes
+    from a sideways spread that grows with distance: the wider uprights
+    catch more of it. The short share falls with the lower crossbar.
+    A place kick is rarely short inside 35 yards and often short past 60.
+    A snap kick is hit lower off the bounce, so more of its misses are
+    short at any distance.
+    """
+    from statistics import NormalDist
+    p = max(0.001, min(0.999, p_college))
+    if kind == "snap":
+        short_share = min(0.6, 0.30 + max(0.0, distance - 30) * 0.008)
+    else:
+        short_share = min(0.6, max(0.05, (distance - 35) / 40))
+    miss = 1.0 - p
+    p_height = 1.0 - short_share * miss
+    p_wide = min(0.999, p / p_height)
+    nd = NormalDist()
+    spread = nd.inv_cdf((1.0 + p_wide) / 2.0)   # half width over sideways spread
+    p_wide_new = 2.0 * nd.cdf(spread * POST_WIDTH_FT / COLLEGE_POST_WIDTH_FT) - 1.0
+    p_height_new = 1.0 - short_share * miss * (CROSSBAR_FT / COLLEGE_CROSSBAR_FT)
+    return p_wide_new * p_height_new
+
+
 def kick_angle_factor(x: float, distance: float) -> float:
     """Share of the uprights a kicker sees from the snap spot.
 

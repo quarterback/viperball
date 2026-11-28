@@ -120,6 +120,7 @@ The playing surface is a standard 100-yard gridiron:
   - Crossbar 2.5 meters (8 feet 2 inches) above the ground. College football's is 10 feet.
   - Uprights at least 7 meters (23 feet) tall.
   - A kick scores when the whole ball passes between the uprights and over the crossbar. Above the top of the uprights, the posts count as running straight up. There is no net and nothing scores under the crossbar.
+  - Wider uprights catch kicks that would slide past college posts, and the lower crossbar catches some that would come up short. The gain grows with distance, because long kicks spread wider and fall lower.
 
 Apart from the goal posts, the field is identical to a standard American college football field. No additional markings are required.
 
@@ -189,7 +190,7 @@ A snap kick is legal on any down. It is a shot at goal from open play, in the sp
 - **Downs 1 through 3:** advance the ball and chase the 9-point touchdown. The exception is late in a half: in the last two minutes, a team in range takes the shot on any down when the points matter.
 - **4th down:** kick only when the drive has stalled, the first down is far away, and the kicker is in range.
 - **5th down:** the natural kicking down. A miss still leaves 6th down for a second try.
-- **6th down:** the last chance. A miss here is a turnover, so a team kicks, punts, or goes for it. A trailing team never punts on 6th down.
+- **6th down:** the last chance. A miss here is a turnover, so a team kicks, punts, or goes for it. Most teams take the surer field goal over a snap kick. A trailing team never punts on 6th down.
 
 A field goal is the answer when a drive stalls outside snap kick range. Off a tee the ball carries farther than a drop kick, so a team that cannot get close enough for its snap kicker still puts 3 points on the board on 4th, 5th or 6th down.
 
@@ -371,11 +372,11 @@ Snap kicks can be attempted from anywhere on the field. A snap kick is Viperball
 
 | Distance | Typical starter | Elite kicker |
 |---|---|---|
-| 15 yards | 42% | 51% |
-| 25 yards | 35% | 50% |
-| 35 yards | 26% | 43% |
-| 45 yards | 15% | 34% |
-| 55 yards | 2% | 23% |
+| 15 yards | 42% | 52% |
+| 25 yards | 35% | 52% |
+| 35 yards | 25% | 44% |
+| 45 yards | 13% | 35% |
+| 55 yards | 3% | 24% |
 
 A kick can miss for three reasons, alone or together: the kicker's own strike, the weather (rain, snow, crosswind and headwind) and pressure from the rush. A kick from a hash sees a narrower opening than one from the middle of the field.
 
@@ -383,7 +384,9 @@ Because a miss on downs 1 through 5 costs a down rather than the ball, coaches t
 
 #### Missed Snap Kicks
 
-On downs 1 through 5, a missed snap kick that stays in the field of play is treated as a **dead ball** — the kicking team retains possession and the down advances. This "retained possession on miss" rule (borrowed from Finnish baseball's foul-ball mechanic) means that short-range snap kick attempts carry very little risk.
+On downs 1 through 5, a missed snap kick that stays in the field of play is treated as a **dead ball**: the kicking team retains possession and the down advances. This "retained possession on miss" rule (borrowed from Finnish baseball's foul ball mechanic) means a short snap kick costs a down, not the ball.
+
+A kick hurried by the rush comes off low and short, so a pressured miss is much more likely to be fielded and returned by the defense, from any distance.
 
 However, **long-range misses (beyond approximately 50 yards)** may be fielded and returned by the defense as a live ball. The longer the attempt, the more likely the ball travels deep enough for a defender to field it. A missed 65-yard snap kick is more likely than not to be returned. This creates a natural risk/reward curve: short snap kicks are nearly free, but bombing from long range can give the opponent a return opportunity — or even a return touchdown.
 
@@ -393,7 +396,7 @@ On **6th down**, a missed snap kick of any distance is a turnover — the defens
 
 The place kick is a set-piece scoring kick worth 3 points. The ball is held on the ground by a teammate while the kicker drives it through the uprights. Place kicks are more accurate at distance than snap kicks but require the offense to line up in a kicking formation, giving the defense time to set up a block attempt.
 
-Field goal accuracy follows college football rates by distance. A typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Better kickers play every kick as if it were a few yards shorter.
+Field goal accuracy starts from college football rates by distance, then gets the lift of the wider Gaelic posts. Through college posts a typical starting kicker makes about 95 percent in the 20s, 87 percent in the 30s, 72 percent in the 40s, about half in the 50s and about a quarter in the 60s. Through Viperball posts the same kicker makes about 97, 92, 79, 58 and 32 percent. Better kickers play every kick as if it were a few yards shorter.
 
 ### Punt
 

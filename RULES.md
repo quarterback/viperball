@@ -57,7 +57,14 @@ position.
 - Yard lines every 5 yards, numbered every 10 from each goal line to midfield.
 - Hash marks at standard NCAA spacing. A ball downed outside the hashes is spotted on the
   nearest hash.
-- Goal posts at the back line of each end zone, standard college dimensions.
+- Goal posts on the back line of each end zone, centered across the field. Viperball uses
+  Gaelic football H posts:
+  - Uprights 6.5 meters (21 feet 4 inches) apart, inside to inside.
+  - Crossbar 2.5 meters (8 feet 2 inches) above the ground.
+  - Uprights at least 7 meters (23 feet) tall.
+  - A kick scores when the whole ball passes between the uprights and over the crossbar.
+    Above the uprights, the posts count as running straight up. Nothing scores under the
+    crossbar, and there is no net.
 - No kickoff restraining lines; the game has no kickoff.
 
 ---
@@ -122,7 +129,8 @@ so coaches follow a simple logic:
   kicker is in range.
 - **5th down:** the natural kicking down. A miss still leaves 6th down for a second try.
 - **6th down:** the last chance. A missed snap kick is a turnover, so a team kicks, punts
-  or goes for it. A trailing team never punts on 6th down.
+  or goes for it. Most teams take the surer field goal over a snap kick. A trailing team
+  never punts on 6th down.
 
 A field goal is the answer when a drive stalls outside snap kick range. Near the goal line,
 teams keep driving for the touchdown. Late in a game, a team does not take a kick that
@@ -204,8 +212,24 @@ There is no kickoff. After every score the team that did not score receives the 
 ### Snap kick
 
 A drop kick during live play: the kicker drops the ball, lets it bounce once and kicks it.
-No holder and no stoppage. It is legal on any down from anywhere. It is reliable within
-40 yards and plausible out to about 55.
+No holder and no stoppage. It is legal on any down from anywhere.
+
+A snap kick is Viperball's three pointer: about one in three attempts goes in. A typical
+starting kicker makes about 42 percent from inside 15 yards, and each 5 yards farther costs
+about 3 points of accuracy at first and up to 7 points at long range. Elite kickers lose
+much less with distance.
+
+| Distance | Typical starter | Elite kicker |
+|---|---|---|
+| 15 yards | 42% | 52% |
+| 25 yards | 35% | 52% |
+| 35 yards | 25% | 44% |
+| 45 yards | 13% | 35% |
+| 55 yards | 3% | 24% |
+
+A snap kick can miss for three reasons, alone or together: the kicker's own strike, the
+weather (rain, snow, crosswind and headwind) and pressure from the rush. A kick from a hash
+sees a narrower opening than one from the middle of the field.
 
 #### Missed snap kicks
 
@@ -213,6 +237,8 @@ No holder and no stoppage. It is legal on any down from anywhere. It is reliable
   keeps the ball and the down advances.
 - Misses from beyond about 50 yards may be fielded and returned by the defense as a live
   ball. The longer the kick, the more likely the return.
+- A kick hurried by the rush comes off low and short, so a pressured miss from any distance
+  is much more likely to be fielded and returned.
 - On 6th down, a miss from any distance is a turnover at the spot of the kick.
 - A miss into the end zone that is not returned out is a pindown.
 
@@ -222,6 +248,21 @@ A place kick from scrimmage with a holder. It carries farther than a snap kick: 
 comfortable range runs about 15 yards beyond the kicker's snap kick range, and attempts are
 possible out to about 71 yards. A missed field goal can be fielded and returned like a
 missed snap kick.
+
+Field goal accuracy starts from college football rates by distance, then gains from the
+wider uprights and lower crossbar. The gain grows with distance, because long kicks spread
+wider and fall lower.
+
+| Distance | Through college posts | Through Viperball posts |
+|---|---|---|
+| 25 yards | 95% | 97% |
+| 35 yards | 87% | 92% |
+| 45 yards | 72% | 79% |
+| 55 yards | 49% | 58% |
+| 65 yards | 24% | 32% |
+
+These are for a typical starting kicker. Better kickers play every kick as if it were a few
+yards shorter.
 
 ### Punt
 
