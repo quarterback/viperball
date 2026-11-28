@@ -180,6 +180,10 @@ linked AARs. All work is on branch `claude/fix-league-hub-null-status`, PR #323.
     hold them for urgent situations and use the call that beat a front as an answer.
     → `aar_2026-11-28_opening_scripts.md`
 
+46. **System changes by long-serving head coaches** (November 28). After two bad seasons on
+    her non-specialist side, an adaptable coach can move the program to a school that did
+    better across the league. → `aar_2026-11-28_system_change.md`
+
 37. **Whole numbers without decimals** (November 27). Stat tables printed whole point totals
     as `261.000` or `293.0`. A `stat` filter drops the trailing zeros on Analytics, standings,
     season, team stats and game pages. → `aar_2026-11-27_whole_numbers.md`
