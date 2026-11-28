@@ -1127,6 +1127,30 @@
 {% endfor %}
 {% endif %}
 
+{% set scripts = fr.get('opening_scripts') or {} %}
+{% if scripts and (scripts.get('home', {}).get('calls') or scripts.get('away', {}).get('calls')) %}
+<h2>Opening scripts</h2>
+{% for side, team_name in (('away', game.away_team), ('home', game.home_team)) %}
+{% set sc = scripts.get(side) %}
+{% if sc and sc.calls %}
+<h3>{{ team_name }}</h3>
+<table>
+  <thead><tr><th class="num">#</th><th>Call</th><th>Front shown</th><th class="num">Yards</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for obs in sc.observations %}
+  <tr><td class="num">{{ loop.index }}</td><td>{{ obs.probe|replace('_', ' ')|capitalize }} ({{ obs.family|replace('_', ' ') }})</td><td>{{ obs.front or '—' }}</td><td class="num">{{ obs.yards }}</td><td>{{ (obs.result or '')|replace('_', ' ') }}</td></tr>
+  {% endfor %}
+  {% for probe in sc.calls[sc.observations|length:] %}
+  <tr><td class="num">{{ sc.observations|length + loop.index }}</td><td>{{ probe|replace('_', ' ')|capitalize }}</td><td colspan="3">Not reached in the first half</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if sc.skipped %}<p class="hint">Held for the game situation: {% for k, v in sc.skipped.items() %}{{ k|replace('_', ' ') }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+{% if sc.answers %}<p class="hint">Answers after the script: {% for front, probe in sc.answers.items() %}{{ probe|replace('_', ' ') }} against a {{ front }} front{% if not loop.last %}, {% endif %}{% endfor %}. Called {{ sc.answer_uses }} time{{ '' if sc.answer_uses == 1 else 's' }}.</p>{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% set pbp = fr.get('play_by_play', []) %}
 {% if pbp %}
 <h2>Play-by-Play ({{ pbp|length }} plays)</h2>
