@@ -129,6 +129,20 @@ def lateral_length(package, available):
     return min(c.lateral_count_target, available - 1)
 
 
-def kick_preference(package_id, context):
-    """Reserved for the existing finish selector; no independent scoring gate."""
-    return concept_weight(package_id, context) if package_id == "clinic_launch_option" else 1.0
+def snap_kick_threshold_shift(tactics, context, kicker_archetype):
+    """Bounded preference at existing fourth/fifth-down stalled-drive gates.
+
+    Only a practiced Launch Option with a suitable actual kicker can move
+    the threshold. Never changes kick success probability or legal range.
+    """
+    if kicker_archetype not in ("kicking_zb", "dual_threat_zb"):
+        return 0.0
+    if context.get("down") not in (4, 5):
+        return 0.0
+    for p in tactics.get("packages", ()):
+        if p.get("package_id") == "clinic_launch_option":
+            familiarity = max(0.0, min(1.0, p.get("familiarity", 0.0)))
+            authority = max(0.0, min(1.0, tactics.get("authority", 1.0)))
+            preference = concept_weight(p["package_id"], context)
+            return min(2.0, familiarity * authority * preference)
+    return 0.0
