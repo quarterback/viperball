@@ -1,11 +1,11 @@
-{% macro playbook_selects(playbooks, prefix='', default_label='Staff default') %}
+{% macro playbook_selects(playbooks, prefix='', default_label='Staff default', name_fmt='{prefix}{side}_book', current={}) %}
   {% for side in ('offense', 'defense') %}
     {% set options = playbooks|selectattr('side', 'equalto', side)|list %}
-    {% if options %}
-      <select name="{{ prefix }}{{ side }}_book" aria-label="{{ side|capitalize }} playbook">
-        <option value="">{{ side|capitalize }} book · {{ default_label }}</option>
-        {% for book in options %}<option value="{{ book.id }}">{{ book.name }}</option>{% endfor %}
-      </select>
-    {% endif %}
+    {% set cur = current.get(side) %}
+    <select name="{{ name_fmt.format(prefix=prefix, side=side) }}" aria-label="{{ side|capitalize }} playbook">
+      <option value="">{{ side|capitalize }} book · {{ default_label }}</option>
+      {% for book in options %}<option value="{{ book.id }}" {% if cur and cur.get('revision') and cur.get('revision') == book.get('revision') %}selected{% endif %}>{{ book.name }}</option>{% endfor %}
+      {% if not options %}<option value="" disabled>No saved {{ side }} playbooks yet</option>{% endif %}
+    </select>
   {% endfor %}
 {% endmacro %}
