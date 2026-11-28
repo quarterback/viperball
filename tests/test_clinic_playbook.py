@@ -67,3 +67,62 @@ def test_live_selector_uses_clinic_eligibility():
                                                  score_diff=-12, time_remaining=120),
                                                  random.Random(1))
     assert picked["package_id"] == p["package_id"] and p["package_id"] in eligible
+
+
+def test_observable_reads_and_compound_risk():
+    from engine.clinic_playbook import clinic_read, compound_fumble_probability
+    read, bias = clinic_read({"package_id": "clinic_pod_two"}, "spread")
+    assert read == "edge_contained" and bias["lateral_spread"] < 0
+    assert clinic_read({"package_id": "clinic_pod_two"}, "stacked")[1]["lateral_spread"] > 0
+    assert clinic_read({"package_id": "clinic_corridor_switch"}, "aggressive")[1]["kick_pass"] < 0
+    assert clinic_read({"package_id": "unknown"}, "stacked") == (None, {})
+    risks = [compound_fumble_probability(n) for n in (2, 3, 4)]
+    assert abs(risks[0] - .12) < 1e-8 and risks[0] < risks[1] < risks[2]
+
+
+def test_launch_option_threshold_is_bounded():
+    from engine.clinic_playbook import snap_kick_threshold_shift
+    t = {"authority": 1, "packages": [{"package_id": "clinic_launch_option", "familiarity": 1}]}
+    c = state(down=5)
+    shift = snap_kick_threshold_shift(t, c, "kicking_zb")
+    assert 0 < shift <= 2
+    assert snap_kick_threshold_shift(t, c, "dual_threat_zb") > 0
+    assert snap_kick_threshold_shift(t, c, "running_zb") == 0
+    assert snap_kick_threshold_shift(t, state(down=2), "kicking_zb") == 0
+    assert snap_kick_threshold_shift(t, dict(c, clinic_defense_school="keeper_hunt"), "kicking_zb") < shift
+
+
+def test_existing_defensive_counter_eligibility_responds_to_scouting():
+    from engine.defensive_commitments import eligibility
+    assert eligibility("chaos_lateral_trap", {"early_down"}, {"recent_lateral_rate": .3}, []) == 1
+    assert eligibility("chaos_lateral_trap", {"early_down"}, {"recent_lateral_rate": 0}, []) == .45
+    assert eligibility("shadow_robber", {"late_downs"}, {"down": 5, "recent_kick_rate": .5}, []) == 1
+    assert eligibility("shadow_robber", {"late_downs"}, {"down": 5, "recent_kick_rate": 0}, []) == .45
+
+
+def test_full_engine_clinic_selection():
+    from pathlib import Path
+    from engine.game_engine import ViperballEngine, load_team_from_json
+    from engine.coaching import CoachCard
+    from engine.team_installation import new_installation
+    paths = sorted((Path(__file__).resolve().parents[1] / "data" / "teams").glob("*.json"))
+    a, b = [load_team_from_json(str(p), fresh=False) for p in paths[:2]]
+    staff = {}
+    for role in ("head_coach", "oc"):
+        staff[role] = CoachCard(coach_id="clinic-" + role, first_name="Clinic",
+            last_name=role, age=47, gender="female", role=role,
+            classification="scheme_master", instincts=76, leadership=72,
+            composure=70, rotations=65, development=65, recruiting=65)
+    a.installation = new_installation(a.name, staff, "lateral_spread", "balanced", 2026)
+    a.installation["offense"].update(familiarity=1.0, family_familiarity=1.0,
+        packages=[{"package_id": "clinic_pod_two", "familiarity": 1.0}])
+    game = ViperballEngine(a, b, seed=20261127, home_coaching=staff,
+        style_overrides={a.name: "lateral_spread", b.name: "balanced"},
+        weather="clear", neutral_site=True).simulate_game()
+    calls = [p.get("offensive_call") or {} for p in game["play_by_play"]]
+    selected = [c for c in calls if c.get("package_id") == "clinic_pod_two"]
+    assert selected, "installed clinic concept never selected"
+    assert all("clinic_pod_two" in c["eligible"] for c in selected)
+    for c in selected:
+        if "clinic_transfer_target" in c:
+            assert c["clinic_transfer_target"] in (1, 2)
