@@ -3,9 +3,9 @@
 Punting skill
     Every player has a punting profile built from their kick ratings plus a
     personal knack that their kick ratings don't capture. Kicking is a skill
-    every position uses in Viperball, so good punters turn up all over a
-    roster, and a few players are natural punters well above their goal
-    kicking. A profile has two parts: distance (how far and how high) and
+    every position uses in Viperball, but punting well takes training: about
+    one player in twenty has it, from any position. A team's best punter can
+    be anywhere from about 30 (nobody trained) to the high 90s. A profile has two parts: distance (how far and how high) and
     placement (where it lands and how it stops), and a style:
       aussie       the drop punt and the rugby roll out
       continental  the North American spiral
@@ -98,10 +98,16 @@ def punter_profile(player) -> PuntProfile:
     power = getattr(player, "kick_power", 70)
     accuracy = getattr(player, "kick_accuracy", 70)
     kicking = getattr(player, "kicking", 70)
-    knack = 6.5 * _bell(seed, "knack")
-    # About one player in twelve is a natural punter.
-    if _unit(seed, "natural") < 0.08:
-        knack += 8.0
+    knack = 6.0 * _bell(seed, "knack")
+    # About one player in twenty has trained as a punter, so a 36 player
+    # roster has one or two, and about one team in six has none and makes
+    # do with whoever kicks best. A third of trained punters are naturals.
+    if _unit(seed, "trained") < 0.05:
+        knack += 20.0
+        if _unit(seed, "natural") < 0.35:
+            knack += 8.0
+    else:
+        knack -= 30.0
     distance = 0.55 * power + 0.30 * kicking + 0.15 * getattr(player, "power", 70) + knack + 4 * _bell(seed, "d")
     placement = 0.55 * accuracy + 0.25 * kicking + 0.20 * getattr(player, "awareness", 70) + knack + 4 * _bell(seed, "p")
     distance = int(max(25, min(99, round(distance))))

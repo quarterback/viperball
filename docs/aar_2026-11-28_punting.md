@@ -16,11 +16,13 @@ New module `engine/punting.py`, wired into `engine/game_engine.py`.
 
 1. **Punting skill.** Every player has a profile: distance, placement, an overall rating
    and a style (aussie, continental or both). It comes from kick power, kick accuracy and
-   kicking plus a personal knack that stays the same every run, and about one player in
-   twelve is a natural punter. The best punter on the roster punts, whatever his position.
-   Across 80 teams the best punter rates 59 to 99 (average 79), with about 2.4 players per
-   team at 70 or better, and they come from every position group, because kick ratings in
-   the team files barely differ by position.
+   kicking plus a personal knack that stays the same every run. Punting well takes
+   training: about one player in twenty has it, a third of those are naturals, and the
+   rest of the roster punts well below its kick ratings. The best punter on the roster
+   punts, whatever his position. Across all 205 teams the best punter rates 30 to 99
+   (tenth percentile 42, median 60, ninetieth 96): about one team in six has nobody
+   trained. Best punters come from every position group, because kick ratings in the team
+   files barely differ by position.
 2. **Punt types.**
    * spiral: distance from deep in your own end; past midfield it is aimed at the end zone
      for a pindown.
@@ -65,12 +67,17 @@ New module `engine/punting.py`, wired into `engine/game_engine.py`.
 
 ## Numbers (200 games each, philosophy forced for both teams)
 
+The never punts and field position first columns, and the head to head results above,
+were run before punting became a trained skill; the by the book column is after it. With
+weaker punters on some teams, a by the book coach punts a little less (1.38 6th down
+punts a game, from 1.52).
+
 | | Never punts | By the book | Field position first |
 |---|---|---|---|
 | Points per game | 104.8 | 103.9 | 102.6 |
-| 6th down punts per game | 0 | 1.52 | 2.20 |
+| 6th down punts per game | 0 | 1.38 | 2.20 |
 | 6th down tries per game | 2.56 | 1.21 | 0.65 |
-| All punts per team | 0.00 | 0.86 | 1.18 |
+| All punts per team | 0.00 | 0.80 | 1.18 |
 
 On main, 6th down punts ran about 0.94 a game.
 
