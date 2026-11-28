@@ -62,8 +62,9 @@ _DEFENSE_LEAN = {"turnover_hunt": 0.06, "pursuit_zone": 0.05, "run_wall": -0.06}
 def seagull_preference(staff, role):
     """0 to 1: how much one coach wants Seagulls. Adaptable, chaos seeking,
     risk tolerant coaches like them; stubborn ones do not. Read from the
-    personality sliders and, when the coach has one, the tactical profile.
-    A missing coach is neutral (0.5)."""
+    personality sliders and, when the coach has one, the tactical profile,
+    plus what he has learned about Seagulls in past seasons. A missing
+    coach is neutral (0.5)."""
     coach = (staff or {}).get(role)
     if coach is None:
         return 0.5
@@ -71,7 +72,11 @@ def seagull_preference(staff, role):
     v = lambda k: max(0.0, min(100.0, float(sliders.get(k, 50)))) / 100.0
     pref = (0.35 * v("adaptability") + 0.25 * v("chaos_appetite")
             + 0.20 * v("risk_tolerance") + 0.20 * (1.0 - v("stubbornness")))
-    identity = ((getattr(coach, "tactical_profile", None) or {}).get("identity") or {})
+    profile = getattr(coach, "tactical_profile", None) or {}
+    identity = profile.get("identity") or {}
+    # What the coach has learned from past seasons (engine/coach_learning.py).
+    from engine.coach_learning import seagull_learned
+    pref += seagull_learned(profile, role)
     pref += _OFFENSE_LEAN.get(identity.get("offense_interpretation"), 0.0) if role != "dc" else 0.0
     pref += _DEFENSE_LEAN.get(identity.get("defense_interpretation"), 0.0) if role != "oc" else 0.0
     return round(max(0.0, min(1.0, pref)), 3)

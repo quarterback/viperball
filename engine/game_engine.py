@@ -6280,7 +6280,11 @@ class ViperballEngine:
                "seagull_line": None, "seagull_line_all": [p.name for p in line_sgs],
                "seagull_slide": False, "jersey_report": jersey_report,
                "seagull_viper": None, "seagull_on_offense": False, "offenders": {},
-               "short_line": list(short), "on_line": on_line}
+               "short_line": list(short), "on_line": on_line,
+               "defense_seagull": None}
+        d_role = self._seagull_roles[self._side_key(def_team)]["defense"] or ()
+        if d_role:
+            ctx["defense_seagull"] = {"name": d_role[0][0], "role": d_role[0][1]}
         roles = self._seagull_roles[off_sk]["offense"] or ()
         if roles:
             ctx["seagull_on_offense"] = True
@@ -6349,6 +6353,7 @@ class ViperballEngine:
                 "seagull_line": ctx["seagull_line"], "seagull_line_all": list(ctx.get("seagull_line_all", [])),
                 "seagull_slide": ctx["seagull_slide"],
                 "short_line": list(ctx.get("short_line", [])), "on_line": ctx.get("on_line"),
+                "defense_seagull": ctx.get("defense_seagull"),
                 "seagull_viper": ctx["seagull_viper"], "jersey_report": ctx["jersey_report"],
                 "defense_adjusted": bool(ctx.get("defense_adjusted"))}
 

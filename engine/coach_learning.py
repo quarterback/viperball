@@ -201,3 +201,165 @@ def learn_from_coordinator(hc, coordinator, role, team, year, season):
     state[key]=after
     state["history"]=list(state.get("history",[]))[-19:]+[event]
     return event
+
+
+# ── Seagull learning ─────────────────────────────────────────────
+#
+# Coaches learn whether Seagulls work the same way they learn their kick
+# mix: at season's end, from their own team's games, comparing Seagull snaps
+# with ordinary snaps in matching situations. Three things are learned, each
+# a small, bounded change to the coach's Seagull preference
+# (engine/presnap.py):
+#
+# * the offensive coordinator: plays with a Seagull on the line or in the
+#   Viper jersey against plays without one,
+# * the defensive coordinator: plays with a Seagull on at defensive back,
+#   Keeper or defensive line against plays without one, and what opponents'
+#   Seagulls did against his defense,
+# * the head coach: whether his coordinators' Seagull snaps came out ahead,
+#   and what opponents' Seagulls did to his team on both sides of the ball.
+#
+# A staff that never lists a Seagull has no Seagull snaps of its own, so it
+# can only learn from opponents. A coach who moves keeps what he learned.
+
+SEAGULL_MIN_GAMES = 6
+SEAGULL_MIN_ARM = 20
+SEAGULL_STEP = .03     # most a coach's Seagull preference moves in one year
+SEAGULL_LIMIT = .08    # most it moves over a career
+SEAGULL_KEYS = {"head_coach": "listing", "oc": "offense", "dc": "defense"}
+
+
+def _cell(play):
+    down, ytg, fp = play.get("down"), play.get("yards_to_go"), play.get("field_position")
+    if down is None or ytg is None or fp is None:
+        return None
+    return (down >= 4, ytg <= 5, fp >= 80, fp < 20)
+
+
+def _offense_seagull(play):
+    m = play.get("motion") or {}
+    return bool(m.get("seagull_line") or m.get("seagull_viper"))
+
+
+def _defense_seagull(play):
+    return bool((play.get("motion") or {}).get("defense_seagull"))
+
+
+def _contrast(games):
+    """Mean over games of the matched cell difference (Seagull minus none)."""
+    effects, with_n, without_n = [], 0, 0
+    for cells in games:
+        matched = [(a, b) for a, b in cells.values() if a and b]
+        if matched:
+            effects.append(mean(mean(b) - mean(a) for a, b in matched))
+            without_n += sum(len(a) for a, b in matched)
+            with_n += sum(len(b) for a, b in matched)
+    return {"games": len(effects), "with": with_n, "without": without_n,
+            "contrast": round(mean(effects), 5) if effects else None}
+
+
+def observe_seagulls(season, team):
+    """Seagull evidence from one team's completed games.
+
+    Returns four contrasts, each the matched difference in play value
+    (scrimmage gain against the task, turnovers -1) between plays with a
+    Seagull and plays without:
+
+    * own_offense: our offense, our Seagull on or not (higher is good for us)
+    * own_defense: opponents' offense, our Seagull on or not (lower is good)
+    * opp_offense: opponents' offense, their Seagull on or not (higher hurt us)
+    * opp_defense: our offense, their Seagull on or not (lower hurt us)
+    """
+    buckets = {k: [] for k in ("own_offense", "own_defense", "opp_offense", "opp_defense")}
+    ids = {}
+    if season is None:
+        return {k: _contrast([]) for k in buckets}, ids
+    for game in list(season.schedule) + list(getattr(season, "playoff_bracket", ())):
+        if not getattr(game, "completed", False) or team not in (game.home_team, game.away_team):
+            continue
+        result = game.full_result or {}
+        side = "home" if game.home_team == team else "away"
+        ids.setdefault("oc", set()).add((result.get("coach_tactics", {}).get(side, {}) or {}).get("oc_id"))
+        ids.setdefault("dc", set()).add((result.get("defensive_coach_tactics", {}).get(side, {}) or {}).get("dc_id"))
+        cells = {k: defaultdict(lambda: [[], []]) for k in buckets}
+        for p in result.get("play_by_play", ()):
+            if (p.get("penalty") or {}).get("nullified") or not p.get("motion"):
+                continue
+            key = _cell(p)
+            if key is None:
+                continue
+            v = _value(p)
+            ours = p.get("snap_possession") == side
+            if ours:
+                cells["own_offense"][key][int(_offense_seagull(p))].append(v)
+                cells["opp_defense"][key][int(_defense_seagull(p))].append(v)
+            else:
+                cells["own_defense"][key][int(_defense_seagull(p))].append(v)
+                cells["opp_offense"][key][int(_offense_seagull(p))].append(v)
+        for k in buckets:
+            buckets[k].append(cells[k])
+    return {k: _contrast(v) for k, v in buckets.items()}, ids
+
+
+def _signal(data, sign):
+    """Shrunk signal from one contrast, or None without enough evidence."""
+    if data["contrast"] is None or data["games"] < SEAGULL_MIN_GAMES:
+        return None
+    arm = min(data["with"], data["without"])
+    if arm < SEAGULL_MIN_ARM:
+        return None
+    return sign * data["contrast"] * arm / (arm + 60)
+
+
+def seagull_learned(profile, role):
+    """The learned change to this coach's Seagull preference (bounded)."""
+    key = SEAGULL_KEYS.get(role)
+    state = ((profile or {}).get("learning") or {}).get("seagull") or {}
+    return clamp(float(state.get(key, 0.0)), SEAGULL_LIMIT) if key else 0.0
+
+
+def adapt_seagull(card, role, team, year, season):
+    """Season end Seagull learning for one coach. Returns the event or None.
+
+    Coordinators learn only from games they called. Opponents' Seagulls
+    count half as much as a coach's own, and say "copy what beat us": when
+    they hurt his team, his preference rises.
+    """
+    from engine.coach_tactics import ensure_coach_tactical_profile
+    key = SEAGULL_KEYS.get(role)
+    if key is None or season is None:
+        return None
+    data, ids = observe_seagulls(season, team)
+    if role in ("oc", "dc") and card.coach_id not in ids.get(role, set()):
+        return None
+    profile = ensure_coach_tactical_profile(card)
+    learning = profile.setdefault("learning", {})
+    state = learning.setdefault("seagull", {})
+    if state.get("last_year", {}).get(key, -1) >= year:
+        return None
+    parts = []
+    if role in ("oc", "head_coach"):
+        parts.append((_signal(data["own_offense"], 1), 1.0))
+    if role in ("dc", "head_coach"):
+        parts.append((_signal(data["own_defense"], -1), 1.0))
+        parts.append((_signal(data["opp_offense"], 1), 0.5))
+    if role == "head_coach":
+        parts.append((_signal(data["opp_defense"], -1), 0.5))
+    usable = [(s, w) for s, w in parts if s is not None]
+    sliders = card.personality_sliders or {}
+    receptivity = (max(0., min(1., sliders.get("adaptability", 50) / 100))
+                   * (1 - max(0., min(1., sliders.get("stubbornness", 50) / 100))))
+    previous = float(state.get(key, 0.0))
+    change = 0.0
+    if usable:
+        signal = sum(s * w for s, w in usable) / sum(w for _, w in usable)
+        change = clamp(signal * receptivity, SEAGULL_STEP)
+    revised = round(clamp(previous + change, SEAGULL_LIMIT), 5)
+    event = {"year": year, "team": team, "role": role, "coach_id": card.coach_id,
+             "key": "seagull_" + key, "before": previous, "after": revised,
+             "sufficient": bool(usable), "evidence": data}
+    state[key] = revised
+    state["last_year"] = {**state.get("last_year", {}), key: year}
+    state["history"] = list(state.get("history", []))[-19:] + [
+        {k: v for k, v in event.items() if k != "evidence"}]
+    return event

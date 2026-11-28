@@ -1274,7 +1274,7 @@ class Dynasty:
         tactical_learning = []
         mentorship_events = []
         career_events = []
-        from engine.coach_learning import adapt, learn_from_mentor, learn_from_coordinator
+        from engine.coach_learning import adapt, adapt_seagull, learn_from_mentor, learn_from_coordinator
         from engine.coach_career import record_season, season_evidence, grow, caller
         for team_name, staff in active_staffs.items():
             sr = self.team_histories[team_name].season_records.get(prev_year)
@@ -1329,6 +1329,13 @@ class Dynasty:
                 lesson = adapt(card, calling_role, team_name, prev_year, self.seasons.get(prev_year))
                 if lesson is not None:
                     tactical_learning.append(lesson)
+                # Seagull learning: the head coach for listing, the caller of
+                # each side for how she is used.
+                seagull_role = "head_coach" if role == "head_coach" else calling_role
+                seagull_lesson = adapt_seagull(card, seagull_role, team_name, prev_year,
+                                               self.seasons.get(prev_year))
+                if seagull_lesson is not None:
+                    tactical_learning.append(seagull_lesson)
                 # All coaches develop their attributes each offseason
                 from engine.coach_roles import POSITION_DISCIPLINE
                 mentor = staff.get(POSITION_DISCIPLINE.get(role)) if role in POSITION_DISCIPLINE else None
