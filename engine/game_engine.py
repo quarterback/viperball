@@ -4628,6 +4628,14 @@ class ViperballEngine:
         st = self.state
         diff = st.home_score - st.away_score
         context = self._package_context(diff if st.possession == "home" else -diff)
+        from .clinic_playbook import CONCEPTS
+        if any(p["package_id"] in CONCEPTS for p in tactics["packages"]):
+            offense = self.get_offensive_team()
+            context["clinic_archetypes"] = tuple(
+                p.archetype for p in self._offense_skill(offense)
+                if p.position in ("Zeroback", "Viper"))
+            context["clinic_defense_school"] = self._current_defense_name()
+            context["clinic_bonus_pending"] = st.bonus_possession_team == st.possession
         picked, eligible, live = choose_offensive_package(
             tactics, context, self._offensive_package_rng[st.possession])
         if not eligible:
@@ -12735,8 +12743,14 @@ class ViperballEngine:
 
         chain_length = random.randint(2, 5)
         skill_pool = self._offense_skill(team)
+        from .clinic_playbook import lateral_length
+        target = lateral_length(getattr(self, "_active_offensive_plan", None), len(skill_pool))
+        if target is not None:
+            chain_length = target
+            if self._offensive_plan_event is not None:
+                self._offensive_plan_event["clinic_transfer_target"] = target
         # Weighted selection for the lateral chain — spread touches across the roster
-        _lat_count = min(chain_length, len(skill_pool))
+        _lat_count = min(chain_length + (1 if target is not None else 0), len(skill_pool))
         _lat_weights = [max(1.0, (_old(p.speed) + _old(getattr(p, 'lateral_skill', 35))) / 2.0 - 40) for p in skill_pool]
         _lat_weights = self._spread_the_love_offense(skill_pool, _lat_weights)
         players_involved = []
