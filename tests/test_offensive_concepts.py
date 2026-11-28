@@ -153,6 +153,8 @@ def test_paired_drive_changes_calls_against_observed_fronts(monkeypatch):
         # This test is about pace after a probe. Keep the defense from also
         # learning the offense's side habit, which changes which probes gain.
         monkeypatch.setitem(V2_ENGINE_CONFIG, "side_learning_enabled", False)
+        # Midgame caller changes and suggestions also change later calls.
+        monkeypatch.setitem(V2_ENGINE_CONFIG, "midgame_calls_enabled", False)
         return paired_engine(defense, tempo=tempo).simulate_game()["play_by_play"]
 
     def calls(plays, status):
